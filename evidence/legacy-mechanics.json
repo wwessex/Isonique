@@ -1,0 +1,123 @@
+{
+  "version": 1,
+  "note": "Recovered historical constants, not implemented runtime mechanics. Sources and limitations are documented in MECHANICS.md.",
+  "values": [
+    {
+      "name": "legacy CI workaround OS major",
+      "group": "startup",
+      "value": 10,
+      "source": "function 0x10000fa98; fallback lifter, provisional"
+    },
+    {
+      "name": "legacy CI workaround OS minor",
+      "group": "startup",
+      "value": 6,
+      "source": "function 0x10000fa98; fallback lifter, provisional"
+    },
+    {
+      "name": "legacy CI workaround maximum patch",
+      "group": "startup",
+      "value": 4,
+      "source": "function 0x10000fa98; fallback lifter, provisional"
+    },
+    {
+      "name": "render warmup OS major",
+      "group": "startup",
+      "value": 10,
+      "source": "function 0x10000fa98; fallback lifter, provisional"
+    },
+    {
+      "name": "render warmup OS minor",
+      "group": "startup",
+      "value": 7,
+      "source": "function 0x10000fa98; fallback lifter, provisional"
+    },
+    {
+      "name": "render warmup maximum patch",
+      "group": "startup",
+      "value": 3,
+      "source": "function 0x10000fa98; fallback lifter, provisional"
+    },
+    {
+      "name": "memory query fallback",
+      "group": "startup",
+      "value": 2147483648,
+      "unit": "bytes",
+      "source": "function 0x10000fa98; fallback lifter, provisional"
+    },
+    {
+      "name": "diagnostic timer interval",
+      "group": "startup",
+      "value": 100000000,
+      "unit": "ns",
+      "source": "function 0x10000fa98; fallback lifter, provisional"
+    },
+    {
+      "name": "diagnostic timer tolerance",
+      "group": "startup",
+      "value": 5000000,
+      "unit": "ns",
+      "source": "function 0x10000fa98; fallback lifter, provisional"
+    },
+    {
+      "name": "GNG saturation metadata default",
+      "group": "legacy adjustments (not used by renderer)",
+      "value": 1.5,
+      "source": "Geode 0xcf49a; see MECHANICS.md for constant addresses/evidence"
+    },
+    {
+      "name": "GNG saturation metadata identity",
+      "group": "legacy adjustments (not used by renderer)",
+      "value": 1,
+      "source": "Geode 0xcf49a; see MECHANICS.md for constant addresses/evidence"
+    },
+    {
+      "name": "GNG saturation metadata min",
+      "group": "legacy adjustments (not used by renderer)",
+      "value": 0,
+      "source": "Geode 0xcf49a; see MECHANICS.md for constant addresses/evidence"
+    },
+    {
+      "name": "GNG saturation metadata max",
+      "group": "legacy adjustments (not used by renderer)",
+      "value": 2,
+      "source": "Geode 0xcf49a; see MECHANICS.md for constant addresses/evidence"
+    },
+    {
+      "name": "GNG contrast metadata default",
+      "group": "legacy adjustments (not used by renderer)",
+      "value": 0.25,
+      "source": "Geode 0xd0d9a; see MECHANICS.md for constant addresses/evidence"
+    },
+    {
+      "name": "GNG contrast metadata identity",
+      "group": "legacy adjustments (not used by renderer)",
+      "value": 0,
+      "source": "Geode 0xd0d9a; see MECHANICS.md for constant addresses/evidence"
+    },
+    {
+      "name": "GNG contrast metadata min",
+      "group": "legacy adjustments (not used by renderer)",
+      "value": -1,
+      "source": "Geode 0xd0d9a; see MECHANICS.md for constant addresses/evidence"
+    },
+    {
+      "name": "GNG contrast metadata max",
+      "group": "legacy adjustments (not used by renderer)",
+      "value": 1,
+      "source": "Geode 0xd0d9a; see MECHANICS.md for constant addresses/evidence"
+    },
+    {
+      "name": "GNG contrast metadata sliderMin",
+      "group": "legacy adjustments (not used by renderer)",
+      "value": -0.5,
+      "source": "Geode 0xd0d9a; see MECHANICS.md for constant addresses/evidence"
+    },
+    {
+      "name": "GNG contrast metadata sliderMax",
+      "group": "legacy adjustments (not used by renderer)",
+      "value": 0.5,
+      "source": "Geode 0xd0d9a; see MECHANICS.md for constant addresses/evidence"
+    }
+  ]
+}

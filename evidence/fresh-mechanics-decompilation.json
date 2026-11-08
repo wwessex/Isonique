@@ -1,0 +1,1670 @@
+[
+  {
+    "authority": "original-files",
+    "confidence": "observed",
+    "coverage": {
+      "examined": 38,
+      "status": "complete",
+      "total": 38
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_dbd0745bb553052d24d6efca73d7b6875541339ac0329f1da7b2d1eb088dca1f",
+    "limitations": [
+      {
+        "code": "data_sections_only",
+        "message": "only strings stored in the file are searched (absence is not proof)"
+      }
+    ],
+    "links": [],
+    "locations": [],
+    "operation": "native_strings_find",
+    "params": {
+      "case_sensitive": false,
+      "limit": 100,
+      "mode": "regex",
+      "offset": 0,
+      "pattern": "rotateLeft|rotateRight|RotateClockwise|RotateCounter|flagged|a_toggleFlag|noLiftedAdjustmentsMessage|RKLiftStampToolReplaceOnStamp"
+    },
+    "result": {
+      "matches": [
+        {
+          "address": "0x100558a51",
+          "references": [
+            {
+              "from": "0x1008a70b8",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "rotateCounterclockwise"
+        },
+        {
+          "address": "0x100558a68",
+          "references": [
+            {
+              "from": "0x1008a70d8",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "rotateClockwise"
+        },
+        {
+          "address": "0x10055a0c8",
+          "references": [
+            {
+              "from": "0x1008a89f8",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "noLiftedAdjustmentsMessage"
+        },
+        {
+          "address": "0x10055a885",
+          "references": [
+            {
+              "from": "0x1008a9378",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "TB_RotateRight_Glyph"
+        },
+        {
+          "address": "0x10055a8a7",
+          "references": [
+            {
+              "from": "0x1008a93b8",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "TB_RotateLeft_Glyph"
+        },
+        {
+          "address": "0x10055c5fe",
+          "references": [
+            {
+              "from": "0x1008ab998",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "isFlagged"
+        },
+        {
+          "address": "0x10055ed2d",
+          "references": [
+            {
+              "from": "0x1007657f8",
+              "function": null
+            },
+            {
+              "from": "0x1008aec98",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "flagged"
+        },
+        {
+          "address": "0x10055f075",
+          "references": [
+            {
+              "from": "0x1008af278",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "RKLiftStampToolReplaceOnStamp"
+        },
+        {
+          "address": "0x10055f13e",
+          "references": [
+            {
+              "from": "0x100765800",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "Tc,N,Vm_flagged"
+        },
+        {
+          "address": "0x100569ed1",
+          "references": [
+            {
+              "from": "0x1008bf018",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "limitPreviewTitleFlagged"
+        },
+        {
+          "address": "0x10056ed13",
+          "references": [
+            {
+              "from": "0x1008c3f38",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "preset.includesOnlyFilesFlaggedInCamera"
+        },
+        {
+          "address": "0x100575a77",
+          "references": [
+            {
+              "from": "0x1008cbe98",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "QueryFlagged"
+        },
+        {
+          "address": "0x10058113d",
+          "references": [
+            {
+              "from": "0x1008d6118",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "cursorRotateLeft"
+        },
+        {
+          "address": "0x10058114e",
+          "references": [
+            {
+              "from": "0x1008d6138",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "cursorRotateRight"
+        },
+        {
+          "address": "0x100588020",
+          "references": [
+            {
+              "from": "0x1008468b8",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "flaggedImageList"
+        },
+        {
+          "address": "0x100588031",
+          "references": [
+            {
+              "from": "0x1008468c0",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "T@\"NSMutableArray\",&,N,V_flaggedImageList"
+        },
+        {
+          "address": "0x100590e2e",
+          "references": [
+            {
+              "from": "0x100785710",
+              "function": null
+            },
+            {
+              "from": "0x1008686c0",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "setFlaggedFilter"
+        },
+        {
+          "address": "0x100591d0c",
+          "references": [
+            {
+              "from": "0x100745998",
+              "function": null
+            },
+            {
+              "from": "0x100757800",
+              "function": null
+            },
+            {
+              "from": "0x10075bc10",
+              "function": null
+            },
+            {
+              "from": "0x10079b9c8",
+              "function": null
+            },
+            {
+              "from": "0x1007e9a58",
+              "function": null
+            },
+            {
+              "from": "0x1007efa18",
+              "function": null
+            },
+            {
+              "from": "0x1007f0178",
+              "function": null
+            },
+            {
+              "from": "0x10086d1a8",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "a_setFlaggedFilter:"
+        },
+        {
+          "address": "0x1005a0363",
+          "references": [
+            {
+              "from": "0x10086c7b0",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "isFlagged"
+        },
+        {
+          "address": "0x1005aa245",
+          "references": [
+            {
+              "from": "0x1007653e8",
+              "function": null
+            },
+            {
+              "from": "0x10086eca8",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "flagged"
+        },
+        {
+          "address": "0x1005aa2eb",
+          "references": [
+            {
+              "from": "0x100765400",
+              "function": null
+            },
+            {
+              "from": "0x10086ed18",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "setFlagged:"
+        },
+        {
+          "address": "0x1005ab64b",
+          "references": [
+            {
+              "from": "0x10086f2d8",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "changeFlagged:"
+        },
+        {
+          "address": "0x1005aba0c",
+          "references": [
+            {
+              "from": "0x100765698",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "m_flagged"
+        },
+        {
+          "address": "0x1005c46b9",
+          "references": [
+            {
+              "from": "0x100875a78",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "setIsFlagged:"
+        },
+        {
+          "address": "0x1005c48ea",
+          "references": [
+            {
+              "from": "0x10079fb78",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "scriptingFlagged"
+        },
+        {
+          "address": "0x1005c48fb",
+          "references": [
+            {
+              "from": "0x10079fb90",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "setScriptingFlagged:"
+        },
+        {
+          "address": "0x1005d58a5",
+          "references": [
+            {
+              "from": "0x1007c6c60",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "m_flaggedMenu"
+        },
+        {
+          "address": "0x1005d9c23",
+          "references": [
+            {
+              "from": "0x1007ce120",
+              "function": null
+            },
+            {
+              "from": "0x10087bc50",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "flaggedMenu"
+        },
+        {
+          "address": "0x1005d9c97",
+          "references": [
+            {
+              "from": "0x1007ce228",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "_flaggedMenu"
+        },
+        {
+          "address": "0x1005e0088",
+          "references": [
+            {
+              "from": "0x10087bd28",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "flaggedAlbumFromDatabase:"
+        },
+        {
+          "address": "0x1005e9f9a",
+          "references": [
+            {
+              "from": "0x10087e350",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "defaultFlaggedQuery"
+        },
+        {
+          "address": "0x1006011fe",
+          "references": [
+            {
+              "from": "0x100883e10",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "cacheIsFlagged:"
+        },
+        {
+          "address": "0x10060841c",
+          "references": [
+            {
+              "from": "0x100885718",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "iPhotoFlaggedKeywordString"
+        },
+        {
+          "address": "0x1006086ec",
+          "references": [
+            {
+              "from": "0x100846600",
+              "function": null
+            },
+            {
+              "from": "0x100885810",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "setFlaggedImageList:"
+        },
+        {
+          "address": "0x1006087ef",
+          "references": [
+            {
+              "from": "0x1008465e8",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "flaggedImageList"
+        },
+        {
+          "address": "0x100608866",
+          "references": [
+            {
+              "from": "0x1008467a8",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "_flaggedImageList"
+        },
+        {
+          "address": "0x100608924",
+          "references": [
+            {
+              "from": "0x100885858",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "flaggedAlbum"
+        },
+        {
+          "address": "0x100618f8e",
+          "references": [
+            {
+              "from": "0x1007ef638",
+              "function": null
+            },
+            {
+              "from": "0x1007ef6d0",
+              "function": null
+            }
+          ],
+          "section": "__objc_classname",
+          "text": "RKQueryFlagged"
+        }
+      ],
+      "total": 38
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "38 strings match \"rotateLeft|rotateRight|RotateClockwise|RotateCounter|flagged|a_toggleFlag|noLiftedAdjustmentsMessage|RKLiftStampToolReplaceOnStamp\"."
+  },
+  {
+    "authority": "original-files",
+    "confidence": "derived",
+    "coverage": {
+      "examined": 2,
+      "status": "complete",
+      "total": 2
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_9e7db8327c2733f7676c271c568a245ea27161bf81a0cfcdb2e2d0fa8bb3d050",
+    "limitations": [
+      {
+        "code": "static_references",
+        "message": "references made through computed pointers at run time are not seen"
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x100590e2e"
+      }
+    ],
+    "operation": "native_xrefs_list",
+    "params": {
+      "address": "0x100590e2e",
+      "limit": 50,
+      "offset": 0
+    },
+    "result": {
+      "address": "0x100590e2e",
+      "name": null,
+      "references_from": [],
+      "references_to": [
+        {
+          "from": "0x100785710",
+          "function": null,
+          "kind": "string"
+        },
+        {
+          "from": "0x1008686c0",
+          "function": null,
+          "kind": "string"
+        }
+      ],
+      "total_to": 2
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "0x100590e2e is referenced from 2 places and refers to 0."
+  },
+  {
+    "authority": "original-files",
+    "confidence": "derived",
+    "coverage": {
+      "examined": 3,
+      "status": "complete",
+      "total": 3
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_be08976e3a233b0867c4f9c9cb6edc92c13065237101b3adddad5ab168af242c",
+    "limitations": [
+      {
+        "code": "static_references",
+        "message": "references made through computed pointers at run time are not seen"
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x1008686c0"
+      }
+    ],
+    "operation": "native_xrefs_list",
+    "params": {
+      "address": "0x1008686c0",
+      "limit": 50,
+      "offset": 0
+    },
+    "result": {
+      "address": "0x1008686c0",
+      "name": null,
+      "references_from": [
+        {
+          "kind": "string",
+          "name": null,
+          "to": "0x100590e2e"
+        }
+      ],
+      "references_to": [
+        {
+          "from": "0x1000145bd",
+          "function": "-[RKBrowserController a_setFlaggedFilter:]",
+          "kind": "data"
+        },
+        {
+          "from": "0x1001b2cef",
+          "function": "-[RKFullScreenView a_setFlaggedFilter:]",
+          "kind": "data"
+        },
+        {
+          "from": "0x10035e69a",
+          "function": "-[RKFullScreenGridView a_setFlaggedFilter:]",
+          "kind": "data"
+        }
+      ],
+      "total_to": 3
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "0x1008686c0 is referenced from 3 places and refers to 1."
+  },
+  {
+    "authority": "original-files",
+    "confidence": "derived",
+    "coverage": {
+      "examined": 0,
+      "status": "complete",
+      "total": 0
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_4cfbfa06a7c533faf150ea6e60759044def8ad1abd5f90fd434ca7fc0e530db5",
+    "limitations": [
+      {
+        "code": "static_references",
+        "message": "references made through computed pointers at run time are not seen"
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x1008a70b8"
+      }
+    ],
+    "operation": "native_xrefs_list",
+    "params": {
+      "address": "0x1008a70b8",
+      "limit": 50,
+      "offset": 0
+    },
+    "result": {
+      "address": "0x1008a70b8",
+      "name": null,
+      "references_from": [
+        {
+          "kind": "string",
+          "name": null,
+          "to": "0x100558a51"
+        }
+      ],
+      "references_to": [],
+      "total_to": 0
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "0x1008a70b8 is referenced from 0 places and refers to 1."
+  },
+  {
+    "authority": "original-files",
+    "confidence": "derived",
+    "coverage": {
+      "examined": 0,
+      "status": "complete",
+      "total": 0
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_df9dd3f5e937869f6701fe82d26cab3ca91a9469d0e4c78ac807d2193f5c1e60",
+    "limitations": [
+      {
+        "code": "static_references",
+        "message": "references made through computed pointers at run time are not seen"
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x1008a70d8"
+      }
+    ],
+    "operation": "native_xrefs_list",
+    "params": {
+      "address": "0x1008a70d8",
+      "limit": 50,
+      "offset": 0
+    },
+    "result": {
+      "address": "0x1008a70d8",
+      "name": null,
+      "references_from": [
+        {
+          "kind": "string",
+          "name": null,
+          "to": "0x100558a68"
+        }
+      ],
+      "references_to": [],
+      "total_to": 0
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "0x1008a70d8 is referenced from 0 places and refers to 1."
+  },
+  {
+    "authority": "original-files",
+    "carries_target_content": true,
+    "confidence": "inferred",
+    "coverage": {
+      "status": "unknown"
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_1bee585cb1c8336d59e662c1b0bdc56944ac9401c5c81b355fc2684e9e081320",
+    "limitations": [
+      {
+        "code": "register_level",
+        "message": "variables are machine registers and stack slots; types are not recovered"
+      },
+      {
+        "code": "calling_convention_assumed",
+        "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+      },
+      {
+        "code": "conditions_from_flags",
+        "message": "branch conditions are rebuilt from the last compare and may be approximate"
+      },
+      {
+        "code": "deep_engine_unavailable",
+        "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x1000145ae"
+      }
+    ],
+    "operation": "native_function_pseudocode",
+    "params": {
+      "function": "0x1000145ae"
+    },
+    "result": {
+      "calls": [],
+      "engine": "clean-room lifter",
+      "entry": "0x1000145ae",
+      "function": "-[RKBrowserController a_setFlaggedFilter:]",
+      "gotos": 0,
+      "inline_asm": 0,
+      "pseudo_code": "int64_t -[RKBrowserController a_setFlaggedFilter:](int64_t rdi)\n{\n    rax = *(uint64_t*)0x1008e38c8;\n    rdi = *(uint64_t*)(rdi + rax);\n    rsi = *(uint64_t*)0x1008686c0;\n    return _objc_msgSend(); /* tail call */\n}\n",
+      "signature": "int64_t -[RKBrowserController a_setFlaggedFilter:](int64_t rdi)",
+      "strings": [],
+      "structured": true
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "Pseudo-C for -[RKBrowserController a_setFlaggedFilter:] (7 lines)."
+  },
+  {
+    "authority": "original-files",
+    "carries_target_content": true,
+    "confidence": "inferred",
+    "coverage": {
+      "status": "unknown"
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_13b48217bfad429241772433d90d1f672ae57bfd1b3257c896bfcce60bfd310f",
+    "limitations": [
+      {
+        "code": "register_level",
+        "message": "variables are machine registers and stack slots; types are not recovered"
+      },
+      {
+        "code": "calling_convention_assumed",
+        "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+      },
+      {
+        "code": "conditions_from_flags",
+        "message": "branch conditions are rebuilt from the last compare and may be approximate"
+      },
+      {
+        "code": "indirect_jumps_unresolved",
+        "message": "some indirect jumps were not resolved, so code may be missing"
+      },
+      {
+        "code": "deep_engine_unavailable",
+        "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x100157c47"
+      }
+    ],
+    "operation": "native_function_pseudocode",
+    "params": {
+      "function": "0x100157c47"
+    },
+    "result": {
+      "calls": [
+        "0x100888720",
+        "0x1008887f0",
+        "_objc_msgSend",
+        "r15",
+        "rax"
+      ],
+      "engine": "clean-room lifter",
+      "entry": "0x100157c47",
+      "function": "-[RKFilterFieldController setFlaggedFilter]",
+      "gotos": 0,
+      "inline_asm": 0,
+      "pseudo_code": "int64_t -[RKFilterFieldController setFlaggedFilter](int64_t rdi)\n{\n    r14 = rdi;\n    rax = _objc_msgSend(rdi, *(uint64_t*)0x1008735d0, 0x16, 1);\n    rbx = rax;\n    if (rbx == 0) {\n        rax = (*0x100888720)(*(uint64_t*)0x1008899a8, &data_100888720);\n        rbx = rax;\n        r15 = _objc_msgSend@got;\n        (*r15)(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100869190, 1);\n        rcx = _RKVersionIsFlagged@got;\n        stack_0 = 0;\n        rax = (*r15)(rbx, *(uint64_t*)0x1008728d0, 0x16, *(uint64_t*)(rcx), 5, rax);\n        rax = (*0x1008887f0)(rax, &data_1008887f0);\n        rbx = rax;\n        (*r15)(rbx, *(uint64_t*)0x10086b040, 1);\n        rax = *(uint64_t*)0x1008e69f0;\n        rax = (*r15)(*(uint64_t*)(r14 + rax), *(uint64_t*)0x100868a50);\n        (*r15)(rax, *(uint64_t*)0x100872398, rbx);\n    } else {\n        r15 = _objc_msgSend@got;\n        (*r15)(rbx, *(uint64_t*)0x100873540);\n        (*r15)(rbx, *(uint64_t*)0x100873548, 5);\n        rax = (*r15)(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100869190, 1);\n        (*r15)(rbx, *(uint64_t*)0x100873530, rax);\n        (*r15)(rbx, *(uint64_t*)0x10086b040, 1);\n    }\n    rbx = _objc_msgSend@got;\n    rax = rbx;\n    (*rax)(r14, *(uint64_t*)0x1008735b8);\n    rax = *(uint64_t*)0x1008e6a08;\n    rdi = *(uint64_t*)(r14 + rax);\n    rsi = *(uint64_t*)0x1008735b0;\n    rax = rbx;\n    goto *rax; /* computed jump */\n}\n",
+      "signature": "int64_t -[RKFilterFieldController setFlaggedFilter](int64_t rdi)",
+      "strings": [],
+      "structured": true
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "Pseudo-C for -[RKFilterFieldController setFlaggedFilter] (36 lines)."
+  },
+  {
+    "authority": "original-files",
+    "carries_target_content": true,
+    "confidence": "inferred",
+    "coverage": {
+      "status": "unknown"
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_7dbb7772831bb930a7ea9a02a9eeead6f333315637461db77c2e3024081b84ec",
+    "limitations": [
+      {
+        "code": "register_level",
+        "message": "variables are machine registers and stack slots; types are not recovered"
+      },
+      {
+        "code": "calling_convention_assumed",
+        "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+      },
+      {
+        "code": "conditions_from_flags",
+        "message": "branch conditions are rebuilt from the last compare and may be approximate"
+      },
+      {
+        "code": "indirect_jumps_unresolved",
+        "message": "some indirect jumps were not resolved, so code may be missing"
+      },
+      {
+        "code": "deep_engine_unavailable",
+        "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x1000584e5"
+      }
+    ],
+    "operation": "native_function_pseudocode",
+    "params": {
+      "function": "0x1000584e5"
+    },
+    "result": {
+      "calls": [
+        "0x100888750",
+        "rax"
+      ],
+      "engine": "clean-room lifter",
+      "entry": "0x1000584e5",
+      "function": "+[RKWorkspaceController toggleFlagOnVersions:]",
+      "gotos": 0,
+      "inline_asm": 0,
+      "pseudo_code": "int64_t +[RKWorkspaceController toggleFlagOnVersions:]()\n{\n    rbx = _objc_msgSend@got;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)0x100888bb8, *(uint64_t*)0x10086b9f0);\n    r12 = rax;\n    r15 = _NSApp@got;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)(r15), *(uint64_t*)0x100869928);\n    r14 = rax;\n    rax = (*0x100888750)(*(uint64_t*)0x100889020, &data_100888750);\n    rax = rbx;\n    (*rax)(r14, *(uint64_t*)0x100869ea8, rax, *(uint64_t*)0x100869ea0, r12);\n    rax = rbx;\n    rax = (*rax)(r12, *(uint64_t*)0x10086b9f8);\n    r12l = al;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)(r15), *(uint64_t*)0x100869928);\n    r14 = rax;\n    rax = &data_1008a95e8;\n    rdx = &data_1008a9608;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, rax);\n    rsi = *(uint64_t*)0x100869eb0;\n    rdi = r14;\n    rdx = rax;\n    rax = rbx;\n    goto *rax; /* computed jump */\n}\n",
+      "signature": "int64_t +[RKWorkspaceController toggleFlagOnVersions:]()",
+      "strings": [],
+      "structured": true
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "Pseudo-C for +[RKWorkspaceController toggleFlagOnVersions:] (29 lines)."
+  },
+  {
+    "authority": "original-files",
+    "confidence": "observed",
+    "coverage": {
+      "examined": 6,
+      "status": "complete",
+      "total": 6
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_1a2d70f50d90c796b3f8f5d717167bcb36cca8c915656808d22b54e62634fcdf",
+    "limitations": [
+      {
+        "code": "data_sections_only",
+        "message": "only strings stored in the file are searched (absence is not proof)"
+      }
+    ],
+    "links": [],
+    "locations": [],
+    "operation": "native_strings_find",
+    "params": {
+      "case_sensitive": false,
+      "limit": 40,
+      "mode": "regex",
+      "offset": 0,
+      "pattern": "RKCropStraightenGestureTracker|setScriptingMainRating:|changeReject:|setRatingFilterIndex:|noLiftedAdjustmentsMessage"
+    },
+    "result": {
+      "matches": [
+        {
+          "address": "0x10055a0c8",
+          "references": [
+            {
+              "from": "0x1008a89f8",
+              "function": null
+            }
+          ],
+          "section": "__cstring",
+          "text": "noLiftedAdjustmentsMessage"
+        },
+        {
+          "address": "0x100590dfe",
+          "references": [
+            {
+              "from": "0x1007856e0",
+              "function": null
+            },
+            {
+              "from": "0x1008686b0",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "setRatingFilterIndex:"
+        },
+        {
+          "address": "0x1005c48c2",
+          "references": [
+            {
+              "from": "0x10079fb48",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "setScriptingMainRating:"
+        },
+        {
+          "address": "0x1005fbecf",
+          "references": [
+            {
+              "from": "0x100825698",
+              "function": null
+            }
+          ],
+          "section": "__objc_methname",
+          "text": "changeReject:"
+        },
+        {
+          "address": "0x10061a6cd",
+          "references": [
+            {
+              "from": "0x1008247a8",
+              "function": null
+            },
+            {
+              "from": "0x1008249d0",
+              "function": null
+            }
+          ],
+          "section": "__objc_classname",
+          "text": "RKCropStraightenGestureTracker"
+        },
+        {
+          "address": "0x10062b06d",
+          "references": [
+            {
+              "from": "0x100824188",
+              "function": null
+            }
+          ],
+          "section": "__objc_methtype",
+          "text": "@\"RKCropStraightenGestureTracker\""
+        }
+      ],
+      "total": 6
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "6 strings match \"RKCropStraightenGestureTracker|setScriptingMainRating:|changeReject:|setRatingFilterIndex:|noLiftedAdjustmentsMessage\"."
+  },
+  {
+    "authority": "original-files",
+    "confidence": "derived",
+    "coverage": {
+      "examined": 1,
+      "status": "complete",
+      "total": 1
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_af1f854f70ab516b27949eb61de83009a7f5a665c62880a75571349449664d6e",
+    "limitations": [
+      {
+        "code": "static_references",
+        "message": "references made through computed pointers at run time are not seen"
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x1008a89e8"
+      }
+    ],
+    "operation": "native_xrefs_list",
+    "params": {
+      "address": "0x1008a89e8",
+      "limit": 30,
+      "offset": 0
+    },
+    "result": {
+      "address": "0x1008a89e8",
+      "name": null,
+      "references_from": [],
+      "references_to": [
+        {
+          "from": "0x100049441",
+          "function": "-[RKSelectionMgr a_liftAdjustments:]",
+          "kind": "data"
+        }
+      ],
+      "total_to": 1
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "0x1008a89e8 is referenced from 1 places and refers to 0."
+  },
+  {
+    "authority": "original-files",
+    "carries_target_content": true,
+    "confidence": "inferred",
+    "coverage": {
+      "status": "unknown"
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_21c1f0b83c6f022e8ec81d4edea45f9531620d90f4c7fe89e9f795d103ce6930",
+    "limitations": [
+      {
+        "code": "register_level",
+        "message": "variables are machine registers and stack slots; types are not recovered"
+      },
+      {
+        "code": "calling_convention_assumed",
+        "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+      },
+      {
+        "code": "conditions_from_flags",
+        "message": "branch conditions are rebuilt from the last compare and may be approximate"
+      },
+      {
+        "code": "inline_asm",
+        "message": "61 instructions have no C rule and are shown as __asm(...)"
+      },
+      {
+        "code": "deep_engine_unavailable",
+        "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x10042f5e6"
+      }
+    ],
+    "operation": "native_function_pseudocode",
+    "params": {
+      "function": "0x10042f5e6"
+    },
+    "result": {
+      "calls": [
+        "_NSEqualSizes@stub",
+        "_floor@stub",
+        "_objc_msgSend",
+        "_objc_msgSend_stret@stub",
+        "r12",
+        "r13"
+      ],
+      "engine": "clean-room lifter",
+      "entry": "0x10042f5e6",
+      "function": "-[RKCropStraightenGestureTracker rotate:]",
+      "gotos": 0,
+      "inline_asm": 61,
+      "pseudo_code": "int64_t -[RKCropStraightenGestureTracker rotate:](int64_t rdi, int64_t rdx)\n{\n    r15 = rdx;\n    rbx = rdi;\n    r14 = _NSApp@got;\n    rax = _objc_msgSend(*(uint64_t*)(r14), *(uint64_t*)0x100868710);\n    if (al != 0) {\n        rax = _objc_msgSend(*(uint64_t*)(r14), *(uint64_t*)0x100868c50);\n        if (eax == 4) {\n            rax = *(uint64_t*)0x1008ee828;\n            rax = _objc_msgSend(*(uint64_t*)0x100889ec8, *(uint64_t*)0x100882408, *(uint64_t*)(rbx + rax), 1);\n            r14 = rax;\n            if (r14 != 0) {\n                r13 = *(uint64_t*)0x1008ee850;\n                if (*(uint8_t*)(rbx + r13) == 0) {\n                    r12 = _objc_msgSend@got;\n                    (*r12)(r14, *(uint64_t*)0x100876968, 1);\n                    (*r12)(r14, *(uint64_t*)0x1008769b0);\n                    *(uint8_t*)(rbx + r13) = 1;\n                }\n            }\n            r13 = _objc_msgSend@got;\n            (*r13)(r15, *(uint64_t*)0x1008696d8);\n            __asm(\"movss [rbp-0xb8], xmm0\");\n            rax = _kDGOperationStraighten_InputRotation@got;\n            r15 = *(uint64_t*)(rax);\n            rax = (*r13)(r14, *(uint64_t*)0x100868770, r15);\n            (*r13)(rax, *(uint64_t*)0x1008683a8);\n            __asm(\"cvtss2sd xmm1, [rbp-0xb8]\");\n            __asm(\"movsd xmm2, [0x100551808]\");\n            __asm(\"addsd xmm1, xmm0\");\n            __asm(\"ucomisd xmm2, xmm1\");\n            if (xmm2 <= 0 /* unsigned */) {\n                __asm(\"ucomisd xmm1, [0x100552090]\");\n                __asm(\"movapd xmm2, xmm1\");\n                if (xmm1 > 0 /* unsigned */) {\n                    __asm(\"movsd xmm2, [0x100552090]\");\n                }\n            }\n            __asm(\"movsd [rbp-0xc0], xmm2\");\n            __asm(\"movapd xmm0, xmm2\");\n            rax = (*r13)(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100868390);\n            (*r13)(r14, *(uint64_t*)0x100867e98, rax, r15);\n            rax = _NSZeroSize@got;\n            r14 = *(uint64_t*)0x1008ee870;\n            __asm(\"movsd xmm0, [rbx+r14]\");\n            __asm(\"movsd xmm1, [rbx+r14+8]\");\n            __asm(\"movsd xmm2, [rax]\");\n            __asm(\"movsd xmm3, [rax+8]\");\n            rax = _NSEqualSizes@stub();\n            if (al == 0) {\n                rax = *(uint64_t*)0x1008ee860;\n                *(uint8_t*)(rbx + rax) = 1;\n                rax = *(uint64_t*)0x1008ee868;\n                __asm(\"movsd xmm0, [rbx+rax]\");\n                __asm(\"movsd xmm1, [rbx+rax+8]\");\n                r15 = *(uint64_t*)0x1008ee828;\n                (*r13)(*(uint64_t*)(rbx + r15), *(uint64_t*)0x100882498);\n                __asm(\"movsd [rbp-0xd8], xmm1\");\n                __asm(\"movsd xmm2, [rbx+r14]\");\n                __asm(\"movsd [rbp-0xd0], xmm2\");\n                __asm(\"movsd xmm1, [rbx+r14+8]\");\n                __asm(\"movsd [rbp-0xb8], xmm1\");\n                __asm(\"movaps xmm1, xmm2\");\n                __asm(\"mulsd xmm1, [0x10054fe78]\");\n                __asm(\"subsd xmm0, xmm1\");\n                _floor@stub();\n                __asm(\"movsd [rbp-0xe0], xmm0\");\n                (*r13)(*(uint64_t*)(rbx + r15), *(uint64_t*)0x100869e70);\n                __asm(\"movdqa xmm1, [0x1005545e0]\");\n                __asm(\"movapd xmm0, [0x1005545f0]\");\n                __asm(\"xorps xmm3, xmm3\");\n                rcx = *(uint64_t*)0x1008ee840;\n                __asm(\"movsd xmm2, [rbx+rcx]\");\n                __asm(\"movsd [rbp-0xc8], xmm2\");\n                __asm(\"movaps [rbp-0x90], xmm3\");\n                __asm(\"movq xmm2, rax\");\n                __asm(\"punpckldq xmm2, xmm1\");\n                __asm(\"subpd xmm2, xmm0\");\n                __asm(\"haddpd xmm2, xmm2\");\n                __asm(\"movlpd [rbp-0x80], xmm2\");\n                __asm(\"movq xmm2, rdx\");\n                __asm(\"punpckldq xmm2, xmm1\");\n                __asm(\"subpd xmm2, xmm0\");\n                __asm(\"haddpd xmm2, xmm2\");\n                __asm(\"movlpd [rbp-0x78], xmm2\");\n                __asm(\"movsd xmm1, [0x10054fe78]\");\n                __asm(\"mulsd xmm1, [rbp-0xb8]\");\n                __asm(\"movsd xmm0, [rbp-0xd8]\");\n                __asm(\"subsd xmm0, xmm1\");\n                __asm(\"movsd xmm1, [rbp-0xe0]\");\n                __asm(\"movsd [rbp-0x70], xmm1\");\n                _floor@stub();\n                __asm(\"movsd [rbp-0x68], xmm0\");\n                __asm(\"movsd xmm0, [rbp-0xd0]\");\n                __asm(\"movsd [rbp-0x60], xmm0\");\n                __asm(\"movsd xmm0, [rbp-0xb8]\");\n                __asm(\"movsd [rbp-0x58], xmm0\");\n                rsi = *(uint64_t*)0x100888bb8;\n                if (rsi == 0) {\n                    __asm(\"xorps xmm0, xmm0\");\n                    __asm(\"movaps [rbp-0x40], xmm0\");\n                    __asm(\"movaps [rbp-0x50], xmm0\");\n                } else {\n                    r8 = var_60;\n                    r9 = var_58;\n                    r10 = var_90;\n                    rax = var_88;\n                    rcx = var_80;\n                    rdi = var_78;\n                    stack_38 = rdi;\n                    stack_30 = rcx;\n                    stack_28 = rax;\n                    stack_20 = r10;\n                    stack_18 = r9;\n                    stack_10 = r8;\n                    rax = var_70;\n                    rcx = var_68;\n                    stack_8 = rcx;\n                    stack_0 = rax;\n                    __asm(\"movsd xmm0, [rbp-0xc0]\");\n                    __asm(\"movsd xmm1, [rbp-0xc8]\");\n                    _objc_msgSend_stret@stub(&var_50, rsi, *(uint64_t*)0x10087d998);\n                }\n                __asm(\"movaps xmm0, [rbp-0x50]\");\n                __asm(\"movaps xmm1, [rbp-0x40]\");\n                __asm(\"movaps [rbp-0xa0], xmm1\");\n                __asm(\"movaps [rbp-0xb0], xmm0\");\n                rax = var_98;\n                stack_18 = rax;\n                rax = var_a0;\n                stack_10 = rax;\n                rax = var_b0;\n                rcx = var_a8;\n                stack_8 = rcx;\n                stack_0 = rax;\n                _objc_msgSend(rbx, *(uint64_t*)0x1008824b0, 0);\n                rax = *(uint64_t*)0x1008ee858;\n                rcx = var_98;\n                *(uint64_t*)(rbx + rax + 0x18) = rcx;\n                rcx = var_a0;\n                *(uint64_t*)(rbx + rax + 16) = rcx;\n                rcx = var_b0;\n                rdx = var_a8;\n                *(uint64_t*)(rbx + rax + 8) = rdx;\n                *(uint64_t*)(rbx + rax) = rcx;\n            }\n        }\n    }\n    return rax;\n}\n",
+      "signature": "int64_t -[RKCropStraightenGestureTracker rotate:](int64_t rdi, int64_t rdx)",
+      "strings": [],
+      "structured": true
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "Pseudo-C for -[RKCropStraightenGestureTracker rotate:] (151 lines)."
+  },
+  {
+    "authority": "original-files",
+    "carries_target_content": true,
+    "confidence": "inferred",
+    "coverage": {
+      "status": "unknown"
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_c28bfd9591925afb7e0441431abea970f5580f99eb867213e88b0b036fd89341",
+    "limitations": [
+      {
+        "code": "register_level",
+        "message": "variables are machine registers and stack slots; types are not recovered"
+      },
+      {
+        "code": "calling_convention_assumed",
+        "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+      },
+      {
+        "code": "conditions_from_flags",
+        "message": "branch conditions are rebuilt from the last compare and may be approximate"
+      },
+      {
+        "code": "deep_engine_unavailable",
+        "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x100049366"
+      }
+    ],
+    "operation": "native_function_pseudocode",
+    "params": {
+      "function": "0x100049366"
+    },
+    "result": {
+      "calls": [
+        "r13"
+      ],
+      "engine": "clean-room lifter",
+      "entry": "0x100049366",
+      "function": "-[RKSelectionMgr a_liftAdjustments:]",
+      "gotos": 0,
+      "inline_asm": 0,
+      "pseudo_code": "int64_t -[RKSelectionMgr a_liftAdjustments:](int64_t rdi)\n{\n    r14 = rdi;\n    r13 = _objc_msgSend@got;\n    rax = (*r13)(*(uint64_t*)0x100888c88, *(uint64_t*)0x1008697b8);\n    rbx = rax;\n    rax = *(uint64_t*)0x1008e3ce8;\n    (*r13)(rbx, *(uint64_t*)0x10086af20, *(uint64_t*)(r14 + rax), 0, 1, 0);\n    rax = (*r13)(rbx, *(uint64_t*)0x10086a650);\n    if (al == 0) {\n        rax = (*r13)(*(uint64_t*)0x100888998, *(uint64_t*)0x100867e18);\n        r14 = &data_1008a89a8;\n        rax = (*r13)(rax, *(uint64_t*)0x100867e20, r14);\n        if (al == 0) {\n            r15 = *(uint64_t*)0x100888bc8;\n            rax = (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a75c8);\n            r12 = rax;\n            rax = (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a89c8);\n            rbx = rax;\n            (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a89e8);\n            stack_0 = r14;\n            (*r13)(r15, *(uint64_t*)0x10086abc8, r12, 0, rbx, rax);\n        }\n    }\n    return rax;\n}\n",
+      "signature": "int64_t -[RKSelectionMgr a_liftAdjustments:](int64_t rdi)",
+      "strings": [],
+      "structured": true
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "Pseudo-C for -[RKSelectionMgr a_liftAdjustments:] (26 lines)."
+  },
+  {
+    "authority": "original-files",
+    "carries_target_content": true,
+    "confidence": "inferred",
+    "coverage": {
+      "status": "unknown"
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_985011a10bf1628babcf021296a083d74eeb999e81b9123018465f540f4b4f0d",
+    "limitations": [
+      {
+        "code": "register_level",
+        "message": "variables are machine registers and stack slots; types are not recovered"
+      },
+      {
+        "code": "calling_convention_assumed",
+        "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+      },
+      {
+        "code": "conditions_from_flags",
+        "message": "branch conditions are rebuilt from the last compare and may be approximate"
+      },
+      {
+        "code": "indirect_jumps_unresolved",
+        "message": "some indirect jumps were not resolved, so code may be missing"
+      },
+      {
+        "code": "deep_engine_unavailable",
+        "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x1001c35de"
+      }
+    ],
+    "operation": "native_function_pseudocode",
+    "params": {
+      "function": "0x1001c35de"
+    },
+    "result": {
+      "calls": [
+        "rax"
+      ],
+      "engine": "clean-room lifter",
+      "entry": "0x1001c35de",
+      "function": "-[RKScriptingVersion setScriptingMainRating:]",
+      "gotos": 0,
+      "inline_asm": 0,
+      "pseudo_code": "int64_t -[RKScriptingVersion setScriptingMainRating:](int64_t rdx)\n{\n    rax = _kMinRating@got;\n    rbx = *(uint64_t*)(rax);\n    if (rbx <= rdx) {\n        rax = _kMaxRating@got;\n        rax = *(uint64_t*)(rax);\n        rdx = rax;\n        rbx = rdx;\n    }\n    r14 = _objc_msgSend@got;\n    rax = r14;\n    rax = (*rax)(rdi, *(uint64_t*)0x1008759e8);\n    rsi = *(uint64_t*)0x10086ed10;\n    rdi = rax;\n    rdx = rbx;\n    rax = r14;\n    goto *rax; /* computed jump */\n}\n",
+      "signature": "int64_t -[RKScriptingVersion setScriptingMainRating:](int64_t rdx)",
+      "strings": [],
+      "structured": true
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "Pseudo-C for -[RKScriptingVersion setScriptingMainRating:] (19 lines)."
+  },
+  {
+    "authority": "original-files",
+    "carries_target_content": true,
+    "confidence": "inferred",
+    "coverage": {
+      "status": "unknown"
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_f75d430788a434ecffb3b178c05046d59b248ef53d0b37949a8a6dcf89f716f8",
+    "limitations": [
+      {
+        "code": "register_level",
+        "message": "variables are machine registers and stack slots; types are not recovered"
+      },
+      {
+        "code": "calling_convention_assumed",
+        "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+      },
+      {
+        "code": "conditions_from_flags",
+        "message": "branch conditions are rebuilt from the last compare and may be approximate"
+      },
+      {
+        "code": "indirect_jumps_unresolved",
+        "message": "some indirect jumps were not resolved, so code may be missing"
+      },
+      {
+        "code": "deep_engine_unavailable",
+        "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x1004320d4"
+      }
+    ],
+    "operation": "native_function_pseudocode",
+    "params": {
+      "function": "0x1004320d4"
+    },
+    "result": {
+      "calls": [
+        "rax"
+      ],
+      "engine": "clean-room lifter",
+      "entry": "0x1004320d4",
+      "function": "-[RKMetadataRatingItemView changeReject:]",
+      "gotos": 0,
+      "inline_asm": 0,
+      "pseudo_code": "int64_t -[RKMetadataRatingItemView changeReject:](int64_t rdi, int64_t rdx)\n{\n    r14 = rdi;\n    r15 = *(uint64_t*)0x1008889d0;\n    rbx = _objc_msgSend@got;\n    rax = rbx;\n    rax = (*rax)(rdx, *(uint64_t*)0x10086e4f0);\n    rcx = -1;\n    edx = 0;\n    rax = rbx;\n    rax = (*rax)(r15, *(uint64_t*)0x100869190, rcx);\n    rsi = *(uint64_t*)0x100873a20;\n    rdi = r14;\n    rdx = rax;\n    rax = rbx;\n    goto *rax; /* computed jump */\n}\n",
+      "signature": "int64_t -[RKMetadataRatingItemView changeReject:](int64_t rdi, int64_t rdx)",
+      "strings": [],
+      "structured": true
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "Pseudo-C for -[RKMetadataRatingItemView changeReject:] (17 lines)."
+  },
+  {
+    "authority": "original-files",
+    "carries_target_content": true,
+    "confidence": "inferred",
+    "coverage": {
+      "status": "unknown"
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_80724a82ed999943771eae99a1526f87df36086a5ab66234bd4a445db0d16aa2",
+    "limitations": [
+      {
+        "code": "register_level",
+        "message": "variables are machine registers and stack slots; types are not recovered"
+      },
+      {
+        "code": "calling_convention_assumed",
+        "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+      },
+      {
+        "code": "conditions_from_flags",
+        "message": "branch conditions are rebuilt from the last compare and may be approximate"
+      },
+      {
+        "code": "unstructured_flow",
+        "message": "1 gotos remain where the control flow isn't a simple if/loop"
+      },
+      {
+        "code": "indirect_jumps_unresolved",
+        "message": "some indirect jumps were not resolved, so code may be missing"
+      },
+      {
+        "code": "deep_engine_unavailable",
+        "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x100157a19"
+      }
+    ],
+    "operation": "native_function_pseudocode",
+    "params": {
+      "function": "0x100157a19"
+    },
+    "result": {
+      "calls": [
+        "_objc_msgSend",
+        "r14",
+        "rax"
+      ],
+      "engine": "clean-room lifter",
+      "entry": "0x100157a19",
+      "function": "-[RKFilterFieldController setRatingFilterIndex:]",
+      "gotos": 1,
+      "inline_asm": 0,
+      "pseudo_code": "int64_t -[RKFilterFieldController setRatingFilterIndex:](int64_t rdi, int64_t rdx)\n{\n    r14 = rdx;\n    rbx = rdi;\n    rax = _objc_msgSend(rdi, *(uint64_t*)0x1008735d0, 5, 1);\n    r15 = rax;\n    if (r15 == 0) {\n        rsi = *(uint64_t*)0x1008735b8;\n        rdi = rbx;\n        return _objc_msgSend(); /* tail call */\n    } else {\n        var_30 = rbx;\n        rcx = r14 - 1;\n        if (rcx > 7 /* unsigned */) {\n            r13l = 1;\n            ebx = 8;\n            r12d = 0;\nlabel_100157abc:\n            r14 = _objc_msgSend@got;\n            (*r14)(r15, *(uint64_t*)0x100873540);\n            (*r14)(r15, *(uint64_t*)0x100873548, rbx);\n            rax = (*r14)(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100869190, r12);\n            (*r14)(r15, *(uint64_t*)0x100873530, rax);\n        } else {\n            rcx <<= 3;\n            rax = 0x101000101010101;\n            rax >>= cl;\n            r13l = 0;\n            if (al != 0) {\n                rcx = &data_1005515d0;\n                r12 = *(uint64_t*)(rcx + r14 * 8 - 8);\n                rcx = &data_100551590;\n                rbx = *(uint64_t*)(rcx + r14 * 8 - 8);\n                r13l = al;\n                goto label_100157abc;\n            }\n        }\n        r14 = _objc_msgSend@got;\n        rax = r14;\n        (*rax)(r15, *(uint64_t*)0x10086b040, r13l);\n        rbx = var_30;\n        rax = r14;\n        (*rax)(rbx, *(uint64_t*)0x1008735b8);\n        rax = *(uint64_t*)0x1008e6a08;\n        rdi = *(uint64_t*)(rbx + rax);\n        rsi = *(uint64_t*)0x1008735b0;\n        rax = r14;\n        goto *rax; /* computed jump */\n    }\n}\n",
+      "signature": "int64_t -[RKFilterFieldController setRatingFilterIndex:](int64_t rdi, int64_t rdx)",
+      "strings": [],
+      "structured": false
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "Pseudo-C for -[RKFilterFieldController setRatingFilterIndex:] (50 lines, partly unstructured)."
+  },
+  {
+    "authority": "original-files",
+    "confidence": "observed",
+    "coverage": {
+      "examined": 196,
+      "status": "complete",
+      "total": 196
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_e120649baf1ea97117849e9ff15227a88a1357503acaa127f04e6093a2feb462",
+    "limitations": [],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x10042f5e6"
+      }
+    ],
+    "operation": "native_function_disassemble",
+    "params": {
+      "function": "0x10042f5e6"
+    },
+    "result": {
+      "assembly": "-[RKCropStraightenGestureTracker rotate:]:\n  0x10042f5e6  55                   push rbp\n  0x10042f5e7  4889e5               mov rbp, rsp\n  0x10042f5ea  4157                 push r15\n  0x10042f5ec  4156                 push r14\n  0x10042f5ee  4155                 push r13\n  0x10042f5f0  4154                 push r12\n  0x10042f5f2  53                   push rbx\n  0x10042f5f3  4881ecf8000000       sub rsp, 0xf8\n  0x10042f5fa  4989d7               mov r15, rdx\n  0x10042f5fd  4889fb               mov rbx, rdi\n  0x10042f600  4c8b35f19e3000       mov r14, [0x1007394f8]  ; _NSApp@got\n  0x10042f607  498b3e               mov rdi, [r14]\n  0x10042f60a  488b35ff904300       mov rsi, [0x100868710]\n  0x10042f611  ff1591c73000         call qword ptr [0x10073bda8]  ; _objc_msgSend@got\n  0x10042f617  84c0                 test al, al\n  0x10042f619  0f848d030000         je 0x10042f9ac\nloc_10042f61f:\n  0x10042f61f  498b3e               mov rdi, [r14]\n  0x10042f622  488b3527964300       mov rsi, [0x100868c50]\n  0x10042f629  ff1579c73000         call qword ptr [0x10073bda8]  ; _objc_msgSend@got\n  0x10042f62f  83f804               cmp eax, 4\n  0x10042f632  0f8574030000         jne 0x10042f9ac\nloc_10042f638:\n  0x10042f638  488b05e9f14b00       mov rax, [0x1008ee828]\n  0x10042f63f  488b1403             mov rdx, [rbx+rax]\n  0x10042f643  488b35be2d4500       mov rsi, [0x100882408]\n  0x10042f64a  488b3d77a84500       mov rdi, [0x100889ec8]\n  0x10042f651  b901000000           mov ecx, 1\n  0x10042f656  ff154cc73000         call qword ptr [0x10073bda8]  ; _objc_msgSend@got\n  0x10042f65c  4989c6               mov r14, rax\n  0x10042f65f  4d85f6               test r14, r14\n  0x10042f662  7439                 je 0x10042f69d\nloc_10042f664:\n  0x10042f664  4c8b2de5f14b00       mov r13, [0x1008ee850]\n  0x10042f66b  42803c2b00           cmp byte ptr [rbx+r13], 0\n  0x10042f670  752b                 jne 0x10042f69d\nloc_10042f672:\n  0x10042f672  488b35ef724400       mov rsi, [0x100876968]\n  0x10042f679  4c8b2528c73000       mov r12, [0x10073bda8]  ; _objc_msgSend@got\n  0x10042f680  4c89f7               mov rdi, r14\n  0x10042f683  ba01000000           mov edx, 1\n  0x10042f688  41ffd4               call r12\n  0x10042f68b  488b351e734400       mov rsi, [0x1008769b0]\n  0x10042f692  4c89f7               mov rdi, r14\n  0x10042f695  41ffd4               call r12\n  0x10042f698  42c6042b01           mov byte ptr [rbx+r13], 1\nloc_10042f69d:\n  0x10042f69d  488b3534a04300       mov rsi, [0x1008696d8]\n  0x10042f6a4  4c8b2dfdc63000       mov r13, [0x10073bda8]  ; _objc_msgSend@got\n  0x10042f6ab  4c89ff               mov rdi, r15\n  0x10042f6ae  41ffd5               call r13\n  0x10042f6b1  f30f118548ffffff     movss [rbp-0xb8], xmm0\n  0x10042f6b9  488b35b0904300       mov rsi, [0x100868770]\n  0x10042f6c0  488b0551bf3000       mov rax, [0x10073b618]  ; _kDGOperationStraighten_InputRotation@got\n  0x10042f6c7  4c8b38               mov r15, [rax]\n  0x10042f6ca  4c89f7               mov rdi, r14\n  0x10042f6cd  4c89fa               mov rdx, r15\n  0x10042f6d0  41ffd5               call r13\n  0x10042f6d3  488b35ce8c4300       mov rsi, [0x1008683a8]\n  0x10042f6da  4889c7               mov rdi, rax\n  0x10042f6dd  41ffd5               call r13\n  0x10042f6e0  f30f5a8d48ffffff     cvtss2sd xmm1, [rbp-0xb8]\n  0x10042f6e8  f20f101518211200     movsd xmm2, [0x100551808]\n  0x10042f6f0  f20f58c8             addsd xmm1, xmm0\n  0x10042f6f4  660f2ed1             ucomisd xmm2, xmm1\n  0x10042f6f8  7716                 ja 0x10042f710\nloc_10042f6fa:\n  0x10042f6fa  660f2e0d8e291200     ucomisd xmm1, [0x100552090]\n  0x10042f702  660f28d1             movapd xmm2, xmm1\n  0x10042f706  7608                 jbe 0x10042f710\nloc_10042f708:\n  0x10042f708  f20f101580291200     movsd xmm2, [0x100552090]\nloc_10042f710:\n  0x10042f710  f20f119540ffffff     movsd [rbp-0xc0], xmm2\n  0x10042f718  488b35718c4300       mov rsi, [0x100868390]\n  0x10042f71f  488b3daa924500       mov rdi, [0x1008889d0]\n  0x10042f726  660f28c2             movapd xmm0, xmm2\n  0x10042f72a  41ffd5               call r13\n  0x10042f72d  488b3564874300       mov rsi, [0x100867e98]\n  0x10042f734  4c89f7               mov rdi, r14\n  0x10042f737  4889c2               mov rdx, rax\n  0x10042f73a  4c89f9               mov rcx, r15\n  0x10042f73d  41ffd5               call r13\n  0x10042f740  488b05a9a23000       mov rax, [0x1007399f0]  ; _NSZeroSize@got\n  0x10042f747  4c8b3522f14b00       mov r14, [0x1008ee870]\n  0x10042f74e  f2420f100433         movsd xmm0, [rbx+r14]\n  0x10042f754  f2420f104c3308       movsd xmm1, [rbx+r14+8]\n  0x10042f75b  f20f1010             movsd xmm2, [rax]\n  0x10042f75f  f20f105808           movsd xmm3, [rax+8]\n  0x10042f764  e8c7e31100           call 0x10054db30  ; _NSEqualSizes@stub\n  0x10042f769  84c0                 test al, al\n  0x10042f76b  0f853b020000         jne 0x10042f9ac\nloc_10042f771:\n  0x10042f771  488b05e8f04b00       mov rax, [0x1008ee860]\n  0x10042f778  c6040301             mov byte ptr [rbx+rax], 1\n  0x10042f77c  488b05e5f04b00       mov rax, [0x1008ee868]\n  0x10042f783  f20f100403           movsd xmm0, [rbx+rax]\n  0x10042f788  f20f104c0308         movsd xmm1, [rbx+rax+8]\n  0x10042f78e  4c8b3d93f04b00       mov r15, [0x1008ee828]\n  0x10042f795  4a8b3c3b             mov rdi, [rbx+r15]\n  0x10042f799  488b35f82c4500       mov rsi, [0x100882498]\n  0x10042f7a0  41ffd5               call r13\n  0x10042f7a3  f20f118d28ffffff     movsd [rbp-0xd8], xmm1\n  0x10042f7ab  f2420f101433         movsd xmm2, [rbx+r14]\n  0x10042f7b1  f20f119530ffffff     movsd [rbp-0xd0], xmm2\n  0x10042f7b9  f2420f104c3308       movsd xmm1, [rbx+r14+8]\n  0x10042f7c0  f20f118d48ffffff     movsd [rbp-0xb8], xmm1\n  0x10042f7c8  0f28ca               movaps xmm1, xmm2\n  0x10042f7cb  f20f590da5061200     mulsd xmm1, [0x10054fe78]\n  0x10042f7d3  f20f5cc1             subsd xmm0, xmm1\n  0x10042f7d7  e878e61100           call 0x10054de54  ; _floor@stub\n  0x10042f7dc  f20f118520ffffff     movsd [rbp-0xe0], xmm0\n  0x10042f7e4  4a8b3c3b             mov rdi, [rbx+r15]\n  0x10042f7e8  488b3581a64300       mov rsi, [0x100869e70]\n  0x10042f7ef  41ffd5               call r13\n  0x10042f7f2  660f6f0de64d1200     movdqa xmm1, [0x1005545e0]\n  0x10042f7fa  660f2805ee4d1200     movapd xmm0, [0x1005545f0]\n  0x10042f802  0f57db               xorps xmm3, xmm3\n  0x10042f805  488b0d34f04b00       mov rcx, [0x1008ee840]\n  0x10042f80c  f20f10140b           movsd xmm2, [rbx+rcx]\n  0x10042f811  f20f119538ffffff     movsd [rbp-0xc8], xmm2\n  0x10042f819  0f299d70ffffff       movaps [rbp-0x90], xmm3\n  0x10042f820  66480f6ed0           movq xmm2, rax\n  0x10042f825  660f62d1             punpckldq xmm2, xmm1\n  0x10042f829  660f5cd0             subpd xmm2, xmm0\n  0x10042f82d  660f7cd2             haddpd xmm2, xmm2\n  0x10042f831  660f135580           movlpd [rbp-0x80], xmm2\n  0x10042f836  66480f6ed2           movq xmm2, rdx\n  0x10042f83b  660f62d1             punpckldq xmm2, xmm1\n  0x10042f83f  660f5cd0             subpd xmm2, xmm0\n  0x10042f843  660f7cd2             haddpd xmm2, xmm2\n  0x10042f847  660f135588           movlpd [rbp-0x78], xmm2\n  0x10042f84c  f20f100d24061200     movsd xmm1, [0x10054fe78]\n  0x10042f854  f20f598d48ffffff     mulsd xmm1, [rbp-0xb8]\n  0x10042f85c  f20f108528ffffff     movsd xmm0, [rbp-0xd8]\n  0x10042f864  f20f5cc1             subsd xmm0, xmm1\n  0x10042f868  f20f108d20ffffff     movsd xmm1, [rbp-0xe0]\n  0x10042f870  f20f114d90           movsd [rbp-0x70], xmm1\n  0x10042f875  e8dae51100           call 0x10054de54  ; _floor@stub\n  0x10042f87a  f20f114598           movsd [rbp-0x68], xmm0\n  0x10042f87f  f20f108530ffffff     movsd xmm0, [rbp-0xd0]\n  0x10042f887  f20f1145a0           movsd [rbp-0x60], xmm0\n  0x10042f88c  f20f108548ffffff     movsd xmm0, [rbp-0xb8]\n  0x10042f894  f20f1145a8           movsd [rbp-0x58], xmm0\n  0x10042f899  488b3518934500       mov rsi, [0x100888bb8]\n  0x10042f8a0  4885f6               test rsi, rsi\n  0x10042f8a3  746f                 je 0x10042f914\nloc_10042f8a5:\n  0x10042f8a5  488b15ece04400       mov rdx, [0x10087d998]\n  0x10042f8ac  4c8b45a0             mov r8, [rbp-0x60]\n  0x10042f8b0  4c8b4da8             mov r9, [rbp-0x58]\n  0x10042f8b4  4c8b9570ffffff       mov r10, [rbp-0x90]\n  0x10042f8bb  488b8578ffffff       mov rax, [rbp-0x88]\n  0x10042f8c2  488b4d80             mov rcx, [rbp-0x80]\n  0x10042f8c6  488b7d88             mov rdi, [rbp-0x78]\n  0x10042f8ca  48897c2438           mov [rsp+0x38], rdi\n  0x10042f8cf  48894c2430           mov [rsp+0x30], rcx\n  0x10042f8d4  4889442428           mov [rsp+0x28], rax\n  0x10042f8d9  4c89542420           mov [rsp+0x20], r10\n  0x10042f8de  4c894c2418           mov [rsp+0x18], r9\n  0x10042f8e3  4c89442410           mov [rsp+0x10], r8\n  0x10042f8e8  488b4590             mov rax, [rbp-0x70]\n  0x10042f8ec  488b4d98             mov rcx, [rbp-0x68]\n  0x10042f8f0  48894c2408           mov [rsp+8], rcx\n  0x10042f8f5  48890424             mov [rsp], rax\n  0x10042f8f9  488d7db0             lea rdi, [rbp-0x50]\n  0x10042f8fd  f20f108540ffffff     movsd xmm0, [rbp-0xc0]\n  0x10042f905  f20f108d38ffffff     movsd xmm1, [rbp-0xc8]\n  0x10042f90d  e880e31100           call 0x10054dc92  ; _objc_msgSend_stret@stub\n  0x10042f912  eb0b                 jmp 0x10042f91f\nloc_10042f914:\n  0x10042f914  0f57c0               xorps xmm0, xmm0\n  0x10042f917  0f2945c0             movaps [rbp-0x40], xmm0\n  0x10042f91b  0f2945b0             movaps [rbp-0x50], xmm0\nloc_10042f91f:\n  0x10042f91f  0f2845b0             movaps xmm0, [rbp-0x50]\n  0x10042f923  0f284dc0             movaps xmm1, [rbp-0x40]\n  0x10042f927  0f298d60ffffff       movaps [rbp-0xa0], xmm1\n  0x10042f92e  0f298550ffffff       movaps [rbp-0xb0], xmm0\n  0x10042f935  488b35742b4500       mov rsi, [0x1008824b0]\n  0x10042f93c  488b8568ffffff       mov rax, [rbp-0x98]\n  0x10042f943  4889442418           mov [rsp+0x18], rax\n  0x10042f948  488b8560ffffff       mov rax, [rbp-0xa0]\n  0x10042f94f  4889442410           mov [rsp+0x10], rax\n  0x10042f954  488b8550ffffff       mov rax, [rbp-0xb0]\n  0x10042f95b  488b8d58ffffff       mov rcx, [rbp-0xa8]\n  0x10042f962  48894c2408           mov [rsp+8], rcx\n  0x10042f967  48890424             mov [rsp], rax\n  0x10042f96b  4889df               mov rdi, rbx\n  0x10042f96e  31d2                 xor edx, edx\n  0x10042f970  ff1532c43000         call qword ptr [0x10073bda8]  ; _objc_msgSend@got\n  0x10042f976  488b05dbee4b00       mov rax, [0x1008ee858]\n  0x10042f97d  488b8d68ffffff       mov rcx, [rbp-0x98]\n  0x10042f984  48894c0318           mov [rbx+rax+0x18], rcx\n  0x10042f989  488b8d60ffffff       mov rcx, [rbp-0xa0]\n  0x10042f990  48894c0310           mov [rbx+rax+0x10], rcx\n  0x10042f995  488b8d50ffffff       mov rcx, [rbp-0xb0]\n  0x10042f99c  488b9558ffffff       mov rdx, [rbp-0xa8]\n  0x10042f9a3  4889540308           mov [rbx+rax+8], rdx\n  0x10042f9a8  48890c03             mov [rbx+rax], rcx\nloc_10042f9ac:\n  0x10042f9ac  4881c4f8000000       add rsp, 0xf8\n  0x10042f9b3  5b                   pop rbx\n  0x10042f9b4  415c                 pop r12\n  0x10042f9b6  415d                 pop r13\n  0x10042f9b8  415e                 pop r14\n  0x10042f9ba  415f                 pop r15\n  0x10042f9bc  5d                   pop rbp\n  0x10042f9bd  c3                   ret\n",
+      "entry": "0x10042f5e6",
+      "function": "-[RKCropStraightenGestureTracker rotate:]",
+      "instructions": 196
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "196 instructions of -[RKCropStraightenGestureTracker rotate:]."
+  },
+  {
+    "authority": "original-files",
+    "confidence": "observed",
+    "coverage": {
+      "status": "unknown"
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_a0e96d79eafba3d9f5424faa30bcd35d8002c59223ab8e32529938a195d067e1",
+    "limitations": [
+      {
+        "code": "no_type_recovery",
+        "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x100551808"
+      }
+    ],
+    "operation": "native_data_show",
+    "params": {
+      "address": "0x100551808",
+      "type": "f64"
+    },
+    "result": {
+      "address": "0x100551808",
+      "name": null,
+      "references_to": 3,
+      "section": "__const",
+      "type": "f64",
+      "value": "-45.0"
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "0x100551808 looks like f64."
+  },
+  {
+    "authority": "original-files",
+    "confidence": "observed",
+    "coverage": {
+      "status": "unknown"
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_d5c238df7aa81e53967ec0e2e8063ff20c1541121c8f8c4d53734ee3ef39dd17",
+    "limitations": [
+      {
+        "code": "no_type_recovery",
+        "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+      }
+    ],
+    "links": [],
+    "locations": [
+      {
+        "kind": "address",
+        "value": "0x100552090"
+      }
+    ],
+    "operation": "native_data_show",
+    "params": {
+      "address": "0x100552090",
+      "type": "f64"
+    },
+    "result": {
+      "address": "0x100552090",
+      "name": null,
+      "references_to": 6,
+      "section": "__const",
+      "type": "f64",
+      "value": "45.0"
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "0x100552090 looks like f64."
+  },
+  {
+    "authority": "original-files",
+    "confidence": "derived",
+    "coverage": {
+      "examined": 3,
+      "status": "complete",
+      "total": 3
+    },
+    "environment": {
+      "clean_room": false,
+      "engine": "builtin",
+      "engine_version": "0.5.0",
+      "host": "macos-aarch64"
+    },
+    "id": "ev_4ffe015aad5955c5594b04870e7d001b0b5ec6598bde0bcd8da65adb67565335",
+    "limitations": [],
+    "links": [],
+    "locations": [],
+    "operation": "native_functions_search",
+    "params": {
+      "case_sensitive": false,
+      "limit": 20,
+      "mode": "regex",
+      "offset": 0,
+      "pattern": "RKCropStraightenGestureTracker.*rotate:|setScriptingMainRating:|changeReject:"
+    },
+    "result": {
+      "functions": 3,
+      "imports": 0,
+      "matches": [
+        {
+          "address": "0x1001c35de",
+          "demangled": null,
+          "kind": "function",
+          "name": "-[RKScriptingVersion setScriptingMainRating:]",
+          "size": 83
+        },
+        {
+          "address": "0x10042f5e6",
+          "demangled": null,
+          "kind": "function",
+          "name": "-[RKCropStraightenGestureTracker rotate:]",
+          "size": 984
+        },
+        {
+          "address": "0x1004320d4",
+          "demangled": null,
+          "kind": "function",
+          "name": "-[RKMetadataRatingItemView changeReject:]",
+          "size": 102
+        }
+      ],
+      "total": 3
+    },
+    "subject": {
+      "kind": "mach-o",
+      "name": "Aperture",
+      "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+    },
+    "summary": "3 functions and 0 imports match \"RKCropStraightenGestureTracker.*rotate:|setScriptingMainRating:|changeReject:\"."
+  }
+]

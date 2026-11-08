@@ -1,0 +1,3215 @@
+[
+  {
+    "step": "open",
+    "result": {
+      "result": {
+        "bytes": 9755984,
+        "description": "A Mac or iPhone program",
+        "kind": "mach-o",
+        "name": "Aperture",
+        "path": "/Users/williamwessex/Downloads/Aperture.app/Contents/MacOS/Aperture",
+        "raw": null,
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4",
+        "target_id": "t_ec5b412048e7"
+      }
+    }
+  },
+  {
+    "step": "strings",
+    "pattern": "export.*(quality|size|metadata)|JPEGQuality",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "examined": 28,
+        "status": "complete",
+        "total": 28
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_edca6d79c1af0143f164c6a59d55505299acf18860b68138d340293d286b2efd",
+      "limitations": [
+        {
+          "code": "data_sections_only",
+          "message": "only strings stored in the file are searched (absence is not proof)"
+        }
+      ],
+      "links": [],
+      "locations": [],
+      "operation": "native_strings_find",
+      "params": {
+        "case_sensitive": false,
+        "limit": 300,
+        "mode": "regex",
+        "offset": 0,
+        "pattern": "export.*(quality|size|metadata)|JPEGQuality"
+      },
+      "result": {
+        "matches": [
+          {
+            "address": "0x1005597c8",
+            "references": [
+              {
+                "from": "0x1008a7e78",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "menuItemExportMetadata"
+          },
+          {
+            "address": "0x10056ac54",
+            "references": [
+              {
+                "from": "0x1008bffb8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "kExportKeyImageSize"
+          },
+          {
+            "address": "0x100576afd",
+            "references": [
+              {
+                "from": "0x1008ccf38",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "RKSlideshowExportQuality"
+          },
+          {
+            "address": "0x10057a9b9",
+            "references": [
+              {
+                "from": "0x1008d0638",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "menuItemSlideshowExportWebSizeMM"
+          },
+          {
+            "address": "0x10057a9da",
+            "references": [
+              {
+                "from": "0x1008d0658",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "menuItemSlideshowExportWebSizeNoMM"
+          },
+          {
+            "address": "0x100582407",
+            "references": [
+              {
+                "from": "0x1008d6b58",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "select zVersionId, zUuid, zName, zFileName, zVersionNumber, zStackUuid, zMasterUuid, zProjectUuid, zImageTimeZoneName, zImageDate, zMasterHeight, zMasterWidth, zProcessedHeight, zProcessedWidth, zRotation, zColorLabelIndex, zMainRating, zHasAdjustments, zHasEnabledAdjustments, zIsEditable, zThumbnailsCurrent, zFullSizePreviewUpToDate, zThumbnailCacheIndex, zThumbnailRendered, zPreviewRendered, zPreviewJpegHeight, zPreviewJpegWidth, zThumbnailPreviewPath, zFullSizePreviewPath, zFullSizePreviewChangeDate, zCreateDate, zExportImageChangeDate, zExportMetadataChangeDate, zMasterThumbnailCacheIndex from zRKVersion"
+          },
+          {
+            "address": "0x10058266f",
+            "references": [
+              {
+                "from": "0x1008d6b78",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "select z_pk, zUuid, zName, 'NoFileName', zVersionNumber, zSTACKID, zMASTER, zProjectUuid, zImageTimeZoneName, zImageDate, zPIXELHEIGHT, zPIXELWIDTH, zPROCESSEDPIXELHEIGHT, zPROCESSEDPIXELWIDTH, zRotation, -1, zMainRating, zHASENABLEDIMAGEADJUSTMENTS, zHASENABLEDIMAGEADJUSTMENTS, 1, zTHUMBNAILUPTODATE, zFullSizePreviewUpToDate, zThumbnailCacheIndex, 0, 0, NULL, NULL, zThumbnailPreviewPath, zFullSizePreviewPath, zFullSizePreviewChangeDate, zCreateDate, zExportImageChangeDate, zExportMetadataChangeDate, zMasterThumbnailCacheIndex from zRKVersion"
+          },
+          {
+            "address": "0x100582894",
+            "references": [
+              {
+                "from": "0x1008d6b98",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "select z_pk, zUuid, zName, 'NoFileName', zVersionNumber, zSTACKID, zMASTER, zProjectUuid, zImageTimeZoneName, zImageDate, zPIXELHEIGHT, zPIXELWIDTH, zPROCESSEDPIXELHEIGHT, zPROCESSEDPIXELWIDTH, zRotation, -1, zMainRating, zHASENABLEDIMAGEADJUSTMENTS, zHASENABLEDIMAGEADJUSTMENTS, 1, zTHUMBNAILUPTODATE, zFullSizePreviewUpToDate, zThumbnailCacheIndex, 0, 0, NULL, NULL, zThumbnailPreviewPath, zFullSizePreviewPath, NULL, zCreateDate, zExportImageChangeDate, zExportMetadataChangeDate, zMasterThumbnailCacheIndex from zRKVersion"
+          },
+          {
+            "address": "0x100582aa3",
+            "references": [
+              {
+                "from": "0x1008d6bb8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "select z_pk, zUuid, zName, 'NoFileName', zVersionNumber, zSTACKID, zMASTER, zProjectUuid, zImageTimeZoneName, zImageDate, zPIXELHEIGHT, zPIXELWIDTH, zPROCESSEDPIXELHEIGHT, zPROCESSEDPIXELWIDTH, zRotation, -1, zMainRating, zHASENABLEDIMAGEADJUSTMENTS, zHASENABLEDIMAGEADJUSTMENTS, 1, zTHUMBNAILUPTODATE, 0, zThumbnailCacheIndex, 0, 0, NULL, NULL, NULL, NULL, NULL, zCreateDate, NULL, zExportMetadataChangeDate, zMasterThumbnailCacheIndex from zRKVersion"
+          },
+          {
+            "address": "0x1005858bf",
+            "references": [
+              {
+                "from": "0x1008d9338",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "masterExportMetadataMode"
+          },
+          {
+            "address": "0x10059838c",
+            "references": [
+              {
+                "from": "0x10074d8a0",
+                "function": null
+              },
+              {
+                "from": "0x100814bd0",
+                "function": null
+              },
+              {
+                "from": "0x100831020",
+                "function": null
+              },
+              {
+                "from": "0x10086a5d8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_exportMetadata:"
+          },
+          {
+            "address": "0x10059a315",
+            "references": [
+              {
+                "from": "0x10086b0f0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportMetadataOfVersions:"
+          },
+          {
+            "address": "0x1005a77d6",
+            "references": [
+              {
+                "from": "0x10083d7a0",
+                "function": null
+              },
+              {
+                "from": "0x10086e3f0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportMasterMetadataMode"
+          },
+          {
+            "address": "0x1005a7859",
+            "references": [
+              {
+                "from": "0x10075fc50",
+                "function": null
+              },
+              {
+                "from": "0x10086e420",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportMastersForVersions:toPath:fileNamingPolicy:folderNamingPolicy:metadataMode:showAlertWhenFinished:setDesktopWhenFinished:forDisplay:scriptCommand:"
+          },
+          {
+            "address": "0x1005a7953",
+            "references": [
+              {
+                "from": "0x10086e448",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportMastersForVersions:toPath:fileNamingPolicy:folderNamingPolicy:metadataMode:showAlertWhenFinished:setDesktopWhenFinished:forDisplay:replyTarget:replySelector:replyThread:"
+          },
+          {
+            "address": "0x1005adecd",
+            "references": [
+              {
+                "from": "0x10086ff08",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportMetadataChangeDate"
+          },
+          {
+            "address": "0x1005dd187",
+            "references": [
+              {
+                "from": "0x1008586a8",
+                "function": null
+              },
+              {
+                "from": "0x10087b390",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportToPath:size:delegate:options:context:"
+          },
+          {
+            "address": "0x1005ebfb1",
+            "references": [
+              {
+                "from": "0x1007f51f8",
+                "function": null
+              },
+              {
+                "from": "0x10087e8f0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportSizeForType:aspectRatio:"
+          },
+          {
+            "address": "0x1005ebfd0",
+            "references": [
+              {
+                "from": "0x1007f5210",
+                "function": null
+              },
+              {
+                "from": "0x10087e8f8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportFrameRateForType:size:"
+          },
+          {
+            "address": "0x1005ebfed",
+            "references": [
+              {
+                "from": "0x1007f5228",
+                "function": null
+              },
+              {
+                "from": "0x10087e900",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportQualityForType:"
+          },
+          {
+            "address": "0x1005ec291",
+            "references": [
+              {
+                "from": "0x1007f5888",
+                "function": null
+              },
+              {
+                "from": "0x10087ea10",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_exportOptionsForType:size:"
+          },
+          {
+            "address": "0x1005ec35c",
+            "references": [
+              {
+                "from": "0x1007f5240",
+                "function": null
+              },
+              {
+                "from": "0x100880680",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportDescriptionForType:quality:model:"
+          },
+          {
+            "address": "0x1005f35b2",
+            "references": [
+              {
+                "from": "0x10080bb20",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportQualityChanged:"
+          },
+          {
+            "address": "0x1005f3673",
+            "references": [
+              {
+                "from": "0x10080bcc0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_exportWebSizeMenuItem"
+          },
+          {
+            "address": "0x100601310",
+            "references": [
+              {
+                "from": "0x100883e78",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "cacheExportMetadataChangeDate:"
+          },
+          {
+            "address": "0x100603b0c",
+            "references": [
+              {
+                "from": "0x1008849d8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportMetadataForVersion:preset:"
+          },
+          {
+            "address": "0x100603cc8",
+            "references": [
+              {
+                "from": "0x100858690",
+                "function": null
+              },
+              {
+                "from": "0x100884a70",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportToPath:size:delegate:options:"
+          },
+          {
+            "address": "0x1006105fd",
+            "references": [
+              {
+                "from": "0x100858678",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportToPath:size:delegate:"
+          }
+        ],
+        "total": 28
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "28 strings match \"export.*(quality|size|metadata)|JPEGQuality\"."
+    }
+  },
+  {
+    "step": "strings",
+    "pattern": "crop.*(aspect|portrait)|aspect.*ratio",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "examined": 50,
+        "status": "complete",
+        "total": 50
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_8cfe1405003903b4a038544b13ac4dc7b921f54096a00e5bc5fb6b8782e71bdc",
+      "limitations": [
+        {
+          "code": "data_sections_only",
+          "message": "only strings stored in the file are searched (absence is not proof)"
+        }
+      ],
+      "links": [],
+      "locations": [],
+      "operation": "native_strings_find",
+      "params": {
+        "case_sensitive": false,
+        "limit": 300,
+        "mode": "regex",
+        "offset": 0,
+        "pattern": "crop.*(aspect|portrait)|aspect.*ratio"
+      },
+      "result": {
+        "matches": [
+          {
+            "address": "0x1005616b4",
+            "references": [
+              {
+                "from": "0x1008b3e38",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "bookSetPhotoAspectRatio"
+          },
+          {
+            "address": "0x10057346d",
+            "references": [
+              {
+                "from": "0x100809e60",
+                "function": null
+              },
+              {
+                "from": "0x1008c90f8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "aspectRatio"
+          },
+          {
+            "address": "0x10057a2b7",
+            "references": [
+              {
+                "from": "0x100809e68",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "Td,N,V_aspectRatio"
+          },
+          {
+            "address": "0x10057ec7a",
+            "references": [
+              {
+                "from": "0x1008d4158",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "slideshowMainDisplayWithAspectRatio"
+          },
+          {
+            "address": "0x10057ecb3",
+            "references": [
+              {
+                "from": "0x1008d4198",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "slideshowSecondaryDisplayWithAspectRatio"
+          },
+          {
+            "address": "0x10057ecf6",
+            "references": [
+              {
+                "from": "0x1008d41d8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "slideshowComputerAspectRatio"
+          },
+          {
+            "address": "0x100587e8b",
+            "references": [
+              {
+                "from": "0x1008db2b8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "Aspect Ratio"
+          },
+          {
+            "address": "0x100592fa3",
+            "references": [
+              {
+                "from": "0x100868f90",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "aspectRatioForSize:"
+          },
+          {
+            "address": "0x100593fc5",
+            "references": [
+              {
+                "from": "0x100869530",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "masterAspectRatioWithGeometry"
+          },
+          {
+            "address": "0x100593fe3",
+            "references": [
+              {
+                "from": "0x100869538",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "masterAspectRatioWithRotation"
+          },
+          {
+            "address": "0x1005a6764",
+            "references": [
+              {
+                "from": "0x1007e2d10",
+                "function": null
+              },
+              {
+                "from": "0x10086e058",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "runSlideshowWithMarimbaDocument:preset:screenIndex:aspectRatio:"
+          },
+          {
+            "address": "0x1005af9a3",
+            "references": [
+              {
+                "from": "0x10076a960",
+                "function": null
+              },
+              {
+                "from": "0x100870828",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "contentAspectRatio"
+          },
+          {
+            "address": "0x1005afc04",
+            "references": [
+              {
+                "from": "0x10076aed0",
+                "function": null
+              },
+              {
+                "from": "0x10076c340",
+                "function": null
+              },
+              {
+                "from": "0x100870850",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "photoAspectRatio"
+          },
+          {
+            "address": "0x1005afc15",
+            "references": [
+              {
+                "from": "0x10076aee8",
+                "function": null
+              },
+              {
+                "from": "0x10076c358",
+                "function": null
+              },
+              {
+                "from": "0x10077f118",
+                "function": null
+              },
+              {
+                "from": "0x1008719c0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "setPhotoAspectRatio:"
+          },
+          {
+            "address": "0x1005b3e88",
+            "references": [
+              {
+                "from": "0x100771fe8",
+                "function": null
+              },
+              {
+                "from": "0x100871b00",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_setAspectRatioTo4by3:"
+          },
+          {
+            "address": "0x1005b3ea0",
+            "references": [
+              {
+                "from": "0x100772018",
+                "function": null
+              },
+              {
+                "from": "0x100871b08",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_setAspectRatioTo3by4:"
+          },
+          {
+            "address": "0x1005b3eb8",
+            "references": [
+              {
+                "from": "0x100772000",
+                "function": null
+              },
+              {
+                "from": "0x100871b10",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_setAspectRatioTo3by2:"
+          },
+          {
+            "address": "0x1005b3ed0",
+            "references": [
+              {
+                "from": "0x100772030",
+                "function": null
+              },
+              {
+                "from": "0x100871b18",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_setAspectRatioTo2by3:"
+          },
+          {
+            "address": "0x1005b3ee8",
+            "references": [
+              {
+                "from": "0x100772048",
+                "function": null
+              },
+              {
+                "from": "0x100871b20",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_setAspectRatioToPhoto:"
+          },
+          {
+            "address": "0x1005b3f01",
+            "references": [
+              {
+                "from": "0x100771fd0",
+                "function": null
+              },
+              {
+                "from": "0x100871b28",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_setAspectRatioToSquare:"
+          },
+          {
+            "address": "0x1005c3722",
+            "references": [
+              {
+                "from": "0x10079cd20",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_currentThumbnailAspectRatio"
+          },
+          {
+            "address": "0x1005c3eda",
+            "references": [
+              {
+                "from": "0x10079e458",
+                "function": null
+              },
+              {
+                "from": "0x1008003d0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_thumbnailAspectRatio"
+          },
+          {
+            "address": "0x1005c8914",
+            "references": [
+              {
+                "from": "0x1007a85c0",
+                "function": null
+              },
+              {
+                "from": "0x100823ee8",
+                "function": null
+              },
+              {
+                "from": "0x100876820",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "updateConstraintEnabled:aspectRatio:updateCurrentCrop:"
+          },
+          {
+            "address": "0x1005c8ace",
+            "references": [
+              {
+                "from": "0x1007a87d8",
+                "function": null
+              },
+              {
+                "from": "0x100876898",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_calculatedAspectRatioFromUI"
+          },
+          {
+            "address": "0x1005c8c24",
+            "references": [
+              {
+                "from": "0x1007a88e0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "aspectRatioChanged:"
+          },
+          {
+            "address": "0x1005c8cb8",
+            "references": [
+              {
+                "from": "0x1007a8b20",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "m_aspectRatioPopUpButton"
+          },
+          {
+            "address": "0x1005cc11d",
+            "references": [
+              {
+                "from": "0x1007b0b68",
+                "function": null
+              },
+              {
+                "from": "0x1007b13d8",
+                "function": null
+              },
+              {
+                "from": "0x100877418",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "correctFrameForAspectRatio:"
+          },
+          {
+            "address": "0x1005d1ae8",
+            "references": [
+              {
+                "from": "0x1007e4508",
+                "function": null
+              },
+              {
+                "from": "0x1008789c8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "smallestAspectRatio"
+          },
+          {
+            "address": "0x1005d1afc",
+            "references": [
+              {
+                "from": "0x1007e4520",
+                "function": null
+              },
+              {
+                "from": "0x1008789d0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "largestAspectRatio"
+          },
+          {
+            "address": "0x1005d88a6",
+            "references": [
+              {
+                "from": "0x1007de6c0",
+                "function": null
+              },
+              {
+                "from": "0x1007e0428",
+                "function": null
+              },
+              {
+                "from": "0x100809c60",
+                "function": null
+              },
+              {
+                "from": "0x10087a290",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "aspectRatio"
+          },
+          {
+            "address": "0x1005e1e8e",
+            "references": [
+              {
+                "from": "0x1007de180",
+                "function": null
+              },
+              {
+                "from": "0x10087c5a0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "assetAspectRatio"
+          },
+          {
+            "address": "0x1005e1f51",
+            "references": [
+              {
+                "from": "0x10087c5f0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "mediaAspectRatioForEffectID:usingAttributes:atIndex:defaultAspectRatio:"
+          },
+          {
+            "address": "0x1005e3ee0",
+            "references": [
+              {
+                "from": "0x10087cf28",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "originalAspectRatio"
+          },
+          {
+            "address": "0x1005e4b2e",
+            "references": [
+              {
+                "from": "0x1007e20b8",
+                "function": null
+              },
+              {
+                "from": "0x10087d100",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_rectToFitIn:withAspectRatio:"
+          },
+          {
+            "address": "0x1005e4e62",
+            "references": [
+              {
+                "from": "0x1007e3138",
+                "function": null
+              },
+              {
+                "from": "0x10087d1c0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "runWithMarimbaDocument:preset:screenIndex:aspectRatio:startingAtSlideNumber:"
+          },
+          {
+            "address": "0x1005e50e3",
+            "references": [
+              {
+                "from": "0x1007e3048",
+                "function": null
+              },
+              {
+                "from": "0x10087d2e8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "newMarimbaViewWithDocument:screenIndex:aspectRatio:"
+          },
+          {
+            "address": "0x1005e6342",
+            "references": [
+              {
+                "from": "0x1007e5a68",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_smallestAspectRatio"
+          },
+          {
+            "address": "0x1005e6357",
+            "references": [
+              {
+                "from": "0x1007e5a88",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_largestAspectRatio"
+          },
+          {
+            "address": "0x1005e6fc2",
+            "references": [
+              {
+                "from": "0x10087d998",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "validCropRectForProposedCropRect:masterBounds:straightenAngle:aspectRatio:"
+          },
+          {
+            "address": "0x1005ebfb1",
+            "references": [
+              {
+                "from": "0x1007f51f8",
+                "function": null
+              },
+              {
+                "from": "0x10087e8f0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "exportSizeForType:aspectRatio:"
+          },
+          {
+            "address": "0x1005f2538",
+            "references": [
+              {
+                "from": "0x100809c78",
+                "function": null
+              },
+              {
+                "from": "0x1008801f8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "setAspectRatio:"
+          },
+          {
+            "address": "0x1005f275c",
+            "references": [
+              {
+                "from": "0x100809d20",
+                "function": null
+              },
+              {
+                "from": "0x100824350",
+                "function": null
+              },
+              {
+                "from": "0x1008246d0",
+                "function": null
+              },
+              {
+                "from": "0x100824940",
+                "function": null
+              },
+              {
+                "from": "0x100824b28",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_aspectRatio"
+          },
+          {
+            "address": "0x1005fb85d",
+            "references": [
+              {
+                "from": "0x100824250",
+                "function": null
+              },
+              {
+                "from": "0x100882418",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "initWithVersion:viewerDisplayItem:OSC:cropRect:aspectRatio:event:"
+          },
+          {
+            "address": "0x1005fb8d5",
+            "references": [
+              {
+                "from": "0x1008247e0",
+                "function": null
+              },
+              {
+                "from": "0x100882438",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "initWithEvent:version:viewerDisplayItem:OSC:cropRect:aspectRatio:"
+          },
+          {
+            "address": "0x1005fbac9",
+            "references": [
+              {
+                "from": "0x100824140",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_constrainedAspectRatio"
+          },
+          {
+            "address": "0x1005fc35b",
+            "references": [
+              {
+                "from": "0x100826b88",
+                "function": null
+              },
+              {
+                "from": "0x100827488",
+                "function": null
+              },
+              {
+                "from": "0x1008279b8",
+                "function": null
+              },
+              {
+                "from": "0x1008826a8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "aspectRatioPopUp"
+          },
+          {
+            "address": "0x1005fc43c",
+            "references": [
+              {
+                "from": "0x100826d78",
+                "function": null
+              },
+              {
+                "from": "0x100827b78",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_aspectRatioPopup"
+          },
+          {
+            "address": "0x1005fc5cb",
+            "references": [
+              {
+                "from": "0x100827368",
+                "function": null
+              },
+              {
+                "from": "0x1008826b0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_configureAspectRatioMenu"
+          },
+          {
+            "address": "0x1005fc6a7",
+            "references": [
+              {
+                "from": "0x1008276b0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_setAspectRatio:"
+          },
+          {
+            "address": "0x1005fc7d2",
+            "references": [
+              {
+                "from": "0x100827a58",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_aspectRatioView"
+          }
+        ],
+        "total": 50
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "50 strings match \"crop.*(aspect|portrait)|aspect.*ratio\"."
+    }
+  },
+  {
+    "step": "strings",
+    "pattern": "RKLiftStampToolReplaceOnStamp|noLiftedAdjustmentsMessage|shouldStampAdjustmentsOntoVersionRef:",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "examined": 3,
+        "status": "complete",
+        "total": 3
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_74ae6b831a37ecc8daba216640e4ad2d713d389043ec38e86f9335c746c3fc61",
+      "limitations": [
+        {
+          "code": "data_sections_only",
+          "message": "only strings stored in the file are searched (absence is not proof)"
+        }
+      ],
+      "links": [],
+      "locations": [],
+      "operation": "native_strings_find",
+      "params": {
+        "case_sensitive": false,
+        "limit": 300,
+        "mode": "regex",
+        "offset": 0,
+        "pattern": "RKLiftStampToolReplaceOnStamp|noLiftedAdjustmentsMessage|shouldStampAdjustmentsOntoVersionRef:"
+      },
+      "result": {
+        "matches": [
+          {
+            "address": "0x10055a0c8",
+            "references": [
+              {
+                "from": "0x1008a89f8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "noLiftedAdjustmentsMessage"
+          },
+          {
+            "address": "0x10055f075",
+            "references": [
+              {
+                "from": "0x1008af278",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "RKLiftStampToolReplaceOnStamp"
+          },
+          {
+            "address": "0x1005ab625",
+            "references": [
+              {
+                "from": "0x100765178",
+                "function": null
+              },
+              {
+                "from": "0x10086f2d0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "shouldStampAdjustmentsOntoVersionRef:"
+          }
+        ],
+        "total": 3
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "3 strings match \"RKLiftStampToolReplaceOnStamp|noLiftedAdjustmentsMessage|shouldStampAdjustmentsOntoVersionRef:\"."
+    }
+  },
+  {
+    "step": "pointer",
+    "address": "0x1008a89e8",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_7a3e2a3120320630fae7811c9393db3dffe24450245ba688b1f9fcf650f284bd",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008a89e8"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1008a89e8",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x1008a89e8",
+        "name": null,
+        "references_to": 1,
+        "section": "__cfstring",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x0",
+            "name": null,
+            "points_to": "data"
+          },
+          "value": "0x0"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008a89e8 looks like pointer."
+    }
+  },
+  {
+    "step": "pointer",
+    "address": "0x1008af268",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_ceb29260e37d50e4a42104f5301754ce4c5ff3e8bbf368f6a37ed92c61d6fa9a",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008af268"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1008af268",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x1008af268",
+        "name": null,
+        "references_to": 3,
+        "section": "__cfstring",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x0",
+            "name": null,
+            "points_to": "data"
+          },
+          "value": "0x0"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008af268 looks like pointer."
+    }
+  },
+  {
+    "step": "pointer",
+    "address": "0x100765188",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_b564b2c2aa352d56095b3bf727c191f78d1f9c9cb05e503d9840fa9abe28998f",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100765188"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x100765188",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x100765188",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x1000bb32d",
+            "name": "-[RKLiftStampTool shouldStampAdjustmentsOntoVersionRef:]",
+            "points_to": "function"
+          },
+          "value": "0x1000bb32d"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x100765188 looks like pointer."
+    }
+  },
+  {
+    "step": "pointer",
+    "address": "0x1007a87e8",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_8c76045254c93b554713a4a7b780eb9b37bd666272929ff95b9a95e5e349c26a",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1007a87e8"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1007a87e8",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x1007a87e8",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x1001e709b",
+            "name": "-[RKCropToolController _calculatedAspectRatioFromUI]",
+            "points_to": "function"
+          },
+          "value": "0x1001e709b"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1007a87e8 looks like pointer."
+    }
+  },
+  {
+    "step": "pointer",
+    "address": "0x1007a88f0",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_b7d917dcb6e4328101e5df071690f211aa8c2aad57f91c96e1693edb2718dbca",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1007a88f0"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1007a88f0",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x1007a88f0",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x1001e8619",
+            "name": "-[RKCropToolController aspectRatioChanged:]",
+            "points_to": "function"
+          },
+          "value": "0x1001e8619"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1007a88f0 looks like pointer."
+    }
+  },
+  {
+    "step": "pointer",
+    "address": "0x10083d7b0",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_d3ee9a41ca0ea1c3f061bc0689d9dc94598f557d45a4f0f1d281cd70128e8065",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x10083d7b0"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x10083d7b0",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x10083d7b0",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x1004a53ab",
+            "name": "-[RKFileNamingManager exportMasterMetadataMode]",
+            "points_to": "function"
+          },
+          "value": "0x1004a53ab"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x10083d7b0 looks like pointer."
+    }
+  },
+  {
+    "step": "xref",
+    "result": {
+      "authority": "original-files",
+      "confidence": "derived",
+      "coverage": {
+        "examined": 3,
+        "status": "complete",
+        "total": 3
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_b707e15d4cff7682ea4ce656b76153f7060cc5ff30d0a59057d207cf9d670312",
+      "limitations": [
+        {
+          "code": "static_references",
+          "message": "references made through computed pointers at run time are not seen"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008af268"
+        }
+      ],
+      "operation": "native_xrefs_list",
+      "params": {
+        "address": "0x1008af268",
+        "limit": 200,
+        "offset": 0
+      },
+      "result": {
+        "address": "0x1008af268",
+        "name": null,
+        "references_from": [],
+        "references_to": [
+          {
+            "from": "0x1000bac30",
+            "function": "+[RKLiftStampTool initialize]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1000bc6c5",
+            "function": "-[RKLiftStampTool setReplaceOnStamp:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1000bc706",
+            "function": "-[RKLiftStampTool replaceOnStamp]",
+            "kind": "data"
+          }
+        ],
+        "total_to": 3
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008af268 is referenced from 3 places and refers to 0."
+    }
+  },
+  {
+    "step": "pseudocode",
+    "function": "0x1001e709b",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_5dd53ca4d1e0441dca3696ac291bc1d0137bbb2e7bbf664333001c7f72957104",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "unstructured_flow",
+          "message": "1 gotos remain where the control flow isn't a simple if/loop"
+        },
+        {
+          "code": "inline_asm",
+          "message": "11 instructions have no C rule and are shown as __asm(...)"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1001e709b"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x1001e709b"
+      },
+      "result": {
+        "calls": [
+          "r14"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x1001e709b",
+        "function": "-[RKCropToolController _calculatedAspectRatioFromUI]",
+        "gotos": 1,
+        "inline_asm": 11,
+        "pseudo_code": "int64_t -[RKCropToolController _calculatedAspectRatioFromUI](int64_t rdi)\n{\n    rbx = rdi;\n    rax = *(uint64_t*)0x1008e82c8;\n    r14 = _objc_msgSend@got;\n    (*r14)(*(uint64_t*)(rbx + rax), *(uint64_t*)0x1008683a8);\n    __asm(\"movsd [rbp-0x18], xmm0\");\n    rax = *(uint64_t*)0x1008e82d0;\n    (*r14)(*(uint64_t*)(rbx + rax), *(uint64_t*)0x1008683a8);\n    __asm(\"movsd [rbp-0x20], xmm0\");\n    rax = *(uint64_t*)0x1008e82e8;\n    (*r14)(*(uint64_t*)(rbx + rax), *(uint64_t*)0x10086f280);\n    __asm(\"movsd xmm1, [rbp-0x18]\");\n    __asm(\"movsd xmm0, [0x100551d10]\");\n    __asm(\"andpd xmm1, xmm0\");\n    __asm(\"movsd xmm2, [rbp-0x20]\");\n    __asm(\"andpd xmm2, xmm0\");\n    __asm(\"movapd xmm0, xmm2\");\n    if (rax == 0x5a) {\nlabel_1001e7125:\n        __asm(\"divsd xmm0, xmm1\");\n    } else {\n        if (rax != 0x10e) {\n            __asm(\"divsd xmm1, xmm0\");\n            __asm(\"movapd xmm0, xmm1\");\n        } else {\n            goto label_1001e7125;\n        }\n    }\n    return rax;\n}\n",
+        "signature": "int64_t -[RKCropToolController _calculatedAspectRatioFromUI](int64_t rdi)",
+        "strings": [],
+        "structured": false
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKCropToolController _calculatedAspectRatioFromUI] (31 lines, partly unstructured)."
+    }
+  },
+  {
+    "step": "pseudocode",
+    "function": "0x1001e8619",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_327238e81e5659b0c7e0b0e796644e002b3cd1da1eb94afa807948f4c4974fbb",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "indirect_jumps_unresolved",
+          "message": "some indirect jumps were not resolved, so code may be missing"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1001e8619"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x1001e8619"
+      },
+      "result": {
+        "calls": [
+          "rax"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x1001e8619",
+        "function": "-[RKCropToolController aspectRatioChanged:]",
+        "gotos": 0,
+        "inline_asm": 0,
+        "pseudo_code": "int64_t -[RKCropToolController aspectRatioChanged:](int64_t rdi)\n{\n    r14 = rdi;\n    rbx = _objc_msgSend@got;\n    rax = rbx;\n    (*rax)(rdi, *(uint64_t*)0x100876888);\n    rax = rbx;\n    (*rax)(r14, *(uint64_t*)0x1008768d0, 1);\n    rax = rbx;\n    (*rax)(r14, *(uint64_t*)0x100876890);\n    rax = *(uint64_t*)0x1008e82a0;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)(r14 + rax), *(uint64_t*)0x10086d9e0);\n    rax = rbx;\n    rax = (*rax)(rax, *(uint64_t*)0x100868678);\n    r14 = rax;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)0x100888998, *(uint64_t*)0x100867e18);\n    rcx = &data_1008bbf88;\n    rsi = *(uint64_t*)0x100869c78;\n    rdi = rax;\n    rdx = r14;\n    rax = rbx;\n    goto *rax; /* computed jump */\n}\n",
+        "signature": "int64_t -[RKCropToolController aspectRatioChanged:](int64_t rdi)",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKCropToolController aspectRatioChanged:] (25 lines)."
+    }
+  },
+  {
+    "step": "pseudocode",
+    "function": "0x1000bb32d",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_fa892879fadc695ccb7e99207800a9bae92f55d8f4990d5599b613a17b3c7a50",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "unstructured_flow",
+          "message": "2 gotos remain where the control flow isn't a simple if/loop"
+        },
+        {
+          "code": "inline_asm",
+          "message": "1 instructions have no C rule and are shown as __asm(...)"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1000bb32d"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x1000bb32d"
+      },
+      "result": {
+        "calls": [
+          "0x100888790",
+          "_objc_msgSend",
+          "r15"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x1000bb32d",
+        "function": "-[RKLiftStampTool shouldStampAdjustmentsOntoVersionRef:]",
+        "gotos": 2,
+        "inline_asm": 1,
+        "pseudo_code": "int32_t -[RKLiftStampTool shouldStampAdjustmentsOntoVersionRef:](int64_t rdi, int64_t rdx)\n{\n    r14 = rdx;\n    rbx = rdi;\n    eax = _objc_msgSend(rdi, *(uint64_t*)0x10086f2c0, 0x20);\n    if (al == 0) {\nlabel_1000bb388:\n        eax = _objc_msgSend(rbx, *(uint64_t*)0x10086f2c0, 1);\n        cl = 0;\n        if (al != 0) {\n            rax = *(uint64_t*)0x1008e5000;\n            eax = (*0x100888790)(*(uint64_t*)(rbx + rax), &data_100888790);\n            __asm(\"setne cl\");\n        }\n    } else {\n        rax = *(uint64_t*)0x1008e4ff8;\n        if (*(uint64_t*)(rbx + rax) == 0) {\n            goto label_1000bb388;\n        } else {\n            r15 = _objc_msgSend@got;\n            eax = (*r15)(r14, *(uint64_t*)0x100867f08);\n            eax = (*r15)(rax, *(uint64_t*)0x10086a820);\n            cl = 1;\n            if (al == 0) {\n                goto label_1000bb388;\n            }\n        }\n    }\n    eax = cl;\n    return eax;\n}\n",
+        "signature": "int32_t -[RKLiftStampTool shouldStampAdjustmentsOntoVersionRef:](int64_t rdi, int64_t rdx)",
+        "strings": [],
+        "structured": false
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKLiftStampTool shouldStampAdjustmentsOntoVersionRef:] (31 lines, partly unstructured)."
+    }
+  },
+  {
+    "step": "pseudocode",
+    "function": "0x1004a53ab",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_6365b723610e918cae6e4e383d21b47e54731b15ab1e7b1802de7b70096a3e32",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "indirect_jumps_unresolved",
+          "message": "some indirect jumps were not resolved, so code may be missing"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1004a53ab"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x1004a53ab"
+      },
+      "result": {
+        "calls": [
+          "rax"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x1004a53ab",
+        "function": "-[RKFileNamingManager exportMasterMetadataMode]",
+        "gotos": 0,
+        "inline_asm": 0,
+        "pseudo_code": "int64_t -[RKFileNamingManager exportMasterMetadataMode]()\n{\n    rbx = _objc_msgSend@got;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)0x100888998, *(uint64_t*)0x100867e18);\n    rdx = &data_1008d9328;\n    rsi = *(uint64_t*)0x100868178;\n    rdi = rax;\n    rax = rbx;\n    goto *rax; /* computed jump */\n}\n",
+        "signature": "int64_t -[RKFileNamingManager exportMasterMetadataMode]()",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKFileNamingManager exportMasterMetadataMode] (11 lines)."
+    }
+  },
+  {
+    "step": "assembly",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "examined": 40,
+        "status": "complete",
+        "total": 40
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_54832cd6c965f7d77efb50427bf7fb615b412f2294aca841f24086dc07563fea",
+      "limitations": [],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1001e709b"
+        }
+      ],
+      "operation": "native_function_disassemble",
+      "params": {
+        "function": "0x1001e709b"
+      },
+      "result": {
+        "assembly": "-[RKCropToolController _calculatedAspectRatioFromUI]:\n  0x1001e709b  55                   push rbp\n  0x1001e709c  4889e5               mov rbp, rsp\n  0x1001e709f  4156                 push r14\n  0x1001e70a1  53                   push rbx\n  0x1001e70a2  4883ec10             sub rsp, 0x10\n  0x1001e70a6  4889fb               mov rbx, rdi\n  0x1001e70a9  488b0518127000       mov rax, [0x1008e82c8]\n  0x1001e70b0  488b3c03             mov rdi, [rbx+rax]\n  0x1001e70b4  488b35ed126800       mov rsi, [0x1008683a8]\n  0x1001e70bb  4c8b35e64c5500       mov r14, [0x10073bda8]  ; _objc_msgSend@got\n  0x1001e70c2  41ffd6               call r14\n  0x1001e70c5  f20f1145e8           movsd [rbp-0x18], xmm0\n  0x1001e70ca  488b05ff117000       mov rax, [0x1008e82d0]\n  0x1001e70d1  488b3c03             mov rdi, [rbx+rax]\n  0x1001e70d5  488b35cc126800       mov rsi, [0x1008683a8]\n  0x1001e70dc  41ffd6               call r14\n  0x1001e70df  f20f1145e0           movsd [rbp-0x20], xmm0\n  0x1001e70e4  488b05fd117000       mov rax, [0x1008e82e8]\n  0x1001e70eb  488b3c03             mov rdi, [rbx+rax]\n  0x1001e70ef  488b358a816800       mov rsi, [0x10086f280]\n  0x1001e70f6  41ffd6               call r14\n  0x1001e70f9  f20f104de8           movsd xmm1, [rbp-0x18]\n  0x1001e70fe  f20f10050aac3600     movsd xmm0, [0x100551d10]\n  0x1001e7106  660f54c8             andpd xmm1, xmm0\n  0x1001e710a  f20f1055e0           movsd xmm2, [rbp-0x20]\n  0x1001e710f  660f54d0             andpd xmm2, xmm0\n  0x1001e7113  660f28c2             movapd xmm0, xmm2\n  0x1001e7117  4883f85a             cmp rax, 0x5a\n  0x1001e711b  7408                 je 0x1001e7125\nloc_1001e711d:\n  0x1001e711d  483d0e010000         cmp rax, 0x10e\n  0x1001e7123  7506                 jne 0x1001e712b\nloc_1001e7125:\n  0x1001e7125  f20f5ec1             divsd xmm0, xmm1\n  0x1001e7129  eb08                 jmp 0x1001e7133\nloc_1001e712b:\n  0x1001e712b  f20f5ec8             divsd xmm1, xmm0\n  0x1001e712f  660f28c1             movapd xmm0, xmm1\nloc_1001e7133:\n  0x1001e7133  4883c410             add rsp, 0x10\n  0x1001e7137  5b                   pop rbx\n  0x1001e7138  415e                 pop r14\n  0x1001e713a  5d                   pop rbp\n  0x1001e713b  c3                   ret\n",
+        "entry": "0x1001e709b",
+        "function": "-[RKCropToolController _calculatedAspectRatioFromUI]",
+        "instructions": 40
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "40 instructions of -[RKCropToolController _calculatedAspectRatioFromUI]."
+    }
+  },
+  {
+    "step": "assembly",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "examined": 46,
+        "status": "complete",
+        "total": 46
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_3824d54ccd546a3849d7ecae4a47d3d296442b48b92e128e92faf67e48b2545c",
+      "limitations": [],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1000bb32d"
+        }
+      ],
+      "operation": "native_function_disassemble",
+      "params": {
+        "function": "0x1000bb32d"
+      },
+      "result": {
+        "assembly": "-[RKLiftStampTool shouldStampAdjustmentsOntoVersionRef:]:\n  0x1000bb32d  55                   push rbp\n  0x1000bb32e  4889e5               mov rbp, rsp\n  0x1000bb331  4157                 push r15\n  0x1000bb333  4156                 push r14\n  0x1000bb335  53                   push rbx\n  0x1000bb336  50                   push rax\n  0x1000bb337  4989d6               mov r14, rdx\n  0x1000bb33a  4889fb               mov rbx, rdi\n  0x1000bb33d  488b357c3f7b00       mov rsi, [0x10086f2c0]\n  0x1000bb344  ba20000000           mov edx, 0x20\n  0x1000bb349  ff15590a6800         call qword ptr [0x10073bda8]  ; _objc_msgSend@got\n  0x1000bb34f  84c0                 test al, al\n  0x1000bb351  7435                 je 0x1000bb388\nloc_1000bb353:\n  0x1000bb353  488b059e9c8200       mov rax, [0x1008e4ff8]\n  0x1000bb35a  48833c0300           cmp qword ptr [rbx+rax], 0\n  0x1000bb35f  7427                 je 0x1000bb388\nloc_1000bb361:\n  0x1000bb361  488b35a0cb7a00       mov rsi, [0x100867f08]\n  0x1000bb368  4c8b3d390a6800       mov r15, [0x10073bda8]  ; _objc_msgSend@got\n  0x1000bb36f  4c89f7               mov rdi, r14\n  0x1000bb372  41ffd7               call r15\n  0x1000bb375  488b35a4f47a00       mov rsi, [0x10086a820]\n  0x1000bb37c  4889c7               mov rdi, rax\n  0x1000bb37f  41ffd7               call r15\n  0x1000bb382  b101                 mov cl, 1\n  0x1000bb384  84c0                 test al, al\n  0x1000bb386  7539                 jne 0x1000bb3c1\nloc_1000bb388:\n  0x1000bb388  488b35313f7b00       mov rsi, [0x10086f2c0]\n  0x1000bb38f  4889df               mov rdi, rbx\n  0x1000bb392  ba01000000           mov edx, 1\n  0x1000bb397  ff150b0a6800         call qword ptr [0x10073bda8]  ; _objc_msgSend@got\n  0x1000bb39d  30c9                 xor cl, cl\n  0x1000bb39f  84c0                 test al, al\n  0x1000bb3a1  741e                 je 0x1000bb3c1\nloc_1000bb3a3:\n  0x1000bb3a3  488b05569c8200       mov rax, [0x1008e5000]\n  0x1000bb3aa  488b3c03             mov rdi, [rbx+rax]\n  0x1000bb3ae  488d35dbd37c00       lea rsi, [0x100888790]\n  0x1000bb3b5  ff15d5d37c00         call qword ptr [0x100888790]\n  0x1000bb3bb  4885c0               test rax, rax\n  0x1000bb3be  0f95c1               setne cl\nloc_1000bb3c1:\n  0x1000bb3c1  0fb6c1               movzx eax, cl\n  0x1000bb3c4  4883c408             add rsp, 8\n  0x1000bb3c8  5b                   pop rbx\n  0x1000bb3c9  415e                 pop r14\n  0x1000bb3cb  415f                 pop r15\n  0x1000bb3cd  5d                   pop rbp\n  0x1000bb3ce  c3                   ret\n",
+        "entry": "0x1000bb32d",
+        "function": "-[RKLiftStampTool shouldStampAdjustmentsOntoVersionRef:]",
+        "instructions": 46
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "46 instructions of -[RKLiftStampTool shouldStampAdjustmentsOntoVersionRef:]."
+    }
+  },
+  {
+    "step": "resolve",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_415d4d584314012c3b0bbb43a788943da11965456f8c52301a6beb02733898e4",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008683a8"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1008683a8",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x1008683a8",
+        "name": null,
+        "references_to": 331,
+        "section": "__objc_selrefs",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x1005905be",
+            "points_to": "string",
+            "text": "doubleValue"
+          },
+          "value": "0x1005905be"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008683a8 looks like pointer."
+    }
+  },
+  {
+    "step": "resolve",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_c6ca4933556093a56de0f5692a1fbb4baa2edfb9c3951121c3ea62398d0b5882",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x10086f280"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x10086f280",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x10086f280",
+        "name": null,
+        "references_to": 37,
+        "section": "__objc_selrefs",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x1005ab562",
+            "points_to": "string",
+            "text": "rotationAsInteger"
+          },
+          "value": "0x1005ab562"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x10086f280 looks like pointer."
+    }
+  },
+  {
+    "step": "resolve",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_06e8f98819ba70be94d23e6924967edfce3828c3b6bff80616ffb3fd01466b08",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008e82c8"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1008e82c8",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x1008e82c8",
+        "name": null,
+        "references_to": 5,
+        "section": "__objc_ivar",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x58",
+            "name": null,
+            "points_to": "data"
+          },
+          "value": "0x58"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008e82c8 looks like pointer."
+    }
+  },
+  {
+    "step": "resolve",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_93accb1f5f79ce41c8034784b8e1a10cf3164de3cae4a92a8b0add3e0e4059ad",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008e82d0"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1008e82d0",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x1008e82d0",
+        "name": null,
+        "references_to": 6,
+        "section": "__objc_ivar",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x60",
+            "name": null,
+            "points_to": "data"
+          },
+          "value": "0x60"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008e82d0 looks like pointer."
+    }
+  },
+  {
+    "step": "resolve",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_9a16c36690c5b655fec4f29391330438748ab45ff182ba2800c3da8191347825",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008e82e8"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1008e82e8",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x1008e82e8",
+        "name": null,
+        "references_to": 23,
+        "section": "__objc_ivar",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x98",
+            "name": null,
+            "points_to": "data"
+          },
+          "value": "0x98"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008e82e8 looks like pointer."
+    }
+  },
+  {
+    "step": "resolve",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_1ddae214264d7a0873c9f683a1d49661fc8dbb28284c3cf36b714c0060585a7c",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100551d10"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x100551d10",
+        "type": "u64"
+      },
+      "result": {
+        "address": "0x100551d10",
+        "name": null,
+        "references_to": 1,
+        "section": "__const",
+        "type": "u64",
+        "value": 9223372036854776000
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x100551d10 looks like u64."
+    }
+  },
+  {
+    "step": "resolve",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_1e04980df541400cc3adea22f7fa0cd3e1df0aaf83521cf0f351e95dcf94163b",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100868178"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x100868178",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x100868178",
+        "name": null,
+        "references_to": 99,
+        "section": "__objc_selrefs",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x10058ff57",
+            "points_to": "string",
+            "text": "integerForKey:"
+          },
+          "value": "0x10058ff57"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x100868178 looks like pointer."
+    }
+  },
+  {
+    "step": "resolve",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_c54da392d670b2dbe5510fd0323a79affe8e0d19e4bde3b3a0839c5bcac4837d",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100867e18"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x100867e18",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x100867e18",
+        "name": null,
+        "references_to": 983,
+        "section": "__objc_selrefs",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x10058f6de",
+            "points_to": "string",
+            "text": "standardUserDefaults"
+          },
+          "value": "0x10058f6de"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x100867e18 looks like pointer."
+    }
+  },
+  {
+    "step": "bytes",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "examined": 16,
+        "status": "complete",
+        "total": 16
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_767d94fda04003de5ad85e5576ab1b8071ee08f8c15138b2f054ef6ee2644c26",
+      "limitations": [],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100551d10"
+        }
+      ],
+      "operation": "native_bytes_show",
+      "params": {
+        "address": "0x100551d10",
+        "length": 16
+      },
+      "result": {
+        "address": "0x100551d10",
+        "ascii": "................",
+        "file_offset": 5578000,
+        "hex": "ffffffffffffff7fffffffffffffff7f",
+        "length": 16
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "16 bytes at 0x100551d10."
+    }
+  },
+  {
+    "step": "xref",
+    "result": {
+      "authority": "original-files",
+      "confidence": "derived",
+      "coverage": {
+        "examined": 5,
+        "status": "complete",
+        "total": 5
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_775f6a83af71662f4e0a4ce94b2ee770e5d4c07a61722e9dd0cfdcc59e57c026",
+      "limitations": [
+        {
+          "code": "static_references",
+          "message": "references made through computed pointers at run time are not seen"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008e82c8"
+        }
+      ],
+      "operation": "native_xrefs_list",
+      "params": {
+        "address": "0x1008e82c8",
+        "limit": 200,
+        "offset": 0
+      },
+      "result": {
+        "address": "0x1008e82c8",
+        "name": null,
+        "references_from": [],
+        "references_to": [
+          {
+            "from": "0x1001e6c98",
+            "function": "-[RKCropToolController _updateWidthAndHeight:height:swapOrientation:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e6ff6",
+            "function": "-[RKCropToolController _widthAndHeightFromUI:height:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e70a9",
+            "function": "-[RKCropToolController _calculatedAspectRatioFromUI]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e7a78",
+            "function": "-[RKCropToolController _updateARFieldsFromMenu]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e85d3",
+            "function": "-[RKCropToolController controlTextDidChange:]",
+            "kind": "data"
+          }
+        ],
+        "total_to": 5
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008e82c8 is referenced from 5 places and refers to 0."
+    }
+  },
+  {
+    "step": "xref",
+    "result": {
+      "authority": "original-files",
+      "confidence": "derived",
+      "coverage": {
+        "examined": 6,
+        "status": "complete",
+        "total": 6
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_1b98b35ae712579da3ee9d66c139b3f5e38edb6d8b3ef6e4955136f8f86cdcb5",
+      "limitations": [
+        {
+          "code": "static_references",
+          "message": "references made through computed pointers at run time are not seen"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008e82d0"
+        }
+      ],
+      "operation": "native_xrefs_list",
+      "params": {
+        "address": "0x1008e82d0",
+        "limit": 200,
+        "offset": 0
+      },
+      "result": {
+        "address": "0x1008e82d0",
+        "name": null,
+        "references_from": [],
+        "references_to": [
+          {
+            "from": "0x1001e6cbe",
+            "function": "-[RKCropToolController _updateWidthAndHeight:height:swapOrientation:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e6ce6",
+            "function": "-[RKCropToolController _updateWidthAndHeight:height:swapOrientation:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e7017",
+            "function": "-[RKCropToolController _widthAndHeightFromUI:height:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e70ca",
+            "function": "-[RKCropToolController _calculatedAspectRatioFromUI]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e7a95",
+            "function": "-[RKCropToolController _updateARFieldsFromMenu]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e85e0",
+            "function": "-[RKCropToolController controlTextDidChange:]",
+            "kind": "data"
+          }
+        ],
+        "total_to": 6
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008e82d0 is referenced from 6 places and refers to 0."
+    }
+  },
+  {
+    "step": "xref",
+    "result": {
+      "authority": "original-files",
+      "confidence": "derived",
+      "coverage": {
+        "examined": 23,
+        "status": "complete",
+        "total": 23
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_2966e744934c1dd2c28904b6788505e756674450a43de62c0ac8a3578b18cbe5",
+      "limitations": [
+        {
+          "code": "static_references",
+          "message": "references made through computed pointers at run time are not seen"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008e82e8"
+        }
+      ],
+      "operation": "native_xrefs_list",
+      "params": {
+        "address": "0x1008e82e8",
+        "limit": 200,
+        "offset": 0
+      },
+      "result": {
+        "address": "0x1008e82e8",
+        "name": null,
+        "references_from": [],
+        "references_to": [
+          {
+            "from": "0x1001e6f11",
+            "function": "-[RKCropToolController _cropRatioForTag:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e7031",
+            "function": "-[RKCropToolController _widthAndHeightFromUI:height:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e70e4",
+            "function": "-[RKCropToolController _calculatedAspectRatioFromUI]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e71af",
+            "function": "-[RKCropToolController _closestMenuItem:checkForMasterAspect:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e73ab",
+            "function": "-[RKCropToolController _updateARFieldsFromMenu]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e742f",
+            "function": "-[RKCropToolController _updateARFieldsFromMenu]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e7466",
+            "function": "-[RKCropToolController _updateARFieldsFromMenu]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e74c6",
+            "function": "-[RKCropToolController _updateARFieldsFromMenu]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e750d",
+            "function": "-[RKCropToolController _updateARFieldsFromMenu]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e7691",
+            "function": "-[RKCropToolController _updateARFieldsFromMenu]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e7b33",
+            "function": "-[RKCropToolController _updateMenuToMatchSelectedAR:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e7d4c",
+            "function": "-[RKCropToolController _updateMenuToMatchSelectedAR:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e805e",
+            "function": "-[RKCropToolController _updateConstraint:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e814c",
+            "function": "-[RKCropToolController _updateConstraint:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e851f",
+            "function": "-[RKCropToolController _cropRectangleChanged:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e86d9",
+            "function": "-[RKCropToolController widthChanged:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e8934",
+            "function": "-[RKCropToolController heightChanged:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e8b7a",
+            "function": "-[RKCropToolController swapChanged:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e8d81",
+            "function": "-[RKCropToolController resetClicked:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e9060",
+            "function": "-[RKCropToolController setSelectedVersion:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e909a",
+            "function": "-[RKCropToolController setSelectedVersion:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e91ac",
+            "function": "-[RKCropToolController setSelectedVersion:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1001e9408",
+            "function": "-[RKCropToolController observeValueForKeyPath:ofObject:change:context:]",
+            "kind": "data"
+          }
+        ],
+        "total_to": 23
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008e82e8 is referenced from 23 places and refers to 0."
+    }
+  },
+  {
+    "step": "xref",
+    "result": {
+      "authority": "original-files",
+      "confidence": "derived",
+      "coverage": {
+        "examined": 1,
+        "status": "complete",
+        "total": 1
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_fbba1dd596450df41132f1256e31a31bc59acfb5235b5d1c0922248f3d8b9b19",
+      "limitations": [
+        {
+          "code": "static_references",
+          "message": "references made through computed pointers at run time are not seen"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008a89e8"
+        }
+      ],
+      "operation": "native_xrefs_list",
+      "params": {
+        "address": "0x1008a89e8",
+        "limit": 200,
+        "offset": 0
+      },
+      "result": {
+        "address": "0x1008a89e8",
+        "name": null,
+        "references_from": [],
+        "references_to": [
+          {
+            "from": "0x100049441",
+            "function": "-[RKSelectionMgr a_liftAdjustments:]",
+            "kind": "data"
+          }
+        ],
+        "total_to": 1
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008a89e8 is referenced from 1 places and refers to 0."
+    }
+  },
+  {
+    "step": "xref",
+    "result": {
+      "authority": "original-files",
+      "confidence": "derived",
+      "coverage": {
+        "examined": 4,
+        "status": "complete",
+        "total": 4
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_eacc6ab1b5859d180652df934b6509da85ff19432358a9fbccd73654a5f06aea",
+      "limitations": [
+        {
+          "code": "static_references",
+          "message": "references made through computed pointers at run time are not seen"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008d9328"
+        }
+      ],
+      "operation": "native_xrefs_list",
+      "params": {
+        "address": "0x1008d9328",
+        "limit": 200,
+        "offset": 0
+      },
+      "result": {
+        "address": "0x1008d9328",
+        "name": null,
+        "references_from": [],
+        "references_to": [
+          {
+            "from": "0x1004a5284",
+            "function": "-[RKFileNamingManager setShowsMetadataOption:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1004a52f3",
+            "function": "-[RKFileNamingManager setShowsMetadataOption:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1004a53cb",
+            "function": "-[RKFileNamingManager exportMasterMetadataMode]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1004a542f",
+            "function": "-[RKFileNamingManager a_selectMetadataMode:]",
+            "kind": "data"
+          }
+        ],
+        "total_to": 4
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008d9328 is referenced from 4 places and refers to 0."
+    }
+  },
+  {
+    "step": "pseudocode",
+    "function": "0x1001e6ff6",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_7c31eb3219f58ba0a5f35af634a4d70e7c431227533a95849c7a85b085ee294a",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "inline_asm",
+          "message": "12 instructions have no C rule and are shown as __asm(...)"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1001e6fde"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x1001e6ff6"
+      },
+      "result": {
+        "calls": [
+          "r12"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x1001e6fde",
+        "function": "-[RKCropToolController _widthAndHeightFromUI:height:]",
+        "gotos": 0,
+        "inline_asm": 12,
+        "pseudo_code": "int64_t -[RKCropToolController _widthAndHeightFromUI:height:](int64_t rdi, int64_t rdx, int64_t rcx)\n{\n    r14 = rcx;\n    r15 = rdx;\n    rbx = rdi;\n    rax = *(uint64_t*)0x1008e82c8;\n    r12 = _objc_msgSend@got;\n    (*r12)(*(uint64_t*)(rbx + rax), *(uint64_t*)0x1008683a8);\n    __asm(\"movsd [rbp-0x28], xmm0\");\n    rax = *(uint64_t*)0x1008e82d0;\n    (*r12)(*(uint64_t*)(rbx + rax), *(uint64_t*)0x1008683a8);\n    __asm(\"movsd [rbp-0x30], xmm0\");\n    rax = *(uint64_t*)0x1008e82e8;\n    rax = (*r12)(*(uint64_t*)(rbx + rax), *(uint64_t*)0x10086f280);\n    cl = 0;\n    if (rax != 0x5a) {\n        if (rax != 0x10e) {\n            cl = 1;\n        }\n    }\n    __asm(\"movsd xmm0, [0x100551d00]\");\n    __asm(\"movsd xmm1, [rbp-0x28]\");\n    __asm(\"andpd xmm1, xmm0\");\n    __asm(\"movsd xmm2, [rbp-0x30]\");\n    __asm(\"andpd xmm2, xmm0\");\n    __asm(\"movapd xmm0, xmm1\");\n    if (cl == 0) {\n        __asm(\"movapd xmm0, xmm2\");\n    }\n    __asm(\"movsd [r15], xmm0\");\n    if (!(/* Ne */ flags)) {\n        __asm(\"movapd xmm2, xmm1\");\n    }\n    __asm(\"movsd [r14], xmm2\");\n    return rax;\n}\n",
+        "signature": "int64_t -[RKCropToolController _widthAndHeightFromUI:height:](int64_t rdi, int64_t rdx, int64_t rcx)",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKCropToolController _widthAndHeightFromUI:height:] (36 lines)."
+    }
+  },
+  {
+    "step": "pseudocode",
+    "function": "0x100049366",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_c28bfd9591925afb7e0441431abea970f5580f99eb867213e88b0b036fd89341",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100049366"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x100049366"
+      },
+      "result": {
+        "calls": [
+          "r13"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x100049366",
+        "function": "-[RKSelectionMgr a_liftAdjustments:]",
+        "gotos": 0,
+        "inline_asm": 0,
+        "pseudo_code": "int64_t -[RKSelectionMgr a_liftAdjustments:](int64_t rdi)\n{\n    r14 = rdi;\n    r13 = _objc_msgSend@got;\n    rax = (*r13)(*(uint64_t*)0x100888c88, *(uint64_t*)0x1008697b8);\n    rbx = rax;\n    rax = *(uint64_t*)0x1008e3ce8;\n    (*r13)(rbx, *(uint64_t*)0x10086af20, *(uint64_t*)(r14 + rax), 0, 1, 0);\n    rax = (*r13)(rbx, *(uint64_t*)0x10086a650);\n    if (al == 0) {\n        rax = (*r13)(*(uint64_t*)0x100888998, *(uint64_t*)0x100867e18);\n        r14 = &data_1008a89a8;\n        rax = (*r13)(rax, *(uint64_t*)0x100867e20, r14);\n        if (al == 0) {\n            r15 = *(uint64_t*)0x100888bc8;\n            rax = (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a75c8);\n            r12 = rax;\n            rax = (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a89c8);\n            rbx = rax;\n            (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a89e8);\n            stack_0 = r14;\n            (*r13)(r15, *(uint64_t*)0x10086abc8, r12, 0, rbx, rax);\n        }\n    }\n    return rax;\n}\n",
+        "signature": "int64_t -[RKSelectionMgr a_liftAdjustments:](int64_t rdi)",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKSelectionMgr a_liftAdjustments:] (26 lines)."
+    }
+  },
+  {
+    "step": "pseudocode",
+    "function": "0x1000babff",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_d89100a5bd0d01164e0ee586aea342d8005ed3e1d96807cc93b5185ac437a925",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "indirect_jumps_unresolved",
+          "message": "some indirect jumps were not resolved, so code may be missing"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1000babff"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x1000babff"
+      },
+      "result": {
+        "calls": [
+          "rax"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x1000babff",
+        "function": "+[RKLiftStampTool initialize]",
+        "gotos": 0,
+        "inline_asm": 0,
+        "pseudo_code": "int64_t +[RKLiftStampTool initialize]()\n{\n    r14 = *(uint64_t*)0x100888ae0;\n    rbx = _objc_msgSend@got;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100868278, 0);\n    rax = rbx;\n    rax = (*rax)(r14, *(uint64_t*)0x10086acb8, rax, &data_1008af268);\n    r14 = rax;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)0x100888998, *(uint64_t*)0x100867e18);\n    rsi = *(uint64_t*)0x10086b750;\n    rdi = rax;\n    rdx = r14;\n    rax = rbx;\n    goto *rax; /* computed jump */\n}\n",
+        "signature": "int64_t +[RKLiftStampTool initialize]()",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for +[RKLiftStampTool initialize] (17 lines)."
+    }
+  }
+]

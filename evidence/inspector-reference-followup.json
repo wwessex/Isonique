@@ -1,0 +1,277 @@
+[
+  {
+    "label": "messageBaseRefs",
+    "result": {
+      "authority": "original-files",
+      "confidence": "derived",
+      "coverage": {
+        "examined": 1,
+        "status": "complete",
+        "total": 1
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_5d97b892c42fb5b28da82b8ef3f4a9c38796d4b39b60f3444c21b69fd6394d11",
+      "limitations": [
+        {
+          "code": "static_references",
+          "message": "references made through computed pointers at run time are not seen"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008a89e8"
+        }
+      ],
+      "operation": "native_xrefs_list",
+      "params": {
+        "address": "0x1008a89e8",
+        "limit": 25,
+        "offset": 0
+      },
+      "result": {
+        "address": "0x1008a89e8",
+        "name": null,
+        "references_from": [],
+        "references_to": [
+          {
+            "from": "0x100049441",
+            "function": "-[RKSelectionMgr a_liftAdjustments:]",
+            "kind": "data"
+          }
+        ],
+        "total_to": 1
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008a89e8 is referenced from 1 places and refers to 0."
+    }
+  },
+  {
+    "label": "wbRefs",
+    "result": {
+      "authority": "original-files",
+      "confidence": "derived",
+      "coverage": {
+        "examined": 1,
+        "status": "complete",
+        "total": 1
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_504c7f9f4d2314f9f117fd556e1b0b8501886e323177d7147f62f38142b367df",
+      "limitations": [
+        {
+          "code": "static_references",
+          "message": "references made through computed pointers at run time are not seen"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x10087ea90"
+        }
+      ],
+      "operation": "native_xrefs_list",
+      "params": {
+        "address": "0x10087ea90",
+        "limit": 25,
+        "offset": 0
+      },
+      "result": {
+        "address": "0x10087ea90",
+        "name": null,
+        "references_from": [
+          {
+            "kind": "string",
+            "name": null,
+            "to": "0x1005ec597"
+          }
+        ],
+        "references_to": [
+          {
+            "from": "0x100374bc8",
+            "function": "-[DGWhiteBalanceController _setTemperatureAndTintForRawV2Color:]",
+            "kind": "data"
+          }
+        ],
+        "total_to": 1
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x10087ea90 is referenced from 1 places and refers to 1."
+    }
+  },
+  {
+    "label": "wbRawPseudo",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_a4505ea8d06a9f6bb538bb3d2c22549eac5f38fbee9dccb9017fbe25154fa6d9",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "unstructured_flow",
+          "message": "6 gotos remain where the control flow isn't a simple if/loop"
+        },
+        {
+          "code": "inline_asm",
+          "message": "11 instructions have no C rule and are shown as __asm(...)"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100374791"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x100374791"
+      },
+      "result": {
+        "calls": [
+          "0x100888740",
+          "0x1008887a0",
+          "0x1008887b0",
+          "0x1008887e0",
+          "_CFRelease@stub",
+          "_CGImageRelease@stub",
+          "_CGImageSourceCopyPropertiesAtIndex@stub",
+          "_CGImageSourceCreateImageAtIndex@stub",
+          "_CGImageSourceCreateWithURL@stub",
+          "___stack_chk_fail@stub",
+          "_objc_enumerationMutation@stub",
+          "_objc_msgSend",
+          "r13",
+          "rbx"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x100374791",
+        "function": "-[DGWhiteBalanceController _setTemperatureAndTintForRawV2Color:]",
+        "gotos": 6,
+        "inline_asm": 11,
+        "pseudo_code": "int64_t -[DGWhiteBalanceController _setTemperatureAndTintForRawV2Color:](int64_t rdi, int64_t rdx)\n{\n    r14 = rdx;\n    var_120 = rdi;\n    rax = ___stack_chk_guard@got;\n    rax = *(uint64_t*)(rax);\n    var_30 = rax;\n    rax = &data_1008eac50;\n    rax = *(uint64_t*)(rax);\n    r13 = _objc_msgSend@got;\n    rax = (*r13)(*(uint64_t*)(rdi + rax), *(uint64_t*)0x100867f08);\n    r15 = rax;\n    rax = (*r13)(r15, *(uint64_t*)0x100868bc8);\n    rax = (*r13)(rax, *(uint64_t*)0x100869df0);\n    rax = (*r13)(*(uint64_t*)0x100888eb8, *(uint64_t*)0x10086c478, rax);\n    rax = _CGImageSourceCreateWithURL@stub(rax, 0);\n    var_118 = rax;\n    if (rax != 0) {\n        (*r13)(r14, *(uint64_t*)0x10086df10, &var_50);\n        r14 = *(uint64_t*)0x100888a60;\n        __asm(\"movsd xmm0, [rbp-0x50]\");\n        rax = (*r13)(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100868390);\n        r12 = rax;\n        __asm(\"movsd xmm0, [rbp-0x48]\");\n        rax = (*r13)(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100868390);\n        rbx = rax;\n        __asm(\"movsd xmm0, [rbp-0x40]\");\n        rax = (*r13)(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100868390);\n        al = 0;\n        rax = (*r13)(r14, *(uint64_t*)0x100868930, r12, rbx, rax, 0);\n        r14 = rax;\n        rbx = *(uint64_t*)0x1008889c8;\n        rax = (*r13)(r15, *(uint64_t*)0x10086f290);\n        rax = (*r13)(rbx, *(uint64_t*)0x10086d6b8, rax);\n        r12 = rax;\n        (*r13)(r12, *(uint64_t*)0x100867e98, r14, &data_1008cd368);\n        rax = (*r13)(r15, *(uint64_t*)0x100874450);\n        rbx = rax;\n        rax = (*0x1008887e0)(&data_1008b8b68, &data_1008887e0, rbx);\n        if (al != 0) {\n            rax = _objc_msgSend(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100869190, 1);\n            rbx = rax;\n        }\n        rax = (*0x1008887e0)(&data_1008b5328, &data_1008887e0, rbx);\n        if (al != 0) {\n            rax = _objc_msgSend(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100869190, 0);\n            rbx = rax;\n        }\n        r14 = *(uint64_t*)0x100888ae0;\n        (*r13)(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100869190, 16);\n        rcx = _kCGImageSourceShouldUseMethodVersion@got;\n        r10 = *(uint64_t*)(rcx);\n        r11 = _kCGImageSourceSubsampleFactor@got;\n        rdi = _kCGImageSourceShouldExtendRaw@got;\n        rdx = _kCFBooleanTrue@got;\n        rcx = _kCGImageSourceRawReconstructionOptions@got;\n        r8 = *(uint64_t*)(rcx);\n        rdx = *(uint64_t*)(rdx);\n        r9 = *(uint64_t*)(rdi);\n        rcx = *(uint64_t*)(r11);\n        rdi = _kCFBooleanFalse@got;\n        rdi = *(uint64_t*)(rdi);\n        stack_48 = r10;\n        stack_40 = rbx;\n        rbx = _kCGImageSourceUseCoreImage@got;\n        rbx = *(uint64_t*)(rbx);\n        stack_38 = rbx;\n        stack_30 = rdi;\n        stack_28 = rcx;\n        stack_20 = rax;\n        stack_18 = r9;\n        stack_10 = rdx;\n        stack_8 = r8;\n        stack_0 = r12;\n        stack_50 = 0;\n        rax = _kCGImageSourceShouldCache@got;\n        rax = _kCGImageSourceRawReconstructionDefaults@got;\n        al = 0;\n        rax = (*r13)(r14, *(uint64_t*)0x100869150, rdx, *(uint64_t*)(rax), rdx, *(uint64_t*)(rax));\n        r14 = rax;\n        rbx = var_118;\n        rax = _CGImageSourceCreateImageAtIndex@stub(rbx, 0, r14);\n        var_128 = rax;\n        if (rax != 0) {\n            rax = _CGImageSourceCopyPropertiesAtIndex@stub(rbx, 0, r14);\n            var_130 = rax;\n            rbx = &data_100888740;\n            rax = (*0x100888740)(rax, rbx, &data_1008cd388);\n            rax = (*0x100888740)(rax, rbx, &data_1008b5f48);\n            rbx = rax;\n            if (rbx != 0) {\n                __asm(\"xorps xmm0, xmm0\");\n                __asm(\"movaps [rbp-0x60], xmm0\");\n                __asm(\"movaps [rbp-0x70], xmm0\");\n                __asm(\"movaps [rbp-0x80], xmm0\");\n                __asm(\"movaps [rbp-0x90], xmm0\");\n                rax = _objc_msgSend(rbx, *(uint64_t*)0x100867f78, &var_90, &var_110, 16);\n                r12 = rax;\n                if (r12 != 0) {\n                    rax = var_80;\n                    r13 = *(uint64_t*)(rax);\n                    while (true) {\nlabel_100374ae2:\n                        r14d = 0;\n                    }\nlabel_100374b60:\n                }\n            }\nlabel_100374be0:\n            _CFRelease@stub(var_130);\n            _CGImageRelease@stub(var_128);\n            rbx = var_118;\n        }\n        _CFRelease@stub(rbx);\n    }\n    rax = ___stack_chk_guard@got;\n    rax = *(uint64_t*)(rax);\n    if (rax != var_30) {\n        ___stack_chk_fail@stub();\n    } else {\n        return rax;\n    }\n    while (true) {\nlabel_100374ae5:\n        rax = var_80;\n        if (*(uint64_t*)(rax) != r13) {\n            _objc_enumerationMutation@stub(rbx);\n        }\n    }\nlabel_100374b34:\n    rax = _objc_msgSend(rbx, *(uint64_t*)0x100867f78, &var_90, &var_110, 16);\n    r12 = rax;\n    if (r12 != 0) {\n        goto label_100374ae2;\n    } else {\n        goto label_100374b60;\n    }\n    goto label_100374be0;\n    rax = var_88;\n    r15 = *(uint64_t*)(rax + r14 * 8);\n    rax = _objc_msgSend(r15, *(uint64_t*)0x10086d9c0);\n    rax = (*0x1008887b0)(rax, &data_1008887b0, &data_1008cd3a8);\n    if (al != 0) {\n        rbx = _objc_msgSend@got;\n        rax = (*rbx)(r15, *(uint64_t*)0x100868770, &data_1008cd3c8);\n        r15 = rax;\n        r14 = &data_1008887a0;\n        rax = (*0x1008887a0)(r15, r14, 0);\n        (*rbx)(rax, *(uint64_t*)0x1008683a8);\n        __asm(\"movsd [rbp-0x138], xmm0\");\n        rax = (*0x1008887a0)(r15, r14, 1);\n        (*rbx)(rax, *(uint64_t*)0x1008683a8);\n        __asm(\"movaps xmm1, xmm0\");\n        __asm(\"movsd xmm0, [rbp-0x138]\");\n        (*rbx)(var_120, *(uint64_t*)0x10087ea90);\n    } else {\n        r14++;\n        if (r14 < r12 /* unsigned */) {\n            goto label_100374ae5;\n        } else {\n            goto label_100374b34;\n        }\n    }\n    goto label_100374be0;\n}\n",
+        "signature": "int64_t -[DGWhiteBalanceController _setTemperatureAndTintForRawV2Color:](int64_t rdi, int64_t rdx)",
+        "strings": [],
+        "structured": false
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[DGWhiteBalanceController _setTemperatureAndTintForRawV2Color:] (165 lines, partly unstructured)."
+    }
+  },
+  {
+    "label": "liftMessagePseudo",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_c28bfd9591925afb7e0441431abea970f5580f99eb867213e88b0b036fd89341",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100049366"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x100049366"
+      },
+      "result": {
+        "calls": [
+          "r13"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x100049366",
+        "function": "-[RKSelectionMgr a_liftAdjustments:]",
+        "gotos": 0,
+        "inline_asm": 0,
+        "pseudo_code": "int64_t -[RKSelectionMgr a_liftAdjustments:](int64_t rdi)\n{\n    r14 = rdi;\n    r13 = _objc_msgSend@got;\n    rax = (*r13)(*(uint64_t*)0x100888c88, *(uint64_t*)0x1008697b8);\n    rbx = rax;\n    rax = *(uint64_t*)0x1008e3ce8;\n    (*r13)(rbx, *(uint64_t*)0x10086af20, *(uint64_t*)(r14 + rax), 0, 1, 0);\n    rax = (*r13)(rbx, *(uint64_t*)0x10086a650);\n    if (al == 0) {\n        rax = (*r13)(*(uint64_t*)0x100888998, *(uint64_t*)0x100867e18);\n        r14 = &data_1008a89a8;\n        rax = (*r13)(rax, *(uint64_t*)0x100867e20, r14);\n        if (al == 0) {\n            r15 = *(uint64_t*)0x100888bc8;\n            rax = (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a75c8);\n            r12 = rax;\n            rax = (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a89c8);\n            rbx = rax;\n            (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a89e8);\n            stack_0 = r14;\n            (*r13)(r15, *(uint64_t*)0x10086abc8, r12, 0, rbx, rax);\n        }\n    }\n    return rax;\n}\n",
+        "signature": "int64_t -[RKSelectionMgr a_liftAdjustments:](int64_t rdi)",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKSelectionMgr a_liftAdjustments:] (26 lines)."
+    }
+  }
+]

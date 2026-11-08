@@ -1,0 +1,6 @@
+.build/
+.build-ui/
+build/
+shots/
+.DS_Store
+*.log

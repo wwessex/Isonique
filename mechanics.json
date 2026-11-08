@@ -1,0 +1,95 @@
+{
+  "version": 1,
+  "values": [
+    {
+      "name": "original version",
+      "group": "compatibility",
+      "value": "3.6",
+      "source": "original Contents/Info.plist CFBundleShortVersionString"
+    },
+    {
+      "name": "original executable architecture",
+      "group": "compatibility",
+      "value": "x86_64",
+      "source": "core_target_triage ev_56a80cc3b2b6794d7bba56df1de141437635416e9348bbf81c31e35f22ca9ea8"
+    },
+    {
+      "name": "minimum user rating",
+      "group": "ratings",
+      "value": -1,
+      "source": "RedRock _kMinRating 0x4a9ca8; ev_8258378d501efebc84afffd6bedf46178d64bff5e9bb07e10bdb179555fda85b"
+    },
+    {
+      "name": "maximum user rating",
+      "group": "ratings",
+      "value": 5,
+      "source": "RedRock _kMaxRating 0x4a9cb0; ev_be9977ff973a19b3f43591b8824c4d05f47e2eebb264de77ce6135ed9d29dba1"
+    },
+    {
+      "name": "invalid internal rating",
+      "group": "ratings",
+      "value": -100,
+      "source": "RedRock _kInvalidRating 0x4a9ca0; ev_eb3bc69d939f4ba85d5f03b5e1ccb077bd690f0dedc5a660e15f8786253a2d39"
+    },
+    {
+      "name": "rating clamp",
+      "group": "ratings",
+      "value": "min(5, max(-1, requested))",
+      "source": "Aperture 0x1001c35de; assembly ev_b62d895ddfe01394adaa86d57addd08c24d8252e207e133b586f92ef7512913f"
+    },
+    {
+      "name": "rejection transition",
+      "group": "ratings",
+      "value": "on: -1; off: 0",
+      "source": "Aperture 0x1004320d4; assembly ev_0e0116876ce19cb8bf16b89bbc4e528a5541632134a6a7c872300293fd5f0fd8"
+    },
+    {
+      "name": "minimum straighten angle",
+      "group": "geometry",
+      "value": -45,
+      "source": "Aperture 0x10042f5e6; f64 0x100551808; ev_a0e96d79eafba3d9f5424faa30bcd35d8002c59223ab8e32529938a195d067e1"
+    },
+    {
+      "name": "maximum straighten angle",
+      "group": "geometry",
+      "value": 45,
+      "source": "Aperture 0x10042f5e6; f64 0x100552090; ev_d5c238df7aa81e53967ec0e2e8063ff20c1541121c8f8c4d53734ee3ef39dd17"
+    },
+    {
+      "name": "straighten gesture formula",
+      "group": "geometry",
+      "value": "min(45, max(-45, currentAngle + event.rotation))",
+      "source": "Aperture 0x10042f5e6; assembly ev_e120649baf1ea97117849e9ff15227a88a1357503acaa127f04e6093a2feb462; StraightenRules.applying used by fine-angle controls; 0.1 degree button step is an independent UI choice"
+    },
+    {
+      "name": "rating filter index table",
+      "group": "ratings",
+      "value": "1: >=1; 2: >=2; 3: >=3; 4: >=4; 5: =5; 6: disabled; 7: =0; 8: =-1; other: >=0",
+      "source": "Aperture 0x100157a19; assembly ev_bb58ca1c6433723d4f6d9e201febf431aa309159bf626a1c9ef0e7371d2be2d6; typed i64 tables 0x100551590/0x1005515d0; evidence/inspector-decompilation.json"
+    },
+    {
+      "name": "rating query comparison operators",
+      "group": "ratings",
+      "value": "qualifier 5 = equals; qualifier 8 = greater than or equal",
+      "source": "RedRock 0x43759; assembly ev_74c28bc8f4ed32a6e9fcdd32643d4bafb1bd93fd30c6739ad36832bcd0b88981; strings ev_e906d373570f72ea5a2530b3dfdbe7f9faa2dd2fe1ac1a2147de804afde6a1c8 / ev_98939b54032a498fe438f254176d63452147ab8c1162563c13bb09df6e2a22dc"
+    },
+    {
+      "name": "incremental rating formula",
+      "group": "ratings",
+      "value": "min(5, max(-1, current + delta))",
+      "source": "Aperture addition 0x100032854 / 0x100032879, assembly ev_6228704d1dfc57f749806966a90c8bebb1bed34a8112571fc0eb0db5adde1f85; bounds from separate setter 0x1001c35de; combined implementation RatingRules.adjusting; overflow handling independent"
+    },
+    {
+      "name": "crop aspect ratio",
+      "group": "crop",
+      "value": "abs(width)/abs(height); inverted at source rotations 90 or 270 degrees",
+      "source": "Aperture RKCropToolController 0x1001e709b; pseudocode ev_5dd53ca4d1e0441dca3696ac291bc1d0137bbb2e7bbf664333001c7f72957104; assembly ev_54832cd6c965f7d77efb50427bf7fb615b412f2294aca841f24086dc07563fea; exact mask ev_767d94fda04003de5ad85e5576ab1b8071ee08f8c15138b2f054ef6ee2644c26; CropRules.aspectRatio; invalid-input guards independent"
+    },
+    {
+      "name": "flagged filter predicate",
+      "group": "filtering",
+      "value": "enabled query type 22; RKVersionIsFlagged equals integer 1; qualifier 5",
+      "source": "Aperture 0x100157c47; assembly ev_8de68cf92bf67eda93f7405436fe7434677f01984bf25c961d6509586bc7dbed; BrowserFilterRules.includes; evidence/current-main-program-trace.json"
+    }
+  ]
+}

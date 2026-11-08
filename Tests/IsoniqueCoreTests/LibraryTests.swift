@@ -1,0 +1,519 @@
+import XCTest
+import AppKit
+import ImageIO
+import UniformTypeIdentifiers
+@testable import IsoniqueCore
+
+final class LibraryTests: XCTestCase {
+    func testRecoveredCropAspectRatio() throws {
+        XCTAssertEqual(try XCTUnwrap(CropRules.aspectRatio(width: -3, height: -2)), 1.5)
+        for rotation in [90, 270] {
+            XCTAssertEqual(try XCTUnwrap(CropRules.aspectRatio(width: 3, height: 2, rotation: rotation)), 2.0 / 3, accuracy: 1e-12)
+        }
+        for rotation in [0, 180] {
+            XCTAssertEqual(CropRules.aspectRatio(width: 3, height: 2, rotation: rotation), 1.5)
+        }
+        XCTAssertNil(CropRules.aspectRatio(width: 0, height: 2))
+        XCTAssertNil(CropRules.aspectRatio(width: 2, height: .infinity))
+        XCTAssertNil(CropRules.aspectRatio(width: .nan, height: 2))
+    }
+    var temporary: URL!
+    override func setUpWithError() throws {
+        temporary = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueTests-" + UUID().uuidString)
+        try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
+    }
+    override func tearDownWithError() throws { try FileManager.default.removeItem(at: temporary) }
+    func fixture(_ name: String = "source.png", directory: URL? = nil) throws -> URL {
+        let url = (directory ?? temporary).appendingPathComponent(name)
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let context = CGContext(data: nil, width: 32, height: 24, bitsPerComponent: 8, bytesPerRow: 128, space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        context.setFillColor(CGColor(red: 0.25, green: 0.4, blue: 0.65, alpha: 1)); context.fill(CGRect(x: 0, y: 0, width: 32, height: 24))
+        let writer = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)!
+        CGImageDestinationAddImage(writer, context.makeImage()!, nil)
+        XCTAssertTrue(CGImageDestinationFinalize(writer))
+        return url
+    }
+    func testImportPersistenceAdjustmentsAndExportPreserveOriginal() throws {
+        let source = try fixture()
+        let hash = try LibraryRepository.digest(source)
+        let repository = try LibraryRepository(root: temporary.appendingPathComponent("managed"))
+        var library = Library()
+        let project = Collection(name: "Commission")
+        let album = Collection(name: "Selects")
+        library.projects.append(project); library.albums.append(album)
+        XCTAssertTrue(try repository.importPhoto(source, projectID: project.id, into: &library))
+        XCTAssertFalse(try repository.importPhoto(source, projectID: project.id, into: &library))
+        XCTAssertEqual(library.photos.count, 1)
+        XCTAssertEqual(library.photos[0].width, 32)
+        XCTAssertEqual(library.photos[0].height, 24)
+        library.photos[0].rating = 4
+        library.photos[0].albumIDs.insert(album.id)
+        library.photos[0].caption = "Blue study"
+        library.photos[0].adjustments.exposure = 1
+        try repository.save(library)
+        let loaded = try repository.load()
+        XCTAssertEqual(loaded.photos, library.photos)
+        let destination = temporary.appendingPathComponent("edited.jpg")
+        try Renderer.export(loaded.photos[0], repository: repository, to: destination)
+        let rendered = CGImageSourceCreateWithURL(destination as CFURL, nil)!
+        let properties = CGImageSourceCopyPropertiesAtIndex(rendered, 0, nil)! as NSDictionary
+        XCTAssertEqual(properties[kCGImagePropertyPixelWidth] as? Int, 32)
+        let originalImage = try Renderer.render(source, adjustments: Adjustments())
+        let editedImage = try Renderer.render(source, adjustments: loaded.photos[0].adjustments)
+        XCTAssertNotEqual(originalImage.dataProvider?.data as Data?, editedImage.dataProvider?.data as Data?)
+        XCTAssertEqual(try LibraryRepository.digest(source), hash)
+        XCTAssertEqual(try LibraryRepository.digest(repository.originalURL(loaded.photos[0])), hash)
+        XCTAssertThrowsError(try Renderer.export(loaded.photos[0], repository: repository, to: destination))
+        XCTAssertThrowsError(try Renderer.export(loaded.photos[0], repository: repository, to: repository.originalURL(loaded.photos[0])))
+    }
+    func testPublicRendererExposureMatchesSRGBReferenceValues() throws {
+        // Known sRGB middle-gray values: ±1 EV must operate in linear light.
+        let space = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
+        let context = try XCTUnwrap(CGContext(data: nil, width: 2, height: 2,
+            bitsPerComponent: 8, bytesPerRow: 8, space: space,
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue))
+        let gray = 128.0 / 255.0
+        context.setFillColor(try XCTUnwrap(CGColor(colorSpace: space, components: [gray, gray, gray, 1])))
+        context.fill(CGRect(x: 0, y: 0, width: 2, height: 2))
+        let source = temporary.appendingPathComponent("srgb.png")
+        let writer = try XCTUnwrap(CGImageDestinationCreateWithURL(source as CFURL, UTType.png.identifier as CFString, 1, nil))
+        CGImageDestinationAddImage(writer, try XCTUnwrap(context.makeImage()), nil)
+        XCTAssertTrue(CGImageDestinationFinalize(writer))
+        for (ev, expected) in [(0.0, 128), (1.0, 176), (-1.0, 92)] {
+            var settings = Adjustments(); settings.exposure = ev
+            let rendered = try Renderer.render(source, adjustments: settings)
+            let bytes = try XCTUnwrap(rendered.dataProvider?.data) as Data
+            for channel in 0..<3 { XCTAssertEqual(Double(bytes[channel]), Double(expected), accuracy: 1) }
+            XCTAssertEqual(bytes[3], 255)
+        }
+    }
+    func testLegacyRecoveryCopiesAndVerifiesWithoutChangingSource() throws {
+        let legacy = temporary.appendingPathComponent("Fixture.aplibrary")
+        let masters = legacy.appendingPathComponent("Masters/2026")
+        try FileManager.default.createDirectory(at: masters, withIntermediateDirectories: true)
+        let source = try fixture(directory: masters)
+        let database = legacy.appendingPathComponent("Library.apdb")
+        try Data("opaque database must remain unchanged".utf8).write(to: database)
+        let hash = try LibraryRepository.digest(source), databaseHash = try LibraryRepository.digest(database)
+        let repository = try LibraryRepository(root: temporary.appendingPathComponent("recovered"))
+        var library = Library()
+        let result = try repository.recoverLegacy(legacy, into: &library)
+        XCTAssertEqual(result.imported, 1); XCTAssertEqual(result.skipped, 0)
+        XCTAssertEqual(try LibraryRepository.digest(source), hash)
+        XCTAssertEqual(try LibraryRepository.digest(database), databaseHash)
+        XCTAssertEqual(try LibraryRepository.digest(repository.originalURL(try XCTUnwrap(library.photos.first))), hash)
+        XCTAssertEqual(library.projects.count, 1)
+        XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: repository.root.path).contains { $0.hasPrefix("Recovery-") })
+        XCTAssertThrowsError(try LibraryRepository(root: legacy))
+    }
+    func testRecoveryPreservesEmbeddedMetadataAndReportsSkippedFiles() throws {
+        let legacy = temporary.appendingPathComponent("Metadata.aplibrary")
+        let masters = legacy.appendingPathComponent("Masters")
+        try FileManager.default.createDirectory(at: masters, withIntermediateDirectories: true)
+        let plain = try fixture()
+        let input = try XCTUnwrap(CGImageSourceCreateWithURL(plain as CFURL, nil))
+        let image = masters.appendingPathComponent("tagged.tif")
+        let writer = try XCTUnwrap(CGImageDestinationCreateWithURL(image as CFURL, UTType.tiff.identifier as CFString, 1, nil))
+        let properties: [String: Any] = [kCGImagePropertyIPTCDictionary as String: [
+            kCGImagePropertyIPTCCaptionAbstract as String: "A retained caption — café",
+            kCGImagePropertyIPTCKeywords as String: ["Travel", "Family"],
+            kCGImagePropertyIPTCStarRating as String: 4
+        ]]
+        CGImageDestinationAddImageFromSource(writer, input, 0, properties as CFDictionary)
+        XCTAssertTrue(CGImageDestinationFinalize(writer))
+        try FileManager.default.copyItem(at: image, to: masters.appendingPathComponent("duplicate.tif"))
+        try Data("not a RAW file".utf8).write(to: masters.appendingPathComponent("broken.nef"))
+        let sourceHash = try LibraryRepository.digest(image)
+        let repository = try LibraryRepository(root: temporary.appendingPathComponent("managed"))
+        var library = Library()
+        let result = try repository.recoverLegacy(legacy, into: &library)
+        XCTAssertEqual(result.imported, 1)
+        XCTAssertEqual(result.duplicates, 1)
+        XCTAssertEqual(result.unsupported, ["Masters/broken.nef"])
+        XCTAssertEqual(result.skipped, 2)
+        let recovered = try XCTUnwrap(repository.load().photos.first)
+        XCTAssertEqual(recovered.caption, "A retained caption — café")
+        XCTAssertEqual(recovered.keywords, "Travel, Family")
+        XCTAssertEqual(recovered.rating, 4)
+        XCTAssertEqual(try LibraryRepository.digest(image), sourceHash)
+        library.photos[0].caption = "My newer caption"
+        library.photos[0].rating = 2
+        try repository.save(library)
+        let repeated = try repository.recoverLegacy(legacy, into: &library)
+        XCTAssertEqual(repeated.imported, 0)
+        XCTAssertEqual(repeated.duplicates, 2)
+        XCTAssertEqual(library.photos[0].caption, "My newer caption")
+        XCTAssertEqual(library.photos[0].rating, 2)
+    }
+    func testEmbeddedXMPRatingsAreReadWithoutChangingOriginal() throws {
+        let plain = try fixture()
+        let source = try XCTUnwrap(CGImageSourceCreateWithURL(plain as CFURL, nil))
+        let pixels = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+        let repository = try LibraryRepository(root: temporary.appendingPathComponent("managed"))
+        var library = Library()
+        for (value, expected) in [("-1", -1), ("5", 5), ("99", 5), ("invalid", 0)] {
+            let metadata = CGImageMetadataCreateMutable()
+            XCTAssertTrue(CGImageMetadataRegisterNamespaceForPrefix(metadata, "http://ns.adobe.com/xap/1.0/" as CFString, "xmp" as CFString, nil))
+            XCTAssertTrue(CGImageMetadataSetValueWithPath(metadata, nil, "xmp:Rating" as CFString, value as CFString))
+            let file = temporary.appendingPathComponent(value + ".tif")
+            let writer = try XCTUnwrap(CGImageDestinationCreateWithURL(file as CFURL, UTType.tiff.identifier as CFString, 1, nil))
+            CGImageDestinationAddImageAndMetadata(writer, pixels, metadata, nil)
+            XCTAssertTrue(CGImageDestinationFinalize(writer))
+            let hash = try LibraryRepository.digest(file)
+            XCTAssertTrue(try repository.importPhoto(file, projectID: nil, into: &library))
+            XCTAssertEqual(library.photos.last?.rating, expected)
+            XCTAssertEqual(try LibraryRepository.digest(file), hash)
+        }
+    }
+    func testUnsafeCatalogueAndSymlinksAreRejected() throws {
+        let repository = try LibraryRepository(root: temporary.appendingPathComponent("managed"))
+        let source = try fixture()
+        var library = Library()
+        _ = try repository.importPhoto(source, projectID: nil, into: &library)
+        library.photos[0].filename = "../../source.png"
+        try repository.save(library)
+        XCTAssertThrowsError(try repository.load())
+        library.photos[0].filename = "linked.png"
+        try FileManager.default.createSymbolicLink(at: repository.root.appendingPathComponent("Originals/linked.png"), withDestinationURL: source)
+        XCTAssertThrowsError(try repository.originalURL(library.photos[0]))
+    }
+    func testInvalidImageDoesNotLeaveManagedFiles() throws {
+        let repository = try LibraryRepository(root: temporary.appendingPathComponent("managed"))
+        let invalid = temporary.appendingPathComponent("invalid.nef")
+        try Data("not a photo".utf8).write(to: invalid)
+        var library = Library()
+        XCTAssertTrue(LibraryRepository.imageFiles(in: temporary).contains { $0.lastPathComponent == invalid.lastPathComponent })
+        XCTAssertThrowsError(try repository.importPhoto(invalid, projectID: nil, into: &library))
+        XCTAssertEqual(library.photos.count, 0)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: repository.root.appendingPathComponent("Originals").path).count, 0)
+    }
+    func testRecoveredRatingFilterTruthTable() {
+        let ratings = Array(-1...5)
+        let expected: [(RatingFilter, [Int])] = [
+            (.all, [-1, 0, 1, 2, 3, 4, 5]), (.unratedAndAbove, [0, 1, 2, 3, 4, 5]),
+            (.oneAndAbove, [1, 2, 3, 4, 5]), (.twoAndAbove, [2, 3, 4, 5]),
+            (.threeAndAbove, [3, 4, 5]), (.fourAndAbove, [4, 5]),
+            (.five, [5]), (.unrated, [0]), (.rejected, [-1])
+        ]
+        for (filter, matches) in expected {
+            XCTAssertEqual(ratings.filter(filter.includes), matches, filter.label)
+        }
+        // Index 6 disables the original predicate; it must not mean rating >= 0.
+        XCTAssertTrue(RatingFilter(rawValue: 6)!.includes(-1))
+        XCTAssertFalse(RatingFilter(rawValue: 7)!.includes(1))
+        XCTAssertFalse(RatingFilter(rawValue: 8)!.includes(0))
+    }
+    func testRecoveredRatingRulesAndCatalogueCompatibility() throws {
+        XCTAssertEqual((-1...5).map { RatingRules.adjusting($0, by: 1) }, [0, 1, 2, 3, 4, 5, 5])
+        XCTAssertEqual((-1...5).map { RatingRules.adjusting($0, by: -1) }, [-1, -1, 0, 1, 2, 3, 4])
+        XCTAssertEqual(RatingRules.adjusting(Int.max, by: 1), 5)
+        XCTAssertEqual(RatingRules.adjusting(Int.min, by: -1), -1)
+        XCTAssertEqual([-100, -2, -1, 0, 1, 4, 5, 6, Int.max].map(RatingRules.clamp), [-1, -1, -1, 0, 1, 4, 5, 5, 5])
+        XCTAssertEqual(RatingRules.rejectionRating(isRejected: true), -1)
+        XCTAssertEqual(RatingRules.rejectionRating(isRejected: false), 0)
+        XCTAssertEqual(RatingRules.stars(-1), "")
+        XCTAssertEqual(RatingRules.stars(5), "★★★★★")
+        let repository = try LibraryRepository(root: temporary.appendingPathComponent("managed"))
+        var library = Library()
+        _ = try repository.importPhoto(fixture(), projectID: nil, into: &library)
+        let original = try repository.originalURL(library.photos[0])
+        let digest = try LibraryRepository.digest(original)
+        for rating in [-1, 0, 4, 5] {
+            library.photos[0].rating = rating
+            try repository.save(library)
+            let loaded = try repository.load()
+            XCTAssertEqual(loaded.version, 1)
+            XCTAssertEqual(loaded.photos[0].rating, rating)
+            XCTAssertEqual(loaded.photos[0].id, library.photos[0].id)
+        }
+        // Older catalogues use the same integer field; out-of-range inputs normalize.
+        library.photos[0].rating = 99
+        let catalogue = repository.root.appendingPathComponent("catalog.json")
+        try JSONEncoder().encode(library).write(to: catalogue)
+        XCTAssertEqual(try repository.load().photos[0].rating, 5)
+        library.photos[0].rating = -100
+        try repository.save(library)
+        XCTAssertEqual(try repository.load().photos[0].rating, -1)
+        XCTAssertEqual(try LibraryRepository.digest(original), digest)
+    }
+    func testSavedStraightenBoundsMatchRestoredInspectorAndRenderer() throws {
+        let repository = try LibraryRepository(root: temporary.appendingPathComponent("angle-bounds"))
+        let source = try fixture()
+        let digest = try LibraryRepository.digest(source)
+        var library = Library()
+        _ = try repository.importPhoto(source, projectID: nil, into: &library)
+        let crop = PhotoCrop(x: 0.1, y: 0.2, width: 0.5, height: 0.5)
+        library.photos[0].adjustments.crop = crop
+        for (input, expected) in [(90.0, 45.0), (-90, -45), (12.5, 12.5)] {
+            library.photos[0].adjustments.straighten = input
+            let catalogue = repository.root.appendingPathComponent("catalog.json")
+            // Simulate a catalogue written before load/save normalization existed.
+            try JSONEncoder().encode(library).write(to: catalogue)
+            let restored = try repository.load()
+            XCTAssertEqual(restored.photos[0].adjustments.straighten, expected)
+            XCTAssertEqual(restored.photos[0].adjustments.crop, crop)
+            try repository.save(library)
+            let raw = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: catalogue)) as? [String: Any])
+            let photos = try XCTUnwrap(raw["photos"] as? [[String: Any]])
+            let adjustments = try XCTUnwrap(photos.first?["adjustments"] as? [String: Any])
+            XCTAssertEqual(adjustments["straighten"] as? Double, expected)
+            let saved = try JSONDecoder().decode(Library.self, from: Data(contentsOf: catalogue))
+            XCTAssertEqual(saved.photos[0].adjustments.straighten, expected)
+            XCTAssertEqual(saved.photos[0].id, library.photos[0].id)
+        }
+        XCTAssertEqual(try LibraryRepository.digest(source), digest)
+    }
+    func testOlderRecipesDecodeAndNewGeometryPersistsAndExports() throws {
+        let old = Data(#"{"exposure":1,"contrast":1.1,"saturation":0.8}"#.utf8)
+        let decoded = try JSONDecoder().decode(Adjustments.self, from: old)
+        XCTAssertEqual(decoded.exposure, 1); XCTAssertEqual(decoded.quarterTurns, 0)
+        XCTAssertEqual(decoded.straighten, 0); XCTAssertNil(decoded.crop)
+        let repository = try LibraryRepository(root: temporary.appendingPathComponent("geometry"))
+        let source = try fixture()
+        let digest = try LibraryRepository.digest(source)
+        var library = Library()
+        _ = try repository.importPhoto(source, projectID: nil, into: &library)
+        library.photos[0].adjustments.quarterTurns = 1
+        library.photos[0].adjustments.crop = PhotoCrop(x: 0.25, y: 0.25, width: 0.5, height: 0.5)
+        try repository.save(library)
+        let photo = try XCTUnwrap(repository.load().photos.first)
+        XCTAssertEqual(photo.adjustments, library.photos[0].adjustments)
+        let preview = try Renderer.render(source, adjustments: photo.adjustments)
+        let cpu = try Renderer.renderOnCPU(source, adjustments: photo.adjustments, maxDimension: nil)
+        XCTAssertEqual(preview.width, 12); XCTAssertEqual(preview.height, 16)
+        XCTAssertEqual(cpu.width, preview.width); XCTAssertEqual(cpu.height, preview.height)
+        let destination = temporary.appendingPathComponent("geometry.jpg")
+        try Renderer.export(photo, repository: repository, to: destination)
+        let image = try XCTUnwrap(CGImageSourceCreateWithURL(destination as CFURL, nil))
+        let exported = try XCTUnwrap(CGImageSourceCreateImageAtIndex(image, 0, nil))
+        XCTAssertEqual(exported.width, preview.width); XCTAssertEqual(exported.height, preview.height)
+        XCTAssertEqual(try LibraryRepository.digest(source), digest)
+        XCTAssertEqual(try LibraryRepository.digest(repository.originalURL(photo)), digest)
+    }
+    func testRotationDirectionCropOriginAndStraighteningHaveNoBlankCorners() throws {
+        let context = CGContext(data: nil, width: 40, height: 20, bitsPerComponent: 8, bytesPerRow: 160, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+        context.setFillColor(CGColor(red: 0, green: 0, blue: 1, alpha: 1)); context.fill(CGRect(x: 0, y: 0, width: 40, height: 20))
+        context.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1)); context.fill(CGRect(x: 0, y: 10, width: 20, height: 10))
+        let image = try XCTUnwrap(context.makeImage())
+        func pixel(_ image: CGImage, _ x: Int, _ y: Int) -> [UInt8] {
+            let data = image.dataProvider!.data! as Data
+            let offset = y * image.bytesPerRow + x * 4
+            return Array(data[offset..<(offset + 4)])
+        }
+        var settings = Adjustments()
+        settings.quarterTurns = 1
+        let right = try Renderer.applyGeometry(image, adjustments: settings)
+        XCTAssertEqual(right.width, 20); XCTAssertEqual(right.height, 40)
+        XCTAssertGreaterThan(pixel(right, 15, 5)[0], 240) // top left red moves to top right
+        settings.quarterTurns = -1
+        let left = try Renderer.applyGeometry(image, adjustments: settings)
+        XCTAssertGreaterThan(pixel(left, 5, 35)[0], 240)
+        settings = Adjustments()
+        settings.crop = PhotoCrop(x: 0, y: 0, width: 0.5, height: 0.5)
+        let topLeft = try Renderer.applyGeometry(image, adjustments: settings)
+        XCTAssertEqual(topLeft.width, 20); XCTAssertEqual(topLeft.height, 10)
+        XCTAssertGreaterThan(pixel(topLeft, 5, 5)[0], 240)
+        settings = Adjustments()
+        settings.quarterTurns = 4
+        XCTAssertEqual(try Renderer.applyGeometry(image, adjustments: settings).dataProvider?.data as Data?, image.dataProvider?.data as Data?)
+        for angle in [-45.0, -20, -5, 5, 20, 45] {
+            settings.straighten = angle
+            let straightened = try Renderer.applyGeometry(image, adjustments: settings)
+            XCTAssertLessThan(straightened.width, image.width)
+            for (x, y) in [(0, 0), (straightened.width - 1, 0), (0, straightened.height - 1), (straightened.width - 1, straightened.height - 1)] {
+                XCTAssertGreaterThan(pixel(straightened, x, y)[3], 245, "Blank corner at \(angle)°")
+            }
+        }
+    }
+    func testRecoveredStraightenBoundsReachRenderer() throws {
+        let source = try fixture()
+        XCTAssertEqual(StraightenRules.clamp(-46), -45)
+        XCTAssertEqual(StraightenRules.clamp(46), 45)
+        XCTAssertEqual(StraightenRules.clamp(12.5), 12.5)
+        // Clamp each delta: reversing after an overshoot must leave the limit immediately.
+        var angle = 44.0
+        for delta in [10.0, -2.0] { angle = StraightenRules.applying(rotation: delta, to: angle) }
+        XCTAssertEqual(angle, 43)
+        XCTAssertEqual(StraightenRules.applying(rotation: -10, to: -44), -45)
+        XCTAssertEqual(StraightenRules.applying(rotation: 2, to: -45), -43)
+        XCTAssertEqual(StraightenRules.applying(rotation: .nan, to: 12), 12)
+        var settings = Adjustments()
+        for (requested, expected) in [(-90.0, -45.0), (90, 45), (Double.nan, 0), (angle, 43)] {
+            settings.straighten = requested
+            let actual = try Renderer.renderOnCPU(source, adjustments: settings, maxDimension: nil)
+            settings.straighten = expected
+            let bounded = try Renderer.renderOnCPU(source, adjustments: settings, maxDimension: nil)
+            XCTAssertEqual(actual.width, bounded.width)
+            XCTAssertEqual(actual.height, bounded.height)
+            XCTAssertEqual(actual.dataProvider?.data as Data?, bounded.dataProvider?.data as Data?)
+        }
+    }
+    func testNewInspectorSettingsPersistAndExportWithoutChangingOriginal() throws {
+        let source = try fixture()
+        let digest = try LibraryRepository.digest(source)
+        let repository = try LibraryRepository(root: temporary.appendingPathComponent("inspector"))
+        var library = Library()
+        _ = try repository.importPhoto(source, projectID: nil, into: &library)
+        var settings = Adjustments()
+        settings.warmth = 0.4; settings.tint = -0.2; settings.shadows = 0.6; settings.highlights = -0.5
+        library.photos[0].adjustments = settings
+        try repository.save(library)
+        let loaded = try XCTUnwrap(repository.load().photos.first)
+        XCTAssertEqual(loaded.adjustments, settings)
+        let cpu = try Renderer.renderOnCPU(source, adjustments: settings, maxDimension: nil)
+        let neutral = try Renderer.renderOnCPU(source, adjustments: Adjustments(), maxDimension: nil)
+        XCTAssertNotEqual(cpu.dataProvider?.data as Data?, neutral.dataProvider?.data as Data?)
+        let destination = temporary.appendingPathComponent("inspector.jpg")
+        try Renderer.export(loaded, repository: repository, to: destination)
+        let imageSource = try XCTUnwrap(CGImageSourceCreateWithURL(destination as CFURL, nil))
+        let exported = try XCTUnwrap(CGImageSourceCreateImageAtIndex(imageSource, 0, nil))
+        XCTAssertEqual(exported.width, cpu.width); XCTAssertEqual(exported.height, cpu.height)
+        XCTAssertEqual(try LibraryRepository.digest(source), digest)
+        XCTAssertEqual(try LibraryRepository.digest(repository.originalURL(loaded)), digest)
+        let old = try JSONDecoder().decode(Adjustments.self, from: Data(#"{"exposure":0,"contrast":1,"saturation":1}"#.utf8))
+        XCTAssertEqual(old, Adjustments())
+    }
+    func testToneControlsHaveExpectedDirectionAndNeutralBypassesConversion() throws {
+        let context = CGContext(data: nil, width: 2, height: 2, bitsPerComponent: 8, bytesPerRow: 8, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue)!
+        context.setFillColor(CGColor(red: 0.4, green: 0.4, blue: 0.4, alpha: 1))
+        context.fill(CGRect(x: 0, y: 0, width: 2, height: 2))
+        let image = try XCTUnwrap(context.makeImage())
+        XCTAssertEqual(try Renderer.applyTone(image, adjustments: Adjustments()).dataProvider?.data as Data?, image.dataProvider?.data as Data?)
+        func pixel(_ settings: Adjustments) throws -> [UInt8] {
+            let result = try Renderer.applyTone(image, adjustments: settings)
+            return Array((result.dataProvider!.data! as Data).prefix(4))
+        }
+        var settings = Adjustments()
+        settings.warmth = 1
+        let warm = try pixel(settings)
+        XCTAssertGreaterThan(warm[0], warm[2]); XCTAssertEqual(warm[3], 255)
+        settings.warmth = -1
+        let cool = try pixel(settings)
+        XCTAssertLessThan(cool[0], cool[2])
+        settings = Adjustments(); settings.tint = 1
+        let tinted = try pixel(settings)
+        XCTAssertLessThan(tinted[1], tinted[0])
+        settings = Adjustments(); settings.shadows = 1
+        let lifted = try pixel(settings)
+        settings = Adjustments(); settings.highlights = -1
+        let recovered = try pixel(settings)
+        XCTAssertGreaterThan(lifted[0], recovered[0])
+        XCTAssertEqual(lifted[3], 255); XCTAssertEqual(recovered[3], 255)
+    }
+    func testSelectiveStampAndPresetsPreserveUnselectedSettings() throws {
+        var target = Adjustments()
+        target.exposure = -1; target.warmth = -0.5; target.shadows = 0.3
+        target.quarterTurns = 1; target.straighten = 12
+        target.crop = PhotoCrop(x: 0.1, y: 0.2, width: 0.6, height: 0.5)
+        var lifted = Adjustments()
+        lifted.exposure = 2; lifted.warmth = 0.8; lifted.shadows = 0.9
+        XCTAssertEqual(lifted.stamping(onto: target, groups: []), target)
+        let balanceOnly = lifted.stamping(onto: target, groups: [.whiteBalance])
+        XCTAssertEqual(balanceOnly.warmth, lifted.warmth)
+        XCTAssertEqual(balanceOnly.exposure, target.exposure)
+        XCTAssertEqual(balanceOnly.shadows, target.shadows)
+        XCTAssertEqual(balanceOnly.crop, target.crop)
+        XCTAssertEqual(lifted.stamping(onto: target, groups: Set(AdjustmentGroup.allCases)), lifted)
+        for preset in AdjustmentPreset.allCases {
+            let result = preset.applying(to: target)
+            XCTAssertEqual(result.crop, target.crop)
+            XCTAssertEqual(result.quarterTurns, target.quarterTurns)
+            XCTAssertEqual(result.straighten, target.straighten)
+        }
+        XCTAssertEqual(AdjustmentPreset.monochrome.applying(to: target).saturation, 0)
+        XCTAssertEqual(AdjustmentPreset.natural.applying(to: target).exposure, 0)
+    }
+
+    func testExportOptionsFormatsSizeMetadataAndOriginalCopy() throws {
+        let plain = try fixture()
+        let pixels = CGImageSourceCreateImageAtIndex(CGImageSourceCreateWithURL(plain as CFURL, nil)!, 0, nil)!
+        let source = temporary.appendingPathComponent("camera.jpg")
+        let writer = CGImageDestinationCreateWithURL(source as CFURL, UTType.jpeg.identifier as CFString, 1, nil)!
+        let properties: [String: Any] = [
+            kCGImagePropertyExifDictionary as String: [kCGImagePropertyExifDateTimeOriginal as String: "2024:01:02 03:04:05"],
+            kCGImagePropertyGPSDictionary as String: [kCGImagePropertyGPSLatitude as String: 51.5, kCGImagePropertyGPSLatitudeRef as String: "N", kCGImagePropertyGPSLongitude as String: 0.1, kCGImagePropertyGPSLongitudeRef as String: "W"],
+            kCGImagePropertyIPTCDictionary as String: [kCGImagePropertyIPTCCaptionAbstract as String: "Old caption"]
+        ]
+        CGImageDestinationAddImage(writer, pixels, properties as CFDictionary)
+        XCTAssertTrue(CGImageDestinationFinalize(writer))
+        let repository = try LibraryRepository(root: temporary.appendingPathComponent("managed"))
+        var library = Library()
+        XCTAssertTrue(try repository.importPhoto(source, projectID: nil, into: &library))
+        var photo = library.photos[0]
+        photo.caption = "Updated caption"; photo.keywords = "Travel, Family"; photo.rating = 4
+        photo.adjustments.quarterTurns = 1
+        let sourceHash = try LibraryRepository.digest(source)
+        for format in [ExportFormat.jpeg, .png, .tiff] {
+            for include in [false, true] {
+                var options = ExportOptions(); options.format = format; options.maxDimension = 16
+                options.exif = include; options.iptc = include; options.gps = include
+                let output = temporary.appendingPathComponent("\(format.rawValue)-\(include).\(format.suffix)")
+                try Renderer.export(photo, repository: repository, to: output, options: options)
+                let exported = CGImageSourceCreateWithURL(output as CFURL, nil)!
+                XCTAssertEqual(CGImageSourceGetType(exported) as String?, format.type.identifier)
+                let result = CGImageSourceCopyPropertiesAtIndex(exported, 0, nil)! as NSDictionary
+                XCTAssertEqual(result[kCGImagePropertyPixelWidth] as? Int, 12)
+                XCTAssertEqual(result[kCGImagePropertyPixelHeight] as? Int, 16)
+                let exif = result[kCGImagePropertyExifDictionary] as? NSDictionary
+                let iptc = result[kCGImagePropertyIPTCDictionary] as? NSDictionary
+                let gps = result[kCGImagePropertyGPSDictionary] as? NSDictionary
+                XCTAssertEqual(exif?[kCGImagePropertyExifDateTimeOriginal] as? String, include ? "2024:01:02 03:04:05" : nil)
+                XCTAssertEqual(iptc?[kCGImagePropertyIPTCCaptionAbstract] as? String, include ? "Updated caption" : nil)
+                XCTAssertEqual(iptc?[kCGImagePropertyIPTCKeywords] as? [String], include ? ["Travel", "Family"] : nil)
+                XCTAssertEqual(iptc?[kCGImagePropertyIPTCStarRating] as? Int, include ? 4 : nil)
+                XCTAssertEqual(gps?[kCGImagePropertyGPSLatitude] as? Double, include ? 51.5 : nil)
+                XCTAssertThrowsError(try Renderer.export(photo, repository: repository, to: output, options: options))
+            }
+        }
+        var originalOptions = ExportOptions(); originalOptions.format = .original; originalOptions.maxDimension = 1
+        let copied = temporary.appendingPathComponent("original.jpg")
+        try Renderer.export(photo, repository: repository, to: copied, options: originalOptions)
+        XCTAssertEqual(try LibraryRepository.digest(copied), sourceHash)
+        XCTAssertEqual(try LibraryRepository.digest(source), sourceHash)
+        XCTAssertEqual(try LibraryRepository.digest(repository.originalURL(photo)), sourceHash)
+        var quality = ExportOptions(); quality.quality = 0.1
+        let low = temporary.appendingPathComponent("low.jpg"), high = temporary.appendingPathComponent("high.jpg")
+        try Renderer.export(photo, repository: repository, to: low, options: quality)
+        quality.quality = 1
+        try Renderer.export(photo, repository: repository, to: high, options: quality)
+        XCTAssertNotEqual(try Data(contentsOf: low), try Data(contentsOf: high))
+        quality.maxDimension = 1000
+        let noEnlarge = temporary.appendingPathComponent("no-enlarge.jpg")
+        try Renderer.export(photo, repository: repository, to: noEnlarge, options: quality)
+        let actual = CGImageSourceCreateImageAtIndex(CGImageSourceCreateWithURL(noEnlarge as CFURL, nil)!, 0, nil)!
+        XCTAssertEqual(actual.width, 24); XCTAssertEqual(actual.height, 32)
+        let preset = ExportPreset(name: "Share", options: quality)
+        XCTAssertEqual(try JSONDecoder().decode(ExportPreset.self, from: JSONEncoder().encode(preset)).options, quality)
+    }
+    func testCropPixelPrecisionAspectAndGeometryDimensions() throws {
+        let source = try fixture()
+        var settings = Adjustments(); settings.quarterTurns = 1; settings.straighten = 10
+        let size = try Renderer.dimensions(source, adjustments: settings)
+        let rendered = try Renderer.render(source, adjustments: settings)
+        XCTAssertEqual(size, CGSize(width: rendered.width, height: rendered.height))
+        settings.crop = CropRules.pixels(width: 11, height: 13, image: size, current: PhotoCrop(x: 0.17, y: 0.21, width: 1, height: 1))
+        let cropped = try Renderer.render(source, adjustments: settings)
+        XCTAssertEqual(cropped.width, 11); XCTAssertEqual(cropped.height, 13)
+        let locked = CropRules.fitted(x: 0.9, y: -0.2, width: 0.8, height: 0.2, image: CGSize(width: 4000, height: 3000), aspect: 2.0 / 3)
+        XCTAssertEqual(locked.width * 4000 / (locked.height * 3000), 2.0 / 3, accuracy: 0.00001)
+        XCTAssertGreaterThanOrEqual(locked.x, 0); XCTAssertGreaterThanOrEqual(locked.y, 0)
+        XCTAssertLessThanOrEqual(locked.x + locked.width, 1); XCTAssertLessThanOrEqual(locked.y + locked.height, 1)
+    }
+    func testMetadataStampOnlyTouchesCheckedFields() throws {
+        let repository = try LibraryRepository(root: temporary.appendingPathComponent("managed"))
+        var library = Library(); _ = try repository.importPhoto(fixture(), projectID: nil, into: &library)
+        var source = library.photos[0], target = library.photos[0]
+        source.id = UUID(); source.caption = ""; source.keywords = "new"; source.rating = 5; source.adjustments.exposure = 2
+        target.caption = "keep caption"; target.keywords = "keep keywords"; target.rating = 1
+        let lifted = LiftedSettings(source)
+        let captionOnly = lifted.applying(to: target, groups: [], metadata: [.caption])
+        XCTAssertEqual(captionOnly.caption, ""); XCTAssertEqual(captionOnly.keywords, target.keywords)
+        XCTAssertEqual(captionOnly.rating, target.rating); XCTAssertEqual(captionOnly.adjustments, target.adjustments)
+        let stamped = lifted.applying(to: target, groups: [.basic], metadata: [.keywords, .rating])
+        XCTAssertEqual(stamped.caption, target.caption); XCTAssertEqual(stamped.rating, 5); XCTAssertEqual(stamped.keywords, "new")
+        XCTAssertEqual(stamped.adjustments.exposure, 2); XCTAssertEqual(stamped.id, target.id)
+        XCTAssertEqual(stamped.filename, target.filename); XCTAssertEqual(stamped.sha256, target.sha256)
+        XCTAssertEqual(lifted.applying(to: target, groups: [], metadata: []), target)
+    }
+
+}

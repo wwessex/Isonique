@@ -1,0 +1,2028 @@
+{
+  "target": "/Users/williamwessex/Downloads/Aperture.app/Contents/MacOS/Aperture",
+  "strings": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"confidence\":\"observed\",\"coverage\":{\"examined\":2,\"status\":\"complete\",\"total\":2},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_ea56d62cf5bef1bf19051d21b87aa2959d940ab338b0e1d2b3756281cf2d0b43\",\"limitations\":[{\"code\":\"data_sections_only\",\"message\":\"only strings stored in the file are searched (absence is not proof)\"}],\"links\":[],\"locations\":[],\"operation\":\"native_strings_find\",\"params\":{\"case_sensitive\":false,\"limit\":60,\"mode\":\"regex\",\"offset\":0,\"pattern\":\"adjustRatingBy:|setRatingAsSelect:|setRatingAsReject:\"},\"result\":{\"matches\":[{\"address\":\"0x10059883c\",\"references\":[{\"from\":\"0x10074d138\",\"function\":null},{\"from\":\"0x100777878\",\"function\":null},{\"from\":\"0x10086a7c8\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_setRatingAsSelect:\"},{\"address\":\"0x100599af9\",\"references\":[{\"from\":\"0x10074be48\",\"function\":null},{\"from\":\"0x10086ae18\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"_node:adjustRatingBy:\"}],\"total\":2},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"2 strings match \\\"adjustRatingBy:|setRatingAsSelect:|setRatingAsReject:\\\".\"}"
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "confidence": "observed",
+        "coverage": {
+          "examined": 2,
+          "status": "complete",
+          "total": 2
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_ea56d62cf5bef1bf19051d21b87aa2959d940ab338b0e1d2b3756281cf2d0b43",
+        "limitations": [
+          {
+            "code": "data_sections_only",
+            "message": "only strings stored in the file are searched (absence is not proof)"
+          }
+        ],
+        "links": [],
+        "locations": [],
+        "operation": "native_strings_find",
+        "params": {
+          "case_sensitive": false,
+          "limit": 60,
+          "mode": "regex",
+          "offset": 0,
+          "pattern": "adjustRatingBy:|setRatingAsSelect:|setRatingAsReject:"
+        },
+        "result": {
+          "matches": [
+            {
+              "address": "0x10059883c",
+              "references": [
+                {
+                  "from": "0x10074d138",
+                  "function": null
+                },
+                {
+                  "from": "0x100777878",
+                  "function": null
+                },
+                {
+                  "from": "0x10086a7c8",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_setRatingAsSelect:"
+            },
+            {
+              "address": "0x100599af9",
+              "references": [
+                {
+                  "from": "0x10074be48",
+                  "function": null
+                },
+                {
+                  "from": "0x10086ae18",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "_node:adjustRatingBy:"
+            }
+          ],
+          "total": 2
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "2 strings match \"adjustRatingBy:|setRatingAsSelect:|setRatingAsReject:\"."
+      },
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"confidence\":\"observed\",\"coverage\":{\"examined\":60,\"next_offset\":60,\"status\":\"partial\",\"total\":90},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_b91fbdaabf1f00f2a0052f42cd90823ee3194a601171663709f6742d0a47a69c\",\"limitations\":[{\"code\":\"data_sections_only\",\"message\":\"only strings stored in the file are searched (absence is not proof)\"}],\"links\":[],\"locations\":[],\"operation\":\"native_strings_find\",\"params\":{\"case_sensitive\":false,\"limit\":60,\"mode\":\"regex\",\"offset\":0,\"pattern\":\"RKLiftStampToolReplaceOnStamp|noLiftedAdjustmentsMessage|rating\"},\"result\":{\"matches\":[{\"address\":\"0x100557e96\",\"references\":[{\"from\":\"0x1008a6738\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"ratings\"},{\"address\":\"0x10055905f\",\"references\":[{\"from\":\"0x1008a7578\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"undoChangeRating\"},{\"address\":\"0x10055a0c8\",\"references\":[{\"from\":\"0x1008a89f8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"noLiftedAdjustmentsMessage\"},{\"address\":\"0x10055b48f\",\"references\":[{\"from\":\"0x1008aa3f8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"menuItemShowRatings\"},{\"address\":\"0x10055b4a3\",\"references\":[{\"from\":\"0x1008aa418\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"menuItemHideRatings\"},{\"address\":\"0x10055ba7c\",\"references\":[{\"from\":\"0x1008aaed8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"a_showHideRatings\"},{\"address\":\"0x10055bd8e\",\"references\":[{\"from\":\"0x1008ab3d8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"ratingsHidden\"},{\"address\":\"0x10055c280\",\"references\":[{\"from\":\"0x100752c80\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"ratingsVisible\"},{\"address\":\"0x10055c28f\",\"references\":[{\"from\":\"0x100752c88\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"Tc,N,GisRatingsVisible\"},{\"address\":\"0x10055ed22\",\"references\":[{\"from\":\"0x1007657d8\",\"function\":null},{\"from\":\"0x1008aec78\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"mainRating\"},{\"address\":\"0x10055f075\",\"references\":[{\"from\":\"0x1008af278\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"RKLiftStampToolReplaceOnStamp\"},{\"address\":\"0x10055f118\",\"references\":[{\"from\":\"0x1007657e0\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"Tq,N,Vm_mainRating\"},{\"address\":\"0x10055fd1f\",\"references\":[{\"from\":\"0x1008b0bf8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"ratingPageName\"},{\"address\":\"0x10056236d\",\"references\":[{\"from\":\"0x1008b5178\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"QueryRating\"},{\"address\":\"0x100562d33\",\"references\":[{\"from\":\"0x1008b6298\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"SearchField_G_Rating\"},{\"address\":\"0x100565254\",\"references\":[{\"from\":\"0x1008b98d8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"generatingFullSizePreviews\"},{\"address\":\"0x10056a4aa\",\"references\":[{\"from\":\"0x1008bf4f8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"Preparing Book For Upload (Generating PDF)...\"},{\"address\":\"0x10056ab96\",\"references\":[{\"from\":\"0x1008bfeb8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"kExportKeyMainRating\"},{\"address\":\"0x100577cd8\",\"references\":[{\"from\":\"0x1008ce138\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"Rating_Dot_HUD\"},{\"address\":\"0x100577ce7\",\"references\":[{\"from\":\"0x1008ce158\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"Rating_Dot\"},{\"address\":\"0x100577cf2\",\"references\":[{\"from\":\"0x1008ce178\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"Rating_Star_HUD\"},{\"address\":\"0x100577d02\",\"references\":[{\"from\":\"0x1008ce198\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"Rating_Star\"},{\"address\":\"0x10057e826\",\"references\":[{\"from\":\"0x1008d3cd8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"RKMetadataRatingItem\"},{\"address\":\"0x100580daa\",\"references\":[{\"from\":\"0x1008d5b78\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"doNotShowAgainGeneratingThumbnails\"},{\"address\":\"0x100580dcd\",\"references\":[{\"from\":\"0x1008d5b98\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"doNotShowAgainGeneratingPreviews\"},{\"address\":\"0x1005815e8\",\"references\":[{\"from\":\"0x1008d66f8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"select projectUuid, uuid from RKVersion where mainRating >= 0 group by projectUuid\"},{\"address\":\"0x100582407\",\"references\":[{\"from\":\"0x1008d6b58\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"select zVersionId, zUuid, zName, zFileName, zVersionNumber, zStackUuid, zMasterUuid, zProjectUuid, zImageTimeZoneName, zImageDate, zMasterHeight, zMasterWidth, zProcessedHeight, zProcessedWidth, zRotation, zColorLabelIndex, zMainRating, zHasAdjustments, zHasEnabledAdjustments, zIsEditable, zThumbnailsCurrent, zFullSizePreviewUpToDate, zThumbnailCacheIndex, zThumbnailRendered, zPreviewRendered, zPreviewJpegHeight, zPreviewJpegWidth, zThumbnailPreviewPath, zFullSizePreviewPath, zFullSizePreviewChangeDate, zCreateDate, zExportImageChangeDate, zExportMetadataChangeDate, zMasterThumbnailCacheIndex from zRKVersion\"},{\"address\":\"0x10058266f\",\"references\":[{\"from\":\"0x1008d6b78\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"select z_pk, zUuid, zName, 'NoFileName', zVersionNumber, zSTACKID, zMASTER, zProjectUuid, zImageTimeZoneName, zImageDate, zPIXELHEIGHT, zPIXELWIDTH, zPROCESSEDPIXELHEIGHT, zPROCESSEDPIXELWIDTH, zRotation, -1, zMainRating, zHASENABLEDIMAGEADJUSTMENTS, zHASENABLEDIMAGEADJUSTMENTS, 1, zTHUMBNAILUPTODATE, zFullSizePreviewUpToDate, zThumbnailCacheIndex, 0, 0, NULL, NULL, zThumbnailPreviewPath, zFullSizePreviewPath, zFullSizePreviewChangeDate, zCreateDate, zExportImageChangeDate, zExportMetadataChangeDate, zMasterThumbnailCacheIndex from zRKVersion\"},{\"address\":\"0x100582894\",\"references\":[{\"from\":\"0x1008d6b98\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"select z_pk, zUuid, zName, 'NoFileName', zVersionNumber, zSTACKID, zMASTER, zProjectUuid, zImageTimeZoneName, zImageDate, zPIXELHEIGHT, zPIXELWIDTH, zPROCESSEDPIXELHEIGHT, zPROCESSEDPIXELWIDTH, zRotation, -1, zMainRating, zHASENABLEDIMAGEADJUSTMENTS, zHASENABLEDIMAGEADJUSTMENTS, 1, zTHUMBNAILUPTODATE, zFullSizePreviewUpToDate, zThumbnailCacheIndex, 0, 0, NULL, NULL, zThumbnailPreviewPath, zFullSizePreviewPath, NULL, zCreateDate, zExportImageChangeDate, zExportMetadataChangeDate, zMasterThumbnailCacheIndex from zRKVersion\"},{\"address\":\"0x100582aa3\",\"references\":[{\"from\":\"0x1008d6bb8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"select z_pk, zUuid, zName, 'NoFileName', zVersionNumber, zSTACKID, zMASTER, zProjectUuid, zImageTimeZoneName, zImageDate, zPIXELHEIGHT, zPIXELWIDTH, zPROCESSEDPIXELHEIGHT, zPROCESSEDPIXELWIDTH, zRotation, -1, zMainRating, zHASENABLEDIMAGEADJUSTMENTS, zHASENABLEDIMAGEADJUSTMENTS, 1, zTHUMBNAILUPTODATE, 0, zThumbnailCacheIndex, 0, 0, NULL, NULL, NULL, NULL, NULL, zCreateDate, NULL, zExportMetadataChangeDate, zMasterThumbnailCacheIndex from zRKVersion\"},{\"address\":\"0x100586da2\",\"references\":[{\"from\":\"0x100740118\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"RKRatingUpColor\"},{\"address\":\"0x100586db2\",\"references\":[{\"from\":\"0x100740148\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"RKRatingDownColor\"},{\"address\":\"0x100587d60\",\"references\":[{\"from\":\"0x1008db0f8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"Rating\"},{\"address\":\"0x10058fa35\",\"references\":[{\"from\":\"0x100867f78\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"countByEnumeratingWithState:objects:count:\"},{\"address\":\"0x100590dfe\",\"references\":[{\"from\":\"0x1007856e0\",\"function\":null},{\"from\":\"0x1008686b0\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"setRatingFilterIndex:\"},{\"address\":\"0x100591cf9\",\"references\":[{\"from\":\"0x100745968\",\"function\":null},{\"from\":\"0x1007577d0\",\"function\":null},{\"from\":\"0x10075bbe0\",\"function\":null},{\"from\":\"0x10079b998\",\"function\":null},{\"from\":\"0x1007e9a28\",\"function\":null},{\"from\":\"0x1007ef9e8\",\"function\":null},{\"from\":\"0x1007f0148\",\"function\":null},{\"from\":\"0x10086d1a0\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_setRatingFilter:\"},{\"address\":\"0x100596e6e\",\"references\":[{\"from\":\"0x100765388\",\"function\":null},{\"from\":\"0x100869e80\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"mainRating\"},{\"address\":\"0x100596e79\",\"references\":[{\"from\":\"0x10074be18\",\"function\":null},{\"from\":\"0x100869e88\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"_nodeRating:\"},{\"address\":\"0x100596e86\",\"references\":[{\"from\":\"0x100869e90\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"changeMainRating:\"},{\"address\":\"0x100596e98\",\"references\":[{\"from\":\"0x10074be30\",\"function\":null},{\"from\":\"0x100869e98\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"_node:setRating:\"},{\"address\":\"0x100596f8a\",\"references\":[{\"from\":\"0x100835a98\",\"function\":null},{\"from\":\"0x100869f08\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"warnUserAboutOperatingOnUnavailableItems:refItemsOnly:availableItems:fileSize:title:message:action:\"},{\"address\":\"0x10059882f\",\"references\":[{\"from\":\"0x10074d120\",\"function\":null},{\"from\":\"0x100777860\",\"function\":null},{\"from\":\"0x10086a7c0\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_setRating:\"},{\"address\":\"0x10059883c\",\"references\":[{\"from\":\"0x10074d138\",\"function\":null},{\"from\":\"0x100777878\",\"function\":null},{\"from\":\"0x10086a7c8\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_setRatingAsSelect:\"},{\"address\":\"0x100598851\",\"references\":[{\"from\":\"0x10074d168\",\"function\":null},{\"from\":\"0x1007778c0\",\"function\":null},{\"from\":\"0x10086a7d0\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_adjustRating:\"},{\"address\":\"0x100598861\",\"references\":[{\"from\":\"0x10074d150\",\"function\":null},{\"from\":\"0x1007778a8\",\"function\":null},{\"from\":\"0x10086a7d8\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_setRatingWithModifiers:\"},{\"address\":\"0x10059887b\",\"references\":[{\"from\":\"0x10074d180\",\"function\":null},{\"from\":\"0x1007778d8\",\"function\":null},{\"from\":\"0x10086a7e0\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_adjustRatingWithModifiers:\"},{\"address\":\"0x100598898\",\"references\":[{\"from\":\"0x10074d1b0\",\"function\":null},{\"from\":\"0x100777908\",\"function\":null},{\"from\":\"0x10086a7e8\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_adjustRatingAndSelectNextImage:\"},{\"address\":\"0x1005988ba\",\"references\":[{\"from\":\"0x10074d198\",\"function\":null},{\"from\":\"0x1007778f0\",\"function\":null},{\"from\":\"0x10086a7f0\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_setRatingAndSelectNextImage:\"},{\"address\":\"0x1005988d9\",\"references\":[{\"from\":\"0x10074d228\",\"function\":null},{\"from\":\"0x100777980\",\"function\":null},{\"from\":\"0x10086a7f8\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_setCompareRating:\"},{\"address\":\"0x1005988ed\",\"references\":[{\"from\":\"0x10074d240\",\"function\":null},{\"from\":\"0x100777998\",\"function\":null},{\"from\":\"0x10086a800\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_adjustCompareRating:\"},{\"address\":\"0x100599aae\",\"references\":[{\"from\":\"0x10074be78\",\"function\":null},{\"from\":\"0x10086adf8\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"_changeRating:adjustRating:\"},{\"address\":\"0x100599ad2\",\"references\":[{\"from\":\"0x10074d258\",\"function\":null},{\"from\":\"0x1007779b0\",\"function\":null},{\"from\":\"0x10086ae08\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_removeLastRating:\"},{\"address\":\"0x100599ae6\",\"references\":[{\"from\":\"0x10074be60\",\"function\":null},{\"from\":\"0x10086ae10\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"_node:setRatingTo:\"},{\"address\":\"0x100599af9\",\"references\":[{\"from\":\"0x10074be48\",\"function\":null},{\"from\":\"0x10086ae18\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"_node:adjustRatingBy:\"},{\"address\":\"0x10059ab4e\",\"references\":[{\"from\":\"0x10074d1c8\",\"function\":null},{\"from\":\"0x100777920\",\"function\":null},{\"from\":\"0x100883988\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_setRatingAndRemoveLastRating:\"},{\"address\":\"0x10059ab6e\",\"references\":[{\"from\":\"0x10074d1e0\",\"function\":null},{\"from\":\"0x100777938\",\"function\":null},{\"from\":\"0x100883908\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_adjustRatingAndRemoveLastRating:\"},{\"address\":\"0x10059ab91\",\"references\":[{\"from\":\"0x10074d1f8\",\"function\":null},{\"from\":\"0x100777950\",\"function\":null},{\"from\":\"0x100883990\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_setRatingAndRemoveLastRatingAndSelectNextImage:\"},{\"address\":\"0x10059abc3\",\"references\":[{\"from\":\"0x10074d210\",\"function\":null},{\"from\":\"0x100777968\",\"function\":null},{\"from\":\"0x100883910\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_adjustRatingAndRemoveLastRatingAndSelectNextImage:\"},{\"address\":\"0x10059ad6a\",\"references\":[{\"from\":\"0x10074e3b8\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"m_lastRating\"},{\"address\":\"0x10059bad3\",\"references\":[{\"from\":\"0x1007cfab0\",\"function\":null},{\"from\":\"0x1007d5cd8\",\"function\":null},{\"from\":\"0x1007dbb68\",\"function\":null},{\"from\":\"0x100814720\",\"function\":null},{\"from\":\"0x100830f00\",\"function\":null},{\"from\":\"0x100832608\",\"function\":null},{\"from\":\"0x10085ce88\",\"function\":null},{\"from\":\"0x10086b528\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"allowsVisibleWorkspaceRatingsControls\"}],\"total\":90},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"90 strings match \\\"RKLiftStampToolReplaceOnStamp|noLiftedAdjustmentsMessage|rating\\\".\"}"
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "confidence": "observed",
+        "coverage": {
+          "examined": 60,
+          "next_offset": 60,
+          "status": "partial",
+          "total": 90
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_b91fbdaabf1f00f2a0052f42cd90823ee3194a601171663709f6742d0a47a69c",
+        "limitations": [
+          {
+            "code": "data_sections_only",
+            "message": "only strings stored in the file are searched (absence is not proof)"
+          }
+        ],
+        "links": [],
+        "locations": [],
+        "operation": "native_strings_find",
+        "params": {
+          "case_sensitive": false,
+          "limit": 60,
+          "mode": "regex",
+          "offset": 0,
+          "pattern": "RKLiftStampToolReplaceOnStamp|noLiftedAdjustmentsMessage|rating"
+        },
+        "result": {
+          "matches": [
+            {
+              "address": "0x100557e96",
+              "references": [
+                {
+                  "from": "0x1008a6738",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "ratings"
+            },
+            {
+              "address": "0x10055905f",
+              "references": [
+                {
+                  "from": "0x1008a7578",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "undoChangeRating"
+            },
+            {
+              "address": "0x10055a0c8",
+              "references": [
+                {
+                  "from": "0x1008a89f8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "noLiftedAdjustmentsMessage"
+            },
+            {
+              "address": "0x10055b48f",
+              "references": [
+                {
+                  "from": "0x1008aa3f8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "menuItemShowRatings"
+            },
+            {
+              "address": "0x10055b4a3",
+              "references": [
+                {
+                  "from": "0x1008aa418",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "menuItemHideRatings"
+            },
+            {
+              "address": "0x10055ba7c",
+              "references": [
+                {
+                  "from": "0x1008aaed8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "a_showHideRatings"
+            },
+            {
+              "address": "0x10055bd8e",
+              "references": [
+                {
+                  "from": "0x1008ab3d8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "ratingsHidden"
+            },
+            {
+              "address": "0x10055c280",
+              "references": [
+                {
+                  "from": "0x100752c80",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "ratingsVisible"
+            },
+            {
+              "address": "0x10055c28f",
+              "references": [
+                {
+                  "from": "0x100752c88",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "Tc,N,GisRatingsVisible"
+            },
+            {
+              "address": "0x10055ed22",
+              "references": [
+                {
+                  "from": "0x1007657d8",
+                  "function": null
+                },
+                {
+                  "from": "0x1008aec78",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "mainRating"
+            },
+            {
+              "address": "0x10055f075",
+              "references": [
+                {
+                  "from": "0x1008af278",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "RKLiftStampToolReplaceOnStamp"
+            },
+            {
+              "address": "0x10055f118",
+              "references": [
+                {
+                  "from": "0x1007657e0",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "Tq,N,Vm_mainRating"
+            },
+            {
+              "address": "0x10055fd1f",
+              "references": [
+                {
+                  "from": "0x1008b0bf8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "ratingPageName"
+            },
+            {
+              "address": "0x10056236d",
+              "references": [
+                {
+                  "from": "0x1008b5178",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "QueryRating"
+            },
+            {
+              "address": "0x100562d33",
+              "references": [
+                {
+                  "from": "0x1008b6298",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "SearchField_G_Rating"
+            },
+            {
+              "address": "0x100565254",
+              "references": [
+                {
+                  "from": "0x1008b98d8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "generatingFullSizePreviews"
+            },
+            {
+              "address": "0x10056a4aa",
+              "references": [
+                {
+                  "from": "0x1008bf4f8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "Preparing Book For Upload (Generating PDF)..."
+            },
+            {
+              "address": "0x10056ab96",
+              "references": [
+                {
+                  "from": "0x1008bfeb8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "kExportKeyMainRating"
+            },
+            {
+              "address": "0x100577cd8",
+              "references": [
+                {
+                  "from": "0x1008ce138",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "Rating_Dot_HUD"
+            },
+            {
+              "address": "0x100577ce7",
+              "references": [
+                {
+                  "from": "0x1008ce158",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "Rating_Dot"
+            },
+            {
+              "address": "0x100577cf2",
+              "references": [
+                {
+                  "from": "0x1008ce178",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "Rating_Star_HUD"
+            },
+            {
+              "address": "0x100577d02",
+              "references": [
+                {
+                  "from": "0x1008ce198",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "Rating_Star"
+            },
+            {
+              "address": "0x10057e826",
+              "references": [
+                {
+                  "from": "0x1008d3cd8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "RKMetadataRatingItem"
+            },
+            {
+              "address": "0x100580daa",
+              "references": [
+                {
+                  "from": "0x1008d5b78",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "doNotShowAgainGeneratingThumbnails"
+            },
+            {
+              "address": "0x100580dcd",
+              "references": [
+                {
+                  "from": "0x1008d5b98",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "doNotShowAgainGeneratingPreviews"
+            },
+            {
+              "address": "0x1005815e8",
+              "references": [
+                {
+                  "from": "0x1008d66f8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "select projectUuid, uuid from RKVersion where mainRating >= 0 group by projectUuid"
+            },
+            {
+              "address": "0x100582407",
+              "references": [
+                {
+                  "from": "0x1008d6b58",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "select zVersionId, zUuid, zName, zFileName, zVersionNumber, zStackUuid, zMasterUuid, zProjectUuid, zImageTimeZoneName, zImageDate, zMasterHeight, zMasterWidth, zProcessedHeight, zProcessedWidth, zRotation, zColorLabelIndex, zMainRating, zHasAdjustments, zHasEnabledAdjustments, zIsEditable, zThumbnailsCurrent, zFullSizePreviewUpToDate, zThumbnailCacheIndex, zThumbnailRendered, zPreviewRendered, zPreviewJpegHeight, zPreviewJpegWidth, zThumbnailPreviewPath, zFullSizePreviewPath, zFullSizePreviewChangeDate, zCreateDate, zExportImageChangeDate, zExportMetadataChangeDate, zMasterThumbnailCacheIndex from zRKVersion"
+            },
+            {
+              "address": "0x10058266f",
+              "references": [
+                {
+                  "from": "0x1008d6b78",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "select z_pk, zUuid, zName, 'NoFileName', zVersionNumber, zSTACKID, zMASTER, zProjectUuid, zImageTimeZoneName, zImageDate, zPIXELHEIGHT, zPIXELWIDTH, zPROCESSEDPIXELHEIGHT, zPROCESSEDPIXELWIDTH, zRotation, -1, zMainRating, zHASENABLEDIMAGEADJUSTMENTS, zHASENABLEDIMAGEADJUSTMENTS, 1, zTHUMBNAILUPTODATE, zFullSizePreviewUpToDate, zThumbnailCacheIndex, 0, 0, NULL, NULL, zThumbnailPreviewPath, zFullSizePreviewPath, zFullSizePreviewChangeDate, zCreateDate, zExportImageChangeDate, zExportMetadataChangeDate, zMasterThumbnailCacheIndex from zRKVersion"
+            },
+            {
+              "address": "0x100582894",
+              "references": [
+                {
+                  "from": "0x1008d6b98",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "select z_pk, zUuid, zName, 'NoFileName', zVersionNumber, zSTACKID, zMASTER, zProjectUuid, zImageTimeZoneName, zImageDate, zPIXELHEIGHT, zPIXELWIDTH, zPROCESSEDPIXELHEIGHT, zPROCESSEDPIXELWIDTH, zRotation, -1, zMainRating, zHASENABLEDIMAGEADJUSTMENTS, zHASENABLEDIMAGEADJUSTMENTS, 1, zTHUMBNAILUPTODATE, zFullSizePreviewUpToDate, zThumbnailCacheIndex, 0, 0, NULL, NULL, zThumbnailPreviewPath, zFullSizePreviewPath, NULL, zCreateDate, zExportImageChangeDate, zExportMetadataChangeDate, zMasterThumbnailCacheIndex from zRKVersion"
+            },
+            {
+              "address": "0x100582aa3",
+              "references": [
+                {
+                  "from": "0x1008d6bb8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "select z_pk, zUuid, zName, 'NoFileName', zVersionNumber, zSTACKID, zMASTER, zProjectUuid, zImageTimeZoneName, zImageDate, zPIXELHEIGHT, zPIXELWIDTH, zPROCESSEDPIXELHEIGHT, zPROCESSEDPIXELWIDTH, zRotation, -1, zMainRating, zHASENABLEDIMAGEADJUSTMENTS, zHASENABLEDIMAGEADJUSTMENTS, 1, zTHUMBNAILUPTODATE, 0, zThumbnailCacheIndex, 0, 0, NULL, NULL, NULL, NULL, NULL, zCreateDate, NULL, zExportMetadataChangeDate, zMasterThumbnailCacheIndex from zRKVersion"
+            },
+            {
+              "address": "0x100586da2",
+              "references": [
+                {
+                  "from": "0x100740118",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "RKRatingUpColor"
+            },
+            {
+              "address": "0x100586db2",
+              "references": [
+                {
+                  "from": "0x100740148",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "RKRatingDownColor"
+            },
+            {
+              "address": "0x100587d60",
+              "references": [
+                {
+                  "from": "0x1008db0f8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "Rating"
+            },
+            {
+              "address": "0x10058fa35",
+              "references": [
+                {
+                  "from": "0x100867f78",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "countByEnumeratingWithState:objects:count:"
+            },
+            {
+              "address": "0x100590dfe",
+              "references": [
+                {
+                  "from": "0x1007856e0",
+                  "function": null
+                },
+                {
+                  "from": "0x1008686b0",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "setRatingFilterIndex:"
+            },
+            {
+              "address": "0x100591cf9",
+              "references": [
+                {
+                  "from": "0x100745968",
+                  "function": null
+                },
+                {
+                  "from": "0x1007577d0",
+                  "function": null
+                },
+                {
+                  "from": "0x10075bbe0",
+                  "function": null
+                },
+                {
+                  "from": "0x10079b998",
+                  "function": null
+                },
+                {
+                  "from": "0x1007e9a28",
+                  "function": null
+                },
+                {
+                  "from": "0x1007ef9e8",
+                  "function": null
+                },
+                {
+                  "from": "0x1007f0148",
+                  "function": null
+                },
+                {
+                  "from": "0x10086d1a0",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_setRatingFilter:"
+            },
+            {
+              "address": "0x100596e6e",
+              "references": [
+                {
+                  "from": "0x100765388",
+                  "function": null
+                },
+                {
+                  "from": "0x100869e80",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "mainRating"
+            },
+            {
+              "address": "0x100596e79",
+              "references": [
+                {
+                  "from": "0x10074be18",
+                  "function": null
+                },
+                {
+                  "from": "0x100869e88",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "_nodeRating:"
+            },
+            {
+              "address": "0x100596e86",
+              "references": [
+                {
+                  "from": "0x100869e90",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "changeMainRating:"
+            },
+            {
+              "address": "0x100596e98",
+              "references": [
+                {
+                  "from": "0x10074be30",
+                  "function": null
+                },
+                {
+                  "from": "0x100869e98",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "_node:setRating:"
+            },
+            {
+              "address": "0x100596f8a",
+              "references": [
+                {
+                  "from": "0x100835a98",
+                  "function": null
+                },
+                {
+                  "from": "0x100869f08",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "warnUserAboutOperatingOnUnavailableItems:refItemsOnly:availableItems:fileSize:title:message:action:"
+            },
+            {
+              "address": "0x10059882f",
+              "references": [
+                {
+                  "from": "0x10074d120",
+                  "function": null
+                },
+                {
+                  "from": "0x100777860",
+                  "function": null
+                },
+                {
+                  "from": "0x10086a7c0",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_setRating:"
+            },
+            {
+              "address": "0x10059883c",
+              "references": [
+                {
+                  "from": "0x10074d138",
+                  "function": null
+                },
+                {
+                  "from": "0x100777878",
+                  "function": null
+                },
+                {
+                  "from": "0x10086a7c8",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_setRatingAsSelect:"
+            },
+            {
+              "address": "0x100598851",
+              "references": [
+                {
+                  "from": "0x10074d168",
+                  "function": null
+                },
+                {
+                  "from": "0x1007778c0",
+                  "function": null
+                },
+                {
+                  "from": "0x10086a7d0",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_adjustRating:"
+            },
+            {
+              "address": "0x100598861",
+              "references": [
+                {
+                  "from": "0x10074d150",
+                  "function": null
+                },
+                {
+                  "from": "0x1007778a8",
+                  "function": null
+                },
+                {
+                  "from": "0x10086a7d8",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_setRatingWithModifiers:"
+            },
+            {
+              "address": "0x10059887b",
+              "references": [
+                {
+                  "from": "0x10074d180",
+                  "function": null
+                },
+                {
+                  "from": "0x1007778d8",
+                  "function": null
+                },
+                {
+                  "from": "0x10086a7e0",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_adjustRatingWithModifiers:"
+            },
+            {
+              "address": "0x100598898",
+              "references": [
+                {
+                  "from": "0x10074d1b0",
+                  "function": null
+                },
+                {
+                  "from": "0x100777908",
+                  "function": null
+                },
+                {
+                  "from": "0x10086a7e8",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_adjustRatingAndSelectNextImage:"
+            },
+            {
+              "address": "0x1005988ba",
+              "references": [
+                {
+                  "from": "0x10074d198",
+                  "function": null
+                },
+                {
+                  "from": "0x1007778f0",
+                  "function": null
+                },
+                {
+                  "from": "0x10086a7f0",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_setRatingAndSelectNextImage:"
+            },
+            {
+              "address": "0x1005988d9",
+              "references": [
+                {
+                  "from": "0x10074d228",
+                  "function": null
+                },
+                {
+                  "from": "0x100777980",
+                  "function": null
+                },
+                {
+                  "from": "0x10086a7f8",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_setCompareRating:"
+            },
+            {
+              "address": "0x1005988ed",
+              "references": [
+                {
+                  "from": "0x10074d240",
+                  "function": null
+                },
+                {
+                  "from": "0x100777998",
+                  "function": null
+                },
+                {
+                  "from": "0x10086a800",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_adjustCompareRating:"
+            },
+            {
+              "address": "0x100599aae",
+              "references": [
+                {
+                  "from": "0x10074be78",
+                  "function": null
+                },
+                {
+                  "from": "0x10086adf8",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "_changeRating:adjustRating:"
+            },
+            {
+              "address": "0x100599ad2",
+              "references": [
+                {
+                  "from": "0x10074d258",
+                  "function": null
+                },
+                {
+                  "from": "0x1007779b0",
+                  "function": null
+                },
+                {
+                  "from": "0x10086ae08",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_removeLastRating:"
+            },
+            {
+              "address": "0x100599ae6",
+              "references": [
+                {
+                  "from": "0x10074be60",
+                  "function": null
+                },
+                {
+                  "from": "0x10086ae10",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "_node:setRatingTo:"
+            },
+            {
+              "address": "0x100599af9",
+              "references": [
+                {
+                  "from": "0x10074be48",
+                  "function": null
+                },
+                {
+                  "from": "0x10086ae18",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "_node:adjustRatingBy:"
+            },
+            {
+              "address": "0x10059ab4e",
+              "references": [
+                {
+                  "from": "0x10074d1c8",
+                  "function": null
+                },
+                {
+                  "from": "0x100777920",
+                  "function": null
+                },
+                {
+                  "from": "0x100883988",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_setRatingAndRemoveLastRating:"
+            },
+            {
+              "address": "0x10059ab6e",
+              "references": [
+                {
+                  "from": "0x10074d1e0",
+                  "function": null
+                },
+                {
+                  "from": "0x100777938",
+                  "function": null
+                },
+                {
+                  "from": "0x100883908",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_adjustRatingAndRemoveLastRating:"
+            },
+            {
+              "address": "0x10059ab91",
+              "references": [
+                {
+                  "from": "0x10074d1f8",
+                  "function": null
+                },
+                {
+                  "from": "0x100777950",
+                  "function": null
+                },
+                {
+                  "from": "0x100883990",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_setRatingAndRemoveLastRatingAndSelectNextImage:"
+            },
+            {
+              "address": "0x10059abc3",
+              "references": [
+                {
+                  "from": "0x10074d210",
+                  "function": null
+                },
+                {
+                  "from": "0x100777968",
+                  "function": null
+                },
+                {
+                  "from": "0x100883910",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_adjustRatingAndRemoveLastRatingAndSelectNextImage:"
+            },
+            {
+              "address": "0x10059ad6a",
+              "references": [
+                {
+                  "from": "0x10074e3b8",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "m_lastRating"
+            },
+            {
+              "address": "0x10059bad3",
+              "references": [
+                {
+                  "from": "0x1007cfab0",
+                  "function": null
+                },
+                {
+                  "from": "0x1007d5cd8",
+                  "function": null
+                },
+                {
+                  "from": "0x1007dbb68",
+                  "function": null
+                },
+                {
+                  "from": "0x100814720",
+                  "function": null
+                },
+                {
+                  "from": "0x100830f00",
+                  "function": null
+                },
+                {
+                  "from": "0x100832608",
+                  "function": null
+                },
+                {
+                  "from": "0x10085ce88",
+                  "function": null
+                },
+                {
+                  "from": "0x10086b528",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "allowsVisibleWorkspaceRatingsControls"
+            }
+          ],
+          "total": 90
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "90 strings match \"RKLiftStampToolReplaceOnStamp|noLiftedAdjustmentsMessage|rating\"."
+      },
+      "isError": false
+    }
+  ],
+  "references": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"confidence\":\"derived\",\"coverage\":{\"examined\":1,\"status\":\"complete\",\"total\":1},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_a19ff6c37702ecb43f54bb266728ed12fdcc07fb2ce7e19869893485616c2104\",\"limitations\":[{\"code\":\"static_references\",\"message\":\"references made through computed pointers at run time are not seen\"}],\"links\":[],\"locations\":[{\"kind\":\"address\",\"value\":\"0x10086ae18\"}],\"operation\":\"native_xrefs_list\",\"params\":{\"address\":\"0x10086ae18\",\"limit\":40,\"offset\":0},\"result\":{\"address\":\"0x10086ae18\",\"name\":null,\"references_from\":[{\"kind\":\"string\",\"name\":null,\"to\":\"0x100599af9\"}],\"references_to\":[{\"from\":\"0x10004731b\",\"function\":\"-[RKSelectionMgr a_adjustCompareRating:]\",\"kind\":\"data\"}],\"total_to\":1},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"0x10086ae18 is referenced from 1 places and refers to 1.\"}"
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "confidence": "derived",
+        "coverage": {
+          "examined": 1,
+          "status": "complete",
+          "total": 1
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_a19ff6c37702ecb43f54bb266728ed12fdcc07fb2ce7e19869893485616c2104",
+        "limitations": [
+          {
+            "code": "static_references",
+            "message": "references made through computed pointers at run time are not seen"
+          }
+        ],
+        "links": [],
+        "locations": [
+          {
+            "kind": "address",
+            "value": "0x10086ae18"
+          }
+        ],
+        "operation": "native_xrefs_list",
+        "params": {
+          "address": "0x10086ae18",
+          "limit": 40,
+          "offset": 0
+        },
+        "result": {
+          "address": "0x10086ae18",
+          "name": null,
+          "references_from": [
+            {
+              "kind": "string",
+              "name": null,
+              "to": "0x100599af9"
+            }
+          ],
+          "references_to": [
+            {
+              "from": "0x10004731b",
+              "function": "-[RKSelectionMgr a_adjustCompareRating:]",
+              "kind": "data"
+            }
+          ],
+          "total_to": 1
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "0x10086ae18 is referenced from 1 places and refers to 1."
+      },
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"confidence\":\"derived\",\"coverage\":{\"examined\":3,\"status\":\"complete\",\"total\":3},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_0f25d0b9e03a504fb32daa935e03d98fd4e0e2a466965c7fc631be150547d810\",\"limitations\":[{\"code\":\"static_references\",\"message\":\"references made through computed pointers at run time are not seen\"}],\"links\":[],\"locations\":[{\"kind\":\"address\",\"value\":\"0x1008af268\"}],\"operation\":\"native_xrefs_list\",\"params\":{\"address\":\"0x1008af268\",\"limit\":40,\"offset\":0},\"result\":{\"address\":\"0x1008af268\",\"name\":null,\"references_from\":[],\"references_to\":[{\"from\":\"0x1000bac30\",\"function\":\"+[RKLiftStampTool initialize]\",\"kind\":\"data\"},{\"from\":\"0x1000bc6c5\",\"function\":\"-[RKLiftStampTool setReplaceOnStamp:]\",\"kind\":\"data\"},{\"from\":\"0x1000bc706\",\"function\":\"-[RKLiftStampTool replaceOnStamp]\",\"kind\":\"data\"}],\"total_to\":3},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"0x1008af268 is referenced from 3 places and refers to 0.\"}"
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "confidence": "derived",
+        "coverage": {
+          "examined": 3,
+          "status": "complete",
+          "total": 3
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_0f25d0b9e03a504fb32daa935e03d98fd4e0e2a466965c7fc631be150547d810",
+        "limitations": [
+          {
+            "code": "static_references",
+            "message": "references made through computed pointers at run time are not seen"
+          }
+        ],
+        "links": [],
+        "locations": [
+          {
+            "kind": "address",
+            "value": "0x1008af268"
+          }
+        ],
+        "operation": "native_xrefs_list",
+        "params": {
+          "address": "0x1008af268",
+          "limit": 40,
+          "offset": 0
+        },
+        "result": {
+          "address": "0x1008af268",
+          "name": null,
+          "references_from": [],
+          "references_to": [
+            {
+              "from": "0x1000bac30",
+              "function": "+[RKLiftStampTool initialize]",
+              "kind": "data"
+            },
+            {
+              "from": "0x1000bc6c5",
+              "function": "-[RKLiftStampTool setReplaceOnStamp:]",
+              "kind": "data"
+            },
+            {
+              "from": "0x1000bc706",
+              "function": "-[RKLiftStampTool replaceOnStamp]",
+              "kind": "data"
+            }
+          ],
+          "total_to": 3
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "0x1008af268 is referenced from 3 places and refers to 0."
+      },
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"confidence\":\"derived\",\"coverage\":{\"examined\":1,\"status\":\"complete\",\"total\":1},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_c9efe6f752ea265c87ed69e50299bb3eece0ec97a5310cc441dc7e68782c0110\",\"limitations\":[{\"code\":\"static_references\",\"message\":\"references made through computed pointers at run time are not seen\"}],\"links\":[],\"locations\":[{\"kind\":\"address\",\"value\":\"0x1008a89e8\"}],\"operation\":\"native_xrefs_list\",\"params\":{\"address\":\"0x1008a89e8\",\"limit\":40,\"offset\":0},\"result\":{\"address\":\"0x1008a89e8\",\"name\":null,\"references_from\":[],\"references_to\":[{\"from\":\"0x100049441\",\"function\":\"-[RKSelectionMgr a_liftAdjustments:]\",\"kind\":\"data\"}],\"total_to\":1},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"0x1008a89e8 is referenced from 1 places and refers to 0.\"}"
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "confidence": "derived",
+        "coverage": {
+          "examined": 1,
+          "status": "complete",
+          "total": 1
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_c9efe6f752ea265c87ed69e50299bb3eece0ec97a5310cc441dc7e68782c0110",
+        "limitations": [
+          {
+            "code": "static_references",
+            "message": "references made through computed pointers at run time are not seen"
+          }
+        ],
+        "links": [],
+        "locations": [
+          {
+            "kind": "address",
+            "value": "0x1008a89e8"
+          }
+        ],
+        "operation": "native_xrefs_list",
+        "params": {
+          "address": "0x1008a89e8",
+          "limit": 40,
+          "offset": 0
+        },
+        "result": {
+          "address": "0x1008a89e8",
+          "name": null,
+          "references_from": [],
+          "references_to": [
+            {
+              "from": "0x100049441",
+              "function": "-[RKSelectionMgr a_liftAdjustments:]",
+              "kind": "data"
+            }
+          ],
+          "total_to": 1
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "0x1008a89e8 is referenced from 1 places and refers to 0."
+      },
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"confidence\":\"derived\",\"coverage\":{\"examined\":9,\"status\":\"complete\",\"total\":9},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_6b466230cdb33a5a1e4d17a2ee9f0ad5733eb74f42f57713190687b98026f585\",\"limitations\":[],\"links\":[],\"locations\":[],\"operation\":\"native_functions_search\",\"params\":{\"case_sensitive\":false,\"limit\":30,\"mode\":\"regex\",\"offset\":0,\"pattern\":\"_node:adjustRatingBy:|_node:setRating:|a_adjustRating:|setReplaceOnStamp:|a_liftAdjustments:|setScriptingMainRating:\"},\"result\":{\"functions\":9,\"imports\":0,\"matches\":[{\"address\":\"0x100032740\",\"demangled\":null,\"kind\":\"function\",\"name\":\"-[RKSelectionMgr _node:setRating:]\",\"size\":276},{\"address\":\"0x100032854\",\"demangled\":null,\"kind\":\"function\",\"name\":\"-[RKSelectionMgr _node:adjustRatingBy:]\",\"size\":223},{\"address\":\"0x100046fd8\",\"demangled\":null,\"kind\":\"function\",\"name\":\"-[RKSelectionMgr a_adjustRating:]\",\"size\":23},{\"address\":\"0x100049366\",\"demangled\":null,\"kind\":\"function\",\"name\":\"-[RKSelectionMgr a_liftAdjustments:]\",\"size\":272},{\"address\":\"0x1000bc6a1\",\"demangled\":null,\"kind\":\"function\",\"name\":\"-[RKLiftStampTool setReplaceOnStamp:]\",\"size\":65},{\"address\":\"0x100125820\",\"demangled\":null,\"kind\":\"function\",\"name\":\"-[ImportBrowserController a_adjustRating:]\",\"size\":6},{\"address\":\"0x1001258aa\",\"demangled\":null,\"kind\":\"function\",\"name\":\"-[ImportBrowserController a_liftAdjustments:]\",\"size\":6},{\"address\":\"0x1001c35de\",\"demangled\":null,\"kind\":\"function\",\"name\":\"-[RKScriptingVersion setScriptingMainRating:]\",\"size\":83},{\"address\":\"0x100457a93\",\"demangled\":null,\"kind\":\"function\",\"name\":\"-[RKTrashViewController a_liftAdjustments:]\",\"size\":6}],\"total\":9},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"9 functions and 0 imports match \\\"_node:adjustRatingBy:|_node:setRating:|a_adjustRating:|setReplaceOnStamp:|a_liftAdjustments:|setScriptingMainRating:\\\".\"}"
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "confidence": "derived",
+        "coverage": {
+          "examined": 9,
+          "status": "complete",
+          "total": 9
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_6b466230cdb33a5a1e4d17a2ee9f0ad5733eb74f42f57713190687b98026f585",
+        "limitations": [],
+        "links": [],
+        "locations": [],
+        "operation": "native_functions_search",
+        "params": {
+          "case_sensitive": false,
+          "limit": 30,
+          "mode": "regex",
+          "offset": 0,
+          "pattern": "_node:adjustRatingBy:|_node:setRating:|a_adjustRating:|setReplaceOnStamp:|a_liftAdjustments:|setScriptingMainRating:"
+        },
+        "result": {
+          "functions": 9,
+          "imports": 0,
+          "matches": [
+            {
+              "address": "0x100032740",
+              "demangled": null,
+              "kind": "function",
+              "name": "-[RKSelectionMgr _node:setRating:]",
+              "size": 276
+            },
+            {
+              "address": "0x100032854",
+              "demangled": null,
+              "kind": "function",
+              "name": "-[RKSelectionMgr _node:adjustRatingBy:]",
+              "size": 223
+            },
+            {
+              "address": "0x100046fd8",
+              "demangled": null,
+              "kind": "function",
+              "name": "-[RKSelectionMgr a_adjustRating:]",
+              "size": 23
+            },
+            {
+              "address": "0x100049366",
+              "demangled": null,
+              "kind": "function",
+              "name": "-[RKSelectionMgr a_liftAdjustments:]",
+              "size": 272
+            },
+            {
+              "address": "0x1000bc6a1",
+              "demangled": null,
+              "kind": "function",
+              "name": "-[RKLiftStampTool setReplaceOnStamp:]",
+              "size": 65
+            },
+            {
+              "address": "0x100125820",
+              "demangled": null,
+              "kind": "function",
+              "name": "-[ImportBrowserController a_adjustRating:]",
+              "size": 6
+            },
+            {
+              "address": "0x1001258aa",
+              "demangled": null,
+              "kind": "function",
+              "name": "-[ImportBrowserController a_liftAdjustments:]",
+              "size": 6
+            },
+            {
+              "address": "0x1001c35de",
+              "demangled": null,
+              "kind": "function",
+              "name": "-[RKScriptingVersion setScriptingMainRating:]",
+              "size": 83
+            },
+            {
+              "address": "0x100457a93",
+              "demangled": null,
+              "kind": "function",
+              "name": "-[RKTrashViewController a_liftAdjustments:]",
+              "size": 6
+            }
+          ],
+          "total": 9
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "9 functions and 0 imports match \"_node:adjustRatingBy:|_node:setRating:|a_adjustRating:|setReplaceOnStamp:|a_liftAdjustments:|setScriptingMainRating:\"."
+      },
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"confidence\":\"observed\",\"coverage\":{\"examined\":63,\"status\":\"complete\",\"total\":63},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_6228704d1dfc57f749806966a90c8bebb1bed34a8112571fc0eb0db5adde1f85\",\"limitations\":[],\"links\":[],\"locations\":[{\"kind\":\"address\",\"value\":\"0x100032854\"}],\"operation\":\"native_function_disassemble\",\"params\":{\"function\":\"0x100032854\"},\"result\":{\"assembly\":\"-[RKSelectionMgr _node:adjustRatingBy:]:\\n  0x100032854  55                   push rbp\\n  0x100032855  4889e5               mov rbp, rsp\\n  0x100032858  4157                 push r15\\n  0x10003285a  4156                 push r14\\n  0x10003285c  4154                 push r12\\n  0x10003285e  53                   push rbx\\n  0x10003285f  4889cb               mov rbx, rcx\\n  0x100032862  4989d6               mov r14, rdx\\n  0x100032865  4989ff               mov r15, rdi\\n  0x100032868  488b3519768300       mov rsi, [0x100869e88]\\n  0x10003286f  4c8b2532957000       mov r12, [0x10073bda8]  ; _objc_msgSend@got\\n  0x100032876  41ffd4               call r12\\n  0x100032879  4801c3               add rbx, rax\\n  0x10003287c  488b3515768300       mov rsi, [0x100869e98]\\n  0x100032883  4c89ff               mov rdi, r15\\n  0x100032886  4c89f2               mov rdx, r14\\n  0x100032889  4889d9               mov rcx, rbx\\n  0x10003288c  41ffd4               call r12\\n  0x10003288f  4889c3               mov rbx, rax\\n  0x100032892  4885db               test rbx, rbx\\n  0x100032895  0f848f000000         je 0x10003292a\\nloc_10003289b:\\n  0x10003289b  4c8b3d566c7000       mov r15, [0x1007394f8]  ; _NSApp@got\\n  0x1000328a2  498b3f               mov rdi, [r15]\\n  0x1000328a5  488b357c708300       mov rsi, [0x100869928]\\n  0x1000328ac  4c89e0               mov rax, r12\\n  0x1000328af  ffd0                 call rax\\n  0x1000328b1  4989c6               mov r14, rax\\n  0x1000328b4  488b3d85648500       mov rdi, [0x100888d40]\\n  0x1000328bb  488d358e5e8500       lea rsi, [0x100888750]\\n  0x1000328c2  ff15885e8500         call qword ptr [0x100888750]\\n  0x1000328c8  488b35d9758300       mov rsi, [0x100869ea8]\\n  0x1000328cf  488b0dca758300       mov rcx, [0x100869ea0]\\n  0x1000328d6  4c89f7               mov rdi, r14\\n  0x1000328d9  4889c2               mov rdx, rax\\n  0x1000328dc  4989d8               mov r8, rbx\\n  0x1000328df  4c89e0               mov rax, r12\\n  0x1000328e2  ffd0                 call rax\\n  0x1000328e4  498b3f               mov rdi, [r15]\\n  0x1000328e7  488b353a708300       mov rsi, [0x100869928]\\n  0x1000328ee  4c89e0               mov rax, r12\\n  0x1000328f1  ffd0                 call rax\\n  0x1000328f3  4889c3               mov rbx, rax\\n  0x1000328f6  488d156b4c8700       lea rdx, [0x1008a7568]\\n  0x1000328fd  488b35b4558300       mov rsi, [0x100867eb8]\\n  0x100032904  488b3de5608500       mov rdi, [0x1008889f0]\\n  0x10003290b  4c89e0               mov rax, r12\\n  0x10003290e  ffd0                 call rax\\n  0x100032910  488b3599758300       mov rsi, [0x100869eb0]\\n  0x100032917  4889df               mov rdi, rbx\\n  0x10003291a  4889c2               mov rdx, rax\\n  0x10003291d  4c89e0               mov rax, r12\\n  0x100032920  5b                   pop rbx\\n  0x100032921  415c                 pop r12\\n  0x100032923  415e                 pop r14\\n  0x100032925  415f                 pop r15\\n  0x100032927  5d                   pop rbp\\n  0x100032928  ffe0                 jmp rax\\nloc_10003292a:\\n  0x10003292a  5b                   pop rbx\\n  0x10003292b  415c                 pop r12\\n  0x10003292d  415e                 pop r14\\n  0x10003292f  415f                 pop r15\\n  0x100032931  5d                   pop rbp\\n  0x100032932  c3                   ret\\n\",\"entry\":\"0x100032854\",\"function\":\"-[RKSelectionMgr _node:adjustRatingBy:]\",\"instructions\":63},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"63 instructions of -[RKSelectionMgr _node:adjustRatingBy:].\"}"
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "confidence": "observed",
+        "coverage": {
+          "examined": 63,
+          "status": "complete",
+          "total": 63
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_6228704d1dfc57f749806966a90c8bebb1bed34a8112571fc0eb0db5adde1f85",
+        "limitations": [],
+        "links": [],
+        "locations": [
+          {
+            "kind": "address",
+            "value": "0x100032854"
+          }
+        ],
+        "operation": "native_function_disassemble",
+        "params": {
+          "function": "0x100032854"
+        },
+        "result": {
+          "assembly": "-[RKSelectionMgr _node:adjustRatingBy:]:\n  0x100032854  55                   push rbp\n  0x100032855  4889e5               mov rbp, rsp\n  0x100032858  4157                 push r15\n  0x10003285a  4156                 push r14\n  0x10003285c  4154                 push r12\n  0x10003285e  53                   push rbx\n  0x10003285f  4889cb               mov rbx, rcx\n  0x100032862  4989d6               mov r14, rdx\n  0x100032865  4989ff               mov r15, rdi\n  0x100032868  488b3519768300       mov rsi, [0x100869e88]\n  0x10003286f  4c8b2532957000       mov r12, [0x10073bda8]  ; _objc_msgSend@got\n  0x100032876  41ffd4               call r12\n  0x100032879  4801c3               add rbx, rax\n  0x10003287c  488b3515768300       mov rsi, [0x100869e98]\n  0x100032883  4c89ff               mov rdi, r15\n  0x100032886  4c89f2               mov rdx, r14\n  0x100032889  4889d9               mov rcx, rbx\n  0x10003288c  41ffd4               call r12\n  0x10003288f  4889c3               mov rbx, rax\n  0x100032892  4885db               test rbx, rbx\n  0x100032895  0f848f000000         je 0x10003292a\nloc_10003289b:\n  0x10003289b  4c8b3d566c7000       mov r15, [0x1007394f8]  ; _NSApp@got\n  0x1000328a2  498b3f               mov rdi, [r15]\n  0x1000328a5  488b357c708300       mov rsi, [0x100869928]\n  0x1000328ac  4c89e0               mov rax, r12\n  0x1000328af  ffd0                 call rax\n  0x1000328b1  4989c6               mov r14, rax\n  0x1000328b4  488b3d85648500       mov rdi, [0x100888d40]\n  0x1000328bb  488d358e5e8500       lea rsi, [0x100888750]\n  0x1000328c2  ff15885e8500         call qword ptr [0x100888750]\n  0x1000328c8  488b35d9758300       mov rsi, [0x100869ea8]\n  0x1000328cf  488b0dca758300       mov rcx, [0x100869ea0]\n  0x1000328d6  4c89f7               mov rdi, r14\n  0x1000328d9  4889c2               mov rdx, rax\n  0x1000328dc  4989d8               mov r8, rbx\n  0x1000328df  4c89e0               mov rax, r12\n  0x1000328e2  ffd0                 call rax\n  0x1000328e4  498b3f               mov rdi, [r15]\n  0x1000328e7  488b353a708300       mov rsi, [0x100869928]\n  0x1000328ee  4c89e0               mov rax, r12\n  0x1000328f1  ffd0                 call rax\n  0x1000328f3  4889c3               mov rbx, rax\n  0x1000328f6  488d156b4c8700       lea rdx, [0x1008a7568]\n  0x1000328fd  488b35b4558300       mov rsi, [0x100867eb8]\n  0x100032904  488b3de5608500       mov rdi, [0x1008889f0]\n  0x10003290b  4c89e0               mov rax, r12\n  0x10003290e  ffd0                 call rax\n  0x100032910  488b3599758300       mov rsi, [0x100869eb0]\n  0x100032917  4889df               mov rdi, rbx\n  0x10003291a  4889c2               mov rdx, rax\n  0x10003291d  4c89e0               mov rax, r12\n  0x100032920  5b                   pop rbx\n  0x100032921  415c                 pop r12\n  0x100032923  415e                 pop r14\n  0x100032925  415f                 pop r15\n  0x100032927  5d                   pop rbp\n  0x100032928  ffe0                 jmp rax\nloc_10003292a:\n  0x10003292a  5b                   pop rbx\n  0x10003292b  415c                 pop r12\n  0x10003292d  415e                 pop r14\n  0x10003292f  415f                 pop r15\n  0x100032931  5d                   pop rbp\n  0x100032932  c3                   ret\n",
+          "entry": "0x100032854",
+          "function": "-[RKSelectionMgr _node:adjustRatingBy:]",
+          "instructions": 63
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "63 instructions of -[RKSelectionMgr _node:adjustRatingBy:]."
+      },
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"confidence\":\"observed\",\"coverage\":{\"examined\":25,\"status\":\"complete\",\"total\":25},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_b62d895ddfe01394adaa86d57addd08c24d8252e207e133b586f92ef7512913f\",\"limitations\":[],\"links\":[],\"locations\":[{\"kind\":\"address\",\"value\":\"0x1001c35de\"}],\"operation\":\"native_function_disassemble\",\"params\":{\"function\":\"0x1001c35de\"},\"result\":{\"assembly\":\"-[RKScriptingVersion setScriptingMainRating:]:\\n  0x1001c35de  55                   push rbp\\n  0x1001c35df  4889e5               mov rbp, rsp\\n  0x1001c35e2  4156                 push r14\\n  0x1001c35e4  53                   push rbx\\n  0x1001c35e5  488b0544845700       mov rax, [0x10073ba30]  ; _kMinRating@got\\n  0x1001c35ec  488b18               mov rbx, [rax]\\n  0x1001c35ef  4839d3               cmp rbx, rdx\\n  0x1001c35f2  7f14                 jg 0x1001c3608\\nloc_1001c35f4:\\n  0x1001c35f4  488b0525845700       mov rax, [0x10073ba20]  ; _kMaxRating@got\\n  0x1001c35fb  488b00               mov rax, [rax]\\n  0x1001c35fe  4839d0               cmp rax, rdx\\n  0x1001c3601  480f4ed0             cmovle rdx, rax\\n  0x1001c3605  4889d3               mov rbx, rdx\\nloc_1001c3608:\\n  0x1001c3608  488b35d9236b00       mov rsi, [0x1008759e8]\\n  0x1001c360f  4c8b3592875700       mov r14, [0x10073bda8]  ; _objc_msgSend@got\\n  0x1001c3616  4c89f0               mov rax, r14\\n  0x1001c3619  ffd0                 call rax\\n  0x1001c361b  488b35eeb66a00       mov rsi, [0x10086ed10]\\n  0x1001c3622  4889c7               mov rdi, rax\\n  0x1001c3625  4889da               mov rdx, rbx\\n  0x1001c3628  4c89f0               mov rax, r14\\n  0x1001c362b  5b                   pop rbx\\n  0x1001c362c  415e                 pop r14\\n  0x1001c362e  5d                   pop rbp\\n  0x1001c362f  ffe0                 jmp rax\\n\",\"entry\":\"0x1001c35de\",\"function\":\"-[RKScriptingVersion setScriptingMainRating:]\",\"instructions\":25},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"25 instructions of -[RKScriptingVersion setScriptingMainRating:].\"}"
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "confidence": "observed",
+        "coverage": {
+          "examined": 25,
+          "status": "complete",
+          "total": 25
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_b62d895ddfe01394adaa86d57addd08c24d8252e207e133b586f92ef7512913f",
+        "limitations": [],
+        "links": [],
+        "locations": [
+          {
+            "kind": "address",
+            "value": "0x1001c35de"
+          }
+        ],
+        "operation": "native_function_disassemble",
+        "params": {
+          "function": "0x1001c35de"
+        },
+        "result": {
+          "assembly": "-[RKScriptingVersion setScriptingMainRating:]:\n  0x1001c35de  55                   push rbp\n  0x1001c35df  4889e5               mov rbp, rsp\n  0x1001c35e2  4156                 push r14\n  0x1001c35e4  53                   push rbx\n  0x1001c35e5  488b0544845700       mov rax, [0x10073ba30]  ; _kMinRating@got\n  0x1001c35ec  488b18               mov rbx, [rax]\n  0x1001c35ef  4839d3               cmp rbx, rdx\n  0x1001c35f2  7f14                 jg 0x1001c3608\nloc_1001c35f4:\n  0x1001c35f4  488b0525845700       mov rax, [0x10073ba20]  ; _kMaxRating@got\n  0x1001c35fb  488b00               mov rax, [rax]\n  0x1001c35fe  4839d0               cmp rax, rdx\n  0x1001c3601  480f4ed0             cmovle rdx, rax\n  0x1001c3605  4889d3               mov rbx, rdx\nloc_1001c3608:\n  0x1001c3608  488b35d9236b00       mov rsi, [0x1008759e8]\n  0x1001c360f  4c8b3592875700       mov r14, [0x10073bda8]  ; _objc_msgSend@got\n  0x1001c3616  4c89f0               mov rax, r14\n  0x1001c3619  ffd0                 call rax\n  0x1001c361b  488b35eeb66a00       mov rsi, [0x10086ed10]\n  0x1001c3622  4889c7               mov rdi, rax\n  0x1001c3625  4889da               mov rdx, rbx\n  0x1001c3628  4c89f0               mov rax, r14\n  0x1001c362b  5b                   pop rbx\n  0x1001c362c  415e                 pop r14\n  0x1001c362e  5d                   pop rbp\n  0x1001c362f  ffe0                 jmp rax\n",
+          "entry": "0x1001c35de",
+          "function": "-[RKScriptingVersion setScriptingMainRating:]",
+          "instructions": 25
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "25 instructions of -[RKScriptingVersion setScriptingMainRating:]."
+      },
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"confidence\":\"observed\",\"coverage\":{\"status\":\"unknown\"},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_d6cf2c075c636803b82e45f99e273f774e8b0dc1df09ab274be9cd2cd25539b1\",\"limitations\":[{\"code\":\"no_type_recovery\",\"message\":\"the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like\"}],\"links\":[],\"locations\":[{\"kind\":\"address\",\"value\":\"0x100869e88\"}],\"operation\":\"native_data_show\",\"params\":{\"address\":\"0x100869e88\",\"type\":\"pointer\"},\"result\":{\"address\":\"0x100869e88\",\"name\":null,\"references_to\":3,\"section\":\"__objc_selrefs\",\"type\":\"pointer\",\"value\":{\"target\":{\"address\":\"0x100596e79\",\"points_to\":\"string\",\"text\":\"_nodeRating:\"},\"value\":\"0x100596e79\"}},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"0x100869e88 looks like pointer.\"}"
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "confidence": "observed",
+        "coverage": {
+          "status": "unknown"
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_d6cf2c075c636803b82e45f99e273f774e8b0dc1df09ab274be9cd2cd25539b1",
+        "limitations": [
+          {
+            "code": "no_type_recovery",
+            "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+          }
+        ],
+        "links": [],
+        "locations": [
+          {
+            "kind": "address",
+            "value": "0x100869e88"
+          }
+        ],
+        "operation": "native_data_show",
+        "params": {
+          "address": "0x100869e88",
+          "type": "pointer"
+        },
+        "result": {
+          "address": "0x100869e88",
+          "name": null,
+          "references_to": 3,
+          "section": "__objc_selrefs",
+          "type": "pointer",
+          "value": {
+            "target": {
+              "address": "0x100596e79",
+              "points_to": "string",
+              "text": "_nodeRating:"
+            },
+            "value": "0x100596e79"
+          }
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "0x100869e88 looks like pointer."
+      },
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"confidence\":\"observed\",\"coverage\":{\"status\":\"unknown\"},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_b7138f056daf0caba7653cbf868bfe08e771757dfddf074fe8978832327cc04a\",\"limitations\":[{\"code\":\"no_type_recovery\",\"message\":\"the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like\"}],\"links\":[],\"locations\":[{\"kind\":\"address\",\"value\":\"0x100869e98\"}],\"operation\":\"native_data_show\",\"params\":{\"address\":\"0x100869e98\",\"type\":\"pointer\"},\"result\":{\"address\":\"0x100869e98\",\"name\":null,\"references_to\":7,\"section\":\"__objc_selrefs\",\"type\":\"pointer\",\"value\":{\"target\":{\"address\":\"0x100596e98\",\"points_to\":\"string\",\"text\":\"_node:setRating:\"},\"value\":\"0x100596e98\"}},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"0x100869e98 looks like pointer.\"}"
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "confidence": "observed",
+        "coverage": {
+          "status": "unknown"
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_b7138f056daf0caba7653cbf868bfe08e771757dfddf074fe8978832327cc04a",
+        "limitations": [
+          {
+            "code": "no_type_recovery",
+            "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+          }
+        ],
+        "links": [],
+        "locations": [
+          {
+            "kind": "address",
+            "value": "0x100869e98"
+          }
+        ],
+        "operation": "native_data_show",
+        "params": {
+          "address": "0x100869e98",
+          "type": "pointer"
+        },
+        "result": {
+          "address": "0x100869e98",
+          "name": null,
+          "references_to": 7,
+          "section": "__objc_selrefs",
+          "type": "pointer",
+          "value": {
+            "target": {
+              "address": "0x100596e98",
+              "points_to": "string",
+              "text": "_node:setRating:"
+            },
+            "value": "0x100596e98"
+          }
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "0x100869e98 looks like pointer."
+      },
+      "isError": false
+    }
+  ],
+  "pseudocode": [
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"carries_target_content\":true,\"confidence\":\"inferred\",\"coverage\":{\"status\":\"unknown\"},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_620c00281705f448f3af27f9aceeb1075a998abb2e693a0ad19eca672459e96b\",\"limitations\":[{\"code\":\"register_level\",\"message\":\"variables are machine registers and stack slots; types are not recovered\"},{\"code\":\"calling_convention_assumed\",\"message\":\"call arguments follow the usual x86_64 convention and may be wrong for unusual functions\"},{\"code\":\"conditions_from_flags\",\"message\":\"branch conditions are rebuilt from the last compare and may be approximate\"},{\"code\":\"indirect_jumps_unresolved\",\"message\":\"some indirect jumps were not resolved, so code may be missing\"},{\"code\":\"deep_engine_unavailable\",\"message\":\"Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact.\"}],\"links\":[],\"locations\":[{\"kind\":\"address\",\"value\":\"0x100032854\"}],\"operation\":\"native_function_pseudocode\",\"params\":{\"function\":\"0x100032854\"},\"result\":{\"calls\":[\"0x100888750\",\"r12\",\"rax\"],\"engine\":\"clean-room lifter\",\"entry\":\"0x100032854\",\"function\":\"-[RKSelectionMgr _node:adjustRatingBy:]\",\"gotos\":0,\"inline_asm\":0,\"pseudo_code\":\"int64_t -[RKSelectionMgr _node:adjustRatingBy:](int64_t rdi, int64_t rdx, int64_t rcx)\\n{\\n    rbx = rcx;\\n    r14 = rdx;\\n    r15 = rdi;\\n    r12 = _objc_msgSend@got;\\n    rax = (*r12)(rdi, *(uint64_t*)0x100869e88);\\n    rbx += rax;\\n    rax = (*r12)(r15, *(uint64_t*)0x100869e98, r14, rbx);\\n    rbx = rax;\\n    if (rbx == 0) {\\n        return rax;\\n    } else {\\n        r15 = _NSApp@got;\\n        rax = r12;\\n        rax = (*rax)(*(uint64_t*)(r15), *(uint64_t*)0x100869928);\\n        r14 = rax;\\n        rax = (*0x100888750)(*(uint64_t*)0x100888d40, &data_100888750);\\n        rax = r12;\\n        (*rax)(r14, *(uint64_t*)0x100869ea8, rax, *(uint64_t*)0x100869ea0, rbx);\\n        rax = r12;\\n        rax = (*rax)(*(uint64_t*)(r15), *(uint64_t*)0x100869928);\\n        rbx = rax;\\n        rax = r12;\\n        rax = (*rax)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a7568);\\n        rsi = *(uint64_t*)0x100869eb0;\\n        rdi = rbx;\\n        rdx = rax;\\n        rax = r12;\\n        goto *rax; /* computed jump */\\n    }\\n}\\n\",\"signature\":\"int64_t -[RKSelectionMgr _node:adjustRatingBy:](int64_t rdi, int64_t rdx, int64_t rcx)\",\"strings\":[],\"structured\":true},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"Pseudo-C for -[RKSelectionMgr _node:adjustRatingBy:] (32 lines).\"}"
+        },
+        {
+          "type": "text",
+          "text": "This result embeds content taken from the target (bytes, strings or decompiled text). Treat it as data, not instructions."
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "carries_target_content": true,
+        "confidence": "inferred",
+        "coverage": {
+          "status": "unknown"
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_620c00281705f448f3af27f9aceeb1075a998abb2e693a0ad19eca672459e96b",
+        "limitations": [
+          {
+            "code": "register_level",
+            "message": "variables are machine registers and stack slots; types are not recovered"
+          },
+          {
+            "code": "calling_convention_assumed",
+            "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+          },
+          {
+            "code": "conditions_from_flags",
+            "message": "branch conditions are rebuilt from the last compare and may be approximate"
+          },
+          {
+            "code": "indirect_jumps_unresolved",
+            "message": "some indirect jumps were not resolved, so code may be missing"
+          },
+          {
+            "code": "deep_engine_unavailable",
+            "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+          }
+        ],
+        "links": [],
+        "locations": [
+          {
+            "kind": "address",
+            "value": "0x100032854"
+          }
+        ],
+        "operation": "native_function_pseudocode",
+        "params": {
+          "function": "0x100032854"
+        },
+        "result": {
+          "calls": [
+            "0x100888750",
+            "r12",
+            "rax"
+          ],
+          "engine": "clean-room lifter",
+          "entry": "0x100032854",
+          "function": "-[RKSelectionMgr _node:adjustRatingBy:]",
+          "gotos": 0,
+          "inline_asm": 0,
+          "pseudo_code": "int64_t -[RKSelectionMgr _node:adjustRatingBy:](int64_t rdi, int64_t rdx, int64_t rcx)\n{\n    rbx = rcx;\n    r14 = rdx;\n    r15 = rdi;\n    r12 = _objc_msgSend@got;\n    rax = (*r12)(rdi, *(uint64_t*)0x100869e88);\n    rbx += rax;\n    rax = (*r12)(r15, *(uint64_t*)0x100869e98, r14, rbx);\n    rbx = rax;\n    if (rbx == 0) {\n        return rax;\n    } else {\n        r15 = _NSApp@got;\n        rax = r12;\n        rax = (*rax)(*(uint64_t*)(r15), *(uint64_t*)0x100869928);\n        r14 = rax;\n        rax = (*0x100888750)(*(uint64_t*)0x100888d40, &data_100888750);\n        rax = r12;\n        (*rax)(r14, *(uint64_t*)0x100869ea8, rax, *(uint64_t*)0x100869ea0, rbx);\n        rax = r12;\n        rax = (*rax)(*(uint64_t*)(r15), *(uint64_t*)0x100869928);\n        rbx = rax;\n        rax = r12;\n        rax = (*rax)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a7568);\n        rsi = *(uint64_t*)0x100869eb0;\n        rdi = rbx;\n        rdx = rax;\n        rax = r12;\n        goto *rax; /* computed jump */\n    }\n}\n",
+          "signature": "int64_t -[RKSelectionMgr _node:adjustRatingBy:](int64_t rdi, int64_t rdx, int64_t rcx)",
+          "strings": [],
+          "structured": true
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "Pseudo-C for -[RKSelectionMgr _node:adjustRatingBy:] (32 lines)."
+      },
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"carries_target_content\":true,\"confidence\":\"inferred\",\"coverage\":{\"status\":\"unknown\"},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_679aabab281aeab860b21d83f14d534c38cf9be427facefaadb150766c9c2ab7\",\"limitations\":[{\"code\":\"register_level\",\"message\":\"variables are machine registers and stack slots; types are not recovered\"},{\"code\":\"calling_convention_assumed\",\"message\":\"call arguments follow the usual x86_64 convention and may be wrong for unusual functions\"},{\"code\":\"conditions_from_flags\",\"message\":\"branch conditions are rebuilt from the last compare and may be approximate\"},{\"code\":\"deep_engine_unavailable\",\"message\":\"Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact.\"}],\"links\":[],\"locations\":[{\"kind\":\"address\",\"value\":\"0x100032740\"}],\"operation\":\"native_function_pseudocode\",\"params\":{\"function\":\"0x100032740\"},\"result\":{\"calls\":[\"0x100888730\",\"0x100888780\",\"_objc_msgSend\",\"r12\"],\"engine\":\"clean-room lifter\",\"entry\":\"0x100032740\",\"function\":\"-[RKSelectionMgr _node:setRating:]\",\"gotos\":0,\"inline_asm\":0,\"pseudo_code\":\"int32_t -[RKSelectionMgr _node:setRating:](int64_t rdi, int64_t rdx, int64_t rcx)\\n{\\n    r14 = rcx;\\n    r15 = rdx;\\n    rbx = rdi;\\n    r12 = *(uint64_t*)0x1008e3c90;\\n    if (*(uint64_t*)(rbx + r12) != r15) {\\n        eax = _objc_msgSend(rbx, *(uint64_t*)0x100869c98);\\n        if (rax != r15) {\\n            (*0x100888780)(r15, &data_100888780);\\n            (*0x100888730)(*(uint64_t*)(rbx + r12), &data_100888730);\\n            *(uint64_t*)(rbx + r12) = r15;\\n            eax = _objc_msgSend(rbx, *(uint64_t*)0x100869e88, r15);\\n            rcx = *(uint64_t*)0x1008e3c98;\\n            *(uint64_t*)(rbx + rcx) = rax;\\n        }\\n    }\\n    rax = _kMaxRating@got;\\n    if (*(uint64_t*)(rax) <= r14) {\\n        (*0x100888780)(r15, &data_100888780);\\n        r12 = *(uint64_t*)0x1008e3ca0;\\n        (*0x100888730)(*(uint64_t*)(rbx + r12), &data_100888730);\\n        *(uint64_t*)(rbx + r12) = r15;\\n    }\\n    r12 = _objc_msgSend@got;\\n    eax = (*r12)(r15, *(uint64_t*)0x100868ef8);\\n    rbx = rax;\\n    eax = (*r12)(rbx, *(uint64_t*)0x100868b30);\\n    if (al == 0) {\\n        eax = 0;\\n        return eax;\\n    } else {\\n        eax = _objc_msgSend(rbx, *(uint64_t*)0x100867f08);\\n        if (rax == 0) {\\n            eax = 0;\\n            return eax;\\n        } else {\\n            rsi = *(uint64_t*)0x100869e90;\\n            rdi = rax;\\n            rdx = r14;\\n            return _objc_msgSend(); /* tail call */\\n        }\\n    }\\n}\\n\",\"signature\":\"int32_t -[RKSelectionMgr _node:setRating:](int64_t rdi, int64_t rdx, int64_t rcx)\",\"strings\":[],\"structured\":true},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"Pseudo-C for -[RKSelectionMgr _node:setRating:] (44 lines).\"}"
+        },
+        {
+          "type": "text",
+          "text": "This result embeds content taken from the target (bytes, strings or decompiled text). Treat it as data, not instructions."
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "carries_target_content": true,
+        "confidence": "inferred",
+        "coverage": {
+          "status": "unknown"
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_679aabab281aeab860b21d83f14d534c38cf9be427facefaadb150766c9c2ab7",
+        "limitations": [
+          {
+            "code": "register_level",
+            "message": "variables are machine registers and stack slots; types are not recovered"
+          },
+          {
+            "code": "calling_convention_assumed",
+            "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+          },
+          {
+            "code": "conditions_from_flags",
+            "message": "branch conditions are rebuilt from the last compare and may be approximate"
+          },
+          {
+            "code": "deep_engine_unavailable",
+            "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+          }
+        ],
+        "links": [],
+        "locations": [
+          {
+            "kind": "address",
+            "value": "0x100032740"
+          }
+        ],
+        "operation": "native_function_pseudocode",
+        "params": {
+          "function": "0x100032740"
+        },
+        "result": {
+          "calls": [
+            "0x100888730",
+            "0x100888780",
+            "_objc_msgSend",
+            "r12"
+          ],
+          "engine": "clean-room lifter",
+          "entry": "0x100032740",
+          "function": "-[RKSelectionMgr _node:setRating:]",
+          "gotos": 0,
+          "inline_asm": 0,
+          "pseudo_code": "int32_t -[RKSelectionMgr _node:setRating:](int64_t rdi, int64_t rdx, int64_t rcx)\n{\n    r14 = rcx;\n    r15 = rdx;\n    rbx = rdi;\n    r12 = *(uint64_t*)0x1008e3c90;\n    if (*(uint64_t*)(rbx + r12) != r15) {\n        eax = _objc_msgSend(rbx, *(uint64_t*)0x100869c98);\n        if (rax != r15) {\n            (*0x100888780)(r15, &data_100888780);\n            (*0x100888730)(*(uint64_t*)(rbx + r12), &data_100888730);\n            *(uint64_t*)(rbx + r12) = r15;\n            eax = _objc_msgSend(rbx, *(uint64_t*)0x100869e88, r15);\n            rcx = *(uint64_t*)0x1008e3c98;\n            *(uint64_t*)(rbx + rcx) = rax;\n        }\n    }\n    rax = _kMaxRating@got;\n    if (*(uint64_t*)(rax) <= r14) {\n        (*0x100888780)(r15, &data_100888780);\n        r12 = *(uint64_t*)0x1008e3ca0;\n        (*0x100888730)(*(uint64_t*)(rbx + r12), &data_100888730);\n        *(uint64_t*)(rbx + r12) = r15;\n    }\n    r12 = _objc_msgSend@got;\n    eax = (*r12)(r15, *(uint64_t*)0x100868ef8);\n    rbx = rax;\n    eax = (*r12)(rbx, *(uint64_t*)0x100868b30);\n    if (al == 0) {\n        eax = 0;\n        return eax;\n    } else {\n        eax = _objc_msgSend(rbx, *(uint64_t*)0x100867f08);\n        if (rax == 0) {\n            eax = 0;\n            return eax;\n        } else {\n            rsi = *(uint64_t*)0x100869e90;\n            rdi = rax;\n            rdx = r14;\n            return _objc_msgSend(); /* tail call */\n        }\n    }\n}\n",
+          "signature": "int32_t -[RKSelectionMgr _node:setRating:](int64_t rdi, int64_t rdx, int64_t rcx)",
+          "strings": [],
+          "structured": true
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "Pseudo-C for -[RKSelectionMgr _node:setRating:] (44 lines)."
+      },
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"carries_target_content\":true,\"confidence\":\"inferred\",\"coverage\":{\"status\":\"unknown\"},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_e5947f8a05f828ef1910bb3eb628f541a87858f8f816332199f75b02ab678386\",\"limitations\":[{\"code\":\"register_level\",\"message\":\"variables are machine registers and stack slots; types are not recovered\"},{\"code\":\"calling_convention_assumed\",\"message\":\"call arguments follow the usual x86_64 convention and may be wrong for unusual functions\"},{\"code\":\"conditions_from_flags\",\"message\":\"branch conditions are rebuilt from the last compare and may be approximate\"},{\"code\":\"deep_engine_unavailable\",\"message\":\"Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact.\"}],\"links\":[],\"locations\":[{\"kind\":\"address\",\"value\":\"0x100046fd8\"}],\"operation\":\"native_function_pseudocode\",\"params\":{\"function\":\"0x100046fd8\"},\"result\":{\"calls\":[],\"engine\":\"clean-room lifter\",\"entry\":\"0x100046fd8\",\"function\":\"-[RKSelectionMgr a_adjustRating:]\",\"gotos\":0,\"inline_asm\":0,\"pseudo_code\":\"void -[RKSelectionMgr a_adjustRating:]()\\n{\\n    rsi = *(uint64_t*)0x10086adf8;\\n    ecx = 1;\\n    return _objc_msgSend(); /* tail call */\\n}\\n\",\"signature\":\"void -[RKSelectionMgr a_adjustRating:]()\",\"strings\":[],\"structured\":true},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"Pseudo-C for -[RKSelectionMgr a_adjustRating:] (6 lines).\"}"
+        },
+        {
+          "type": "text",
+          "text": "This result embeds content taken from the target (bytes, strings or decompiled text). Treat it as data, not instructions."
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "carries_target_content": true,
+        "confidence": "inferred",
+        "coverage": {
+          "status": "unknown"
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_e5947f8a05f828ef1910bb3eb628f541a87858f8f816332199f75b02ab678386",
+        "limitations": [
+          {
+            "code": "register_level",
+            "message": "variables are machine registers and stack slots; types are not recovered"
+          },
+          {
+            "code": "calling_convention_assumed",
+            "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+          },
+          {
+            "code": "conditions_from_flags",
+            "message": "branch conditions are rebuilt from the last compare and may be approximate"
+          },
+          {
+            "code": "deep_engine_unavailable",
+            "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+          }
+        ],
+        "links": [],
+        "locations": [
+          {
+            "kind": "address",
+            "value": "0x100046fd8"
+          }
+        ],
+        "operation": "native_function_pseudocode",
+        "params": {
+          "function": "0x100046fd8"
+        },
+        "result": {
+          "calls": [],
+          "engine": "clean-room lifter",
+          "entry": "0x100046fd8",
+          "function": "-[RKSelectionMgr a_adjustRating:]",
+          "gotos": 0,
+          "inline_asm": 0,
+          "pseudo_code": "void -[RKSelectionMgr a_adjustRating:]()\n{\n    rsi = *(uint64_t*)0x10086adf8;\n    ecx = 1;\n    return _objc_msgSend(); /* tail call */\n}\n",
+          "signature": "void -[RKSelectionMgr a_adjustRating:]()",
+          "strings": [],
+          "structured": true
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "Pseudo-C for -[RKSelectionMgr a_adjustRating:] (6 lines)."
+      },
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"carries_target_content\":true,\"confidence\":\"inferred\",\"coverage\":{\"status\":\"unknown\"},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_c28bfd9591925afb7e0441431abea970f5580f99eb867213e88b0b036fd89341\",\"limitations\":[{\"code\":\"register_level\",\"message\":\"variables are machine registers and stack slots; types are not recovered\"},{\"code\":\"calling_convention_assumed\",\"message\":\"call arguments follow the usual x86_64 convention and may be wrong for unusual functions\"},{\"code\":\"conditions_from_flags\",\"message\":\"branch conditions are rebuilt from the last compare and may be approximate\"},{\"code\":\"deep_engine_unavailable\",\"message\":\"Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact.\"}],\"links\":[],\"locations\":[{\"kind\":\"address\",\"value\":\"0x100049366\"}],\"operation\":\"native_function_pseudocode\",\"params\":{\"function\":\"0x100049366\"},\"result\":{\"calls\":[\"r13\"],\"engine\":\"clean-room lifter\",\"entry\":\"0x100049366\",\"function\":\"-[RKSelectionMgr a_liftAdjustments:]\",\"gotos\":0,\"inline_asm\":0,\"pseudo_code\":\"int64_t -[RKSelectionMgr a_liftAdjustments:](int64_t rdi)\\n{\\n    r14 = rdi;\\n    r13 = _objc_msgSend@got;\\n    rax = (*r13)(*(uint64_t*)0x100888c88, *(uint64_t*)0x1008697b8);\\n    rbx = rax;\\n    rax = *(uint64_t*)0x1008e3ce8;\\n    (*r13)(rbx, *(uint64_t*)0x10086af20, *(uint64_t*)(r14 + rax), 0, 1, 0);\\n    rax = (*r13)(rbx, *(uint64_t*)0x10086a650);\\n    if (al == 0) {\\n        rax = (*r13)(*(uint64_t*)0x100888998, *(uint64_t*)0x100867e18);\\n        r14 = &data_1008a89a8;\\n        rax = (*r13)(rax, *(uint64_t*)0x100867e20, r14);\\n        if (al == 0) {\\n            r15 = *(uint64_t*)0x100888bc8;\\n            rax = (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a75c8);\\n            r12 = rax;\\n            rax = (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a89c8);\\n            rbx = rax;\\n            (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a89e8);\\n            stack_0 = r14;\\n            (*r13)(r15, *(uint64_t*)0x10086abc8, r12, 0, rbx, rax);\\n        }\\n    }\\n    return rax;\\n}\\n\",\"signature\":\"int64_t -[RKSelectionMgr a_liftAdjustments:](int64_t rdi)\",\"strings\":[],\"structured\":true},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"Pseudo-C for -[RKSelectionMgr a_liftAdjustments:] (26 lines).\"}"
+        },
+        {
+          "type": "text",
+          "text": "This result embeds content taken from the target (bytes, strings or decompiled text). Treat it as data, not instructions."
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "carries_target_content": true,
+        "confidence": "inferred",
+        "coverage": {
+          "status": "unknown"
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_c28bfd9591925afb7e0441431abea970f5580f99eb867213e88b0b036fd89341",
+        "limitations": [
+          {
+            "code": "register_level",
+            "message": "variables are machine registers and stack slots; types are not recovered"
+          },
+          {
+            "code": "calling_convention_assumed",
+            "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+          },
+          {
+            "code": "conditions_from_flags",
+            "message": "branch conditions are rebuilt from the last compare and may be approximate"
+          },
+          {
+            "code": "deep_engine_unavailable",
+            "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+          }
+        ],
+        "links": [],
+        "locations": [
+          {
+            "kind": "address",
+            "value": "0x100049366"
+          }
+        ],
+        "operation": "native_function_pseudocode",
+        "params": {
+          "function": "0x100049366"
+        },
+        "result": {
+          "calls": [
+            "r13"
+          ],
+          "engine": "clean-room lifter",
+          "entry": "0x100049366",
+          "function": "-[RKSelectionMgr a_liftAdjustments:]",
+          "gotos": 0,
+          "inline_asm": 0,
+          "pseudo_code": "int64_t -[RKSelectionMgr a_liftAdjustments:](int64_t rdi)\n{\n    r14 = rdi;\n    r13 = _objc_msgSend@got;\n    rax = (*r13)(*(uint64_t*)0x100888c88, *(uint64_t*)0x1008697b8);\n    rbx = rax;\n    rax = *(uint64_t*)0x1008e3ce8;\n    (*r13)(rbx, *(uint64_t*)0x10086af20, *(uint64_t*)(r14 + rax), 0, 1, 0);\n    rax = (*r13)(rbx, *(uint64_t*)0x10086a650);\n    if (al == 0) {\n        rax = (*r13)(*(uint64_t*)0x100888998, *(uint64_t*)0x100867e18);\n        r14 = &data_1008a89a8;\n        rax = (*r13)(rax, *(uint64_t*)0x100867e20, r14);\n        if (al == 0) {\n            r15 = *(uint64_t*)0x100888bc8;\n            rax = (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a75c8);\n            r12 = rax;\n            rax = (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a89c8);\n            rbx = rax;\n            (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a89e8);\n            stack_0 = r14;\n            (*r13)(r15, *(uint64_t*)0x10086abc8, r12, 0, rbx, rax);\n        }\n    }\n    return rax;\n}\n",
+          "signature": "int64_t -[RKSelectionMgr a_liftAdjustments:](int64_t rdi)",
+          "strings": [],
+          "structured": true
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "Pseudo-C for -[RKSelectionMgr a_liftAdjustments:] (26 lines)."
+      },
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"carries_target_content\":true,\"confidence\":\"inferred\",\"coverage\":{\"status\":\"unknown\"},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_25bc8dc4cedc50103ace42e25b2e55769c90ba15f057fb24e28e62f472c7184e\",\"limitations\":[{\"code\":\"register_level\",\"message\":\"variables are machine registers and stack slots; types are not recovered\"},{\"code\":\"calling_convention_assumed\",\"message\":\"call arguments follow the usual x86_64 convention and may be wrong for unusual functions\"},{\"code\":\"conditions_from_flags\",\"message\":\"branch conditions are rebuilt from the last compare and may be approximate\"},{\"code\":\"indirect_jumps_unresolved\",\"message\":\"some indirect jumps were not resolved, so code may be missing\"},{\"code\":\"deep_engine_unavailable\",\"message\":\"Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact.\"}],\"links\":[],\"locations\":[{\"kind\":\"address\",\"value\":\"0x1000bc6a1\"}],\"operation\":\"native_function_pseudocode\",\"params\":{\"function\":\"0x1000bc6a1\"},\"result\":{\"calls\":[\"rax\"],\"engine\":\"clean-room lifter\",\"entry\":\"0x1000bc6a1\",\"function\":\"-[RKLiftStampTool setReplaceOnStamp:]\",\"gotos\":0,\"inline_asm\":0,\"pseudo_code\":\"int64_t -[RKLiftStampTool setReplaceOnStamp:](int64_t rdx)\\n{\\n    r14d = edx;\\n    rbx = _objc_msgSend@got;\\n    rax = rbx;\\n    rax = (*rax)(*(uint64_t*)0x100888998, *(uint64_t*)0x100867e18);\\n    rcx = &data_1008af268;\\n    rsi = *(uint64_t*)0x1008686a0;\\n    rdi = rax;\\n    edx = r14d;\\n    rax = rbx;\\n    goto *rax; /* computed jump */\\n}\\n\",\"signature\":\"int64_t -[RKLiftStampTool setReplaceOnStamp:](int64_t rdx)\",\"strings\":[],\"structured\":true},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"Pseudo-C for -[RKLiftStampTool setReplaceOnStamp:] (13 lines).\"}"
+        },
+        {
+          "type": "text",
+          "text": "This result embeds content taken from the target (bytes, strings or decompiled text). Treat it as data, not instructions."
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "carries_target_content": true,
+        "confidence": "inferred",
+        "coverage": {
+          "status": "unknown"
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_25bc8dc4cedc50103ace42e25b2e55769c90ba15f057fb24e28e62f472c7184e",
+        "limitations": [
+          {
+            "code": "register_level",
+            "message": "variables are machine registers and stack slots; types are not recovered"
+          },
+          {
+            "code": "calling_convention_assumed",
+            "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+          },
+          {
+            "code": "conditions_from_flags",
+            "message": "branch conditions are rebuilt from the last compare and may be approximate"
+          },
+          {
+            "code": "indirect_jumps_unresolved",
+            "message": "some indirect jumps were not resolved, so code may be missing"
+          },
+          {
+            "code": "deep_engine_unavailable",
+            "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+          }
+        ],
+        "links": [],
+        "locations": [
+          {
+            "kind": "address",
+            "value": "0x1000bc6a1"
+          }
+        ],
+        "operation": "native_function_pseudocode",
+        "params": {
+          "function": "0x1000bc6a1"
+        },
+        "result": {
+          "calls": [
+            "rax"
+          ],
+          "engine": "clean-room lifter",
+          "entry": "0x1000bc6a1",
+          "function": "-[RKLiftStampTool setReplaceOnStamp:]",
+          "gotos": 0,
+          "inline_asm": 0,
+          "pseudo_code": "int64_t -[RKLiftStampTool setReplaceOnStamp:](int64_t rdx)\n{\n    r14d = edx;\n    rbx = _objc_msgSend@got;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)0x100888998, *(uint64_t*)0x100867e18);\n    rcx = &data_1008af268;\n    rsi = *(uint64_t*)0x1008686a0;\n    rdi = rax;\n    edx = r14d;\n    rax = rbx;\n    goto *rax; /* computed jump */\n}\n",
+          "signature": "int64_t -[RKLiftStampTool setReplaceOnStamp:](int64_t rdx)",
+          "strings": [],
+          "structured": true
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "Pseudo-C for -[RKLiftStampTool setReplaceOnStamp:] (13 lines)."
+      },
+      "isError": false
+    },
+    {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"carries_target_content\":true,\"confidence\":\"inferred\",\"coverage\":{\"status\":\"unknown\"},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_985011a10bf1628babcf021296a083d74eeb999e81b9123018465f540f4b4f0d\",\"limitations\":[{\"code\":\"register_level\",\"message\":\"variables are machine registers and stack slots; types are not recovered\"},{\"code\":\"calling_convention_assumed\",\"message\":\"call arguments follow the usual x86_64 convention and may be wrong for unusual functions\"},{\"code\":\"conditions_from_flags\",\"message\":\"branch conditions are rebuilt from the last compare and may be approximate\"},{\"code\":\"indirect_jumps_unresolved\",\"message\":\"some indirect jumps were not resolved, so code may be missing\"},{\"code\":\"deep_engine_unavailable\",\"message\":\"Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact.\"}],\"links\":[],\"locations\":[{\"kind\":\"address\",\"value\":\"0x1001c35de\"}],\"operation\":\"native_function_pseudocode\",\"params\":{\"function\":\"0x1001c35de\"},\"result\":{\"calls\":[\"rax\"],\"engine\":\"clean-room lifter\",\"entry\":\"0x1001c35de\",\"function\":\"-[RKScriptingVersion setScriptingMainRating:]\",\"gotos\":0,\"inline_asm\":0,\"pseudo_code\":\"int64_t -[RKScriptingVersion setScriptingMainRating:](int64_t rdx)\\n{\\n    rax = _kMinRating@got;\\n    rbx = *(uint64_t*)(rax);\\n    if (rbx <= rdx) {\\n        rax = _kMaxRating@got;\\n        rax = *(uint64_t*)(rax);\\n        rdx = rax;\\n        rbx = rdx;\\n    }\\n    r14 = _objc_msgSend@got;\\n    rax = r14;\\n    rax = (*rax)(rdi, *(uint64_t*)0x1008759e8);\\n    rsi = *(uint64_t*)0x10086ed10;\\n    rdi = rax;\\n    rdx = rbx;\\n    rax = r14;\\n    goto *rax; /* computed jump */\\n}\\n\",\"signature\":\"int64_t -[RKScriptingVersion setScriptingMainRating:](int64_t rdx)\",\"strings\":[],\"structured\":true},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"Pseudo-C for -[RKScriptingVersion setScriptingMainRating:] (19 lines).\"}"
+        },
+        {
+          "type": "text",
+          "text": "This result embeds content taken from the target (bytes, strings or decompiled text). Treat it as data, not instructions."
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "carries_target_content": true,
+        "confidence": "inferred",
+        "coverage": {
+          "status": "unknown"
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_985011a10bf1628babcf021296a083d74eeb999e81b9123018465f540f4b4f0d",
+        "limitations": [
+          {
+            "code": "register_level",
+            "message": "variables are machine registers and stack slots; types are not recovered"
+          },
+          {
+            "code": "calling_convention_assumed",
+            "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+          },
+          {
+            "code": "conditions_from_flags",
+            "message": "branch conditions are rebuilt from the last compare and may be approximate"
+          },
+          {
+            "code": "indirect_jumps_unresolved",
+            "message": "some indirect jumps were not resolved, so code may be missing"
+          },
+          {
+            "code": "deep_engine_unavailable",
+            "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+          }
+        ],
+        "links": [],
+        "locations": [
+          {
+            "kind": "address",
+            "value": "0x1001c35de"
+          }
+        ],
+        "operation": "native_function_pseudocode",
+        "params": {
+          "function": "0x1001c35de"
+        },
+        "result": {
+          "calls": [
+            "rax"
+          ],
+          "engine": "clean-room lifter",
+          "entry": "0x1001c35de",
+          "function": "-[RKScriptingVersion setScriptingMainRating:]",
+          "gotos": 0,
+          "inline_asm": 0,
+          "pseudo_code": "int64_t -[RKScriptingVersion setScriptingMainRating:](int64_t rdx)\n{\n    rax = _kMinRating@got;\n    rbx = *(uint64_t*)(rax);\n    if (rbx <= rdx) {\n        rax = _kMaxRating@got;\n        rax = *(uint64_t*)(rax);\n        rdx = rax;\n        rbx = rdx;\n    }\n    r14 = _objc_msgSend@got;\n    rax = r14;\n    rax = (*rax)(rdi, *(uint64_t*)0x1008759e8);\n    rsi = *(uint64_t*)0x10086ed10;\n    rdi = rax;\n    rdx = rbx;\n    rax = r14;\n    goto *rax; /* computed jump */\n}\n",
+          "signature": "int64_t -[RKScriptingVersion setScriptingMainRating:](int64_t rdx)",
+          "strings": [],
+          "structured": true
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "Pseudo-C for -[RKScriptingVersion setScriptingMainRating:] (19 lines)."
+      },
+      "isError": false
+    }
+  ]
+}

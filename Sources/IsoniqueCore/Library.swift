@@ -1,0 +1,507 @@
+import Foundation
+import ImageIO
+import CoreGraphics
+import CryptoKit
+import UniformTypeIdentifiers
+
+/// Recovered from Aperture's scripting setter and RedRock constants; see MECHANICS.md.
+public enum RatingRules {
+    public static let rejected = -1
+    public static let unrated = 0
+    public static let maximum = 5
+    public static let invalid = -100 // Original internal sentinel, never a user rating.
+    public static func clamp(_ value: Int) -> Int { min(maximum, max(rejected, value)) }
+    /// Original delta addition: 0x100032854; bounds from 0x1001c35de.
+    public static func adjusting(_ current: Int, by delta: Int) -> Int {
+        let (sum, overflow) = current.addingReportingOverflow(delta)
+        return overflow ? (delta > 0 ? maximum : rejected) : clamp(sum)
+    }
+    public static func rejectionRating(isRejected: Bool) -> Int { isRejected ? rejected : unrated }
+    public static func stars(_ value: Int) -> String { String(repeating: "★", count: max(unrated, clamp(value))) }
+}
+
+/// Original filter indices and comparison rules: Aperture 0x100157a19,
+/// tables 0x100551590/0x1005515d0; RedRock comparator 0x43759.
+public enum RatingFilter: Int, CaseIterable, Identifiable {
+    case all = 6, unratedAndAbove = 0, oneAndAbove = 1, twoAndAbove = 2
+    case threeAndAbove = 3, fourAndAbove = 4, five = 5, unrated = 7, rejected = 8
+    public var id: Int { rawValue }
+    public var label: String {
+        switch self {
+        case .all: return "All ratings"
+        case .unratedAndAbove: return "Unrated and above"
+        case .oneAndAbove: return "★ and above"
+        case .twoAndAbove: return "★★ and above"
+        case .threeAndAbove: return "★★★ and above"
+        case .fourAndAbove: return "★★★★ and above"
+        case .five: return "★★★★★"
+        case .unrated: return "Unrated only"
+        case .rejected: return "Rejected only"
+        }
+    }
+    public func includes(_ rating: Int) -> Bool {
+        switch self {
+        case .all: return true
+        case .unrated: return rating == RatingRules.unrated
+        case .rejected: return rating == RatingRules.rejected
+        case .five: return rating == RatingRules.maximum
+        case .unratedAndAbove: return rating >= RatingRules.unrated
+        default: return rating >= rawValue
+        }
+    }
+}
+
+/// Original flagged query: 0x100157c47, RKVersionIsFlagged equals integer 1.
+/// Rating filtering remains a separate predicate (0x100157a19).
+public enum BrowserFilterRules {
+    public static func includes(rating: Int, flagged: Bool, ratingFilter: RatingFilter, flaggedOnly: Bool) -> Bool {
+        ratingFilter.includes(rating) && (!flaggedOnly || flagged)
+    }
+}
+
+/// Crop coordinates are fractions of the rotated/straightened image, from its top left.
+public struct PhotoCrop: Codable, Equatable {
+    public var x: Double
+    public var y: Double
+    public var width: Double
+    public var height: Double
+    public init(x: Double, y: Double, width: Double, height: Double) {
+        self.x = x; self.y = y; self.width = width; self.height = height
+    }
+}
+/// Aperture -[RKCropStraightenGestureTracker rotate:] 0x10042f5e6.
+public enum StraightenRules {
+    public static let minimum = -45.0
+    public static let maximum = 45.0
+    public static let range = minimum...maximum
+    public static func clamp(_ degrees: Double) -> Double {
+        degrees.isFinite ? min(maximum, max(minimum, degrees)) : 0
+    }
+    /// Original rotate: adds each event delta, then clamps, including at a limit.
+    public static func applying(rotation delta: Double, to current: Double) -> Double {
+        guard delta.isFinite else { return clamp(current) }
+        return clamp(current + delta)
+    }
+}
+public struct Adjustments: Codable, Equatable {
+    public var exposure: Double = 0
+    public var contrast: Double = 1
+    public var saturation: Double = 1
+    public var warmth: Double = 0
+    public var tint: Double = 0
+    public var shadows: Double = 0
+    public var highlights: Double = 0
+    public var quarterTurns: Int = 0
+    public var straighten: Double = 0
+    public var crop: PhotoCrop?
+    public init() {}
+    enum CodingKeys: String, CodingKey { case exposure, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, straighten, crop }
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
+        contrast = try values.decodeIfPresent(Double.self, forKey: .contrast) ?? 1
+        saturation = try values.decodeIfPresent(Double.self, forKey: .saturation) ?? 1
+        warmth = try values.decodeIfPresent(Double.self, forKey: .warmth) ?? 0
+        tint = try values.decodeIfPresent(Double.self, forKey: .tint) ?? 0
+        shadows = try values.decodeIfPresent(Double.self, forKey: .shadows) ?? 0
+        highlights = try values.decodeIfPresent(Double.self, forKey: .highlights) ?? 0
+        quarterTurns = try values.decodeIfPresent(Int.self, forKey: .quarterTurns) ?? 0
+        // Recovered gesture bounds (0x10042f5e6) also constrain restored inspector values.
+        straighten = StraightenRules.clamp(try values.decodeIfPresent(Double.self, forKey: .straighten) ?? 0)
+        crop = try values.decodeIfPresent(PhotoCrop.self, forKey: .crop)
+    }
+}
+/// Independent editing groups; selective stamping preserves every unselected group.
+public enum AdjustmentGroup: String, CaseIterable, Identifiable {
+    case basic = "Exposure & color", whiteBalance = "White balance", tone = "Highlights & shadows", geometry = "Crop & rotation"
+    public var id: String { rawValue }
+}
+public extension Adjustments {
+    func stamping(onto target: Adjustments, groups: Set<AdjustmentGroup>) -> Adjustments {
+        var result = target
+        if groups.contains(.basic) { result.exposure = exposure; result.contrast = contrast; result.saturation = saturation }
+        if groups.contains(.whiteBalance) { result.warmth = warmth; result.tint = tint }
+        if groups.contains(.tone) { result.shadows = shadows; result.highlights = highlights }
+        if groups.contains(.geometry) { result.quarterTurns = quarterTurns; result.straighten = straighten; result.crop = crop }
+        return result
+    }
+}
+public enum AdjustmentPreset: String, CaseIterable, Identifiable {
+    case natural = "Natural", vivid = "Vivid", monochrome = "Black & White", warm = "Warm"
+    public var id: String { rawValue }
+    public func applying(to current: Adjustments) -> Adjustments {
+        var recipe = Adjustments()
+        switch self {
+        case .natural: break
+        case .vivid: recipe.contrast = 1.12; recipe.saturation = 1.25
+        case .monochrome: recipe.saturation = 0; recipe.contrast = 1.1
+        case .warm: recipe.warmth = 0.3; recipe.saturation = 1.05
+        }
+        return recipe.stamping(onto: current, groups: [.basic, .whiteBalance, .tone])
+    }
+}
+public struct Collection: Codable, Identifiable, Equatable {
+    public var id = UUID()
+    public var name: String
+    public init(name: String) { self.name = name }
+}
+public struct Photo: Codable, Identifiable, Equatable {
+    public var id = UUID()
+    public var filename: String
+    public var originalName: String
+    public var importedAt = Date()
+    public var projectID: UUID?
+    public var albumIDs: Set<UUID> = []
+    public var rating = 0
+    public var flagged = false
+    public var caption = ""
+    public var keywords = ""
+    public var width: Int
+    public var height: Int
+    public var camera: String
+    public var captureDate: String
+    public var sha256: String
+    public var adjustments = Adjustments()
+    public init(filename: String, originalName: String, projectID: UUID?, width: Int, height: Int, camera: String, captureDate: String, sha256: String) {
+        self.filename = filename; self.originalName = originalName; self.projectID = projectID
+        self.width = width; self.height = height; self.camera = camera; self.captureDate = captureDate; self.sha256 = sha256
+    }
+}
+public struct Library: Codable {
+    public var version = 1
+    public var photos: [Photo] = []
+    public var projects: [Collection] = []
+    public var albums: [Collection] = []
+    public init() {}
+}
+public enum LibraryError: LocalizedError {
+    case unsafePath, unsupportedImage(String), integrity(String), unsupportedVersion, invalidLibrary
+    public var errorDescription: String? {
+        switch self {
+        case .unsafePath: return "This location is unsafe. Choose a separate Isonique library folder."
+        case .unsupportedImage(let name): return "Cannot decode \(name) with this Mac's image support."
+        case .integrity(let name): return "Integrity verification failed: \(name). The source was not modified."
+        case .unsupportedVersion: return "This library was created by an unsupported newer version."
+        case .invalidLibrary: return "The selected folder is not an Aperture library with a Masters or Originals folder."
+        }
+    }
+}
+public struct RecoveryResult {
+    public var imported = 0
+    public var duplicates = 0
+    public var unsupported: [String] = []
+    public var skipped: Int { duplicates + unsupported.count }
+}
+public final class LibraryRepository {
+    public let root: URL
+    private let fm = FileManager.default
+    public init(root: URL) throws {
+        self.root = root.standardizedFileURL.resolvingSymlinksInPath()
+        // Never create our catalogue inside a legacy library or application bundle.
+        guard !self.root.pathComponents.contains(where: { ["aplibrary", "aperturelibrary", "photolibrary", "photoslibrary", "app"].contains(URL(fileURLWithPath: $0).pathExtension.lowercased()) }) else { throw LibraryError.unsafePath }
+        if fm.fileExists(atPath: self.root.path), !fm.fileExists(atPath: self.root.appendingPathComponent("catalog.json").path) {
+            let entries = try fm.contentsOfDirectory(atPath: self.root.path)
+            guard entries.isEmpty else { throw LibraryError.unsafePath }
+        }
+        try fm.createDirectory(at: self.root.appendingPathComponent("Originals"), withIntermediateDirectories: true)
+        guard self.root.appendingPathComponent("Originals").resolvingSymlinksInPath().path == self.root.appendingPathComponent("Originals").path else { throw LibraryError.unsafePath }
+    }
+    public func load() throws -> Library {
+        let url = root.appendingPathComponent("catalog.json")
+        guard fm.fileExists(atPath: url.path) else { return Library() }
+        var library = try JSONDecoder().decode(Library.self, from: Data(contentsOf: url))
+        guard library.version == 1 else { throw LibraryError.unsupportedVersion }
+        for index in library.photos.indices { library.photos[index].rating = RatingRules.clamp(library.photos[index].rating) }
+        for photo in library.photos { _ = try originalURL(photo) }
+        return library
+    }
+    public func save(_ library: Library) throws {
+        var normalized = library
+        for index in normalized.photos.indices {
+            normalized.photos[index].rating = RatingRules.clamp(normalized.photos[index].rating)
+            normalized.photos[index].adjustments.straighten = StraightenRules.clamp(normalized.photos[index].adjustments.straighten)
+        }
+        let data = try JSONEncoder().encode(normalized)
+        try data.write(to: root.appendingPathComponent("catalog.json"), options: .atomic)
+    }
+    public func originalURL(_ photo: Photo) throws -> URL {
+        guard photo.filename == (photo.filename as NSString).lastPathComponent, !photo.filename.isEmpty, photo.filename != ".", photo.filename != ".." else { throw LibraryError.unsafePath }
+        let base = root.appendingPathComponent("Originals").resolvingSymlinksInPath()
+        let url = base.appendingPathComponent(photo.filename).resolvingSymlinksInPath()
+        guard base.path == root.appendingPathComponent("Originals").path, url.deletingLastPathComponent() == base else { throw LibraryError.unsafePath }
+        return url
+    }
+    public static func digest(_ url: URL) throws -> String {
+        let handle = try FileHandle(forReadingFrom: url)
+        defer { try? handle.close() }
+        var hash = SHA256()
+        while let data = try handle.read(upToCount: 1024 * 1024), !data.isEmpty { hash.update(data: data) }
+        return hash.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+    public func importPhoto(_ source: URL, projectID: UUID?, into library: inout Library) throws -> Bool {
+        guard let imageSource = CGImageSourceCreateWithURL(source as CFURL, nil), CGImageSourceGetCount(imageSource) > 0,
+              let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [String: Any],
+              let width = properties[kCGImagePropertyPixelWidth as String] as? Int,
+              let height = properties[kCGImagePropertyPixelHeight as String] as? Int else { throw LibraryError.unsupportedImage(source.lastPathComponent) }
+        let hash = try Self.digest(source)
+        if library.photos.contains(where: { $0.sha256 == hash }) { return false }
+        let filename = UUID().uuidString + "." + source.pathExtension.lowercased()
+        let destination = root.appendingPathComponent("Originals").appendingPathComponent(filename)
+        try fm.copyItem(at: source, to: destination)
+        do {
+            guard try Self.digest(destination) == hash, try Self.digest(source) == hash else { throw LibraryError.integrity(source.lastPathComponent) }
+            let tiff = properties[kCGImagePropertyTIFFDictionary as String] as? [String: Any] ?? [:]
+            let exif = properties[kCGImagePropertyExifDictionary as String] as? [String: Any] ?? [:]
+            let camera = [tiff[kCGImagePropertyTIFFMake as String] as? String, tiff[kCGImagePropertyTIFFModel as String] as? String].compactMap { $0 }.joined(separator: " ")
+            var photo = Photo(filename: filename, originalName: source.lastPathComponent, projectID: projectID, width: width, height: height, camera: camera, captureDate: exif[kCGImagePropertyExifDateTimeOriginal as String] as? String ?? "", sha256: hash)
+            // Only metadata actually embedded in the file is available here. Aperture's
+            // database-only metadata and sidecars are deliberately not inferred.
+            let iptc = properties[kCGImagePropertyIPTCDictionary as String] as? [String: Any] ?? [:]
+            photo.caption = iptc[kCGImagePropertyIPTCCaptionAbstract as String] as? String ?? ""
+            if let keywords = iptc[kCGImagePropertyIPTCKeywords as String] as? [String] {
+                photo.keywords = keywords.joined(separator: ", ")
+            }
+            var rating = (iptc[kCGImagePropertyIPTCStarRating as String] as? NSNumber)?.intValue
+            if let metadata = CGImageSourceCopyMetadataAtIndex(imageSource, 0, nil),
+               let value = CGImageMetadataCopyStringValueWithPath(metadata, nil, "xmp:Rating" as CFString) as String?,
+               let embeddedRating = Int(value) { rating = embeddedRating }
+            if let rating { photo.rating = RatingRules.clamp(rating) }
+            library.photos.append(photo)
+            do { try save(library) } catch { library.photos.removeLast(); throw error }
+            return true
+        } catch { try? fm.removeItem(at: destination); throw error }
+    }
+    public static func imageFiles(in folder: URL) -> [URL] {
+        guard let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey], options: [.skipsHiddenFiles, .skipsPackageDescendants]) else { return [] }
+        var files: [URL] = []
+        let imageExtensions: Set<String> = ["jpg", "jpeg", "png", "heic", "heif", "tif", "tiff", "gif", "bmp", "webp", "avif", "dng", "raw", "cr2", "cr3", "crw", "nef", "nrw", "arw", "srf", "sr2", "orf", "raf", "rw2", "pef", "ptx", "rwl", "3fr", "fff", "iiq", "mos", "mrw", "x3f", "erf", "kdc", "dcr", "srw"]
+        for case let url as URL in enumerator {
+            let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+            if values?.isSymbolicLink == true { enumerator.skipDescendants(); continue }
+            if values?.isRegularFile == true, imageExtensions.contains(url.pathExtension.lowercased()) || CGImageSourceCreateWithURL(url as CFURL, nil) != nil { files.append(url) }
+        }
+        return files.sorted { $0.path < $1.path }
+    }
+    /// Makes a verified, disposable copy before reading legacy originals. No proprietary database writes.
+    public func recoverLegacy(_ source: URL, into library: inout Library) throws -> RecoveryResult {
+        let resolved = source.resolvingSymlinksInPath()
+        guard !root.path.hasPrefix(resolved.path + "/"), !resolved.path.hasPrefix(root.path + "/"), resolved != root else { throw LibraryError.unsafePath }
+        guard ["Masters", "Originals"].contains(where: { fm.fileExists(atPath: resolved.appendingPathComponent($0).path) }) else { throw LibraryError.invalidLibrary }
+        func manifest(_ base: URL) throws -> [String: String] {
+            guard let enumerator = fm.enumerator(at: base, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey]) else { throw LibraryError.invalidLibrary }
+            var result: [String: String] = [:]
+            for case let url as URL in enumerator {
+                let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+                guard values.isSymbolicLink != true else { throw LibraryError.unsafePath }
+                if values.isRegularFile == true { result[url.pathComponents.suffix(enumerator.level).joined(separator: "/")] = try Self.digest(url) }
+            }
+            return result
+        }
+        let before = try manifest(resolved)
+        let staging = root.appendingPathComponent("Recovery-" + UUID().uuidString)
+        try fm.copyItem(at: resolved, to: staging)
+        defer { try? fm.removeItem(at: staging) }
+        let copied = try manifest(staging)
+        guard copied == before, try manifest(resolved) == before else { throw LibraryError.integrity("legacy library copy") }
+        let project = Collection(name: "Recovered · " + source.deletingPathExtension().lastPathComponent)
+        library.projects.append(project)
+        try save(library)
+        var result = RecoveryResult()
+        for folder in ["Masters", "Originals"] {
+            let files = Self.imageFiles(in: staging.appendingPathComponent(folder))
+            for image in files {
+                do {
+                    if try importPhoto(image, projectID: project.id, into: &library) { result.imported += 1 }
+                    else { result.duplicates += 1 }
+                } catch LibraryError.unsupportedImage {
+                    result.unsupported.append(image.resolvingSymlinksInPath().pathComponents.dropFirst(staging.resolvingSymlinksInPath().pathComponents.count).joined(separator: "/"))
+                }
+                // Disk, catalogue and integrity failures stop recovery; they are not
+                // misleadingly reported as unsupported photographs.
+            }
+        }
+        guard try manifest(resolved) == before else { throw LibraryError.integrity("legacy library changed during recovery") }
+        return result
+    }
+}
+public enum Renderer {
+    public static func render(_ url: URL, adjustments: Adjustments, maxDimension: CGFloat? = nil) throws -> CGImage {
+        // One documented, independent pixel pipeline for previews and exports.
+        // ImageIO still provides file decoding, including system-supported camera RAW.
+        return try renderOnCPU(url, adjustments: adjustments, maxDimension: maxDimension)
+    }
+    static func renderOnCPU(_ url: URL, adjustments: Adjustments, maxDimension: CGFloat?) throws -> CGImage {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
+        let width = properties[kCGImagePropertyPixelWidth as String] as? Int ?? 1
+        let height = properties[kCGImagePropertyPixelHeight as String] as? Int ?? 1
+        let size = maxDimension.map { min(Int($0), max(width, height)) } ?? max(width, height)
+        guard let decoded = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: size] as CFDictionary),
+              let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(data: nil, width: decoded.width, height: decoded.height, bitsPerComponent: 8, bytesPerRow: decoded.width * 4, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue),
+              let data = context.data else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
+        context.draw(decoded, in: CGRect(x: 0, y: 0, width: decoded.width, height: decoded.height))
+        let pixels = data.bindMemory(to: UInt8.self, capacity: decoded.width * decoded.height * 4)
+        let multiplier = pow(2.0, adjustments.exposure)
+        func expose(_ channel: Double) -> Double {
+            let linear = channel <= 0.04045 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
+            let exposed = max(0, linear * multiplier)
+            return exposed <= 0.0031308 ? exposed * 12.92 : 1.055 * pow(exposed, 1 / 2.4) - 0.055
+        }
+        for offset in stride(from: 0, to: decoded.width * decoded.height * 4, by: 4) {
+            let alpha = Double(pixels[offset + 3]) / 255
+            guard alpha > 0 else { continue }
+            let red = expose(Double(pixels[offset]) / (255 * alpha))
+            let green = expose(Double(pixels[offset + 1]) / (255 * alpha))
+            let blue = expose(Double(pixels[offset + 2]) / (255 * alpha))
+            let luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
+            for (index, value) in [red, green, blue].enumerated() {
+                let saturated = luminance + (value - luminance) * adjustments.saturation
+                let contrasted = (saturated - 0.5) * adjustments.contrast + 0.5
+                pixels[offset + index] = UInt8((min(1, max(0, contrasted)) * alpha * 255).rounded())
+            }
+        }
+        guard let result = context.makeImage() else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
+        return try applyGeometry(applyTone(result, adjustments: adjustments), adjustments: adjustments)
+    }
+    /// Shared independent sRGB tonal treatment for previews, exports and GPU-free hosts.
+    /// Neutral settings bypass conversion; these are not Apple's proprietary RAW formulas.
+    static func applyTone(_ source: CGImage, adjustments a: Adjustments) throws -> CGImage {
+        guard a.warmth != 0 || a.tint != 0 || a.shadows != 0 || a.highlights != 0 else { return source }
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(data: nil, width: source.width, height: source.height, bitsPerComponent: 8, bytesPerRow: source.width * 4, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue),
+              let data = context.data else { throw LibraryError.unsupportedImage("tone adjustment") }
+        context.draw(source, in: CGRect(x: 0, y: 0, width: source.width, height: source.height))
+        let pixels = data.bindMemory(to: UInt8.self, capacity: source.width * source.height * 4)
+        func bounded(_ value: Double, _ range: ClosedRange<Double>) -> Double {
+            value.isFinite ? min(range.upperBound, max(range.lowerBound, value)) : 0
+        }
+        let warmth = bounded(a.warmth, -1...1) * 0.15, tint = bounded(a.tint, -1...1) * 0.15
+        let shadows = bounded(a.shadows, 0...1), highlights = bounded(a.highlights, -1...0)
+        for offset in stride(from: 0, to: source.width * source.height * 4, by: 4) {
+            let alpha = Double(pixels[offset + 3]) / 255
+            guard alpha > 0 else { continue }
+            let channels = (0..<3).map { Double(pixels[offset + $0]) / (255 * alpha) }
+            let luminance = 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
+            let tone = shadows * pow(1 - luminance, 2) * luminance + highlights * pow(luminance, 2) * (1 - luminance)
+            for index in 0..<3 {
+                let balance = index == 0 ? warmth + tint * 0.5 : (index == 1 ? -tint : -warmth + tint * 0.5)
+                let value = channels[index] * (1 + balance) + tone
+                pixels[offset + index] = UInt8((min(1, max(0, value)) * alpha * 255).rounded())
+            }
+        }
+        guard let result = context.makeImage() else { throw LibraryError.unsupportedImage("tone adjustment") }
+        return result
+    }
+    /// Shared by preview and export, so geometry never depends on GPU availability.
+    static func applyGeometry(_ source: CGImage, adjustments: Adjustments) throws -> CGImage {
+        var image = source
+        let turns = ((adjustments.quarterTurns % 4) + 4) % 4
+        if turns != 0 {
+            let width = turns % 2 == 0 ? image.width : image.height
+            let height = turns % 2 == 0 ? image.height : image.width
+            let context = try geometryContext(width: width, height: height)
+            context.translateBy(x: CGFloat(width) / 2, y: CGFloat(height) / 2)
+            context.rotate(by: -CGFloat(turns) * .pi / 2)
+            context.draw(image, in: CGRect(x: -CGFloat(image.width) / 2, y: -CGFloat(image.height) / 2, width: CGFloat(image.width), height: CGFloat(image.height)))
+            guard let rotated = context.makeImage() else { throw LibraryError.unsupportedImage("rotation") }
+            image = rotated
+        }
+        let degrees = StraightenRules.clamp(adjustments.straighten)
+        if degrees != 0 {
+            let angle = CGFloat(degrees) * .pi / 180
+            let w = CGFloat(image.width), h = CGFloat(image.height)
+            // Largest centered rectangle at the original aspect ratio with no blank corners.
+            let factor = min(w / (w * abs(cos(angle)) + h * abs(sin(angle))), h / (w * abs(sin(angle)) + h * abs(cos(angle))))
+            let width = max(1, Int(floor(w * factor))), height = max(1, Int(floor(h * factor)))
+            let context = try geometryContext(width: width, height: height)
+            context.translateBy(x: CGFloat(width) / 2, y: CGFloat(height) / 2)
+            context.rotate(by: -angle)
+            context.draw(image, in: CGRect(x: -w / 2, y: -h / 2, width: w, height: h))
+            guard let straightened = context.makeImage() else { throw LibraryError.unsupportedImage("straightening") }
+            image = straightened
+        }
+        if let crop = adjustments.crop, [crop.x, crop.y, crop.width, crop.height].allSatisfy({ $0.isFinite }), crop.width > 0, crop.height > 0 {
+            let bounds = CGRect(x: 0, y: 0, width: image.width, height: image.height)
+            let requested = CGRect(x: crop.x * Double(image.width), y: crop.y * Double(image.height), width: crop.width * Double(image.width), height: crop.height * Double(image.height))
+            let aligned = CGRect(x: requested.minX.rounded(), y: requested.minY.rounded(), width: requested.width.rounded(), height: requested.height.rounded())
+            let rect = aligned.intersection(bounds)
+            if rect.width >= 1, rect.height >= 1, let cropped = image.cropping(to: rect) { image = cropped }
+        }
+        return image
+    }
+    private static func geometryContext(width: Int, height: Int) throws -> CGContext {
+        guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { throw LibraryError.unsupportedImage("geometry") }
+        context.interpolationQuality = .high
+        return context
+    }
+    public static func dimensions(_ url: URL, adjustments: Adjustments) throws -> CGSize {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any],
+              let width = properties[kCGImagePropertyPixelWidth as String] as? Int,
+              let height = properties[kCGImagePropertyPixelHeight as String] as? Int else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
+        let orientation = properties[kCGImagePropertyOrientation as String] as? Int ?? 1
+        var w = Double(width), h = Double(height)
+        if (5...8).contains(orientation) { swap(&w, &h) }
+        if abs(adjustments.quarterTurns % 2) == 1 { swap(&w, &h) }
+        let angle = StraightenRules.clamp(adjustments.straighten) * .pi / 180
+        if angle != 0 {
+            let factor = min(w / (w * abs(cos(angle)) + h * abs(sin(angle))), h / (w * abs(sin(angle)) + h * abs(cos(angle))))
+            w = max(1, floor(w * factor)); h = max(1, floor(h * factor))
+        }
+        return CGSize(width: w, height: h)
+    }
+    public static func export(_ photo: Photo, repository: LibraryRepository, to destination: URL, options: ExportOptions = ExportOptions()) throws {
+        let original = try repository.originalURL(photo)
+        let target = destination.standardizedFileURL.resolvingSymlinksInPath()
+        let extensions: [String] = options.format == .original ? [original.pathExtension.lowercased()] : (options.format == .jpeg ? ["jpg", "jpeg"] : (options.format == .tiff ? ["tif", "tiff"] : ["png"]))
+        guard extensions.contains(target.pathExtension.lowercased()),
+              !target.path.hasPrefix(repository.root.path + "/"), !FileManager.default.fileExists(atPath: target.path),
+              !target.pathComponents.contains(where: { ["aplibrary", "aperturelibrary", "photoslibrary", "photolibrary", "app"].contains(URL(fileURLWithPath: $0).pathExtension.lowercased()) }) else { throw LibraryError.unsafePath }
+        if options.format == .original {
+            let data = try Data(contentsOf: original)
+            try data.write(to: target, options: .withoutOverwriting)
+            return
+        }
+        var image = try render(original, adjustments: photo.adjustments)
+        if options.maxDimension > 0, max(image.width, image.height) > options.maxDimension {
+            let scale = Double(options.maxDimension) / Double(max(image.width, image.height))
+            let context = try geometryContext(width: max(1, Int((Double(image.width) * scale).rounded())), height: max(1, Int((Double(image.height) * scale).rounded())))
+            context.draw(image, in: CGRect(x: 0, y: 0, width: context.width, height: context.height))
+            guard let resized = context.makeImage() else { throw LibraryError.unsupportedImage(photo.originalName) }
+            image = resized
+        }
+        var properties: [String: Any] = [:]
+        let source = CGImageSourceCreateWithURL(original as CFURL, nil)
+        let embedded = source.flatMap { CGImageSourceCopyPropertiesAtIndex($0, 0, nil) as? [String: Any] } ?? [:]
+        if options.exif {
+            var exif = embedded[kCGImagePropertyExifDictionary as String] as? [String: Any] ?? [:]
+            // Remove stale geometry and embedded maker previews after applying edits.
+            exif.removeValue(forKey: kCGImagePropertyExifMakerNote as String)
+            exif[kCGImagePropertyExifPixelXDimension as String] = image.width
+            exif[kCGImagePropertyExifPixelYDimension as String] = image.height
+            properties[kCGImagePropertyExifDictionary as String] = exif
+            let tiff = embedded[kCGImagePropertyTIFFDictionary as String] as? [String: Any] ?? [:]
+            var camera: [String: Any] = [:]
+            for key in [kCGImagePropertyTIFFMake, kCGImagePropertyTIFFModel, kCGImagePropertyTIFFArtist, kCGImagePropertyTIFFCopyright, kCGImagePropertyTIFFDateTime] {
+                camera[key as String] = tiff[key as String]
+            }
+            properties[kCGImagePropertyTIFFDictionary as String] = camera
+        }
+        if options.iptc {
+            var iptc = embedded[kCGImagePropertyIPTCDictionary as String] as? [String: Any] ?? [:]
+            iptc[kCGImagePropertyIPTCCaptionAbstract as String] = photo.caption
+            iptc[kCGImagePropertyIPTCKeywords as String] = photo.keywords.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            iptc[kCGImagePropertyIPTCStarRating as String] = RatingRules.clamp(photo.rating)
+            properties[kCGImagePropertyIPTCDictionary as String] = iptc
+        }
+        if options.gps { properties[kCGImagePropertyGPSDictionary as String] = embedded[kCGImagePropertyGPSDictionary as String] }
+        properties[kCGImagePropertyOrientation as String] = 1
+        properties[kCGImageDestinationLossyCompressionQuality as String] = options.quality.isFinite ? min(1, max(0, options.quality)) : 0.95
+        let data = NSMutableData()
+        guard let writer = CGImageDestinationCreateWithData(data, options.format.type.identifier as CFString, 1, nil) else { throw LibraryError.unsupportedImage(photo.originalName) }
+        CGImageDestinationAddImage(writer, image, properties as CFDictionary)
+        guard CGImageDestinationFinalize(writer) else { throw LibraryError.unsupportedImage(photo.originalName) }
+        try (data as Data).write(to: target, options: .withoutOverwriting)
+    }
+}
