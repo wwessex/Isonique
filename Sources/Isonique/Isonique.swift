@@ -69,6 +69,11 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var history = EditHistory()
     let viewerRenderCache = ViewerRenderCache()
     let thumbnailCache = ThumbnailCache()
+    static let recentLibraryLimit = 10
+    static let recentLibraryKey = "library.recentRoots"
+    @Published var recentLibraryPaths: [String] {
+        didSet { preferences.set(recentLibraryPaths, forKey: Self.recentLibraryKey) }
+    }
     let preferences: UserDefaults
     private var browserSnapshot: BrowserSnapshot?
     private struct BrowserSnapshot {
@@ -94,6 +99,10 @@ enum EditTool: String { case select, crop, straighten, brush }
     var repository: LibraryRepository?
     init(libraryRoot: URL? = nil, preferences: UserDefaults = .standard) {
         self.preferences = preferences
+        let storedRecents = preferences.stringArray(forKey: Self.recentLibraryKey) ?? []
+        var seenPaths: Set<String> = []
+        recentLibraryPaths = Array(storedRecents.filter { $0.hasPrefix("/") && seenPaths.insert($0).inserted }
+            .prefix(Self.recentLibraryLimit))
         clipping = ClippingSettings(preferences: preferences)
         let layout = preferences.string(forKey: "browser.layout").flatMap(BrowserPresentation.init(rawValue:))
         browserLayout = layout == .list ? .list : .grid
@@ -663,6 +672,15 @@ enum EditTool: String { case select, crop, straighten, brush }
                 Divider()
                 Button("New Isonique Library…", action: workspace.createLibraryPanel).keyboardShortcut("n", modifiers: [.command, .shift]).disabled(workspace.busy)
                 Button("Open Isonique Library…", action: workspace.openLibraryPanel).disabled(workspace.busy)
+                Menu("Open Recent Library") {
+                    ForEach(workspace.recentLibraryPaths, id: \.self) { path in
+                        Button(workspace.recentLibraryTitle(for: path)) {
+                            Task { await workspace.openLibrary(at: URL(fileURLWithPath: path, isDirectory: true)) }
+                        }.disabled(path == workspace.repository?.root.path)
+                    }
+                    Divider()
+                    Button("Clear Recent Libraries") { workspace.recentLibraryPaths = [] }
+                }.disabled(workspace.busy || workspace.recentLibraryPaths.isEmpty)
                 Button("Back Up Library…", action: workspace.backupLibraryPanel).disabled(workspace.busy || workspace.repository == nil)
                 Button("Check Library Integrity", action: workspace.verifyLibrary).disabled(workspace.busy || workspace.repository == nil)
                 Button("Relink Original…") {

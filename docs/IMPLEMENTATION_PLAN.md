@@ -53,8 +53,10 @@ The File menu relocates selected managed originals outside the library. It check
 
 Relocation also works for already-referenced originals. The chooser defaults to keeping old external files. If the user elects to move them, a source that another record still references remains in place. Selecting the current folder reports the file without moving it.
 
+File → Open Recent Library remembers up to ten successfully opened libraries. It uses verified opening and shows parent folders for duplicate names. Clearing the list preserves the startup library.
+
 ## Next implementation slice
 
-1. Add a File menu for switching to recently opened Isonique libraries. Reuse verified opening and persist a bounded list.
+1. Export a selected project as an independent Isonique library. Preserve its photo recipes, shared originals and relevant memberships. Verify staged files and validate project, version and stack references before publishing the destination. Test occupied destinations, referenced files, cancellation and reopen.
 
 Other open core work includes Finder Trash handoff for Library Trash, relocation naming and subfolders, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

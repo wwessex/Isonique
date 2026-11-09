@@ -4,14 +4,18 @@ import IsoniqueCore
 
 extension Workspace {
     private func activateLibrary(_ repo: LibraryRepository, library restored: Library) {
+        if !ProcessInfo.processInfo.arguments.contains("--library") {
+            var opened = [repo.root.path]
+            if let previous = repository?.root.path, previous != repo.root.path { opened.append(previous) }
+            let older = recentLibraryPaths.filter { !opened.contains($0) }
+            recentLibraryPaths = Array((opened + older).prefix(Self.recentLibraryLimit))
+            preferences.set(repo.root.path, forKey: "library.selectedRoot")
+        }
         repository = repo; library = restored
         history = keepHistory ? (library.history ?? EditHistory()) : EditHistory()
         scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all; colorFilter = .all; advancedSearch = nil
         batchMode = false; batchSelection = []; selection = nil
         viewer = false; tool = .select; compareOriginal = false; stopComparison(); liftedAdjustments = nil
-        if !ProcessInfo.processInfo.arguments.contains("--library") {
-            preferences.set(repo.root.path, forKey: "library.selectedRoot")
-        }
     }
 
     func createLibraryPanel() {
@@ -34,15 +38,31 @@ extension Workspace {
         panel.canChooseFiles = false; panel.canChooseDirectories = true
         panel.message = "Choose an existing Isonique library folder. Its catalogue and available managed originals are checked. Missing originals can be relinked."
         guard panel.runModal() == .OK, let source = panel.url else { return }
-        busy = true; status = "Checking library before opening…"
-        Task {
-            do {
-                let opened = try await Task.detached { try LibraryBackup.openVerified(source) }.value
-                activateLibrary(opened.0, library: opened.1)
-                status = "Opened library · \(source.path)"
-            } catch { self.error = error.localizedDescription; status = "Could not open library · current library unchanged" }
-            busy = false
+        Task { await openLibrary(at: source) }
+    }
+
+    func openLibrary(at source: URL) async {
+        guard !busy else { return }
+        busy = true
+        status = "Checking library before opening…"
+        defer { busy = false }
+        do {
+            let (repository, opened) = try await Task.detached { try LibraryBackup.openVerified(source) }.value
+            activateLibrary(repository, library: opened)
+            status = "Opened library · \(repository.root.path)"
+        } catch {
+            self.error = error.localizedDescription
+            status = "Could not open library"
         }
+    }
+
+    func recentLibraryTitle(for path: String) -> String {
+        let url = URL(fileURLWithPath: path, isDirectory: true)
+        let name = url.lastPathComponent
+        if recentLibraryPaths.contains(where: { $0 != path && URL(fileURLWithPath: $0).lastPathComponent == name }) {
+            return "\(name) — \(url.deletingLastPathComponent().path)"
+        }
+        return name
     }
 
     func verifyLibrary() {
