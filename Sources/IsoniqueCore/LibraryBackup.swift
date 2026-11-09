@@ -22,9 +22,14 @@ public enum LibraryBackup {
         let catalog = folder.appendingPathComponent("catalog.json")
         try regularFile(catalog)
         let data = try Data(contentsOf: catalog)
-        let library = try JSONDecoder().decode(Library.self, from: data)
+        return (data, try decodeCatalogue(data))
+    }
+
+    static func decodeCatalogue(_ data: Data) throws -> Library {
+        var library = try JSONDecoder().decode(Library.self, from: data)
         try library.validateSchema()
-        return (data, library)
+        library.catalogueRevision = CatalogueRevision(data)
+        return library
     }
 
     private static func read(_ folder: URL, allowMissingManaged: Bool = false) throws -> Snapshot {
@@ -76,7 +81,7 @@ public enum LibraryBackup {
         let root = source.standardizedFileURL.resolvingSymlinksInPath()
         _ = try read(root, allowMissingManaged: true)
         let repository = try LibraryRepository(root: root)
-        return (repository, try repository.load())
+        return (repository, try repository.reloadCatalogue())
     }
 
     public static func create(from repository: LibraryRepository, to destination: URL) throws {

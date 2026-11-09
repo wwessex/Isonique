@@ -89,8 +89,10 @@ Inspect Untracked Files hashes the files in the reviewed report. It compares the
 
 After inspection, Review Quarantine lists the files before moving them to First Aid Quarantine inside the library. Restore Quarantined Files reviews the return to Originals under the same names. Both actions check the live catalogue under its write lock and verify the reviewed fingerprints before moving. Claimed paths, pending Finder Trash files and occupied destinations are skipped. Each move is atomic, and quarantined files remain available after reopening.
 
+Catalogue writes from independently opened workspaces compare the revision they loaded with the catalogue on disk under the write lock. Successful saves advance the workspace's revision. File → Reload Library reads the latest catalogue without rewriting it and retains valid browser navigation. It replaces stale Undo/Redo history with saved history when enabled, and keeps session history when the catalogue is unchanged.
+
 ## Next implementation slice
 
-1. Detect stale catalogue writes from independently opened workspaces and provide a way to reload the current library.
+1. Add a preview for filename and subfolder presets in Relocate Originals, then verify destination paths, naming collisions and preservation of shared originals.
 
-Other open core work includes relocation naming and subfolders, library merging and repair, import from camera devices, and detection of stale edits from independently opened workspaces. Build and interaction evidence should stay in the test record.
+Other open core work includes library merging and repair, and import from camera devices. Build and interaction evidence should stay in the test record.

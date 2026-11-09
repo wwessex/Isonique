@@ -87,8 +87,7 @@ public enum ImportJob {
                 if let pairID = assignments[draft.photos[index].id] { draft.photos[index].pairID = pairID }
             }
             do {
-                try repository.save(draft)
-                library = draft
+                library = try repository.save(draft)
                 report.selection = selection
             } catch {
                 report.errors.append("RAW + JPEG linking: \(error.localizedDescription)")

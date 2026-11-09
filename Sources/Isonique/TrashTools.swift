@@ -20,7 +20,10 @@ extension Workspace {
                 return
             }
             status = "Emptying Library Trash…"
-            let result = try await Task.detached(priority: .utility) { try repository.emptyLibraryTrash(after: review) }.value
+            let workspace = library
+            let result = try await Task.detached(priority: .utility) {
+                try repository.emptyLibraryTrash(after: review, basedOn: workspace)
+            }.value
             library = result.library
             history.discardEmptiedTrash(photoIDs: result.removedPhotoIDs, originalIDs: result.removedOriginalIDs)
             batchSelection.subtract(result.removedPhotoIDs)

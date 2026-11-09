@@ -360,7 +360,8 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(reopened.history?.undo.count, 100)
         XCTAssertEqual(reopened.history?.undo.last?.photo?.caption, "")
         XCTAssertEqual(reopened.photos[0].caption, "After edit")
-        library.history = nil; try repo.save(library); XCTAssertNil(try repo.load().history)
+        var cleared = reopened
+        cleared.history = nil; try repo.save(cleared); XCTAssertNil(try repo.load().history)
     }
     func testLensPreviewExportAndRGBProofing() throws {
         let source = try fixture()
@@ -393,6 +394,40 @@ final class LibraryTests: XCTestCase {
         XCTAssertTrue(CGImageDestinationFinalize(writer))
         return url
     }
+    func testStaleImportRollsBackManagedCopyAndKeepsNewerCatalogue() throws {
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        let other = try LibraryRepository(root: repo.root)
+        var stale = try repo.load()
+        var latest = try other.load()
+        let project = Collection(name: "Newer project")
+        latest.projects.append(project)
+        latest = try other.save(latest)
+        let catalog = repo.root.appendingPathComponent("catalog.json")
+        let saved = try Data(contentsOf: catalog)
+        XCTAssertTrue(try repo.load().hasSameCatalogueRevision(as: latest))
+        let source = try fixture()
+        let original = try Data(contentsOf: source)
+
+        XCTAssertThrowsError(try repo.importPhoto(source, projectID: nil, into: &stale)) { error in
+            guard case LibraryError.staleCatalogue = error else { return XCTFail("Unexpected error: \(error)") }
+        }
+        XCTAssertTrue(stale.photos.isEmpty)
+        XCTAssertEqual(try Data(contentsOf: catalog), saved)
+        let originals = repo.root.appendingPathComponent("Originals")
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: originals.path).isEmpty)
+        XCTAssertEqual(try Data(contentsOf: source), original)
+
+        // Use the new revision returned by a save, then by import, for further writes.
+        XCTAssertTrue(try other.importPhoto(source, projectID: project.id, into: &latest))
+        latest.photos[0].caption = "Imported after refresh"
+        latest = try other.save(latest)
+        let reopened = try repo.load()
+        XCTAssertEqual(reopened.projects.map(\.id), [project.id])
+        XCTAssertEqual(reopened.photos.first?.caption, "Imported after refresh")
+        XCTAssertTrue(latest.hasSameCatalogueRevision(as: reopened))
+        XCTAssertEqual(try Data(contentsOf: repo.availableOriginalURL(reopened.photos[0])), original)
+    }
+
     func testImportPersistenceAdjustmentsAndExportPreserveOriginal() throws {
         let source = try fixture()
         let hash = try LibraryRepository.digest(source)
@@ -551,7 +586,7 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(try LibraryRepository.digest(image), sourceHash)
         library.photos[0].caption = "My newer caption"
         library.photos[0].rating = 2
-        try repository.save(library)
+        library = try repository.save(library)
         let repeated = try repository.recoverLegacy(legacy, into: &library)
         XCTAssertEqual(repeated.imported, 0)
         XCTAssertEqual(repeated.duplicates, 2)
@@ -633,7 +668,7 @@ final class LibraryTests: XCTestCase {
         let digest = try LibraryRepository.digest(original)
         for rating in [-1, 0, 4, 5] {
             library.photos[0].rating = rating
-            try repository.save(library)
+            library = try repository.save(library)
             let loaded = try repository.load()
             XCTAssertEqual(loaded.version, 1)
             XCTAssertEqual(loaded.photos[0].rating, rating)
@@ -643,7 +678,8 @@ final class LibraryTests: XCTestCase {
         library.photos[0].rating = 99
         let catalogue = repository.root.appendingPathComponent("catalog.json")
         try JSONEncoder().encode(library).write(to: catalogue)
-        XCTAssertEqual(try repository.load().photos[0].rating, 5)
+        library = try repository.load()
+        XCTAssertEqual(library.photos[0].rating, 5)
         library.photos[0].rating = -100
         try repository.save(library)
         XCTAssertEqual(try repository.load().photos[0].rating, -1)
@@ -662,10 +698,11 @@ final class LibraryTests: XCTestCase {
             let catalogue = repository.root.appendingPathComponent("catalog.json")
             // Simulate a catalogue written before load/save normalization existed.
             try JSONEncoder().encode(library).write(to: catalogue)
-            let restored = try repository.load()
+            var restored = try repository.load()
             XCTAssertEqual(restored.photos[0].adjustments.straighten, expected)
             XCTAssertEqual(restored.photos[0].adjustments.crop, crop)
-            try repository.save(library)
+            restored.photos[0].adjustments.straighten = input
+            library = try repository.save(restored)
             let raw = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: catalogue)) as? [String: Any])
             let photos = try XCTUnwrap(raw["photos"] as? [[String: Any]])
             let adjustments = try XCTUnwrap(photos.first?["adjustments"] as? [String: Any])

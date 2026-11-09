@@ -75,12 +75,13 @@ public extension LibraryRepository {
 
     /// Add compatible records and optionally reconcile edits or explicit Trash on matching photos.
     func mergeLibrary(from folder: URL, photoPolicy: LibraryMergePhotoPolicy = .addOnly, applyTrash: Bool = false,
-                      reserving history: EditHistory? = nil,
+                      reserving history: EditHistory? = nil, basedOn workspace: Library? = nil,
                       review: (LibraryMergePreview) async -> Bool,
                       progress: (ImportProgress) async -> Void = { _ in }) async throws -> LibraryMergeResult {
         let sourceRoot = try wholeLibraryMergeSource(folder)
         let (sourceCatalogue, source) = try LibraryBackup.readCatalogue(sourceRoot)
         let (catalogue, destination) = try LibraryBackup.readCatalogue(root)
+        try checkWorkspaceCatalogue(workspace, matches: destination)
         let plan = try WholeLibraryMergePlan(source: source, destination: destination, photoPolicy: photoPolicy,
                                              applyTrash: applyTrash, history: history)
         try Task.checkCancellation()
@@ -110,9 +111,9 @@ public extension LibraryRepository {
             try Self.verifyOriginal(availableOriginalURL(original), photo: original)
         }
         let draft = try plan.applying(to: destination, source: source, filenames: names)
-        try await commitLibraryTransfer(draft, catalogue: catalogue, sourceRoot: sourceRoot,
-                                        sourceCatalogue: sourceCatalogue, transfers: transfers, progress: progress)
-        return LibraryMergeResult(library: draft, preview: plan.preview)
+        let saved = try await commitLibraryTransfer(draft, catalogue: catalogue, sourceRoot: sourceRoot,
+                                                    sourceCatalogue: sourceCatalogue, transfers: transfers, progress: progress)
+        return LibraryMergeResult(library: saved, preview: plan.preview)
     }
 }
 

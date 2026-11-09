@@ -10,7 +10,7 @@ Isonique runs on Apple Silicon Macs. Import a shoot, sort and rate the photos, e
 - **Review a shoot.** Browse a grid with adjustable thumbnail sizes, a metadata list or a filmstrip. Use keyboard ratings, rejection, flags and colour labels to narrow a selection. Group related photos in stacks, create separate editable versions of an original, and compare two versions or photos side by side.
 - **Edit non-destructively.** Adjust exposure, colour, white balance and tone. Use automatic and manual Curves and Levels, crop, straighten, manual lens correction and local Dodge and Burn. The Viewer provides clipping warnings, a pixel Loupe and RGB ICC proofing. Undo edits and copy selected adjustments or metadata to other photos with Lift and Stamp.
 - **Export.** Save edited JPEG, PNG or TIFF files with size and metadata options, or export byte-for-byte copies of originals. Edited output uses 8-bit sRGB. RGB ICC proofing affects the Viewer.
-- **Protect a library.** Check catalogue and original integrity, back up managed originals and the catalogue, and restore to a separate library folder. Back up referenced originals at their external locations.
+- **Protect a library.** Check catalogue and original integrity, back up managed originals and the catalogue, and restore to a separate library folder. If another workspace saves first, use File → Reload Library before retrying your edit. Back up referenced originals at their external locations.
 
 Use **Help → Features & Limits** for available commands and their limits.
 

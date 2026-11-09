@@ -18,13 +18,14 @@ public struct EmptyLibraryTrashResult {
 }
 
 public extension LibraryRepository {
-    func emptyLibraryTrash(after review: LibraryTrashReview) throws -> EmptyLibraryTrashResult {
-        try emptyLibraryTrash(after: review) { original in
+    func emptyLibraryTrash(after review: LibraryTrashReview, basedOn workspace: Library? = nil) throws -> EmptyLibraryTrashResult {
+        try emptyLibraryTrash(after: review, basedOn: workspace) { original in
             try FileManager.default.trashItem(at: original, resultingItemURL: nil)
         }
     }
 
-    internal func emptyLibraryTrash(after review: LibraryTrashReview, trashSource: (URL) throws -> Void) throws
+    internal func emptyLibraryTrash(after review: LibraryTrashReview, basedOn workspace: Library? = nil,
+                                    trashSource: (URL) throws -> Void) throws
         -> EmptyLibraryTrashResult {
         guard review.root == root else { throw LibraryError.unsafePath }
         try Task.checkCancellation()
@@ -33,6 +34,7 @@ public extension LibraryRepository {
             guard catalogue == review.catalogue else {
                 throw LibraryError.integrity("Library Trash changed; review it again")
             }
+            try checkWorkspaceCatalogue(workspace, matches: current)
             var result = EmptyLibraryTrashResult(library: current)
             var removable: Set<UUID> = []
             var verified: [PendingFinderTrash] = []
@@ -72,7 +74,7 @@ public extension LibraryRepository {
                 draft.pendingFinderTrash = pending.isEmpty ? nil : pending
                 try Task.checkCancellation()
                 // A Finder failure can only leave an unreferenced file and a persisted retry entry.
-                try writeCatalogue(draft)
+                draft = try writeCatalogue(draft)
                 result.library = draft
             }
             guard !pending.isEmpty else { return result }
@@ -100,7 +102,7 @@ public extension LibraryRepository {
             if remaining != pending {
                 draft.pendingFinderTrash = remaining.isEmpty ? nil : remaining
                 do {
-                    try writeCatalogue(draft)
+                    draft = try writeCatalogue(draft)
                     result.library = draft
                 } catch {
                     result.handoffErrors.append("Finder Trash progress could not be saved. Review the remaining entries to retry.")

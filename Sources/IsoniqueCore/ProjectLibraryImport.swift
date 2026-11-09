@@ -8,17 +8,18 @@ public struct ProjectLibraryImportResult {
 
 public extension LibraryRepository {
     /// Add an independent project library without merging its records into existing projects.
-    func importProjectLibrary(from folder: URL, reserving history: EditHistory? = nil,
+    func importProjectLibrary(from folder: URL, reserving history: EditHistory? = nil, basedOn workspace: Library? = nil,
                               progress: (ImportProgress) async -> Void = { _ in }) async throws -> ProjectLibraryImportResult {
         let (sourceRoot, source, project) = try readProjectLibrary(from: folder, allowTrashed: false)
         let originals = try source.uniqueOriginals()
         let (catalogue, destination) = try LibraryBackup.readCatalogue(root)
+        try checkWorkspaceCatalogue(workspace, matches: destination)
         let plan = try ProjectLibraryImportPlan(source: source, originals: originals, project: project,
                                                 destination: destination, history: history)
         let transfers = try originals.map { (original: $0, filename: try plan.filename(for: $0) as String?) }
-        try await commitLibraryTransfer(plan.result.library, catalogue: catalogue, sourceRoot: sourceRoot,
-                                        transfers: transfers, progress: progress)
-        return plan.result
+        let saved = try await commitLibraryTransfer(plan.result.library, catalogue: catalogue, sourceRoot: sourceRoot,
+                                                    transfers: transfers, progress: progress)
+        return ProjectLibraryImportResult(library: saved, project: plan.result.project, photoCount: plan.result.photoCount)
     }
 
     internal func readProjectLibrary(from folder: URL, allowTrashed: Bool) throws -> (URL, Library, Collection) {
@@ -49,7 +50,7 @@ public extension LibraryRepository {
 
     internal func commitLibraryTransfer(_ library: Library, catalogue: Data, sourceRoot: URL,
                                         sourceCatalogue: Data? = nil, transfers: [(original: Photo, filename: String?)],
-                                        progress: (ImportProgress) async -> Void) async throws {
+                                        progress: (ImportProgress) async -> Void) async throws -> Library {
         let files = FileManager.default
         let staging = root.appendingPathComponent(".isonique-project-import-\(UUID().uuidString)", isDirectory: true)
         try files.createDirectory(at: staging, withIntermediateDirectories: false)
@@ -73,7 +74,7 @@ public extension LibraryRepository {
 
         try Task.checkCancellation()
         // Serialize publication with library transfers from this or another process.
-        try withCatalogueWriteLock {
+        return try withCatalogueWriteLock {
             var installed: [URL] = []
             var committed = false
             defer {
@@ -104,8 +105,9 @@ public extension LibraryRepository {
             try Task.checkCancellation()
             try verifyCatalogues()
             try Task.checkCancellation()
-            try writeCatalogue(library)
+            let saved = try writeCatalogue(library)
             committed = true
+            return saved
         }
     }
 }
