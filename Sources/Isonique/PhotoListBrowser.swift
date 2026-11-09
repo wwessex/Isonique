@@ -92,7 +92,9 @@ struct PhotoListBrowser: View {
         TableColumn("Photo") { photo in
             HStack(spacing: 7) {
                 if let url = try? model.repository?.availableOriginalURL(photo) {
-                    Thumbnail(url: url, adjustments: photo.adjustments, maximum: 96).frame(width: 34, height: 25)
+                    Thumbnail(request: .init(photoID: photo.id, url: url, adjustments: photo.adjustments,
+                                             maximum: 96, revision: model.originalStatusRevision),
+                              cache: model.thumbnailCache).frame(width: 34, height: 25)
                 } else {
                     Image(systemName: "exclamationmark.triangle").foregroundStyle(.secondary)
                         .accessibilityLabel("Original unavailable").frame(width: 34)

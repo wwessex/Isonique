@@ -35,8 +35,10 @@ The single Viewer and comparison panes reuse recent unproofed frames within a pe
 
 Auto Curves and Loupe-sampled curve points use the existing channel curve recipe. Each automatic correction or new sampled point is one Undo step. Tests cover persistence and full-size PNG export equality.
 
+Grid, List and filmstrip share a 64 MiB thumbnail cache and a bounded, cancellable decode queue. Native browsing and a deterministic 1,200-photo request replay were exercised.
+
 ## Next implementation slice
 
-1. Profile thumbnail generation and scrolling against a larger disposable catalogue. Use file identity and edit-recipe invalidation to keep thumbnail reuse consistent with the Viewer.
+1. Reduce repeated metadata-only filter and sort work in the Browser while preserving live original availability checks.
 
 Other open core work includes Finder Trash handoff, batch relinking, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
