@@ -2,7 +2,7 @@ import Foundation
 import CoreGraphics
 
 public enum SlideshowRules {
-    /// Aperture 3.6 main executable, init 0x10009ef9f; f64 at 0x10054fe40.
+    /// Default time to display a rendered slide, in seconds.
     public static let defaultDisplayTime = 3.0
 }
 

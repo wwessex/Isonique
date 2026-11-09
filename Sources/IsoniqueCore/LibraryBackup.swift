@@ -80,7 +80,6 @@ public enum LibraryBackup {
     }
 
     /// Validate the selected source before asking where to restore it. Restore rechecks it.
-    /// Original control order: RKRestoreDialog 0x10038ca63 -> validateVaultAtPath: 0x10038c3f3.
     public static func validateBackup(_ source: URL) throws -> Int {
         try readBackup(source.standardizedFileURL.resolvingSymlinksInPath()).library.photos.count
     }
@@ -107,7 +106,6 @@ public enum LibraryBackup {
         }
         guard !fm.fileExists(atPath: target.path),
               !target.pathComponents.contains(where: { ["aplibrary", "aperturelibrary", "photolibrary", "photoslibrary", "app"].contains(URL(fileURLWithPath: $0).pathExtension.lowercased()) }) else { throw LibraryError.unsafePath }
-        // Original chooser checks isWritableFileAtPath: before proceeding (0x1001d37ed).
         let parent = target.deletingLastPathComponent()
         var isDirectory: ObjCBool = false
         guard fm.fileExists(atPath: parent.path, isDirectory: &isDirectory), isDirectory.boolValue else {

@@ -25,7 +25,7 @@ struct FeatureGuide: View {
             Feature(title: "10. Cloud sync and other devices", detail: "Cloud sync and web, Windows, iPhone, iPad and Android apps are not included.")
         ]),
         Group(title: "New options (6–10)", symbol: "slider.horizontal.3", features: [
-            Feature(title: "6. RAW+JPEG pairing", detail: "Both with JPEG or RAW primary, separate originals, strict JPEG/RAW-only filters, and legacy Prefer choices during import. Linked photos have a companion button in Info; each keeps its own edits. macOS decoding limits still apply."),
+            Feature(title: "6. RAW+JPEG pairing", detail: "Link a pair with JPEG or RAW as the primary file, keep originals separate, or filter to JPEG or RAW files during import. The Prefer options are also available. Linked photos have a companion button in Info and each keeps its own edits. macOS decoding limits still apply."),
             Feature(title: "7. Import naming and metadata presets", detail: "Add a catalogue filename prefix and save named caption, keywords and rating presets in Import Options. Source files are never renamed."),
             Feature(title: "8. XML and XMP import", detail: "Read matching XMP sidecars during import, or use File → Import XML / XMP Metadata. Supports caption, keywords and rating in XMP and Isonique photo XML, plus AlbumData.xml comments and ratings; no full Aperture catalogue migration."),
             Feature(title: "9. Color proofing and lens correction", detail: "Choose an RGB ICC profile for a viewer-only color simulation; CMYK and paper/ink simulation are unsupported. Manual radial lens correction applies to preview and export; automatic camera/lens profiles are unavailable."),
@@ -46,7 +46,7 @@ struct FeatureGuide: View {
             Feature(title: "Export options", detail: "JPEG, PNG, TIFF and unchanged original export, individually or as a selected batch. JPEG quality, longest-edge resizing, saved presets and separate EXIF/IPTC/GPS choices are available. Original copies retain all embedded metadata. Edited output uses 8-bit sRGB."),
             Feature(title: "Crop", detail: "Move the crop by dragging inside; resize with corner handles or redraw outside. Aspect lock is remembered, presets switch between portrait and landscape, and pixel dimensions can be entered."),
             Feature(title: "Lift and Stamp", detail: "Copies checked adjustment groups and optional caption, keywords and rating to one photo or the selected batch. Selected metadata replaces target values, including empty values; the clipboard lasts only for this session."),
-            Feature(title: "RAW and color processing", detail: "Isonique uses its own documented pixel formulas for preview and export. RAW decoding still depends on macOS camera codecs and has not been validated with camera RAW files. LibRaw is a researched replacement, not yet integrated. Old Aperture recipes and matching pixel output are not supported."),
+            Feature(title: "RAW and color processing", detail: "Isonique uses its own documented pixel formulas for preview and export. RAW decoding depends on macOS camera codecs. Four camera RAW samples passed on macOS 27.3; other cameras and system versions can behave differently. Edited exports use 8-bit sRGB."),
             Feature(title: "Undo and Redo", detail: "Session Undo/Redo is always available. Optional persistent history retains the latest 100 photo edits in the catalogue.")
         ]),
         Group(title: "Available now", symbol: "checkmark.circle", features: [
@@ -98,7 +98,7 @@ struct FeatureGuide: View {
                 Link("Pixel alternative: libvips", destination: URL(string: "https://www.libvips.org/")!)
             }.font(.caption)
             Divider()
-            Text("Platform: Apple Silicon Mac, macOS 14 or newer. Checked on this Mac; Intel and older macOS runtime behavior are unverified.")
+            Text("Requires an Apple Silicon Mac with macOS 14 or later. Tested on macOS 27.3.")
                 .font(.caption).foregroundStyle(.secondary)
         }.padding(24).frame(minWidth: 560, minHeight: 480)
     }

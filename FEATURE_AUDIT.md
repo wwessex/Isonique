@@ -1,6 +1,6 @@
-# Editing and Inspector comparison — 8 November 2026
+# Isonique editing and Inspector comparison — 8 November 2026
 
-The maintained application is the SwiftUI/AppKit macOS app. There are no independent web/PWA, Windows, iOS or Android variants in this repository.
+This is a historical development record. For current coverage, see the [workflow comparison](docs/WORKFLOW_COMPARISON.md) and [test results](docs/TEST_RESULTS.md). The maintained application is the SwiftUI/AppKit macOS app. There are no independent web/PWA, Windows, iOS or Android variants in this repository.
 
 ## References checked
 
@@ -9,7 +9,7 @@ The maintained application is the SwiftUI/AppKit macOS app. There are no indepen
 - Apple-authored [Straighten help](https://aperture.skydocu.com/en/make-image-adjustments/apply-specific-standard-adjustments/straighten/): angle control, alignment grid and removal of blank corners.
 - [PhotoJoseph's split-tone article and screenshots](https://photojoseph.com/tips/2013/7/1/creating-split-tones-aperture-3): saturation and separate RGB curves controls.
 - [Marco Pollini's clone tutorial and screenshot descriptions](https://www.polliniphotolab.com/Articoli/Aperture/clonazione/clonazione.html): source selection, clone brush radius, softness and opacity.
-- Supplied `attachments/picture-3.png`: adjustment HUD, histogram, curves, levels, color and dodge brush.
+- A local reference screenshot of Aperture: adjustment HUD, histogram, curves, levels, color and dodge brush.
 
 The articles and help text were retrieved; direct high-resolution online screenshot downloads were unavailable through the available network paths. Image search returned the screenshots and their descriptions; the supplied screenshot was inspected locally. These references establish feature gaps, not pixel equivalence or compatibility with Apple's proprietary adjustment recipes.
 
@@ -47,9 +47,9 @@ New tone controls use an independent shared 8-bit sRGB transform after exposure/
 
 The latest validation supersedes the earlier seven-test count above: 11 tests pass, including persistence/export, legacy defaults, neutral rendering, directional tone effects, selective stamping and geometry preservation by presets. `rebuild_check` passes build, screenshot and mechanics. Screenshot inspected at 2880×1800; interactive menus, typing and Finder reveal were not automated. Only native Apple Silicon macOS is present; Intel and macOS 14/15 execution are untested.
 
-## Recovered rating-filter follow-up
+## Rating-filter follow-up
 
-The native filter now uses original main-program function 0x100157a19 and its recovered comparison/value tables, with RedRock comparator 0x43759 establishing = and >=. Added exact Unrated only and Rejected only. See MECHANICS.md for source addresses, evidence and decompiler limits, and VALIDATION.md for the passing 12-test/build/screenshot results. This does not establish original image-processing or catalogue fidelity.
+The native filter added exact Unrated only and Rejected only choices alongside the star thresholds. Historical binary analysis informed the filter values and comparisons. See the [development provenance notes](MECHANICS.md) for scope and limitations.
 
 ## Library compatibility follow-up
 

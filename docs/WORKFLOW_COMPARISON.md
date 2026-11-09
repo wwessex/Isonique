@@ -1,6 +1,6 @@
-# Aperture 3 feature parity
+# Isonique workflow comparison with Aperture 3
 
-Baseline audited against Isonique commit `0ebda9a` on 9 November 2026. Only the native Swift/SwiftUI/AppKit macOS app is maintained. The Swift package has a UI executable, an IsoniqueCore library, XCTest and no external package dependencies. ImageIO handles decoding and encoding, Core Graphics runs an 8-bit sRGB pipeline, and CryptoKit supplies SHA-256. Libraries store an atomic JSON catalogue and byte-verified originals on disk. UserDefaults holds several app-level options. There are no web/PWA, iOS, Android, Windows or other maintained app sources. See the [compatibility inventory](../COMPATIBILITY.md) for legacy catalogue evidence and [test results](APERTURE_TEST_RESULTS.md) for what was exercised.
+This historical comparison describes which workflows Isonique supports and where the two applications differ. Baseline audited against Isonique commit `0ebda9a` on 9 November 2026. Only the native Swift/SwiftUI/AppKit macOS app is maintained. The Swift package has a UI executable, an IsoniqueCore library, XCTest and no external package dependencies. ImageIO handles decoding and encoding, Core Graphics runs an 8-bit sRGB pipeline, and CryptoKit supplies SHA-256. Libraries store an atomic JSON catalogue and byte-verified originals on disk. UserDefaults holds several app-level options. There are no web/PWA, iOS, Android, Windows or other maintained app sources. See the [compatibility inventory](../COMPATIBILITY.md) for legacy catalogue evidence and [test results](TEST_RESULTS.md) for what was exercised.
 
 ## Historical sources and scope
 
