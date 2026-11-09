@@ -284,6 +284,80 @@ final class LibraryTests: XCTestCase {
         XCTAssertTrue(stages.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
     }
 
+    func testSimulatedTetheredArrivalImportsNewPhotoAndDeduplicatesReplayedEvent() async throws {
+        let baseline = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Before.png"]))
+        let capture = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Capture.png"]))
+        let sidecar = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Capture.xmp"]))
+        let captureBytes = try Data(contentsOf: fixture("new.png", red: 0.7))
+        let payloads: [CameraImportFile: Data] = [
+            baseline: try Data(contentsOf: fixture("old.png", red: 0.2)),
+            capture: captureBytes,
+            sidecar: Data("<photos><photo><caption>Tethered arrival</caption></photo></photos>".utf8)
+        ]
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        var options = ImportOptions()
+        options.prefix = "Studio"
+        options.readSidecars = true
+
+        // Simulate a new-item notification arriving after the initial catalogue is ready, then replay it.
+        let catalogue = [baseline, capture, sidecar]
+        var requests: [CameraImportFile] = []
+        var staging: Set<URL> = []
+        var reports: [ImportReport] = []
+        for event in [[capture], [capture]] {
+            let report = await ImportJob.run(cameraFiles: catalogue, selectedPhotos: Set(event), options: options,
+                repository: repo, projectID: nil, albumID: nil, into: &library, download: { file, destination in
+                    requests.append(file)
+                    staging.insert(destination.deletingLastPathComponent())
+                    try XCTUnwrap(payloads[file]).write(to: destination)
+                })
+            reports.append(report)
+        }
+
+        XCTAssertEqual(reports.map(\.imported), [1, 0])
+        XCTAssertEqual(reports.map(\.duplicates), [0, 1])
+        XCTAssertTrue(reports.allSatisfy { $0.errors.isEmpty })
+        XCTAssertEqual(requests, [capture, sidecar, capture, sidecar])
+        XCTAssertTrue(staging.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
+        let saved = try repo.load()
+        XCTAssertEqual(saved.photos.map(\.originalName), ["Studio-Capture.png"])
+        let photo = try XCTUnwrap(saved.photos.first)
+        XCTAssertEqual(photo.caption, "Tethered arrival")
+        XCTAssertEqual(try Data(contentsOf: repo.availableOriginalURL(photo)), captureBytes)
+    }
+
+    func testSimulatedTetheredCompanionsArrivingInSeparateBatchesAreCurrentlyUnpaired() async throws {
+        // Camera transport fixtures use distinct image bytes and logical camera filenames.
+        let jpeg = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Shot.JPG"]))
+        let raw = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Shot.NEF"]))
+        let payloads: [CameraImportFile: Data] = [
+            jpeg: try Data(contentsOf: fixture("first.png", red: 0.3)),
+            raw: try Data(contentsOf: fixture("second.png", red: 0.6))
+        ]
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        var options = ImportOptions()
+        options.pairing = .linkedRAW
+        var catalogue: [CameraImportFile] = []
+
+        for arrival in [jpeg, raw] {
+            catalogue.append(arrival)
+            let report = await ImportJob.run(cameraFiles: catalogue, selectedPhotos: [arrival], options: options,
+                repository: repo, projectID: nil, albumID: nil, into: &library, download: { file, destination in
+                    XCTAssertEqual(file, arrival)
+                    try XCTUnwrap(payloads[file]).write(to: destination)
+                })
+            XCTAssertEqual(report.imported, 1)
+            XCTAssertTrue(report.errors.isEmpty)
+        }
+
+        // The existing import job forms pairs within one batch, so event grouping needs its own policy.
+        let saved = try repo.load()
+        XCTAssertEqual(saved.photos.map(\.originalName), ["Shot.JPG", "Shot.NEF"])
+        XCTAssertTrue(saved.photos.allSatisfy { $0.pairID == nil })
+    }
+
     func testCameraIncompleteDownloadAndCancellationKeepCommittedPhoto() async throws {
         let bytes = try Data(contentsOf: fixture())
         let files = try ["A.png", "B.png", "C.png", "D.png"].map {
