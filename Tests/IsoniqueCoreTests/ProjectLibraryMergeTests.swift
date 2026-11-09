@@ -255,6 +255,80 @@ final class ProjectLibraryMergeTests: XCTestCase {
         }
     }
 
+    func testStackPresentationMergesPicksAndCollapseWithoutTouchingOtherProjects() async throws {
+        for preference in [ProjectMergePreference.current, .incoming] {
+            let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
+                .appendingPathComponent("IsoniqueProjectMergeStacks-\(UUID().uuidString)")
+            try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
+            defer { try? FileManager.default.removeItem(at: root) }
+            let destination = try LibraryRepository.createEmpty(at: root.appendingPathComponent("Destination"))
+            let project = Collection(name: "Shoot")
+            let otherProject = Collection(name: "Other project")
+            let album = Collection(name: "Selects")
+            let localAlbum = Collection(name: "Local Selects")
+            let stack = UUID()
+            let protectedStack = UUID()
+            var current = Library()
+            current.projects = [project, otherProject]
+            current.albums = [album]
+            for index in 0..<6 {
+                var member = try photo("photo-\(index).png", byte: UInt8(index), project: index == 5 ? otherProject.id : project.id,
+                                       in: destination)
+                member.stackID = index < 3 ? stack : protectedStack
+                member.albumIDs = [album.id]
+                current.photos.append(member)
+            }
+            let ids = current.photos.map(\.id)
+            current.setStackCollapsed(true, stackID: stack)
+            current.setStackCollapsed(true, stackID: protectedStack)
+            current.applyStackPick(StackPickChange(stackID: stack, photoID: ids[0], selectionID: ids[0]))
+            current.applyStackPick(StackPickChange(stackID: stack, albumID: album.id, photoID: ids[0], selectionID: ids[0]))
+            current.applyStackPick(StackPickChange(stackID: protectedStack, photoID: ids[3], selectionID: ids[3]))
+            try destination.save(current)
+            let export = root.appendingPathComponent("Exported")
+            try LibraryBackup.exportProject(project.id, from: destination, to: export)
+            let (source, opened) = try LibraryBackup.openVerified(export)
+            XCTAssertEqual(opened.projectExportMembership?.stackPresentation, opened.stackBrowser)
+
+            current.albums.append(localAlbum)
+            current.photos[1].albumIDs.insert(localAlbum.id)
+            current.applyStackPick(StackPickChange(stackID: stack, photoID: ids[1], selectionID: ids[1]))
+            current.applyStackPick(StackPickChange(stackID: stack, albumID: localAlbum.id, photoID: ids[1], selectionID: ids[1]))
+            try destination.save(current)
+            var incoming = opened
+            incoming.setStackCollapsed(false, stackID: stack)
+            incoming.setStackCollapsed(false, stackID: protectedStack)
+            incoming.applyStackPick(StackPickChange(stackID: stack, photoID: ids[2], selectionID: ids[2]))
+            incoming.applyStackPick(StackPickChange(stackID: stack, albumID: album.id, photoID: nil, selectionID: ids[0]))
+            incoming.applyStackPick(StackPickChange(stackID: protectedStack, photoID: ids[4], selectionID: ids[4]))
+            try source.save(incoming)
+            let sourceCatalogue = source.root.appendingPathComponent("catalog.json")
+            let sourceBefore = try Data(contentsOf: sourceCatalogue)
+
+            let result = try await destination.mergeProjectLibrary(from: source.root, prefer: preference, review: { preview in
+                XCTAssertEqual(preview.updated, 0)
+                XCTAssertEqual(preview.stackUpdates, 1)
+                XCTAssertTrue(preview.conflicts.isEmpty)
+                XCTAssertEqual(preview.stackConflicts.count, 1)
+                XCTAssertEqual(preview.stackConflicts.first?.representativeName, "photo-0.png")
+                XCTAssertEqual(preview.stackConflicts.first?.fields, ["Stack Pick"])
+                return true
+            })
+
+            let (_, saved) = try LibraryBackup.openVerified(destination.root)
+            let state = try XCTUnwrap(saved.stackBrowser)
+            XCTAssertEqual(result.stackUpdates, 1)
+            XCTAssertEqual(result.conflicts, 1)
+            XCTAssertEqual(state.picks[stack], preference == .current ? ids[1] : ids[2])
+            XCTAssertNil(state.albumPicks[album.id]?[stack])
+            XCTAssertEqual(state.albumPicks[localAlbum.id]?[stack], ids[1])
+            XCTAssertFalse(state.collapsed.contains(stack))
+            XCTAssertEqual(state.picks[protectedStack], ids[3])
+            XCTAssertTrue(state.collapsed.contains(protectedStack))
+            XCTAssertEqual(try Data(contentsOf: sourceCatalogue), sourceBefore)
+        }
+    }
+
     func testMembershipOnlyExportUsesFallbackAndKeepsItsDeletionEvidence() async throws {
         let fixture = try fixture(keepsExportMembership: true)
         defer { try? FileManager.default.removeItem(at: fixture.root) }
@@ -267,6 +341,7 @@ final class ProjectLibraryMergeTests: XCTestCase {
             record.removeValue(forKey: "values")
             return record
         }
+        membership.removeValue(forKey: "stackPresentation")
         object["projectExportMembership"] = membership
         try JSONSerialization.data(withJSONObject: object).write(to: url)
 

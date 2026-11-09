@@ -241,3 +241,9 @@
 - Tests reopened a merged project under both conflict preferences. Current Exposure and imported Contrast survived together. Conflicting crop and rotation values came from the same library, as did Levels endpoints. The review named the affected groups.
 - The signed app reviewed a crop and rotation conflict and merged with Prefer current values. The Inspector showed Exposure 0.60 and Contrast 1.35. The catalogue retained the crop and orientation, and original file hashes matched in both libraries.
 - The optimized suite passed all 144 tests, including four camera RAW fixtures, on Apple M5 Pro, macOS 27.3 and Xcode 27.2. The branding check and signed arm64 build passed.
+
+## Merge stack presentation
+
+- Tests exported and reopened the baseline, then exercised both conflict preferences. A source-only collapse change and album-pick removal survived both preferences. The selected global pick followed the preference, and the destination-only album pick and cross-project stack stayed in place. A separate fixture exercised the previous policy for older exports.
+- In the signed app, the review listed one stack update and a conflicting Stack Pick. Prefer current values kept the existing cover and applied the imported collapse. The Browser displayed the collapsed cover, and the catalogue confirmed the album pick was cleared. Source catalogue and original hashes were unchanged.
+- The optimized suite passed all 145 tests without skips, including four camera RAW fixtures, on Apple M5 Pro, macOS 27.3 and Xcode 27.2. The branding check and signed arm64 build passed.

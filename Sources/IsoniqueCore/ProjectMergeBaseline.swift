@@ -129,3 +129,78 @@ private extension Adjustments {
         return (result, conflicts)
     }
 }
+
+extension Library {
+    mutating func mergeStackPresentation(from source: Library, baseline: StackBrowserState,
+                                         prefer preference: ProjectMergePreference, appliedPhotos: Set<UUID>,
+                                         excludedStacks: Set<UUID>, regularAlbums: Set<UUID>)
+        -> (updated: Int, conflicts: [ProjectStackMergeConflict]) {
+        let incoming = source.stackBrowser ?? StackBrowserState()
+        let current = stackBrowser ?? StackBrowserState()
+        let incomingPhotos = source.activePhotos
+        let mergedPhotos = activePhotos
+        let incomingGroups = Dictionary(grouping: incomingPhotos, by: \.stackID)
+        let groups = Dictionary(grouping: mergedPhotos, by: \.stackID)
+        let scopedStacks = Set(groups.compactMap { stackID, members -> UUID? in
+            guard let stackID, members.count > 1, (incomingGroups[stackID]?.count ?? 0) > 1,
+                  !excludedStacks.contains(stackID), members.allSatisfy({ appliedPhotos.contains($0.id) }) else { return nil }
+            return stackID
+        })
+        guard !scopedStacks.isEmpty else { return (0, []) }
+
+        let photosByID = Dictionary(uniqueKeysWithValues: mergedPhotos.map { ($0.id, $0) })
+        let incomingByID = Dictionary(uniqueKeysWithValues: incomingPhotos.map { ($0.id, $0) })
+        var state = current
+        var updated: Set<UUID> = []
+        var conflicts: [UUID: [String]] = [:]
+        func mergePick(stackID: UUID, album: Collection?, old: UUID?, imported: UUID?, base: UUID?) {
+            guard old != imported, imported != base else { return }
+            // A choice rejected by the photo or membership merge cannot become the cover.
+            if let imported {
+                guard let photo = photosByID[imported], photo.stackID == stackID,
+                      let sourcePhoto = incomingByID[imported], sourcePhoto.stackID == stackID else { return }
+                if let album, !photo.albumIDs.contains(album.id) || !sourcePhoto.albumIDs.contains(album.id) { return }
+            }
+            let choice = resolveProjectValue(old, imported, baseline: base, prefer: preference)
+            if choice.conflict {
+                let label = album.map { "Album Pick (\($0.name))" } ?? "Stack Pick"
+                conflicts[stackID, default: []].append(label)
+            }
+            if choice.value != old, let selectionID = old ?? imported {
+                _ = state.apply(StackPickChange(stackID: stackID, albumID: album?.id,
+                                                photoID: choice.value, selectionID: selectionID))
+                updated.insert(stackID)
+            }
+        }
+
+        for stackID in scopedStacks {
+            let old = current.collapsed.contains(stackID)
+            let collapsed = resolveProjectValue(old, incoming.collapsed.contains(stackID),
+                                                baseline: baseline.collapsed.contains(stackID), prefer: preference).value
+            if collapsed != old {
+                state.setCollapsed(collapsed, stackID: stackID)
+                updated.insert(stackID)
+            }
+            mergePick(stackID: stackID, album: nil, old: current.picks[stackID],
+                      imported: incoming.picks[stackID], base: baseline.picks[stackID])
+        }
+        for album in albums where regularAlbums.contains(album.id) {
+            let old = current.albumPicks[album.id] ?? [:]
+            let imported = incoming.albumPicks[album.id] ?? [:]
+            let base = baseline.albumPicks[album.id] ?? [:]
+            for stackID in Set(imported.keys).union(base.keys).intersection(scopedStacks) {
+                mergePick(stackID: stackID, album: album, old: old[stackID], imported: imported[stackID], base: base[stackID])
+            }
+        }
+
+        if !updated.isEmpty {
+            stackBrowser = state == StackBrowserState() ? nil : state
+            version = max(version, 3)
+        }
+        let review = conflicts.keys.sorted { $0.uuidString < $1.uuidString }.compactMap { stackID -> ProjectStackMergeConflict? in
+            guard let representative = groups[stackID]?.first, let fields = conflicts[stackID] else { return nil }
+            return ProjectStackMergeConflict(representativeName: representative.displayName, fields: fields)
+        }
+        return (updated.count, review)
+    }
+}

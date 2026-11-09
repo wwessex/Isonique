@@ -198,7 +198,9 @@ extension Workspace {
                 task.cancel()
             }
             showProjectTransfer(result.library, project: result.project)
-            status = "Merged \(result.project.name) · \(result.added) added · \(result.updated) updated · \(result.trashed) trashed · \(result.skipped) skipped · \(result.conflicts) conflicts"
+            let conflictLabel = result.conflicts == 1 ? "conflict" : "conflicts"
+            status = "Merged \(result.project.name) · \(result.added) added · \(result.updated) updated · \(result.trashed) trashed · \(result.skipped) skipped · \(result.conflicts) \(conflictLabel)"
+            if result.stackUpdates > 0 { status += " · \(stackUpdateLabel(result.stackUpdates)) updated" }
         } catch is CancellationError {
             status = "Project merge cancelled"
         } catch {
@@ -216,9 +218,16 @@ extension Workspace {
             "\(preview.addedAlbums) albums to add, \(preview.copiedOriginals) originals to copy, \(preview.skipped) photos to skip."
         ]
         let preferred = preference == .current ? "Current values" : "Imported values"
+        if preview.stackUpdates > 0 { details.append("\(stackUpdateLabel(preview.stackUpdates)) to update.") }
         if !preview.conflicts.isEmpty {
-            details.append("\(preferred) will resolve conflicts on \(preview.conflicts.count) photos.")
+            let subject = preview.conflicts.count == 1 ? "photo" : "photos"
+            details.append("\(preferred) will resolve conflicts on \(preview.conflicts.count) \(subject).")
             details += preview.conflicts.prefix(5).map { "\($0.photoName) — \($0.fields.joined(separator: ", "))" }
+        }
+        if !preview.stackConflicts.isEmpty {
+            let subject = preview.stackConflicts.count == 1 ? "stack" : "stacks"
+            details.append("\(preferred) will resolve conflicts on \(preview.stackConflicts.count) \(subject).")
+            details += preview.stackConflicts.prefix(5).map { "Stack with \($0.representativeName) — \($0.fields.joined(separator: ", "))" }
         }
         if preview.legacyMatches > 0 {
             details.append("\(preferred) apply to \(preview.legacyMatches) matching photos without an edit baseline.")
@@ -232,6 +241,10 @@ extension Workspace {
         alert.addButton(withTitle: "Merge Project")
         alert.addButton(withTitle: "Cancel")
         return alert.runModal() == .alertFirstButtonReturn
+    }
+
+    private func stackUpdateLabel(_ count: Int) -> String {
+        "\(count) \(count == 1 ? "stack" : "stacks")"
     }
 
     private func showProjectTransfer(_ saved: Library, project: Collection) {

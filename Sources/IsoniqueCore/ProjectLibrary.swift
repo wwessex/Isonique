@@ -17,6 +17,8 @@ struct ProjectExportMembership: Codable {
 
     let projectID: UUID
     let originalsByPhoto: [UUID: Original]
+    // An empty state is still an export baseline. Older exports omit it.
+    let stackPresentation: StackBrowserState?
 }
 
 extension Library {
@@ -105,7 +107,8 @@ extension Library {
         exported.projectExportMembership = ProjectExportMembership(
             projectID: projectID,
             originalsByPhoto: Dictionary(exported.photos.map { ($0.id, ProjectExportMembership.Original($0)) },
-                                        uniquingKeysWith: { first, _ in first }))
+                                        uniquingKeysWith: { first, _ in first }),
+            stackPresentation: exported.stackBrowser ?? StackBrowserState())
         try exported.validateSchema()
         return exported
     }
