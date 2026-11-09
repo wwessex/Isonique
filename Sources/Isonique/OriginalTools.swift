@@ -45,6 +45,50 @@ extension Workspace {
         }
     }
 
+    var canReconnectOriginals: Bool {
+        !busy && repository != nil && library.photos.contains { $0.trashedAt == nil && $0.referencedPath != nil }
+    }
+
+    func reconnectOriginalsPanel() {
+        guard canReconnectOriginals else { return }
+        let panel = NSOpenPanel()
+        panel.title = "Reconnect Referenced Originals"
+        panel.message = "Choose a folder to search for missing referenced originals in this library. Isonique checks known filenames and verifies each match against the original fingerprint."
+        panel.prompt = "Search Folder"
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        guard panel.runModal() == .OK, let folder = panel.url else { return }
+        Task { await reconnectOriginals(in: folder) }
+    }
+
+    func reconnectOriginals(in folder: URL) async {
+        guard canReconnectOriginals, let repository else { return }
+        let current = library
+        busy = true
+        status = "Searching for missing referenced originals…"
+        let task = Task.detached(priority: .utility) {
+            var draft = current
+            let report = try repository.reconnectMissingReferences(in: folder, library: &draft)
+            return (draft, report)
+        }
+        originalReconnectTask = task
+        defer { originalReconnectTask = nil; busy = false }
+        do {
+            let (draft, report) = try await task.value
+            if !report.reconnected.isEmpty { library = draft }
+            let preferred = selection
+            refreshOriginalStatus()
+            if selected == nil { selectAfterChange(preferred: preferred) }
+            originalReconnectReport = report
+            status = report.summary
+        } catch is CancellationError {
+            status = "Reconnect cancelled"
+        } catch {
+            self.error = error.localizedDescription
+            status = "Reconnect failed"
+        }
+    }
+
     func consolidateOriginal(_ photo: Photo) {
         updateOriginal(photo, status: "Copying and verifying original…", success: "Original consolidated · external file kept") { repo, library in
             try repo.consolidateOriginal(photo.id, in: &library)
@@ -73,6 +117,23 @@ extension Workspace {
                 status = "Original update failed"
             }
         }
+    }
+}
+
+extension OriginalReconnectReport {
+    var summary: String {
+        if reconnected.isEmpty && unmatched.isEmpty && ambiguous.isEmpty { return "No missing referenced originals" }
+        return "\(reconnected.count) reconnected · \(unmatched.count) unmatched · \(ambiguous.count) ambiguous"
+    }
+
+    var details: String {
+        var lines = [summary]
+        for (label, names) in [("Unmatched", unmatched), ("Multiple verified copies", ambiguous)] where !names.isEmpty {
+            let first = names.prefix(4).joined(separator: ", ")
+            lines.append("\(label): \(first)" + (names.count > 4 ? " and \(names.count - 4) more" : ""))
+        }
+        if scanErrors > 0 { lines.append("Locations or files skipped after a read error: \(scanErrors)") }
+        return lines.joined(separator: "\n")
     }
 }
 

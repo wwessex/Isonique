@@ -6,6 +6,13 @@ public enum OriginalStorage: String, Codable, CaseIterable, Identifiable {
     public var id: Self { self }
 }
 
+public struct OriginalReconnectReport: Sendable {
+    public fileprivate(set) var reconnected: [String] = []
+    public fileprivate(set) var unmatched: [String] = []
+    public fileprivate(set) var ambiguous: [String] = []
+    public fileprivate(set) var scanErrors = 0
+}
+
 public extension LibraryRepository {
     func availableOriginalURL(_ photo: Photo) throws -> URL {
         let url = try originalURL(photo)
@@ -32,6 +39,83 @@ public extension LibraryRepository {
         } else {
             try installManagedOriginal(from: input, photo: photo)
         }
+    }
+
+    /// Reconnect missing references by known filenames and verified fingerprints.
+    func reconnectMissingReferences(in folder: URL, library: inout Library) throws -> OriginalReconnectReport {
+        try Task.checkCancellation()
+        guard folder.isFileURL else { throw LibraryError.unsafePath }
+        let directory = try Self.referenceURL(folder.path, libraryRoot: root)
+        let keys: Set<URLResourceKey> = [.isRegularFileKey, .isSymbolicLinkKey, .isDirectoryKey]
+        guard try directory.resourceValues(forKeys: keys).isDirectory == true else { throw LibraryError.unsafePath }
+
+        let activeOriginalIDs = Set(library.activePhotos.map(\.originalID))
+        let missing = try library.uniqueOriginals().filter { photo in
+            photo.referencedPath != nil && activeOriginalIDs.contains(photo.originalID) &&
+                (try? availableOriginalURL(photo)) == nil
+        }
+        var report = OriginalReconnectReport()
+        guard !missing.isEmpty else { return report }
+
+        func filenameKey(_ name: String) -> String { name.precomposedStringWithCanonicalMapping.lowercased() }
+        var originalsByName: [String: [Photo]] = [:]
+        for photo in missing {
+            let names = [photo.referencedPath.map { URL(fileURLWithPath: $0).lastPathComponent },
+                         photo.sourceName, photo.originalName]
+            for name in Set(names.compactMap { $0.map(filenameKey) }) {
+                originalsByName[name, default: []].append(photo)
+            }
+        }
+
+        guard let files = FileManager.default.enumerator(
+            at: directory, includingPropertiesForKeys: Array(keys), options: [.skipsHiddenFiles, .skipsPackageDescendants],
+            errorHandler: { _, _ in report.scanErrors += 1; return true }
+        ) else { throw LibraryError.unsafePath }
+        var matches: [UUID: [URL]] = [:]
+        for case let url as URL in files {
+            try Task.checkCancellation()
+            if url.path == root.path { files.skipDescendants(); continue }
+            guard let possible = originalsByName[filenameKey(url.lastPathComponent)] else { continue }
+            do {
+                let values = try url.resourceValues(forKeys: keys)
+                guard values.isSymbolicLink != true, values.isRegularFile == true else { continue }
+                let candidate = try Self.referenceURL(url.path, libraryRoot: root)
+                let fingerprint = try Self.digest(candidate)
+                for photo in possible where photo.sha256 == fingerprint {
+                    if matches[photo.originalID, default: []].count < 2 {
+                        matches[photo.originalID, default: []].append(candidate)
+                    }
+                }
+            } catch {
+                report.scanErrors += 1
+            }
+        }
+
+        var paths: [UUID: String] = [:]
+        for photo in missing {
+            try Task.checkCancellation()
+            guard (try? availableOriginalURL(photo)) == nil else { continue }
+            let candidates = matches[photo.originalID] ?? []
+            if candidates.count > 1 {
+                report.ambiguous.append(photo.originalName)
+            } else if let candidate = candidates.first {
+                let verified = try Self.referenceURL(candidate.path, libraryRoot: root)
+                try Self.verifyOriginal(verified, photo: photo)
+                paths[photo.originalID] = verified.path
+                report.reconnected.append(photo.originalName)
+            } else {
+                report.unmatched.append(photo.originalName)
+            }
+        }
+        guard !paths.isEmpty else { return report }
+        var updated = library
+        for index in updated.photos.indices {
+            if let path = paths[updated.photos[index].originalID] { updated.photos[index].referencedPath = path }
+        }
+        try Task.checkCancellation()
+        try save(updated)
+        library = updated
+        return report
     }
 
     /// Make a verified managed copy while leaving the external file in place.

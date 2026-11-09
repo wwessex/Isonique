@@ -33,6 +33,8 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var colorFilter = ColorLabelFilter.all
     @Published var labelNames: [String: String]
     @Published var originalStatusRevision = 0
+    @Published var originalReconnectReport: OriginalReconnectReport?
+    @Published var originalReconnectTask: Task<(Library, OriginalReconnectReport), Error>?
     @Published var busy = false
     @Published private(set) var importInProgress = false
     @Published private(set) var importProgress: ImportProgress?
@@ -642,6 +644,11 @@ enum EditTool: String { case select, crop, straighten, brush }
                 Button("Relink Original…") {
                     if let photo = workspace.selected { workspace.relinkOriginalPanel(photo) }
                 }.disabled(workspace.busy || workspace.isViewingTrash || !workspace.canRelinkSelectedOriginal)
+                Button("Reconnect Referenced Originals…", action: workspace.reconnectOriginalsPanel)
+                    .disabled(!workspace.canReconnectOriginals)
+                if let task = workspace.originalReconnectTask {
+                    Button("Cancel Reconnect") { task.cancel() }
+                }
                 Button("Consolidate Original") {
                     if let photo = workspace.selected { workspace.consolidateOriginal(photo) }
                 }.disabled(workspace.busy || workspace.isViewingTrash || workspace.selected?.referencedPath == nil)
@@ -882,6 +889,12 @@ struct ContentView: View {
             }.padding(28)
         }
         .alert("Isonique", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button("OK") { model.error = nil } } message: { Text(model.error ?? "") }
+        .alert("Reconnect Referenced Originals", isPresented: Binding(get: { model.originalReconnectReport != nil },
+                                                                      set: { if !$0 { model.originalReconnectReport = nil } })) {
+            Button("OK") { model.originalReconnectReport = nil }
+        } message: {
+            Text(model.originalReconnectReport?.details ?? "")
+        }
         .onChange(of: model.scope) { _, _ in
             if model.isViewingTrash {
                 model.search = ""; model.ratingFilter = .all; model.originalFilter = .all; model.colorFilter = .all; model.advancedSearch = nil

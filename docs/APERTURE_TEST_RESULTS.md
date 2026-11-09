@@ -166,3 +166,9 @@
 - The Grid preference test covered the standard default, unknown saved values, persistence across reopened workspaces and libraries, an unchanged List layout, and an unchanged catalogue after choosing a size.
 - Native QA on the signed 1,200-photo test build chose Compact from the View menu and Large from Settings. The fixed window exposed 14 Standard, 16 Compact and 6 Large photo cards through accessibility. Browser search narrowed the catalogue to a single named photo, and Settings still showed Large after restart.
 - The isolated staged release executed 106 XCTest cases without failures or skips, including the four opt-in camera RAW fixtures. The arm64 bundle and signed archive passed strict verification on Apple M5 Pro and macOS 27.3 with Xcode 27.2.
+
+## Folder-based reconnect for referenced originals
+
+- Four new XCTest cases covered nested matches, known names, matching and mismatching fingerprints, duplicate matches, symlink exclusion, shared versions including Trash, reopening, filter refresh, cancellation and a failed catalogue write. Originals and non-destructive edits were preserved.
+- Native QA on the signed build reconnected two originals and their shared version through the File menu and folder chooser. The report showed one unmatched original with different bytes and one ambiguous original with two matching copies. The Browser updated its offline badges, the saved catalogue contained the new paths, and all five candidate-file hashes were unchanged.
+- The isolated optimized release executed 110 XCTest cases with zero failures or skips, including four camera RAW fixtures. The arm64 app and release archive passed strict signature verification on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
