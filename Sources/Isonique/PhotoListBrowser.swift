@@ -25,6 +25,51 @@ enum BrowserPresentation: String, CaseIterable, Identifiable {
     }
 }
 
+enum GridThumbnailSize: String, CaseIterable, Identifiable {
+    case compact = "Compact"
+    case standard = "Standard"
+    case large = "Large"
+
+    static let preferenceKey = "browser.gridThumbnailSize"
+    var id: Self { self }
+
+    var columnWidth: CGFloat {
+        switch self {
+        case .compact: return 132
+        case .standard: return 170
+        case .large: return 244
+        }
+    }
+
+    var imageHeight: CGFloat {
+        switch self {
+        case .compact: return 104
+        case .standard: return 140
+        case .large: return 190
+        }
+    }
+
+    var decodeMaximum: Int {
+        switch self {
+        case .compact: return 256
+        case .standard: return 360
+        case .large: return 512
+        }
+    }
+}
+
+struct GridThumbnailSizePicker: View {
+    @ObservedObject var model: Workspace
+
+    var body: some View {
+        Picker("Grid Thumbnail Size", selection: $model.gridThumbnailSize) {
+            ForEach(GridThumbnailSize.allCases) { size in
+                Text(size.rawValue).tag(size)
+            }
+        }
+    }
+}
+
 extension Workspace {
     var presentation: BrowserPresentation { viewer ? .viewer : browserLayout }
 
