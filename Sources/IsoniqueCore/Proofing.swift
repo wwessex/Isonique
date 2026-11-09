@@ -33,11 +33,10 @@ public extension Renderer {
         let dst = outputData.bindMemory(to: UInt8.self, capacity: width * height * 4)
         let k = min(1, max(-1, amount)) * 0.35
         for y in 0..<height { for x in 0..<width {
-            let nx = (Double(x) + 0.5) / Double(width) * 2 - 1
-            let ny = (Double(y) + 0.5) / Double(height) * 2 - 1
-            let factor = 1 + k * (nx * nx + ny * ny)
-            let sx = min(Double(width - 1), max(0, (nx * factor + 1) * Double(width) / 2 - 0.5))
-            let sy = min(Double(height - 1), max(0, (ny * factor + 1) * Double(height) / 2 - 0.5))
+            let point = PhotoGeometry.lensSourcePoint(x: (Double(x) + 0.5) / Double(width),
+                                                       y: (Double(y) + 0.5) / Double(height), coefficient: k)
+            let sx = min(Double(width - 1), max(0, point.x * Double(width) - 0.5))
+            let sy = min(Double(height - 1), max(0, point.y * Double(height) - 0.5))
             let x0 = Int(sx), y0 = Int(sy), x1 = min(width - 1, x0 + 1), y1 = min(height - 1, y0 + 1)
             let fx = sx - Double(x0), fy = sy - Double(y0)
             for c in 0..<4 {

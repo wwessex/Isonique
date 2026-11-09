@@ -358,6 +358,57 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(Workspace(libraryRoot: root, preferences: preferences).presentation, .list)
     }
 
+    @MainActor
+    func testBrushStrokeUndoResetAndRedoSurviveReopening() async throws {
+        let root = try temporaryLibrary()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let suite = "IsoniqueBrushTests.\(UUID().uuidString)"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { preferences.removePersistentDomain(forName: suite) }
+        preferences.set(true, forKey: "history.persist")
+        let workspace = Workspace(libraryRoot: root, preferences: preferences)
+        let photo = Photo(filename: "brush.png", originalName: "brush.png", projectID: nil, width: 100, height: 100,
+                          camera: "", captureDate: "", sha256: "fixture")
+        let fixture = try XCTUnwrap(Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg=="))
+        try fixture.write(to: root.appendingPathComponent("Originals/brush.png"))
+        var draft = workspace.library
+        draft.photos = [photo]
+        XCTAssertTrue(workspace.commit(draft))
+        workspace.selection = photo.id
+        workspace.chooseBrush(.dodge)
+        XCTAssertEqual(workspace.tool, .brush)
+        XCTAssertTrue(workspace.viewer)
+        let dodge = LocalBrushStroke(adjustment: .dodge, radius: 0.1, softness: 0.8, strength: 0.7,
+                                     points: [BrushPoint(x: 0.3, y: 0.4)])
+        let burn = LocalBrushStroke(adjustment: .burn, radius: 0.1, softness: 0.8, strength: 0.7,
+                                    points: [BrushPoint(x: 0.7, y: 0.6)])
+        workspace.applyBrushStroke(dodge, to: UUID())
+        XCTAssertFalse(workspace.canUndo)
+        workspace.applyBrushStroke(dodge, to: photo.id)
+        XCTAssertEqual(workspace.library.version, 4)
+        XCTAssertEqual(workspace.selected?.adjustments.localBrushes, [dodge])
+        workspace.chooseBrush(.burn)
+        workspace.applyBrushStroke(burn, to: photo.id)
+        workspace.undoEdit()
+        XCTAssertEqual(workspace.selected?.adjustments.localBrushes, [dodge])
+        XCTAssertEqual(workspace.tool, .brush)
+        workspace.redoEdit()
+        XCTAssertEqual(workspace.selected?.adjustments.localBrushes, [dodge, burn])
+        workspace.clearBrushMask(.dodge)
+        XCTAssertEqual(workspace.selected?.adjustments.localBrushes, [burn])
+        workspace.undoEdit()
+        XCTAssertEqual(workspace.selected?.adjustments.localBrushes, [dodge, burn])
+
+        let reopened = Workspace(libraryRoot: root, preferences: preferences)
+        XCTAssertEqual(reopened.selected?.adjustments.localBrushes, [dodge, burn])
+        XCTAssertTrue(reopened.canRedo)
+        reopened.redoEdit()
+        XCTAssertEqual(reopened.selected?.adjustments.localBrushes, [burn])
+        reopened.undoEdit()
+        XCTAssertEqual(reopened.selected?.adjustments.localBrushes, [dodge, burn])
+        XCTAssertEqual(try Data(contentsOf: root.appendingPathComponent("Originals/brush.png")), fixture)
+    }
+
     private func temporaryLibrary() throws -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueUI-\(UUID().uuidString)")
         return try LibraryRepository.createEmpty(at: root).root

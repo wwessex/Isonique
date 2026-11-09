@@ -8,7 +8,7 @@ enum PhotoSort: String, CaseIterable, Identifiable {
     case imported = "Import date", name = "Filename", rating = "Rating", captured = "Capture date"
     var id: String { rawValue }
 }
-enum EditTool: String { case select, crop, straighten }
+enum EditTool: String { case select, crop, straighten, brush }
 @MainActor final class Workspace: ObservableObject {
     @Published var library = Library()
     @Published var scope = "all"
@@ -25,7 +25,7 @@ enum EditTool: String { case select, crop, straighten }
     @Published var search = ""
     @Published var sort = PhotoSort.imported
     @Published var sortDescending = false
-    @Published var stampGroups = Set(AdjustmentGroup.allCases)
+    @Published var stampGroups = Set(AdjustmentGroup.allCases.filter { $0 != .localBrush })
     @Published var ratingFilter = RatingFilter.all
     @Published var originalFilter = OriginalFilter.all
     @Published var colorFilter = ColorLabelFilter.all
@@ -44,6 +44,7 @@ enum EditTool: String { case select, crop, straighten }
     @Published var compareOriginal = false
     @Published var comparisonID: UUID?
     @Published var tool = EditTool.select
+    @Published var brushAdjustment = LocalBrushAdjustment.dodge
     @Published var liftedAdjustments: LiftedSettings?
     @Published var stampMetadata = Set<StampMetadata>()
     @Published var showExportOptions = false
@@ -160,6 +161,7 @@ enum EditTool: String { case select, crop, straighten }
         let nextHistory = newHistory ?? history
         var saved = draft
         saved.history = keepHistory ? nextHistory : nil
+        saved.upgradeForBrushRecipes()
         do {
             try repository.save(saved)
             library = saved
@@ -178,7 +180,9 @@ enum EditTool: String { case select, crop, straighten }
         var draft = library
         guard let entry = nextHistory.step(in: &draft, redoing: redo),
               commit(draft, history: nextHistory) else { return }
+        let continueBrushing = tool == .brush && viewer && selection == entry.selectionID
         selectAfterChange(preferred: entry.selectionID)
+        if continueBrushing && selection == entry.selectionID { tool = .brush }
         switch entry {
         case .edit: status = redo ? "Photo edit redone" : "Photo edit undone"
         case .removeVersion: status = "Version creation undone"
@@ -484,6 +488,9 @@ enum EditTool: String { case select, crop, straighten }
                 }.disabled(workspace.busy || workspace.isViewingTrash || workspace.photos.isEmpty || workspace.repository == nil)
             }
             CommandMenu("Photos") {
+                Button("Dodge Brush") { workspace.chooseBrush(.dodge) }.disabled(!workspace.canBrush)
+                Button("Burn Brush") { workspace.chooseBrush(.burn) }.disabled(!workspace.canBrush)
+                Divider()
                 Button("New Version from Original") { workspace.createVersion(from: .original) }
                     .keyboardShortcut("g", modifiers: [.option]).disabled(!workspace.canCreateVersion)
                 Button("Duplicate Version") { workspace.createVersion(from: .current) }
@@ -701,7 +708,7 @@ struct ContentView: View {
                                 if let comparison = model.comparisonPhoto {
                                     PhotoComparisonView(reference: comparison, selected: photo, repository: repo)
                                 } else if let url = try? repo.availableOriginalURL(photo) {
-                                    PhotoViewer(photo: photo, url: url, original: model.compareOriginal)
+                                    PhotoViewer(photo: photo, url: url, original: model.compareOriginal).id(photo.id)
                                 } else {
                                     MissingOriginalView(photo: photo)
                                 }
@@ -891,6 +898,13 @@ struct EditBar: View {
                 Divider().frame(height: 20)
                 tool("Crop", icon: "crop", mode: .crop)
                 tool("Straighten", icon: "level", mode: .straighten)
+                Menu {
+                    Button("Dodge Brush") { model.chooseBrush(.dodge) }
+                    Button("Burn Brush") { model.chooseBrush(.burn) }
+                } label: {
+                    Label("Brush", systemImage: "paintbrush.pointed")
+                        .foregroundStyle(model.tool == .brush ? Color.accentColor : .primary)
+                }.disabled(!model.canBrush)
                 Divider().frame(height: 20)
                 Button(action: model.lift) { Label("Lift", systemImage: "eyedropper") }.help("Copy adjustments from this photo")
                 Button(action: model.stamp) { Label("Stamp", systemImage: "eyedropper.full") }.disabled(model.liftedAdjustments == nil || (model.stampGroups.isEmpty && model.stampMetadata.isEmpty)).help("Apply the adjustments and metadata selected in Inspector")
@@ -941,17 +955,38 @@ struct PhotoViewer: View {
     let url: URL
     let original: Bool
     @State private var image: NSImage?
+    @State private var geometry: PhotoGeometry?
+    @State private var erasingBrush = false
+    @AppStorage("brush.size") private var brushSize = 12.0
+    @AppStorage("brush.softness") private var brushSoftness = 70.0
+    @AppStorage("brush.strength") private var brushStrength = 50.0
     @State private var failure: String?
     @State private var zoom = false
     @State private var cropSize = CGSize(width: 1, height: 1)
     @AppStorage("crop.aspect") private var cropAspect = 0.0
     @AppStorage("crop.locked") private var cropLocked = false
     @State private var draft = PhotoCrop(x: 0, y: 0, width: 1, height: 1)
+    private struct RenderRequest: Equatable {
+        let url: URL
+        let originalStatus: Int
+        let isCropping: Bool
+        let adjustments: Adjustments
+        let maximum: CGFloat?
+        let profile: Data?
+    }
+
     var body: some View {
+        let request = renderRequest
         VStack(spacing: 10) {
             
             if let image {
                 if model.tool == .crop { CropCanvas(image: image, crop: $draft, pixelSize: cropSize, aspect: cropLocked && cropAspect > 0 ? cropAspect : nil).padding(16) }
+                else if model.tool == .brush, let geometry, geometry.matches(photo.adjustments) {
+                    BrushCanvas(image: image, geometry: geometry, adjustment: model.brushAdjustment,
+                                erasing: erasingBrush, radius: brushSize / 200, softness: brushSoftness / 100,
+                                strength: brushStrength / 100) { model.applyBrushStroke($0, to: photo.id) }
+                        .padding(16)
+                }
                 else if zoom && model.tool == .select { ScrollView([.horizontal, .vertical]) { Image(nsImage: image) } }
                 else {
                     Image(nsImage: image).resizable().scaledToFit()
@@ -985,25 +1020,52 @@ struct PhotoViewer: View {
                 CropOptionsView(crop: $draft, aspect: $cropAspect, locked: $cropLocked, size: cropSize,
                     cancel: { model.tool = .select }, apply: { model.edit { $0.adjustments.crop = draft }; model.tool = .select })
                     .padding(12).workspaceGlass().padding(8)
+            } else if model.tool == .brush {
+                BrushControls(adjustment: $model.brushAdjustment, erasing: $erasingBrush,
+                              size: $brushSize, softness: $brushSoftness, strength: $brushStrength,
+                              hasMask: photo.adjustments.localBrushes.contains { $0.adjustment == model.brushAdjustment },
+                              reset: { model.clearBrushMask(model.brushAdjustment) },
+                              done: { model.tool = .select })
+                    .padding(12).workspaceGlass().padding(8)
             }
         }.padding(.top, 8)
-        .onChange(of: model.tool) { _, tool in if tool == .crop { draft = photo.adjustments.crop ?? PhotoCrop(x: 0, y: 0, width: 1, height: 1) } }
-        .task(id: "\(photo.id)-\(url.path)-\(model.originalStatusRevision)-\(photo.adjustments)-\(original)-\(zoom)-\(model.tool)-\(model.proofEnabled)-\(model.proofProfile?.hashValue ?? 0)") {
-            var settings = original ? Adjustments() : photo.adjustments
-            if model.tool == .crop { settings.crop = nil }
-            if model.tool == .crop, let size = try? Renderer.dimensions(url, adjustments: settings) { cropSize = size }
-            let maximum: CGFloat? = zoom && model.tool == .select ? nil : 2400
-            let profile = model.proofEnabled ? model.proofProfile : nil
-            let result = await Task.detached(priority: .userInitiated) { () -> Result<CGImage, Error> in
-                Result {
-                    let rendered = try Renderer.render(url, adjustments: settings, maxDimension: maximum)
-                    return try profile.map { try Renderer.proof(rendered, profile: $0) } ?? rendered
-                }
-            }.value
-            guard !Task.isCancelled else { return }
-            switch result { case .success(let cg): image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height)); failure = nil
-            case .failure(let error): image = nil; failure = error.localizedDescription }
+        .onChange(of: model.tool) { _, tool in
+            if tool == .crop { draft = photo.adjustments.crop ?? PhotoCrop(x: 0, y: 0, width: 1, height: 1) }
+            if tool != .brush { erasingBrush = false }
         }
+        .onChange(of: model.brushAdjustment) { _, _ in erasingBrush = false }
+        .task(id: request) {
+            if request.isCropping, let size = try? Renderer.dimensions(url, adjustments: request.adjustments) { cropSize = size }
+            let render = Task.detached(priority: .userInitiated) {
+                let result = try Renderer.renderWithGeometry(request.url, adjustments: request.adjustments,
+                                                            maxDimension: request.maximum)
+                let image = try request.profile.map { try Renderer.proof(result.image, profile: $0) } ?? result.image
+                return (image, result.geometry)
+            }
+            let result = await withTaskCancellationHandler {
+                await render.result
+            } onCancel: { render.cancel() }
+            guard !Task.isCancelled else { return }
+            switch result {
+            case .success(let (cg, layout)):
+                image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
+                geometry = layout
+                failure = nil
+            case .failure(let error):
+                image = nil
+                geometry = nil
+                failure = error.localizedDescription
+            }
+        }
+    }
+
+    private var renderRequest: RenderRequest {
+        var settings = original ? Adjustments() : photo.adjustments
+        if model.tool == .crop { settings.crop = nil }
+        return RenderRequest(url: url, originalStatus: model.originalStatusRevision, isCropping: model.tool == .crop,
+                             adjustments: settings,
+                             maximum: zoom && model.tool == .select ? nil : 2400,
+                             profile: model.proofEnabled ? model.proofProfile : nil)
     }
 }
 struct Inspector: View {
@@ -1127,6 +1189,16 @@ struct Inspector: View {
             Text("HIGHLIGHTS & SHADOWS").font(.caption).foregroundStyle(.secondary)
             adjustment("Shadows", path: \.adjustments.shadows, range: 0...1)
             adjustment("Highlights", path: \.adjustments.highlights, range: -1...0)
+            DisclosureGroup("Local Brush Masks") {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Button("Dodge Brush") { model.chooseBrush(.dodge) }
+                        Button("Burn Brush") { model.chooseBrush(.burn) }
+                    }.disabled(!model.canBrush)
+                    Text("Paint in the Viewer. Each stroke is one undo step.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }.padding(.top, 8)
+            }
             DisclosureGroup("Color Proofing & Lens") {
                 VStack(alignment: .leading, spacing: 10) {
                     Button("Choose RGB ICC Profile…", action: model.chooseProofProfile)

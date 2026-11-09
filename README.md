@@ -4,9 +4,9 @@ Isonique is an independent, native SwiftUI photo workspace for Apple Silicon Mac
 
 ## Project status
 
-The current build supports managed and referenced originals, cancellable imports, multiple libraries, photo Trash, verified backups, compound Smart Albums, keyboard culling and non-destructive editing. Browsable versions share originals and can be compared side by side. Stacks support library-wide and album-specific picks, plus persistent collapse.
+The current build supports managed and referenced originals, cancellable imports, multiple libraries, photo Trash, verified backups, compound Smart Albums, keyboard culling and non-destructive editing with local Dodge and Burn masks. Browsable versions share originals and can be compared side by side. Stacks support library-wide and album-specific picks, plus persistent collapse.
 
-The 9 November 2026 validation run passed 67 XCTest cases, the signed arm64 release build and native workflow checks on Apple M5 Pro with macOS 27.3. Older macOS runtimes and physical camera workflows remain unverified. [Feature parity audit](docs/APERTURE_FEATURE_PARITY.md) · [Implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
+The 9 November 2026 validation run passed 72 XCTest cases and the signed arm64 release build on Apple M5 Pro with macOS 27.3. Native QA exercised brush painting and erasing on a disposable library. Older macOS runtimes and physical camera workflows remain unverified. [Feature parity audit](docs/APERTURE_FEATURE_PARITY.md) · [Implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
 
 ## Build and run
 
@@ -43,7 +43,7 @@ Bulk import, rendering and recovery run off the UI thread. Edits are disabled du
 
 Legacy recovery imports embedded originals and supported embedded metadata from Aperture libraries. Proprietary recipes, database relationships, externally referenced files, Faces, Places, stacks and versions remain outside that recovery workflow. [Legacy library compatibility](COMPATIBILITY.md)
 
-Isonique reads catalogue formats 1–3. Referenced originals and compound or project-scoped Smart Albums require format 2 or later. Creating a browsable version or using the new stack controls upgrades the library to format 3. Backups include managed originals and retain the paths to referenced files. Keep a separate backup of those files.
+Isonique reads catalogue formats 1–4. Referenced originals and compound or project-scoped Smart Albums require format 2 or later. Browsable versions and stack controls require format 3 or later. Saving a local brush recipe in a photo, adjustment snapshot, or persistent history upgrades the library to format 4, which requires a brush-capable build. Backups include managed originals and retain the paths to referenced files. Keep a separate backup of those files.
 
 RAW decoding uses the Mac's ImageIO codecs. Camera RAW samples, high-bit-depth output and calibrated wide-gamut display behavior remain unqualified. Edited exports use 8-bit sRGB. The native macOS app is the sole maintained version.
 
@@ -79,7 +79,9 @@ Use **Photos → New Version from Original** (Option-G) for neutral adjustments 
 
 ### Review and tonal tools
 
-Inspector → Adjustments now shows a live **luminance histogram** of a 384-pixel edited preview, **Levels** (black/white input points and gamma), and a **Master Tone Curve** (three output controls at 25%, 50%, 75% input). Levels and the piecewise-linear curve run after the other tone controls and before lens/geometry in the shared preview/export renderer. Reset buttons, presets, Undo/Redo, persistent history, named versions and the tone Stamp group include the new fields. These are independent 8-bit sRGB tools, without RGB channel curves, masks or recovered Apple formulas. Existing catalogues default to a neutral transform; older executables can discard the new optional settings when saving.
+Inspector → Adjustments shows a live **luminance histogram** of a 384-pixel edited preview, **Levels** (black/white input points and gamma), and a **Master Tone Curve** (three output controls at 25%, 50%, 75% input). Levels and the piecewise-linear curve run after the other tone controls and before lens and geometry in the shared preview/export renderer. Reset buttons, presets, Undo/Redo, persistent history, named versions and the tone Stamp group include these settings. The tools use an independent 8-bit sRGB implementation. RGB channel curves remain pending.
+
+Choose **Dodge Brush** or **Burn Brush** from Photos, the editing strip’s Brush menu, or Inspector → Adjustments → Local Brush Masks. Click or drag on the fit-to-window photo to lighten or darken it. The stroke guide follows the pointer and the adjusted preview updates on release. Size, Softness and Strength are remembered across launches. **Erase** and **Reset Mask** affect the selected mask, and each stroke or reset has its own Undo step. Masks follow the original photo through crop, rotation, flip, straightening and lens correction. Built-in presets preserve them. To copy masks with Lift & Stamp, enable **Local brush masks** in the Inspector before stamping.
 
 **Review → Auto Stack by Capture Time** (also in the Review toolbar menu) previews groups for a 0–60 second maximum consecutive gap, using the current view or selected batch. Missing/invalid capture dates and already-stacked photos are excluded. Dates use embedded capture time as recorded, without camera time-zone reconciliation. A chain of short gaps can span more than the selected interval. Creating stacks participates in per-photo Undo.
 
