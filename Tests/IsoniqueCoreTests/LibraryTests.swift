@@ -447,6 +447,59 @@ final class LibraryTests: XCTestCase {
             XCTAssertEqual(bytes[3], 255)
         }
     }
+    func testBrightnessVibrancyAndSepiaAffectPixelsAndMatchPNGExport() throws {
+        let source = try fixture()
+        let digest = try LibraryRepository.digest(source)
+        func channels(_ settings: Adjustments) throws -> [Int] {
+            let image = try Renderer.render(source, adjustments: settings)
+            return (try XCTUnwrap(image.dataProvider?.data) as Data).prefix(4).map(Int.init)
+        }
+        let neutral = try channels(Adjustments())
+        var settings = Adjustments()
+        settings.brightness = 0.7
+        let lighter = try channels(settings)
+        XCTAssertTrue(zip(lighter.prefix(3), neutral.prefix(3)).allSatisfy { $0 > $1 })
+        settings.brightness = -0.7
+        let darker = try channels(settings)
+        XCTAssertTrue(zip(darker.prefix(3), neutral.prefix(3)).allSatisfy { $0 < $1 })
+
+        settings = Adjustments()
+        settings.vibrancy = 1
+        let vibrant = try channels(settings)
+        settings.vibrancy = -1
+        let muted = try channels(settings)
+        XCTAssertGreaterThan(vibrant[2] - vibrant[0], neutral[2] - neutral[0])
+        XCTAssertLessThan(muted[2] - muted[0], neutral[2] - neutral[0])
+
+        settings = AdjustmentPreset.sepia.applying(to: Adjustments())
+        let warm = try channels(settings)
+        XCTAssertGreaterThan(warm[0], warm[1])
+        XCTAssertGreaterThan(warm[1], warm[2])
+        XCTAssertEqual(warm[3], 255)
+        settings.brightness = 0.4
+        settings.vibrancy = 0.3
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        XCTAssertTrue(try repo.importPhoto(source, projectID: nil, into: &library))
+        library.photos[0].adjustments = settings
+        try repo.save(library)
+        let photo = try XCTUnwrap(repo.load().photos.first)
+        XCTAssertEqual(photo.adjustments, settings)
+        XCTAssertEqual(settings.stamping(onto: Adjustments(), groups: [.basic]), settings)
+        let destination = temporary.appendingPathComponent("edited.png")
+        var options = ExportOptions()
+        options.format = .png
+        try Renderer.export(photo, repository: repo, to: destination, options: options)
+        let output = try Renderer.render(destination, adjustments: Adjustments())
+        let expected = try Renderer.render(source, adjustments: settings)
+        let outputBytes = try XCTUnwrap(output.dataProvider?.data) as Data
+        let expectedBytes = try XCTUnwrap(expected.dataProvider?.data) as Data
+        XCTAssertEqual(outputBytes.count, expectedBytes.count)
+        XCTAssertTrue(zip(outputBytes, expectedBytes).allSatisfy { abs(Int($0) - Int($1)) <= 1 })
+        XCTAssertEqual(try LibraryRepository.digest(source), digest)
+        XCTAssertEqual(try LibraryRepository.digest(repo.originalURL(photo)), digest)
+    }
+
     func testLegacyRecoveryCopiesAndVerifiesWithoutChangingSource() throws {
         let legacy = temporary.appendingPathComponent("Fixture.aplibrary")
         let masters = legacy.appendingPathComponent("Masters/2026")
@@ -628,12 +681,18 @@ final class LibraryTests: XCTestCase {
         let decoded = try JSONDecoder().decode(Adjustments.self, from: old)
         XCTAssertEqual(decoded.exposure, 1); XCTAssertEqual(decoded.quarterTurns, 0)
         XCTAssertEqual(decoded.straighten, 0); XCTAssertNil(decoded.crop)
+        XCTAssertEqual(decoded.brightness, 0)
+        XCTAssertEqual(decoded.vibrancy, 0)
+        XCTAssertEqual(decoded.sepia, 0)
+        XCTAssertFalse(decoded.flipHorizontal)
+        XCTAssertFalse(decoded.flipVertical)
         let repository = try LibraryRepository(root: temporary.appendingPathComponent("geometry"))
         let source = try fixture()
         let digest = try LibraryRepository.digest(source)
         var library = Library()
         _ = try repository.importPhoto(source, projectID: nil, into: &library)
         library.photos[0].adjustments.quarterTurns = 1
+        library.photos[0].adjustments.toggleFlip(.horizontal)
         library.photos[0].adjustments.crop = PhotoCrop(x: 0.25, y: 0.25, width: 0.5, height: 0.5)
         try repository.save(library)
         let photo = try XCTUnwrap(repository.load().photos.first)
@@ -673,6 +732,19 @@ final class LibraryTests: XCTestCase {
         let topLeft = try Renderer.applyGeometry(image, adjustments: settings)
         XCTAssertEqual(topLeft.width, 20); XCTAssertEqual(topLeft.height, 10)
         XCTAssertGreaterThan(pixel(topLeft, 5, 5)[0], 240)
+        settings.toggleFlip(.horizontal)
+        XCTAssertEqual(settings.crop?.x, 0.5)
+        let croppedAfterFlip = try Renderer.applyGeometry(image, adjustments: settings)
+        XCTAssertEqual(croppedAfterFlip.width, 20)
+        XCTAssertGreaterThan(pixel(croppedAfterFlip, 5, 5)[0], 240)
+        settings.toggleFlip(.vertical)
+        XCTAssertEqual(settings.crop?.y, 0.5)
+        XCTAssertGreaterThan(pixel(try Renderer.applyGeometry(image, adjustments: settings), 5, 5)[0], 240)
+        settings.crop = nil
+        let flipped = try Renderer.applyGeometry(image, adjustments: settings)
+        XCTAssertGreaterThan(pixel(flipped, 35, 15)[0], 240)
+        XCTAssertGreaterThan(pixel(flipped, 5, 5)[2], 240)
+        XCTAssertEqual(settings.stamping(onto: Adjustments(), groups: [.geometry]), settings)
         settings = Adjustments()
         settings.quarterTurns = 4
         XCTAssertEqual(try Renderer.applyGeometry(image, adjustments: settings).dataProvider?.data as Data?, image.dataProvider?.data as Data?)

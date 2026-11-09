@@ -52,7 +52,7 @@ struct FeatureGuide: View {
             Feature(title: "Multiple Isonique libraries", detail: "Create a separate folder using File → New Isonique Library and switch using File → Open Isonique Library."),
             Feature(title: "Import and organize", detail: "Import files or folders, verify managed copies, skip exact duplicates, and optionally create a project. Cancel Import stops after the current file and keeps completed photos."),
             Feature(title: "Review and metadata", detail: "Ratings, rejection, flags, rating filters, sorting, captions, keywords, photo information and Reveal Managed Original are available."),
-            Feature(title: "Non-destructive editing", detail: "Exposure, contrast, saturation, warmth, tint, shadows, highlights, presets, rotation, straighten, crop, original comparison and selective Stamp preserve managed originals.")
+            Feature(title: "Non-destructive editing", detail: "Exposure, brightness, contrast, saturation, vibrancy, sepia, warmth, tint, shadows, highlights, presets, rotation, flip, straighten, crop, original comparison and selective Stamp preserve originals.")
         ])
     ]
 
