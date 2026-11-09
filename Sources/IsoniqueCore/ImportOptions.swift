@@ -9,6 +9,8 @@ public enum PairingMode: String, Codable, CaseIterable, Identifiable {
 }
 public struct ImportOptions: Codable, Equatable {
     public var pairing = PairingMode.linked
+    public var storage: OriginalStorage?
+    public var createProject: Bool?
     public var prefix = ""
     public var caption = ""
     public var keywords = ""
@@ -22,13 +24,16 @@ public struct ImportOptions: Codable, Equatable {
     public static func isJPEG(_ url: URL) -> Bool { ["jpg", "jpeg"].contains(url.pathExtension.lowercased()) }
     public func files(_ urls: [URL]) -> [URL] {
         let unique = Array(Set(urls)).sorted { $0.path < $1.path }
-        return unique.filter { url in
-            if pairing == .onlyJPEG { return Self.isJPEG(url) }
-            if pairing == .onlyRAW { return Self.isRAW(url) }
-            let siblings = unique.filter { Self.key($0) == Self.key(url) }
-            if pairing == .raw && Self.isJPEG(url) { return !siblings.contains(where: Self.isRAW) }
-            if pairing == .jpeg && Self.isRAW(url) { return !siblings.contains(where: Self.isJPEG) }
-            return true
+        switch pairing {
+        case .onlyJPEG: return unique.filter(Self.isJPEG)
+        case .onlyRAW: return unique.filter(Self.isRAW)
+        case .raw:
+            let preferred = Set(unique.filter(Self.isRAW).map(Self.key))
+            return unique.filter { !Self.isJPEG($0) || !preferred.contains(Self.key($0)) }
+        case .jpeg:
+            let preferred = Set(unique.filter(Self.isJPEG).map(Self.key))
+            return unique.filter { !Self.isRAW($0) || !preferred.contains(Self.key($0)) }
+        default: return unique
         }
     }
     public func applying(to source: Photo) -> Photo {

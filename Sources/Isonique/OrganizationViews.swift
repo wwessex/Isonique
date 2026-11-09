@@ -10,76 +10,46 @@ struct BatchBar: View {
                 Text("\(model.batchSelection.count) selected").monospacedDigit()
                 Button("Select All") { model.batchSelection = Set(model.photos.map(\.id)) }
                 Button("Clear") { model.batchSelection = [] }
-                Group {
-                    Menu("Rating") {
-                        ForEach(-1...5, id: \.self) { rating in
-                            Button(rating == -1 ? "Rejected" : rating == 0 ? "Unrated" : "\(rating) stars") { model.editBatch { $0.rating = rating } }
-                        }
-                    }
-                    Menu("Flag") {
-                        Button("Flag Selected") { model.editBatch { $0.flagged = true } }
-                        Button("Unflag Selected") { model.editBatch { $0.flagged = false } }
-                    }
-                    Menu("Preset") {
-                        ForEach(AdjustmentPreset.allCases) { preset in
-                            Button(preset.rawValue) { model.editBatch { $0.adjustments = preset.applying(to: $0.adjustments) } }
-                        }
-                    }
-                    Button("Stamp", action: model.stamp).disabled(model.liftedAdjustments == nil)
-                    Menu("Organize") {
-                        Menu("Add to Album") {
-                            ForEach(model.library.albums.filter { $0.rule == nil }) { album in
-                                Button(album.name) { model.editBatch { $0.albumIDs.insert(album.id) } }
+                if !model.isViewingTrash {
+                    Group {
+                        Menu("Rating") {
+                            ForEach(-1...5, id: \.self) { rating in
+                                Button(rating == -1 ? "Rejected" : rating == 0 ? "Unrated" : "\(rating) stars") { model.editBatch { $0.rating = rating } }
                             }
                         }
-                        Menu("Move to Project") {
-                            Button("Unassigned") { model.editBatch { $0.projectID = nil } }
-                            ForEach(model.library.projects) { project in
-                                Button(project.name) { model.editBatch { $0.projectID = project.id } }
+                        ColorLabelMenu()
+                        Menu("Flag") {
+                            Button("Flag Selected") { model.editBatch { $0.flagged = true } }
+                            Button("Unflag Selected") { model.editBatch { $0.flagged = false } }
+                        }
+                        Menu("Preset") {
+                            ForEach(AdjustmentPreset.allCases) { preset in
+                                Button(preset.rawValue) { model.editBatch { $0.adjustments = preset.applying(to: $0.adjustments) } }
                             }
                         }
-                        Button("Stack Selected", action: model.stackSelection).disabled(!StackRules.canStack(photoCount: model.batchPhotos.count))
-                        Button("Remove Selected from Stacks") { model.editBatch { $0.stackID = nil } }
-                    }
-                    Button("Export Selected…", action: model.exportPanel)
-                }.disabled(model.batchSelection.isEmpty)
+                        Button("Stamp", action: model.stamp).disabled(model.liftedAdjustments == nil)
+                        Menu("Organize") {
+                            Menu("Add to Album") {
+                                ForEach(model.library.albums.filter { $0.rule == nil }) { album in
+                                    Button(album.name) { model.editBatch { $0.albumIDs.insert(album.id) } }
+                                }
+                            }
+                            Menu("Move to Project") {
+                                Button("Unassigned") { model.editBatch { $0.projectID = nil } }
+                                ForEach(model.library.projects) { project in
+                                    Button(project.name) { model.editBatch { $0.projectID = project.id } }
+                                }
+                            }
+                            Button("Stack Selected", action: model.stackSelection).disabled(!StackRules.canStack(photoCount: model.batchPhotos.count))
+                            Button("Remove Selected from Stacks") { model.editBatch { $0.stackID = nil } }
+                        }
+                        Button("Export Selected…", action: model.exportPanel)
+                        Button("Move to Trash") { model.setPhotosTrashed(model.selectedTrashActionIDs, trashed: true) }
+                            .disabled(model.selectedTrashActionIDs.isEmpty)
+                    }.disabled(model.batchSelection.isEmpty)
+                }
             }.padding(12)
         }.scrollIndicators(.hidden).background(.ultraThinMaterial)
-    }
-}
-
-struct SmartAlbumView: View {
-    @EnvironmentObject var model: Workspace
-    @Environment(\.dismiss) var dismiss
-    @State private var name = ""
-    @State private var rule = SmartAlbumRule()
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text(model.editingSmartAlbum == nil ? "New Smart Album" : "Edit Smart Album").font(.title2.bold())
-            TextField("Album name", text: $name)
-            Picker("Rating", selection: Binding(get: { rule.selectedRatingFilter }, set: { rule.setRatingFilter($0) })) {
-                ForEach(RatingFilter.allCases) { filter in Text(filter.label).tag(filter) }
-            }
-            Toggle("Flagged photos only", isOn: $rule.flaggedOnly)
-            TextField("Name, caption, keyword or camera contains", text: $rule.text)
-            Text("Photos must match all rules. Membership updates automatically as you edit photos.").font(.caption).foregroundStyle(.secondary)
-            Text("\(model.library.photos.filter { rule.includes($0) }.count) matching photos")
-            HStack {
-                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
-                Spacer()
-                Button(model.editingSmartAlbum == nil ? "Create" : "Save") {
-                    var album = Collection(name: name.trimmingCharacters(in: .whitespacesAndNewlines)); album.rule = rule
-                    if let id = model.editingSmartAlbum, let index = model.library.albums.firstIndex(where: { $0.id == id }) {
-                        album.id = id; model.library.albums[index] = album
-                    } else { model.library.albums.append(album) }
-                    model.scope = "album:\(album.id)"; model.showBrowser(); model.save(); dismiss()
-                }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty).keyboardShortcut(.defaultAction)
-            }
-        }.padding(26).frame(width: 440).onAppear {
-            if let album = model.library.albums.first(where: { $0.id == model.editingSmartAlbum }), let savedRule = album.rule {
-                name = album.name; rule = savedRule
-            }
-        }
     }
 }
 
@@ -127,7 +97,7 @@ extension Workspace {
                 do {
                     try BatchExport.prepareDirectory(folder, repository: repository)
                     for (index, photo) in snapshot.enumerated() {
-                        let suffix = options.format == .original ? (photo.originalName as NSString).pathExtension : options.format.suffix
+                        let suffix = options.format == .original ? (photo.filename as NSString).pathExtension : options.format.suffix
                         let base = ((photo.originalName as NSString).lastPathComponent as NSString).deletingPathExtension
                         let url = folder.appendingPathComponent("\(index + 1)-\(base).\(suffix)")
                         try Renderer.export(photo, repository: repository, to: url, options: options)

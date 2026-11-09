@@ -17,6 +17,272 @@ final class LibraryTests: XCTestCase {
         XCTAssertNil(CropRules.aspectRatio(width: 2, height: .infinity))
         XCTAssertNil(CropRules.aspectRatio(width: .nan, height: 2))
     }
+    func testImportJobCancellationKeepsCommittedFilesAndProject() async throws {
+        let directory = temporary!
+        let first = try fixture("01.png", red: 0.1)
+        let second = try fixture("02.png", red: 0.2)
+        let third = try fixture("03.png", red: 0.3)
+        let repo = try LibraryRepository.createEmpty(at: directory.appendingPathComponent("Library"))
+        let (draft, report, updates) = await Task.detached {
+            var draft = Library()
+            var updates: [ImportProgress] = []
+            let report = await ImportJob.run(urls: [third, first, second], options: ImportOptions(), repository: repo,
+                                             projectID: nil, albumID: nil, newProjectName: "Studio", into: &draft) { update in
+                updates.append(update)
+                if update.processed == 1 {
+                    withUnsafeCurrentTask { $0?.cancel() }
+                }
+            }
+            return (draft, report, updates)
+        }.value
+        XCTAssertTrue(report.cancelled)
+        XCTAssertEqual(report.imported, 1)
+        XCTAssertEqual(draft.photos.map(\.originalName), ["01.png"])
+        XCTAssertEqual(updates.map(\.processed), [0, 1, 1])
+        XCTAssertTrue(updates.allSatisfy { $0.total == 3 })
+        let persisted = try repo.load()
+        XCTAssertEqual(persisted.projects.map(\.name), ["Studio"])
+        XCTAssertEqual(persisted.photos.first?.projectID, report.createdProject)
+        XCTAssertEqual(persisted.photos, draft.photos)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: repo.root.appendingPathComponent("Originals").path).count, 1)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: second.path))
+    }
+
+    func testImportJobRecoversFromPerFileErrorsAndSkipsEmptyProject() async throws {
+        let input = temporary.appendingPathComponent("Input")
+        try FileManager.default.createDirectory(at: input, withIntermediateDirectories: false)
+        let unsupported = input.appendingPathComponent("bad.png")
+        try Data("not an image".utf8).write(to: unsupported)
+        let valid = try fixture("valid.png", directory: input)
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        let result = await ImportJob.run(urls: [input], options: ImportOptions(), repository: repo, projectID: nil,
+                                         albumID: nil, into: &library)
+        XCTAssertFalse(result.cancelled)
+        XCTAssertEqual(result.imported, 1)
+        XCTAssertEqual(result.errors.count, 1)
+        XCTAssertTrue(result.errors.first?.contains("bad.png") == true)
+        let empty = await ImportJob.run(urls: [valid, unsupported], options: ImportOptions(), repository: repo,
+                                        projectID: nil, albumID: nil, newProjectName: "Empty", into: &library)
+        XCTAssertEqual(empty.duplicates, 1)
+        XCTAssertEqual(empty.imported, 0)
+        XCTAssertNil(empty.createdProject)
+        XCTAssertTrue(library.projects.isEmpty)
+        XCTAssertTrue(try repo.load().projects.isEmpty)
+    }
+
+    func testReferencedOriginalRelinkExportAndConsolidation() throws {
+        let source = try fixture()
+        let fm = FileManager.default
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        var options = ImportOptions()
+        options.storage = .referenced
+        XCTAssertNil(try JSONDecoder().decode(ImportOptions.self, from: JSONEncoder().encode(ImportOptions())).storage)
+        XCTAssertTrue(try repo.importPhoto(source, projectID: nil, into: &library, options: options))
+        XCTAssertEqual(library.version, 2)
+        let photo = try XCTUnwrap(repo.load().photos.first)
+        XCTAssertEqual(try repo.availableOriginalURL(photo), source.resolvingSymlinksInPath())
+        let originals = repo.root.appendingPathComponent("Originals")
+        XCTAssertTrue(try fm.contentsOfDirectory(atPath: originals.path).isEmpty)
+
+        let moved = temporary.appendingPathComponent("moved.dat")
+        try fm.moveItem(at: source, to: moved)
+        let wrong = temporary.appendingPathComponent("wrong.png")
+        try Data("wrong".utf8).write(to: wrong)
+        XCTAssertThrowsError(try repo.availableOriginalURL(photo))
+        XCTAssertThrowsError(try LibraryBackup.verify(repo))
+        XCTAssertThrowsError(try repo.relinkOriginal(photo.id, to: wrong, in: &library))
+        XCTAssertEqual(try repo.load().photos, [photo])
+        try repo.relinkOriginal(photo.id, to: moved, in: &library)
+        let relinked = try XCTUnwrap(repo.load().photos.first)
+        XCTAssertEqual(relinked.id, photo.id)
+        XCTAssertEqual(relinked.referencedPath, moved.resolvingSymlinksInPath().path)
+        XCTAssertEqual(try LibraryBackup.verify(repo), 1)
+        let originalExport = temporary.appendingPathComponent("export.png")
+        var export = ExportOptions()
+        export.format = .original
+        try Renderer.export(relinked, repository: repo, to: originalExport, options: export)
+        XCTAssertEqual(try LibraryRepository.digest(originalExport), photo.sha256)
+        try Renderer.export(relinked, repository: repo, to: temporary.appendingPathComponent("edited.jpg"))
+
+        let catalogue = repo.root.appendingPathComponent("catalog.json")
+        let saved = try Data(contentsOf: catalogue)
+        try fm.removeItem(at: catalogue)
+        try fm.createDirectory(at: catalogue, withIntermediateDirectories: false)
+        XCTAssertThrowsError(try repo.consolidateOriginal(photo.id, in: &library))
+        XCTAssertEqual(library.photos, [relinked])
+        XCTAssertTrue(try fm.contentsOfDirectory(atPath: originals.path).isEmpty)
+        try fm.removeItem(at: catalogue)
+        try saved.write(to: catalogue)
+
+        try repo.consolidateOriginal(photo.id, in: &library)
+        let managed = try XCTUnwrap(repo.load().photos.first)
+        XCTAssertEqual(managed.id, photo.id)
+        XCTAssertEqual(managed.sha256, photo.sha256)
+        XCTAssertNil(managed.referencedPath)
+        XCTAssertEqual(try LibraryRepository.digest(moved), photo.sha256)
+        XCTAssertEqual(try LibraryRepository.digest(repo.availableOriginalURL(managed)), photo.sha256)
+    }
+
+    func testBackupRetainsOfflineReferenceAndMissingManagedOriginalCanBeRestored() throws {
+        let fm = FileManager.default
+        let source = try fixture()
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        var options = ImportOptions()
+        options.storage = .referenced
+        XCTAssertTrue(try repo.importPhoto(source, projectID: nil, into: &library, options: options))
+        let photo = try XCTUnwrap(library.photos.first)
+        let moved = temporary.appendingPathComponent("moved.png")
+        try fm.moveItem(at: source, to: moved)
+
+        let backup = temporary.appendingPathComponent("Backup")
+        let restored = temporary.appendingPathComponent("Restored")
+        try LibraryBackup.create(from: repo, to: backup)
+        XCTAssertEqual(try LibraryBackup.validateBackup(backup), 1)
+        XCTAssertTrue(try fm.contentsOfDirectory(atPath: backup.appendingPathComponent("Originals").path).isEmpty)
+        try LibraryBackup.restore(from: backup, to: restored, excluding: repo.root)
+        let (restoredRepo, snapshot) = try LibraryBackup.openVerified(restored)
+        XCTAssertEqual(snapshot.photos, [photo])
+        XCTAssertThrowsError(try restoredRepo.availableOriginalURL(photo))
+
+        var repaired = snapshot
+        try restoredRepo.relinkOriginal(photo.id, to: moved, in: &repaired)
+        try restoredRepo.consolidateOriginal(photo.id, in: &repaired)
+        let managed = try XCTUnwrap(repaired.photos.first)
+        let copy = try restoredRepo.availableOriginalURL(managed)
+        try fm.removeItem(at: copy)
+        XCTAssertEqual(try LibraryBackup.openVerified(restored).1.photos, [managed])
+        XCTAssertThrowsError(try LibraryBackup.verify(restoredRepo))
+        try restoredRepo.relinkOriginal(managed.id, to: moved, in: &repaired)
+        XCTAssertEqual(try LibraryBackup.verify(restoredRepo), 1)
+        XCTAssertThrowsError(try restoredRepo.relinkOriginal(managed.id, to: moved, in: &repaired))
+        XCTAssertEqual(try LibraryRepository.digest(copy), photo.sha256)
+
+        var downgraded = snapshot
+        downgraded.version = 1
+        XCTAssertThrowsError(try restoredRepo.save(downgraded))
+        XCTAssertThrowsError(try repo.relinkOriginal(photo.id, to: repo.root.appendingPathComponent("Originals/invalid.png"), in: &library))
+    }
+
+    func testNewLibraryDoesNotReuseExistingOrNestedLocations() throws {
+        let fm = FileManager.default
+        let root = temporary.appendingPathComponent("Client Library")
+        let repo = try LibraryRepository.createEmpty(at: root)
+        XCTAssertEqual(try LibraryBackup.verify(repo), 0)
+        var library = try repo.load()
+        XCTAssertTrue(try repo.importPhoto(fixture(), projectID: nil, into: &library))
+        let separate = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Personal Library"))
+        XCTAssertTrue(try separate.load().photos.isEmpty)
+        XCTAssertThrowsError(try LibraryRepository.createEmpty(at: root))
+        XCTAssertThrowsError(try LibraryRepository.createEmpty(at: root.appendingPathComponent("Originals/Nested")))
+        XCTAssertFalse(fm.fileExists(atPath: root.appendingPathComponent("Originals/Nested").path))
+        let existing = temporary.appendingPathComponent("Empty")
+        try fm.createDirectory(at: existing, withIntermediateDirectories: false)
+        XCTAssertThrowsError(try LibraryRepository.createEmpty(at: existing))
+        XCTAssertTrue(try fm.contentsOfDirectory(atPath: existing.path).isEmpty)
+        XCTAssertThrowsError(try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Legacy.aplibrary/Nested")))
+        XCTAssertEqual(try LibraryBackup.openVerified(root).1.photos, library.photos)
+    }
+
+    func testPhotoTrashPersistsWithOriginalEditsMembershipAndBackup() throws {
+        let source = try fixture()
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        let project = Collection(name: "Project"), album = Collection(name: "Album")
+        library.projects = [project]; library.albums = [album]
+        XCTAssertTrue(try repo.importPhoto(source, projectID: project.id, into: &library, albumID: album.id))
+        library.photos[0].caption = "Delivery"
+        library.photos[0].adjustments.exposure = 1
+        library.photos[0].stackID = UUID()
+        let photo = library.photos[0]
+        let removedAt = Date(timeIntervalSinceReferenceDate: 77)
+        XCTAssertEqual(library.setPhotosTrashed([photo.id], at: removedAt), [photo])
+        XCTAssertTrue(library.setPhotosTrashed([photo.id], at: Date()).isEmpty)
+        XCTAssertTrue(library.activePhotos.isEmpty)
+        try repo.save(library)
+        XCTAssertFalse(try repo.importPhoto(source, projectID: nil, into: &library))
+        XCTAssertEqual(try repo.load().photos.first?.trashedAt, removedAt)
+
+        let backup = temporary.appendingPathComponent("Backup")
+        let restored = temporary.appendingPathComponent("Restored")
+        try LibraryBackup.create(from: repo, to: backup)
+        try LibraryBackup.restore(from: backup, to: restored, excluding: repo.root)
+        let (restoredRepo, snapshot) = try LibraryBackup.openVerified(restored)
+        var restoredLibrary = snapshot
+        XCTAssertEqual(restoredLibrary.setPhotosTrashed([photo.id], at: nil).first?.trashedAt, removedAt)
+        try restoredRepo.save(restoredLibrary)
+        XCTAssertEqual(try restoredRepo.load().activePhotos, [photo])
+        XCTAssertEqual(try LibraryRepository.digest(restoredRepo.originalURL(photo)), try LibraryRepository.digest(source))
+        XCTAssertEqual(try repo.load().photos.first?.trashedAt, removedAt)
+    }
+
+    func testImportCommitsFinalMetadataAndMembershipTogether() throws {
+        let source = try fixture()
+        let sidecar = source.deletingPathExtension().appendingPathExtension("xmp")
+        try """
+        <photos><photo filename="source.png"><caption>Sidecar</caption><rating>4</rating></photo></photos>
+        """.write(to: sidecar, atomically: true, encoding: .utf8)
+        let repo = try LibraryRepository(root: temporary.appendingPathComponent("library"))
+        var library = Library()
+        let project = Collection(name: "Client"), album = Collection(name: "Delivery")
+        library.projects = [project]; library.albums = [album]
+        var options = ImportOptions()
+        options.prefix = "Shoot"; options.applyMetadata = true; options.caption = "Preset"
+        options.keywords = "portrait"; options.readSidecars = true
+        XCTAssertTrue(try repo.importPhoto(source, projectID: project.id, into: &library, options: options, albumID: album.id))
+
+        let saved = try XCTUnwrap(repo.load().photos.first)
+        XCTAssertEqual(saved, library.photos.first)
+        XCTAssertEqual(saved.originalName, "Shoot-source.png")
+        XCTAssertEqual(saved.sourceName, "source.png")
+        XCTAssertEqual(saved.projectID, project.id)
+        XCTAssertEqual(saved.albumIDs, [album.id])
+        XCTAssertEqual(saved.caption, "Sidecar")
+        XCTAssertEqual(saved.keywords, "portrait")
+        XCTAssertEqual(saved.rating, 4)
+        XCTAssertEqual(try LibraryRepository.digest(source), try LibraryRepository.digest(repo.originalURL(saved)))
+
+        try "<invalid>".write(to: sidecar, atomically: true, encoding: .utf8)
+        XCTAssertFalse(try repo.importPhoto(source, projectID: nil, into: &library, options: options))
+        XCTAssertEqual(try repo.load().photos, [saved])
+    }
+
+    func testImportFailureRollsBackRecordAndCopyAndRetryImportsResolvedLink() throws {
+        let source = try fixture()
+        let alias = temporary.appendingPathComponent("linked.png")
+        let fm = FileManager.default
+        try fm.createSymbolicLink(at: alias, withDestinationURL: source)
+        let repo = try LibraryRepository(root: temporary.appendingPathComponent("library"))
+        let catalogue = repo.root.appendingPathComponent("catalog.json")
+        let originals = repo.root.appendingPathComponent("Originals")
+        var library = Library()
+        try fm.createDirectory(at: catalogue, withIntermediateDirectories: false)
+        XCTAssertThrowsError(try repo.importPhoto(alias, projectID: nil, into: &library))
+        XCTAssertTrue(library.photos.isEmpty)
+        XCTAssertTrue(try fm.contentsOfDirectory(atPath: originals.path).isEmpty)
+        try fm.removeItem(at: catalogue)
+
+        let sidecar = alias.deletingPathExtension().appendingPathExtension("xmp")
+        try "<invalid>".write(to: sidecar, atomically: true, encoding: .utf8)
+        var options = ImportOptions()
+        options.readSidecars = true
+        XCTAssertThrowsError(try repo.importPhoto(alias, projectID: nil, into: &library, options: options))
+        XCTAssertTrue(library.photos.isEmpty)
+        XCTAssertTrue(try fm.contentsOfDirectory(atPath: originals.path).isEmpty)
+
+        try fm.removeItem(at: sidecar)
+        XCTAssertTrue(try repo.importPhoto(alias, projectID: nil, into: &library, options: options))
+        let photo = try XCTUnwrap(repo.load().photos.first)
+        let copy = originals.appendingPathComponent(photo.filename)
+        XCTAssertEqual(photo.sourceName, "linked.png")
+        XCTAssertEqual(try copy.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink, false)
+        try fm.removeItem(at: alias)
+        try fm.removeItem(at: source)
+        XCTAssertEqual(try LibraryRepository.digest(copy), photo.sha256)
+    }
+
     func testImportPairingAndNamingPreset() throws {
         let raw = URL(fileURLWithPath: "/shoot/A.nef")
         let jpeg = URL(fileURLWithPath: "/shoot/A.jpg")
@@ -117,11 +383,11 @@ final class LibraryTests: XCTestCase {
         try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
     }
     override func tearDownWithError() throws { try FileManager.default.removeItem(at: temporary) }
-    func fixture(_ name: String = "source.png", directory: URL? = nil) throws -> URL {
+    func fixture(_ name: String = "source.png", directory: URL? = nil, red: CGFloat = 0.25) throws -> URL {
         let url = (directory ?? temporary).appendingPathComponent(name)
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         let context = CGContext(data: nil, width: 32, height: 24, bitsPerComponent: 8, bytesPerRow: 128, space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
-        context.setFillColor(CGColor(red: 0.25, green: 0.4, blue: 0.65, alpha: 1)); context.fill(CGRect(x: 0, y: 0, width: 32, height: 24))
+        context.setFillColor(CGColor(red: red, green: 0.4, blue: 0.65, alpha: 1)); context.fill(CGRect(x: 0, y: 0, width: 32, height: 24))
         let writer = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)!
         CGImageDestinationAddImage(writer, context.makeImage()!, nil)
         XCTAssertTrue(CGImageDestinationFinalize(writer))
@@ -181,6 +447,59 @@ final class LibraryTests: XCTestCase {
             XCTAssertEqual(bytes[3], 255)
         }
     }
+    func testBrightnessVibrancyAndSepiaAffectPixelsAndMatchPNGExport() throws {
+        let source = try fixture()
+        let digest = try LibraryRepository.digest(source)
+        func channels(_ settings: Adjustments) throws -> [Int] {
+            let image = try Renderer.render(source, adjustments: settings)
+            return (try XCTUnwrap(image.dataProvider?.data) as Data).prefix(4).map(Int.init)
+        }
+        let neutral = try channels(Adjustments())
+        var settings = Adjustments()
+        settings.brightness = 0.7
+        let lighter = try channels(settings)
+        XCTAssertTrue(zip(lighter.prefix(3), neutral.prefix(3)).allSatisfy { $0 > $1 })
+        settings.brightness = -0.7
+        let darker = try channels(settings)
+        XCTAssertTrue(zip(darker.prefix(3), neutral.prefix(3)).allSatisfy { $0 < $1 })
+
+        settings = Adjustments()
+        settings.vibrancy = 1
+        let vibrant = try channels(settings)
+        settings.vibrancy = -1
+        let muted = try channels(settings)
+        XCTAssertGreaterThan(vibrant[2] - vibrant[0], neutral[2] - neutral[0])
+        XCTAssertLessThan(muted[2] - muted[0], neutral[2] - neutral[0])
+
+        settings = AdjustmentPreset.sepia.applying(to: Adjustments())
+        let warm = try channels(settings)
+        XCTAssertGreaterThan(warm[0], warm[1])
+        XCTAssertGreaterThan(warm[1], warm[2])
+        XCTAssertEqual(warm[3], 255)
+        settings.brightness = 0.4
+        settings.vibrancy = 0.3
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        XCTAssertTrue(try repo.importPhoto(source, projectID: nil, into: &library))
+        library.photos[0].adjustments = settings
+        try repo.save(library)
+        let photo = try XCTUnwrap(repo.load().photos.first)
+        XCTAssertEqual(photo.adjustments, settings)
+        XCTAssertEqual(settings.stamping(onto: Adjustments(), groups: [.basic]), settings)
+        let destination = temporary.appendingPathComponent("edited.png")
+        var options = ExportOptions()
+        options.format = .png
+        try Renderer.export(photo, repository: repo, to: destination, options: options)
+        let output = try Renderer.render(destination, adjustments: Adjustments())
+        let expected = try Renderer.render(source, adjustments: settings)
+        let outputBytes = try XCTUnwrap(output.dataProvider?.data) as Data
+        let expectedBytes = try XCTUnwrap(expected.dataProvider?.data) as Data
+        XCTAssertEqual(outputBytes.count, expectedBytes.count)
+        XCTAssertTrue(zip(outputBytes, expectedBytes).allSatisfy { abs(Int($0) - Int($1)) <= 1 })
+        XCTAssertEqual(try LibraryRepository.digest(source), digest)
+        XCTAssertEqual(try LibraryRepository.digest(repo.originalURL(photo)), digest)
+    }
+
     func testLegacyRecoveryCopiesAndVerifiesWithoutChangingSource() throws {
         let legacy = temporary.appendingPathComponent("Fixture.aplibrary")
         let masters = legacy.appendingPathComponent("Masters/2026")
@@ -362,12 +681,18 @@ final class LibraryTests: XCTestCase {
         let decoded = try JSONDecoder().decode(Adjustments.self, from: old)
         XCTAssertEqual(decoded.exposure, 1); XCTAssertEqual(decoded.quarterTurns, 0)
         XCTAssertEqual(decoded.straighten, 0); XCTAssertNil(decoded.crop)
+        XCTAssertEqual(decoded.brightness, 0)
+        XCTAssertEqual(decoded.vibrancy, 0)
+        XCTAssertEqual(decoded.sepia, 0)
+        XCTAssertFalse(decoded.flipHorizontal)
+        XCTAssertFalse(decoded.flipVertical)
         let repository = try LibraryRepository(root: temporary.appendingPathComponent("geometry"))
         let source = try fixture()
         let digest = try LibraryRepository.digest(source)
         var library = Library()
         _ = try repository.importPhoto(source, projectID: nil, into: &library)
         library.photos[0].adjustments.quarterTurns = 1
+        library.photos[0].adjustments.toggleFlip(.horizontal)
         library.photos[0].adjustments.crop = PhotoCrop(x: 0.25, y: 0.25, width: 0.5, height: 0.5)
         try repository.save(library)
         let photo = try XCTUnwrap(repository.load().photos.first)
@@ -407,6 +732,19 @@ final class LibraryTests: XCTestCase {
         let topLeft = try Renderer.applyGeometry(image, adjustments: settings)
         XCTAssertEqual(topLeft.width, 20); XCTAssertEqual(topLeft.height, 10)
         XCTAssertGreaterThan(pixel(topLeft, 5, 5)[0], 240)
+        settings.toggleFlip(.horizontal)
+        XCTAssertEqual(settings.crop?.x, 0.5)
+        let croppedAfterFlip = try Renderer.applyGeometry(image, adjustments: settings)
+        XCTAssertEqual(croppedAfterFlip.width, 20)
+        XCTAssertGreaterThan(pixel(croppedAfterFlip, 5, 5)[0], 240)
+        settings.toggleFlip(.vertical)
+        XCTAssertEqual(settings.crop?.y, 0.5)
+        XCTAssertGreaterThan(pixel(try Renderer.applyGeometry(image, adjustments: settings), 5, 5)[0], 240)
+        settings.crop = nil
+        let flipped = try Renderer.applyGeometry(image, adjustments: settings)
+        XCTAssertGreaterThan(pixel(flipped, 35, 15)[0], 240)
+        XCTAssertGreaterThan(pixel(flipped, 5, 5)[2], 240)
+        XCTAssertEqual(settings.stamping(onto: Adjustments(), groups: [.geometry]), settings)
         settings = Adjustments()
         settings.quarterTurns = 4
         XCTAssertEqual(try Renderer.applyGeometry(image, adjustments: settings).dataProvider?.data as Data?, image.dataProvider?.data as Data?)

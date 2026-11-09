@@ -1,15 +1,34 @@
 import Foundation
 
+public enum PhotoColorLabel: Int, Codable, CaseIterable, Identifiable {
+    case red = 1, orange, yellow, green, blue, purple, gray
+    public var id: Self { self }
+    public var title: String {
+        switch self {
+        case .red: return "Red"
+        case .orange: return "Orange"
+        case .yellow: return "Yellow"
+        case .green: return "Green"
+        case .blue: return "Blue"
+        case .purple: return "Purple"
+        case .gray: return "Gray"
+        }
+    }
+}
+
 /// Rules use the current photo values, so album membership updates after every edit.
 public struct SmartAlbumRule: Codable, Equatable {
     public var minimumRating: Int
     public var ratingFilterIndex: Int?
     public var flaggedOnly: Bool
     public var text: String
+    public var query: PhotoQuery?
+    public var projectID: UUID?
     public init(minimumRating: Int = 0, flaggedOnly: Bool = false, text: String = "") {
         self.minimumRating = minimumRating; self.flaggedOnly = flaggedOnly; self.text = text
     }
-    public func includes(_ photo: Photo) -> Bool {
+    public func includes(_ photo: Photo, originalAvailable: () -> Bool? = { nil }) -> Bool {
+        if let projectID, projectID != photo.projectID { return false }
         let matchesRatingAndFlag: Bool
         if let index = ratingFilterIndex, let filter = RatingFilter(rawValue: index) {
             matchesRatingAndFlag = BrowserFilterRules.includes(rating: photo.rating, flagged: photo.flagged, ratingFilter: filter, flaggedOnly: flaggedOnly)
@@ -18,7 +37,8 @@ public struct SmartAlbumRule: Codable, Equatable {
             matchesRatingAndFlag = photo.rating >= minimumRating && (!flaggedOnly || photo.flagged)
         }
         return matchesRatingAndFlag &&
-        (text.isEmpty || [photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(text))
+            (text.isEmpty || [photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(text)) &&
+            (query?.includes(photo, originalAvailable: originalAvailable) ?? true)
     }
     public var selectedRatingFilter: RatingFilter {
         ratingFilterIndex.flatMap(RatingFilter.init(rawValue:)) ?? (minimumRating == -1 ? .all : RatingFilter(rawValue: minimumRating) ?? .unratedAndAbove)
@@ -48,6 +68,15 @@ public struct PhotoVersion: Codable, Identifiable, Equatable {
     public init(name: String, adjustments: Adjustments) { self.name = name; self.adjustments = adjustments }
 }
 public extension Library {
+    var activePhotos: [Photo] { photos.filter { $0.trashedAt == nil } }
+
+    /// Keep identity, membership, recipes and originals intact until Put Back.
+    mutating func setPhotosTrashed(_ ids: Set<UUID>, at date: Date?) -> [Photo] {
+        updatePhotos(ids) { photo in
+            if (photo.trashedAt == nil) != (date == nil) { photo.trashedAt = date }
+        }
+    }
+
     /// Applies a batch to a stable ID snapshot, even if edits change current filters.
     mutating func updatePhotos(_ ids: Set<UUID>, change: (inout Photo) -> Void) -> [Photo] {
         var previous: [Photo] = []
