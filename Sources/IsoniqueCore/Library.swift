@@ -98,10 +98,11 @@ public struct Adjustments: Codable, Equatable {
     public var curveShadows: Double = 0.25
     public var curveMidtones: Double = 0.5
     public var curveHighlights: Double = 0.75
+    public internal(set) var channelCurves: ChannelCurves?
     public var lensDistortion: Double = 0
     public var localBrushes: [LocalBrushStroke] = []
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, localBrushes }
+    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, localBrushes }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
@@ -125,6 +126,7 @@ public struct Adjustments: Codable, Equatable {
         curveShadows = try values.decodeIfPresent(Double.self, forKey: .curveShadows) ?? 0.25
         curveMidtones = try values.decodeIfPresent(Double.self, forKey: .curveMidtones) ?? 0.5
         curveHighlights = try values.decodeIfPresent(Double.self, forKey: .curveHighlights) ?? 0.75
+        channelCurves = try values.decodeIfPresent(ChannelCurves.self, forKey: .channelCurves)
         lensDistortion = try values.decodeIfPresent(Double.self, forKey: .lensDistortion) ?? 0
         localBrushes = try values.decodeIfPresent([LocalBrushStroke].self, forKey: .localBrushes) ?? []
     }
@@ -166,7 +168,12 @@ public extension Adjustments {
             result.brightness = brightness; result.vibrancy = vibrancy; result.sepia = sepia
         }
         if groups.contains(.whiteBalance) { result.warmth = warmth; result.tint = tint }
-        if groups.contains(.tone) { result.shadows = shadows; result.highlights = highlights; result.blackPoint = blackPoint; result.whitePoint = whitePoint; result.gamma = gamma; result.curveShadows = curveShadows; result.curveMidtones = curveMidtones; result.curveHighlights = curveHighlights }
+        if groups.contains(.tone) {
+            result.shadows = shadows; result.highlights = highlights
+            result.blackPoint = blackPoint; result.whitePoint = whitePoint; result.gamma = gamma
+            result.curveShadows = curveShadows; result.curveMidtones = curveMidtones; result.curveHighlights = curveHighlights
+            result.channelCurves = channelCurves
+        }
         if groups.contains(.geometry) {
             result.quarterTurns = quarterTurns; result.straighten = straighten
             result.crop = crop; result.lensDistortion = lensDistortion
@@ -237,23 +244,28 @@ public struct Library: Codable {
     public var albums: [Collection] = []
     public init() {}
 
-    private var hasBrushRecipes: Bool {
-        func hasBrush(_ photo: Photo) -> Bool {
-            !photo.adjustments.localBrushes.isEmpty ||
-                (photo.versions?.contains { !$0.adjustments.localBrushes.isEmpty } ?? false)
+    private func hasRecipe(where includes: (Adjustments) -> Bool) -> Bool {
+        func matches(_ photo: Photo) -> Bool {
+            includes(photo.adjustments) || (photo.versions?.contains { includes($0.adjustments) } ?? false)
         }
-        return photos.contains(where: hasBrush) ||
-            (history?.undo.contains { $0.photo.map(hasBrush) ?? false } ?? false) ||
-            (history?.redo.contains { $0.photo.map(hasBrush) ?? false } ?? false)
+        return photos.contains(where: matches) ||
+            (history?.undo.contains { $0.photo.map(matches) ?? false } ?? false) ||
+            (history?.redo.contains { $0.photo.map(matches) ?? false } ?? false)
     }
 
     public mutating func upgradeForBrushRecipes() {
-        if version < 4, hasBrushRecipes { version = 4 }
+        if version < 4, hasRecipe(where: { !$0.localBrushes.isEmpty }) { version = 4 }
+    }
+
+    public mutating func upgradeForChannelCurves() {
+        if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
 
     func validateSchema() throws {
+        if version == 5 { return }
+        guard !hasRecipe(where: { $0.channelCurves?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
         if version == 4 { return }
-        guard !hasBrushRecipes else { throw LibraryError.unsupportedVersion }
+        guard !hasRecipe(where: { !$0.localBrushes.isEmpty }) else { throw LibraryError.unsupportedVersion }
         if version == 3 { return }
         guard (1...2).contains(version), stackBrowser == nil,
               !photos.contains(where: { $0.sharedOriginalID != nil || $0.versionName != nil }) else {
@@ -588,7 +600,7 @@ public enum Renderer {
         }
         guard let result = context.makeImage() else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
         let toned = try applyTone(result, adjustments: adjustments)
-        let levels = try TonalTools.applying(toned, table: toneTable)
+        let levels = try TonalTools.applying(toned, table: toneTable, curves: adjustments.channelCurves)
         let geometry = PhotoGeometry(width: decoded.width, height: decoded.height, adjustments: adjustments)
         let image = try applyGeometry(applyLens(levels, amount: geometry.lensAmount), geometry: geometry)
         return (image, geometry)

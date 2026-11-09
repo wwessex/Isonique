@@ -18,20 +18,68 @@ public enum TonalTools {
         let segment = min(3, Int(x * 4)); let fraction = x * 4 - Double(segment)
         return points[segment] + (points[segment + 1] - points[segment]) * fraction
     }
-    static func applying(_ image: CGImage, table: [Double]) throws -> CGImage {
+    static func applying(_ image: CGImage, table: [Double], curves: ChannelCurves? = nil) throws -> CGImage {
         let context = try bitmap(image)
         guard let data = context.data else { throw LibraryError.unsupportedImage("levels") }
         let bytes = data.bindMemory(to: UInt8.self, capacity: image.width * image.height * 4)
+        let luminance = curves?.luminance.map(LuminanceCurve.init)
+        func channelTable(_ curve: ChannelCurve?) -> [Double] {
+            let mapped = curve.map { curve in table.map { curve.value(at: $0) } } ?? table
+            return luminance == nil ? mapped : mapped.map(linearSRGB)
+        }
+        let red = channelTable(curves?.red)
+        let green = channelTable(curves?.green)
+        let blue = channelTable(curves?.blue)
         for offset in stride(from: 0, to: image.width * image.height * 4, by: 4) {
-            let alpha = Double(bytes[offset + 3]) / 255
-            guard alpha > 0 else { continue }
-            for channel in 0..<3 {
-                let index = min(255, Int((Double(bytes[offset + channel]) / alpha).rounded()))
-                bytes[offset + channel] = UInt8((table[index] * alpha * 255).rounded())
-            }
+            if offset.isMultiple(of: 65_536) { try Task.checkCancellation() }
+            let alphaByte = Double(bytes[offset + 3])
+            guard alphaByte > 0 else { continue }
+            let alpha = alphaByte / 255
+            let r = red[min(255, Int((Double(bytes[offset]) / alpha).rounded()))]
+            let g = green[min(255, Int((Double(bytes[offset + 1]) / alpha).rounded()))]
+            let b = blue[min(255, Int((Double(bytes[offset + 2]) / alpha).rounded()))]
+            let output = luminance?.apply(r, g, b) ?? (r, g, b)
+            bytes[offset] = UInt8((output.0 * alpha * 255).rounded())
+            bytes[offset + 1] = UInt8((output.1 * alpha * 255).rounded())
+            bytes[offset + 2] = UInt8((output.2 * alpha * 255).rounded())
         }
         guard let output = context.makeImage() else { throw LibraryError.unsupportedImage("levels") }
         return output
+    }
+
+    private static func linearSRGB(_ value: Double) -> Double {
+        value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+    }
+
+    private static func encodedSRGB(_ value: Double) -> Double {
+        value <= 0.0031308 ? value * 12.92 : 1.055 * pow(value, 1 / 2.4) - 0.055
+    }
+
+    private struct LuminanceCurve {
+        private static let resolution = 4096
+        private static let encoded = (0...resolution).map { min(1, encodedSRGB(Double($0) / Double(resolution))) }
+        let targets: [Double]
+
+        init(_ curve: ChannelCurve) {
+            targets = Self.encoded.map { linearSRGB(curve.value(at: $0)) }
+        }
+
+        private static func index(_ value: Double) -> Int {
+            min(resolution, max(0, Int((value * Double(resolution)).rounded())))
+        }
+
+        func apply(_ red: Double, _ green: Double, _ blue: Double) -> (Double, Double, Double) {
+            let luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
+            let target = targets[Self.index(luminance)]
+            // Blend toward black or white in linear light to reach the requested luminance within gamut.
+            let darkening = target < luminance
+            let amount = darkening ? target / max(luminance, .leastNonzeroMagnitude)
+                : (1 - target) / max(1 - luminance, .leastNonzeroMagnitude)
+            let offset = darkening ? 0 : 1 - amount
+            return (Self.encoded[Self.index(red * amount + offset)],
+                    Self.encoded[Self.index(green * amount + offset)],
+                    Self.encoded[Self.index(blue * amount + offset)])
+        }
     }
     public static func histogram(_ image: CGImage) throws -> [Int] {
         let context = try bitmap(image)

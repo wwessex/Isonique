@@ -166,6 +166,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         let nextHistory = newHistory ?? history
         var saved = draft
         saved.history = keepHistory ? nextHistory : nil
+        saved.upgradeForChannelCurves()
         saved.upgradeForBrushRecipes()
         do {
             try repository.save(saved)
@@ -1223,6 +1224,9 @@ struct Inspector: View {
                     adjustment("Highlight output", path: \.adjustments.curveHighlights, range: 0...1, neutral: 0.75)
                     Button("Reset Curve") { model.edit { $0.adjustments.curveShadows = 0.25; $0.adjustments.curveMidtones = 0.5; $0.adjustments.curveHighlights = 0.75 } }
                 }.padding(.top, 10)
+            }
+            DisclosureGroup("Channel Curves") {
+                ChannelCurveEditor(photo: photo).id(photo.id).padding(.top, 10)
             }
             Text("HIGHLIGHTS & SHADOWS").font(.caption).foregroundStyle(.secondary)
             adjustment("Shadows", path: \.adjustments.shadows, range: 0...1)
