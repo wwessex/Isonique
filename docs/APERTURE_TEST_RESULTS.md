@@ -119,3 +119,17 @@
 
 - All 91 automated cases passed on Apple Silicon. Tests verified exact neutral output for existing recipes, quarter-tone anchors and interpolation, automatic percentile selection, flat-channel handling, stale selection, one-step automatic Undo/Redo, and format-7 persistence. The full-size PNG export of a combined Levels and curves recipe matched the shared preview.
 - Native QA applied combined Auto Levels, adjusted the dark quarter, applied separate RGB Auto Levels, and opened the clipping tolerance settings. The disposable catalogue recorded combined endpoints near 0.204 and 0.796, the 0.35 dark quarter, and distinct RGB endpoints. The arm64 release built and passed signature verification.
+
+## Real camera RAW workflows
+
+- The optional optimized `make test-raw` suite ran against four CC0 samples. Their downloaded SHA-256 hashes matched the release manifest. On Apple M5 Pro with macOS 27.3, all four files imported with camera metadata, rendered with format-7 quarter-tone and luminance curves, produced input histograms, and exported. Full-size PNG pixels matched the uncompressed render. Original exports, managed originals and external sources retained their original file hashes. [Fixtures and manifest](https://github.com/tellodaniel/revelraw-sample-raw-files/releases/tag/v1)
+- Single-run render measurements include ImageIO decoding and tonal processing. These are host-specific timings.
+
+| Fixture | Full-size pixels | 384-pixel preview | Full-size render |
+| --- | --- | --- | --- |
+| Sony a7 III ARW | 6000 × 4000 | 347 ms | 2,280 ms |
+| Canon EOS R CR3 | 6720 × 4480 | 218 ms | 2,140 ms |
+| Nikon Z 6 NEF | 6048 × 4024 | 97 ms | 1,688 ms |
+| Ricoh GR III DNG | 6000 × 4000 | 34 ms | 1,694 ms |
+
+- The fixture files remain external. The regular suite skips this test when `ISONIQUE_RAW_FIXTURES` is unset. The sample results cover this version of macOS ImageIO. Other camera models, decoder versions, demosaicing fidelity and high-bit-depth output remain unqualified.
