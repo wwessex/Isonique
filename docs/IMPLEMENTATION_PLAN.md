@@ -67,8 +67,10 @@ New exports record the starting editable values for each photo. Merge combines c
 
 Independent controls such as Exposure and Contrast merge separately. Geometry, Levels, Curves, channel adjustments and brush masks each stay grouped, and the review names the control or group that needs a decision.
 
+Project exports also record the starting collapsed state, global stack picks and album picks. Merge applies one-sided changes and pick removals, and previews conflicting picks separately from photo conflicts. It limits presentation changes to stacks fully within the merge scope. Older exports keep the previous stack merge behavior.
+
 ## Next implementation slice
 
-1. Record stack presentation at project export. Reconcile collapsed state, global picks and album picks against that baseline, preserve state outside the merge scope, and keep older exports compatible.
+1. Record exported album names and Smart Album rules. Reconcile one-sided changes to album definitions scoped to the matching project, preview conflicts, and protect albums shared with other projects. Preserve the existing behavior for exports without an album baseline.
 
 Other open core work includes Finder Trash handoff for Library Trash, relocation naming and subfolders, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

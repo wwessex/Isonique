@@ -12,10 +12,16 @@ public struct ProjectLibraryMergeResult {
     public fileprivate(set) var trashed = 0
     public fileprivate(set) var skipped = 0
     public fileprivate(set) var conflicts = 0
+    public fileprivate(set) var stackUpdates = 0
 }
 
 public struct ProjectPhotoMergeConflict: Sendable {
     public let photoName: String
+    public let fields: [String]
+}
+
+public struct ProjectStackMergeConflict: Sendable {
+    public let representativeName: String
     public let fields: [String]
 }
 
@@ -30,6 +36,8 @@ public struct ProjectLibraryMergePreview: Sendable {
     public let trashNames: [String]
     public let conflicts: [ProjectPhotoMergeConflict]
     public let legacyMatches: Int
+    public let stackUpdates: Int
+    public let stackConflicts: [ProjectStackMergeConflict]
 }
 
 public extension LibraryRepository {
@@ -186,17 +194,28 @@ public extension LibraryRepository {
         result.updated = zip(destination.photos, draft.photos).lazy.filter {
             $0.0.trashedAt == $0.1.trashedAt && $0.0 != $0.1
         }.count
-        let excludedPresentation = preference == .current
-            ? protectedStacks.union(existingStacks) : protectedStacks
-        draft.mergeStackPresentation(source.stackBrowser ?? StackBrowserState(), appliedPhotos: appliedStackPhotos,
-                                     excludedStacks: excludedPresentation, regularAlbums: sourceRegularIDs)
+        var stackConflicts: [ProjectStackMergeConflict] = []
+        if let baseline = membership?.stackPresentation {
+            let presentation = draft.mergeStackPresentation(from: source, baseline: baseline, prefer: preference,
+                                                            appliedPhotos: appliedStackPhotos,
+                                                            excludedStacks: protectedStacks, regularAlbums: sourceRegularIDs)
+            result.stackUpdates = presentation.updated
+            stackConflicts = presentation.conflicts
+        } else {
+            let excludedPresentation = preference == .current ? protectedStacks.union(existingStacks) : protectedStacks
+            result.stackUpdates = draft.mergeLegacyStackPresentation(source.stackBrowser ?? StackBrowserState(),
+                                                                     appliedPhotos: appliedStackPhotos,
+                                                                     excludedStacks: excludedPresentation,
+                                                                     regularAlbums: sourceRegularIDs)
+        }
         try draft.validateSchema()
         _ = try draft.uniqueOriginals()
         try Task.checkCancellation()
         let preview = ProjectLibraryMergePreview(projectName: current.name, added: result.added, updated: result.updated,
                                                  trashed: result.trashed, skipped: result.skipped, addedAlbums: newAlbums.count,
                                                  copiedOriginals: copiedNames.count, trashNames: trashNames,
-                                                 conflicts: conflicts, legacyMatches: legacyMatches)
+                                                 conflicts: conflicts, legacyMatches: legacyMatches,
+                                                 stackUpdates: result.stackUpdates, stackConflicts: stackConflicts)
         guard await review(preview) else { throw CancellationError() }
         try Task.checkCancellation()
         let transfers = incomingOriginals.map { (original: $0, filename: copiedNames[$0.originalID]) }
@@ -204,7 +223,7 @@ public extension LibraryRepository {
                                        transfers: transfers, progress: progress)
         return ProjectLibraryMergeResult(library: draft, project: current, added: result.added,
                                          updated: result.updated, trashed: result.trashed, skipped: result.skipped,
-                                         conflicts: conflicts.count)
+                                         conflicts: conflicts.count + stackConflicts.count, stackUpdates: result.stackUpdates)
     }
 }
 
@@ -228,27 +247,34 @@ private extension Library {
         }
     }
 
-    mutating func mergeStackPresentation(_ source: StackBrowserState, appliedPhotos: Set<UUID>,
-                                         excludedStacks: Set<UUID>, regularAlbums: Set<UUID>) {
-        guard !appliedPhotos.isEmpty else { return }
+    mutating func mergeLegacyStackPresentation(_ source: StackBrowserState, appliedPhotos: Set<UUID>,
+                                               excludedStacks: Set<UUID>, regularAlbums: Set<UUID>) -> Int {
+        guard !appliedPhotos.isEmpty else { return 0 }
         let byID = Dictionary(photos.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         let appliedStacks = Set(appliedPhotos.compactMap { byID[$0]?.stackID }).subtracting(excludedStacks)
         var state = stackBrowser ?? StackBrowserState()
-        for stackID in appliedStacks {
+        var updated: Set<UUID> = []
+        for stackID in appliedStacks where state.collapsed.contains(stackID) != source.collapsed.contains(stackID) {
             state.setCollapsed(source.collapsed.contains(stackID), stackID: stackID)
+            updated.insert(stackID)
         }
         for (stackID, photoID) in source.picks where appliedStacks.contains(stackID) {
-            guard appliedPhotos.contains(photoID), byID[photoID]?.stackID == stackID else { continue }
+            guard state.picks[stackID] != photoID, appliedPhotos.contains(photoID),
+                  byID[photoID]?.stackID == stackID else { continue }
             _ = state.apply(StackPickChange(stackID: stackID, photoID: photoID, selectionID: photoID))
+            updated.insert(stackID)
         }
         for (albumID, picks) in source.albumPicks where regularAlbums.contains(albumID) {
             for (stackID, photoID) in picks where appliedStacks.contains(stackID) {
-                guard appliedPhotos.contains(photoID), let photo = byID[photoID], photo.stackID == stackID,
+                guard state.albumPicks[albumID]?[stackID] != photoID, appliedPhotos.contains(photoID),
+                      let photo = byID[photoID], photo.stackID == stackID,
                       photo.albumIDs.contains(albumID) else { continue }
                 _ = state.apply(StackPickChange(stackID: stackID, albumID: albumID, photoID: photoID, selectionID: photoID))
+                updated.insert(stackID)
             }
         }
         if state != StackBrowserState() { stackBrowser = state; version = max(version, 3) }
         else { stackBrowser = nil }
+        return updated.count
     }
 }
