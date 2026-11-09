@@ -68,3 +68,19 @@ This section supersedes the earlier missing-option inventory for ranks 1–5. Th
 5. Stamp metadata selection: caption, keywords and rating checkboxes in Inspector, off by default. Lift snapshots these values along with adjustments. Stamp replaces checked fields (including empty values), supports metadata-only Stamp, preserves identity/originals and participates in existing Undo/Redo.
 
 No catalogue schema change: recipes retain normalized crop coordinates. Export preferences/presets and crop aspect preferences use per-user UserDefaults; the Lift clipboard and Stamp choices remain session-local. Earlier app versions can still read the catalogue.
+
+## Implemented next five options — 9 November 2026
+
+Ranks 6–10 now have native controls: RAW/JPEG separate/link/prefer import modes, catalogue naming prefixes and saved metadata presets, XMP sidecars and limited XML metadata import, RGB ICC viewer proof simulation and manual radial distortion correction, and optional persistent bounded Undo/Redo. See README → Next five options for the exact supported formats and limits. Earlier missing-option and session-history descriptions are superseded. Full Aperture migration, automatic camera lens profiles, CMYK/paper proofing and RAW codec validation remain unavailable.
+
+## Batch and organization update — 9 November 2026
+
+Missing-feature ranks 2 and 5 now have controls. Batch mode supports multi-selection, ratings, flags, tone presets, selective Stamp, album/project assignment and export with existing options. Undo operates per photo. Smart albums combine live minimum-rating, flag and text predicates; rules can be edited from their sidebar context menu. Explicit stacks group photos for sidebar browsing, with selected-member unstacking. Named editing versions save/restore/delete adjustment recipes without copying originals or metadata. Automatic stacking, collapsed stack covers and separate per-version metadata remain unavailable. Existing catalogues decode optional fields as absent; older executables can discard them. Back/Escape returns from a photo to its current grid; All Photos clears filters and opens the library grid, including when its sidebar row is already selected. The app starts in the grid. Only the native macOS application exists.
+
+## Next five features — 9 November 2026
+
+Implemented live edited-preview luminance histogram, black/white/gamma Levels, a three-control piecewise-linear master curve, capture-time auto stacking and slideshow playback. This supersedes the earlier statements that histogram/levels/curves, automatic stacking and slideshows are wholly absent. README documents controls, formulas and limits. Full library migration, retouching, referenced originals and backup/repair remain missing. New tools are independent implementations, not recovered Aperture algorithms.
+
+## Remaining-feature pass: library protection — 9 November 2026
+
+Detected missing backup/restore and integrity controls in the in-app inventory. Added File menu commands for verified Isonique backups, restore to a new separate folder, read-only catalogue/original integrity checking, and opening a verified existing library. Last opened/restored location is remembered. The guide now marks backup/repair as available with limits: legacy vaults, merging and automatic repair remain absent. Backup format and exclusions are documented in README. This supersedes the earlier statement that backup/restore are wholly absent. No Apple implementation or proprietary catalogue behavior is claimed.

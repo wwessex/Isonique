@@ -17,32 +17,33 @@ struct FeatureGuide: View {
         var id: String { title }
     }
     private let groups: [Group] = [
-        Group(title: "Top 10 missing features", symbol: "circle.dashed", features: [
+        Group(title: "Remaining missing features", symbol: "circle.dashed", features: [
             Feature(title: "1. Full Aperture library migration", detail: "Original recovery exists, but old edits, database-only metadata, project hierarchy and album relationships are not migrated."),
-            Feature(title: "2. Batch photo workflows", detail: "Multi-photo selection, editing, Stamp and export are missing. Stamp and export work on one photo at a time."),
             Feature(title: "3. Retouching and local edits", detail: "Clone, heal, red-eye removal and adjustment brushes are missing."),
-            Feature(title: "4. Advanced tonal tools", detail: "Histogram, curves and levels are missing; basic tone sliders are available."),
-            Feature(title: "5. Smart albums, stacks and versions", detail: "Automatic album rules, stacks and multiple editing versions are missing. Basic projects and albums are available."),
             Feature(title: "6. Referenced-original management", detail: "Discovery, relinking, relocation and consolidation of external originals are missing; imported originals are managed copies."),
-            Feature(title: "7. Library backup and repair", detail: "Vault backup/restore, library merging and catalogue repair tools are missing."),
             Feature(title: "8. Camera capture and import", detail: "Tethered capture and camera/device import controls are missing; file and folder import are available."),
-            Feature(title: "9. Publishing and extensions", detail: "Books, slideshows, printing tools, plug-ins and video workflows are missing."),
+            Feature(title: "9. Publishing and extensions", detail: "Books, printing tools, plug-ins, slideshow export and video workflows are missing. Review → Start Slideshow plays edited photos on this Mac."),
             Feature(title: "10. Cloud sync and other devices", detail: "Cloud sync and web, Windows, iPhone, iPad and Android apps are not included.")
         ]),
-        Group(title: "Remaining missing options", symbol: "slider.horizontal.3", features: [
-            Feature(title: "6. RAW+JPEG pairing", detail: "Choosing how matching RAW and JPEG files are paired during import is not available."),
-            Feature(title: "7. Import naming and metadata presets", detail: "Automatic import renaming and reusable metadata presets are missing."),
-            Feature(title: "8. XML and XMP import", detail: "Aperture XML catalogue and XMP sidecar import choices are missing; embedded metadata import is available."),
-            Feature(title: "9. Color proofing and lens correction", detail: "Soft-proof profiles and lens-correction controls are missing."),
-            Feature(title: "10. Persistent edit history", detail: "An option to retain Undo/Redo history after closing the app is missing; saved adjustments remain in the catalogue.")
+        Group(title: "New options (6–10)", symbol: "slider.horizontal.3", features: [
+            Feature(title: "6. RAW+JPEG pairing", detail: "Both with JPEG or RAW primary, separate originals, strict JPEG/RAW-only filters, and legacy Prefer choices during import. Linked photos have a companion button in Info; each keeps its own edits. macOS decoding limits still apply."),
+            Feature(title: "7. Import naming and metadata presets", detail: "Add a catalogue filename prefix and save named caption, keywords and rating presets in Import Options. Source files are never renamed."),
+            Feature(title: "8. XML and XMP import", detail: "Read matching XMP sidecars during import, or use File → Import XML / XMP Metadata. Supports caption, keywords and rating in XMP and Isonique photo XML, plus AlbumData.xml comments and ratings; no full Aperture catalogue migration."),
+            Feature(title: "9. Color proofing and lens correction", detail: "Choose an RGB ICC profile for a viewer-only color simulation; CMYK and paper/ink simulation are unsupported. Manual radial lens correction applies to preview and export; automatic camera/lens profiles are unavailable."),
+            Feature(title: "10. Persistent edit history", detail: "Enable Keep Undo/Redo history in Import & History Options to retain the latest 100 edits per library across launches. Turning it off removes saved history.")
         ]),
         Group(title: "Available with limits", symbol: "exclamationmark.circle", features: [
+            Feature(title: "7. Library backup and repair", detail: "File → Back Up Library, Restore Library Backup and Check Library Integrity now verify catalogue copies and original hashes. Restores open a separate new library. Legacy vaults, library merging and automatic catalogue repair remain missing."),
+            Feature(title: "4. Histogram, Levels and master curve", detail: "Inspector shows a live luminance histogram of the edited preview, black/white input points, gamma and a master curve with three adjustable output points. Levels and curve settings apply to preview/export and the tone Stamp group. Independent 8-bit sRGB processing; per-channel curves and masks remain unavailable."),
+            Feature(title: "Slideshow playback", detail: "Review → Start Slideshow plays the current filtered/sorted view or batch selection. Pause/play, previous/next, 3/5/10-second timing and Escape to finish. Uses saved edits, loops and leaves the library selection unchanged. No soundtrack or movie export."),
+            Feature(title: "2. Batch photo workflows", detail: "Select Photos enables multiple selection, Select All, rating, flags, presets, selective Stamp, album/project assignment and export to a new folder. Inspector edits one photo; use the selection bar for batch actions. Undo restores one photo per step. Export stops on the first failure and reports completed files."),
+            Feature(title: "5. Smart albums, stacks and versions", detail: "Create smart albums with minimum rating, flagged-only and text rules; right-click to edit rules. Group selected photos into stacks and browse them in the sidebar. Save, restore and delete named adjustment versions in Inspector. Versions share one original and metadata; Review → Auto Stack groups consecutive capture times using a 0–60 second gap, leaving existing stacks and missing dates alone. Legacy Aperture relationships remain unavailable."),
             Feature(title: "Aperture library recovery", detail: "Recovers embedded originals and embedded IPTC captions/keywords and ratings from a verified temporary copy. Reports duplicates and unsupported files separately. Does not migrate database-only metadata, old edits, projects, albums or referenced originals. Keep a separate backup of your old library."),
-            Feature(title: "Export options", detail: "JPEG, PNG, TIFF and unchanged original export, one photo at a time. JPEG quality, longest-edge resizing, saved presets and separate EXIF/IPTC/GPS choices are available. Original copies retain all embedded metadata. Edited output uses 8-bit sRGB."),
+            Feature(title: "Export options", detail: "JPEG, PNG, TIFF and unchanged original export, individually or as a selected batch. JPEG quality, longest-edge resizing, saved presets and separate EXIF/IPTC/GPS choices are available. Original copies retain all embedded metadata. Edited output uses 8-bit sRGB."),
             Feature(title: "Crop", detail: "Move the crop by dragging inside; resize with corner handles or redraw outside. Aspect lock is remembered, presets switch between portrait and landscape, and pixel dimensions can be entered."),
-            Feature(title: "Lift and Stamp", detail: "Copies checked adjustment groups and optional caption, keywords and rating to one photo. Selected metadata replaces target values, including empty values. Multi-photo stamping is missing; the clipboard lasts only for this session."),
+            Feature(title: "Lift and Stamp", detail: "Copies checked adjustment groups and optional caption, keywords and rating to one photo or the selected batch. Selected metadata replaces target values, including empty values; the clipboard lasts only for this session."),
             Feature(title: "RAW and color processing", detail: "Isonique uses its own documented pixel formulas for preview and export. RAW decoding still depends on macOS camera codecs and has not been validated with camera RAW files. LibRaw is a researched replacement, not yet integrated. Old Aperture recipes and matching pixel output are not supported."),
-            Feature(title: "Undo and Redo", detail: "Photo edit history is available during the current session; it does not survive closing the app.")
+            Feature(title: "Undo and Redo", detail: "Session Undo/Redo is always available. Optional persistent history retains the latest 100 photo edits in the catalogue.")
         ]),
         Group(title: "Available now", symbol: "checkmark.circle", features: [
             Feature(title: "Export format, quality, size and metadata", detail: "Choose JPEG, PNG, TIFF or unchanged original; set JPEG quality and longest-edge size; save reusable presets; choose EXIF, IPTC and GPS for edited exports."),
@@ -65,8 +66,8 @@ struct FeatureGuide: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Features & Limits").font(.largeTitle.bold())
-            Text("Top 10 missing features & remaining options").font(.title3)
-            Text("Ranked by impact on everyday photo work. Features are whole workflows; options are choices within a workflow. The first five ranked options are now available: export format, quality and size, metadata, crop precision and Stamp metadata.")
+            Text("Remaining missing features & available options").font(.title3)
+            Text("Ranked by impact on everyday photo work. Features are whole workflows; options are choices within a workflow. All ten ranked options now have controls. See each entry for supported formats and remaining limits.")
                 .foregroundStyle(.secondary)
             TextField("Search features or options, such as RAW or export", text: $query).textFieldStyle(.roundedBorder)
             Toggle("Show only missing or limited features", isOn: $missingOnly)

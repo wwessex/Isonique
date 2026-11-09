@@ -44,3 +44,11 @@ Available in Help → Features & Limits, searchable by feature name:
 The sole maintained implementation is native Apple Silicon macOS. No real Aperture catalogue has been supplied for end-to-end validation; fixture success is limited evidence, not a full compatibility claim.
 
 Embedded metadata uses Apple's [IPTC caption property](https://developer.apple.com/documentation/imageio/kcgimagepropertyiptccaptionabstract) and [ImageIO metadata reader](https://developer.apple.com/documentation/imageio/cgimagemetadatacopystringvaluewithpath(_:_:_:)). No proprietary database schema was guessed or modified.
+
+## Options 6–10 compatibility update
+
+The only maintained variant is native Apple Silicon macOS. RAW/JPEG linking retains independent originals and recipes, and requires matching companions successfully imported together. Import presets rename catalogue display/export names only. XML/XMP support is metadata-only (README lists the accepted schemas), not full Aperture catalogue compatibility. Lens correction is independent radial resampling, not recovered Apple or automatic camera-profile processing. Proofing accepts RGB ICC only and affects the viewer, not output. Optional history is bounded to 100 edits in the catalogue; switching it off removes persisted snapshots. Older executables ignore new optional fields and can discard them when saving.
+
+## Isonique backup support — 9 November 2026
+
+Verified backup/restore, integrity checking and existing-library opening now work for this app's catalogue and managed originals. New destinations are mandatory. Backups retain the exact saved catalogue and every referenced original, with SHA-256 validation and a catalogue manifest. Restore switches the active library only after a successful verified copy. UserDefaults preferences and unreferenced files are excluded. Legacy Aperture vaults, library merging and automatic repair remain unsupported. No catalogue schema change; backup-manifest.json is an auxiliary file.
