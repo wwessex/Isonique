@@ -116,6 +116,69 @@ final class ProjectLibraryMergeTests: XCTestCase {
         XCTAssertEqual(try LibraryBackup.verify(fixture.destination), 4)
     }
 
+    func testExportMembershipTrashesOnlyPreviouslyExportedMatchingPhotos() async throws {
+        let fixture = try fixture(keepsExportMembership: true)
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        var incoming = try fixture.source.load()
+        let provenance = try XCTUnwrap(incoming.projectExportMembership)
+        XCTAssertEqual(provenance.projectID, fixture.project.id)
+        XCTAssertNotNil(provenance.originalsByPhoto[fixture.absent.id])
+        incoming.photos.removeAll { $0.id == fixture.moved.id }
+        try fixture.source.save(incoming)
+        var destination = try fixture.destination.load()
+        let later = try photo("later.png", byte: 8, project: fixture.project.id, in: fixture.destination)
+        destination.photos.append(later)
+        try fixture.destination.save(destination)
+
+        let result = try await fixture.destination.mergeProjectLibrary(from: fixture.source.root, prefer: .incoming, applyTrash: true,
+                                                                         review: { preview in
+            XCTAssertEqual(preview.projectName, fixture.project.name)
+            XCTAssertEqual(preview.trashed, 2)
+            XCTAssertEqual(Set(preview.trashNames), [fixture.deleted.displayName, fixture.absent.displayName])
+            XCTAssertEqual(preview.skipped, 1)
+            XCTAssertEqual(preview.copiedOriginals, 1)
+            return true
+        })
+
+        let saved = try fixture.destination.load()
+        XCTAssertEqual(result.trashed, 2)
+        XCTAssertEqual(result.skipped, 1)
+        XCTAssertNotNil(saved.photos.first { $0.id == fixture.absent.id }?.trashedAt)
+        XCTAssertEqual(saved.photos.first { $0.id == later.id }, later)
+        XCTAssertEqual(saved.photos.first { $0.id == fixture.moved.id }, fixture.moved)
+    }
+
+    func testRejectingReviewDoesNotStageOrPublishAnyChanges() async throws {
+        let fixture = try fixture(keepsExportMembership: true)
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let root = fixture.destination.root
+        let catalogue = root.appendingPathComponent("catalog.json")
+        let before = try Data(contentsOf: catalogue)
+        let originals = root.appendingPathComponent("Originals")
+        let files = FileManager.default
+        let names = Set(try files.contentsOfDirectory(atPath: originals.path))
+        var reviewed = false
+        do {
+            _ = try await fixture.destination.mergeProjectLibrary(from: fixture.source.root, prefer: .incoming, applyTrash: true,
+                                                                   review: { preview in
+                reviewed = true
+                XCTAssertEqual(preview.added, 2)
+                XCTAssertEqual(preview.updated, 1)
+                XCTAssertEqual(preview.trashed, 2)
+                XCTAssertEqual(preview.addedAlbums, 2)
+                XCTAssertEqual(preview.copiedOriginals, 1)
+                return false
+            }, progress: { _ in
+                XCTFail("Declining a preview should skip staging")
+            })
+            XCTFail("Expected declined review to cancel the merge")
+        } catch is CancellationError {}
+        XCTAssertTrue(reviewed)
+        XCTAssertEqual(try Data(contentsOf: catalogue), before)
+        XCTAssertEqual(Set(try files.contentsOfDirectory(atPath: originals.path)), names)
+        XCTAssertFalse(try files.contentsOfDirectory(atPath: root.path).contains { $0.hasPrefix(".isonique-project-import-") })
+    }
+
     private struct Fixture {
         let root: URL
         let source: LibraryRepository
@@ -133,7 +196,7 @@ final class ProjectLibraryMergeTests: XCTestCase {
         let sourceCatalogue: Data
     }
 
-    private func fixture() throws -> Fixture {
+    private func fixture(keepsExportMembership: Bool = false) throws -> Fixture {
         let root = FileManager.default.temporaryDirectory.resolvingSymlinksInPath()
             .appendingPathComponent("IsoniqueProjectMerge-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: false)
@@ -165,6 +228,7 @@ final class ProjectLibraryMergeTests: XCTestCase {
         try destination.save(current)
 
         var incoming = opened
+        if !keepsExportMembership { incoming.projectExportMembership = nil }
         let newAlbum = Collection(name: "Imported album")
         var newSmart = Collection(name: "Imported Smart Album")
         newSmart.rule = SmartAlbumRule()

@@ -59,10 +59,12 @@ File → Export Project as Library packages the active photos in one project as 
 
 File → Import Project Library adds a verified, self-contained export as a separate project. Copies are independent even when their bytes match originals in the destination. The importer remaps colliding identities, scopes Smart Albums to the imported project and saves the whole project together. Cancellation and save failures clean up the copies. Crash recovery for forcibly interrupted catalogue writes remains open.
 
-File → Merge Project Library reconciles a self-contained export with its matching project by stable IDs. The user chooses which matching photo values to keep. New versions reuse a verified original, while new originals are staged and published with one catalogue update. An explicit option applies source Trash changes. Absent and moved photos stay in place.
+File → Merge Project Library reconciles a self-contained export with its matching project by stable IDs. The user chooses which matching photo values to keep. New versions reuse a verified original, while new originals are staged and published with one catalogue update. An explicit option applies source Trash changes. Photos moved to a different destination project stay in place.
+
+New exports record the project photo IDs and original fingerprints at export time. Merge can use that record to identify previously exported photos that were removed. Destination-only additions stay in place, and older exports apply only explicit Trash changes. The review shows proposed additions, updates, copies and Trash moves before staging.
 
 ## Next implementation slice
 
-1. Store export membership provenance and show the merge plan before applying it. Distinguish removed exported photos from destination-only additions and preserve compatibility with older exports.
+1. Extend the project export baseline to track edits and metadata so merge can distinguish one-sided edits from conflicts. Keep compatibility with exports that have only membership provenance. Exercise conflicts, destination-only edits, imported-only edits, cancellation and rollback.
 
 Other open core work includes Finder Trash handoff for Library Trash, relocation naming and subfolders, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

@@ -1,5 +1,22 @@
 import Foundation
 
+struct ProjectExportMembership: Codable {
+    struct Original: Codable {
+        let id: UUID
+        let fingerprint: String
+
+        init(_ photo: Photo) {
+            id = photo.originalID
+            fingerprint = photo.sha256
+        }
+
+        func matches(_ photo: Photo) -> Bool { id == photo.originalID && fingerprint == photo.sha256 }
+    }
+
+    let projectID: UUID
+    let originalsByPhoto: [UUID: Original]
+}
+
 extension Library {
     func catalogueForProjectExport(_ projectID: UUID) throws -> Library {
         guard let project = projects.first(where: { $0.id == projectID }) else {
@@ -9,6 +26,10 @@ extension Library {
         var exported = Library()
         exported.version = version
         exported.projects = [project]
+        exported.projectExportMembership = ProjectExportMembership(
+            projectID: projectID,
+            originalsByPhoto: Dictionary(members.map { ($0.id, ProjectExportMembership.Original($0)) },
+                                        uniquingKeysWith: { first, _ in first }))
         exported.photos = members.map { photo in
             var copy = photo
             copy.referencedPath = nil

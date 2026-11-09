@@ -13,9 +13,21 @@ public struct ProjectLibraryMergeResult {
     public fileprivate(set) var skipped = 0
 }
 
+public struct ProjectLibraryMergePreview: Sendable {
+    public let projectName: String
+    public let added: Int
+    public let updated: Int
+    public let trashed: Int
+    public let skipped: Int
+    public let addedAlbums: Int
+    public let copiedOriginals: Int
+    public let trashNames: [String]
+}
+
 public extension LibraryRepository {
     /// Merge an edited export into its matching project by stable catalogue identity.
     func mergeProjectLibrary(from folder: URL, prefer preference: ProjectMergePreference, applyTrash: Bool = false,
+                             review: (ProjectLibraryMergePreview) async -> Bool = { _ in true },
                              progress: (ImportProgress) async -> Void = { _ in }) async throws -> ProjectLibraryMergeResult {
         let (sourceRoot, source, project) = try readProjectLibrary(from: folder, allowTrashed: true)
         let (catalogue, destination) = try LibraryBackup.readCatalogue(root)
@@ -67,6 +79,7 @@ public extension LibraryRepository {
         var copiedNames: [UUID: String] = [:]
         var appliedStackPhotos: Set<UUID> = []
         var checkedOriginals: Set<UUID> = []
+        var trashNames: [String] = []
         for photo in source.photos {
             try Task.checkCancellation()
             if let index = indices[photo.id] {
@@ -75,7 +88,7 @@ public extension LibraryRepository {
                 if let deleted = photo.trashedAt {
                     if applyTrash && existing.trashedAt == nil {
                         draft.photos[index].trashedAt = deleted
-                        result.trashed += 1
+                        trashNames.append(existing.displayName)
                     }
                     continue
                 }
@@ -125,6 +138,21 @@ public extension LibraryRepository {
                 result.added += 1
             }
         }
+        if applyTrash, let membership = source.projectExportMembership, membership.projectID == project.id {
+            let exportedIDs = Set(source.photos.map(\.id))
+            let trashDate = Date()
+            for photo in destination.photos where photo.trashedAt == nil && !exportedIDs.contains(photo.id) {
+                try Task.checkCancellation()
+                guard let original = membership.originalsByPhoto[photo.id], let index = indices[photo.id] else { continue }
+                guard photo.projectID == project.id, original.matches(photo) else {
+                    result.skipped += 1
+                    continue
+                }
+                draft.photos[index].trashedAt = trashDate
+                trashNames.append(photo.displayName)
+            }
+        }
+        result.trashed = trashNames.count
         let existingStacks = Set(destination.photos.compactMap(\.stackID))
         let existingPairs = Set(destination.photos.compactMap(\.pairID))
         draft.dropIncompleteNewGroups(existingStacks: existingStacks, existingPairs: existingPairs)
@@ -137,6 +165,12 @@ public extension LibraryRepository {
                                      excludedStacks: excludedPresentation, regularAlbums: sourceRegularIDs)
         try draft.validateSchema()
         _ = try draft.uniqueOriginals()
+        try Task.checkCancellation()
+        let preview = ProjectLibraryMergePreview(projectName: current.name, added: result.added, updated: result.updated,
+                                                 trashed: result.trashed, skipped: result.skipped, addedAlbums: newAlbums.count,
+                                                 copiedOriginals: copiedNames.count, trashNames: trashNames)
+        guard await review(preview) else { throw CancellationError() }
+        try Task.checkCancellation()
         let transfers = incomingOriginals.map { (original: $0, filename: copiedNames[$0.originalID]) }
         try await commitProjectLibrary(draft, catalogue: catalogue, sourceRoot: sourceRoot,
                                        transfers: transfers, progress: progress)

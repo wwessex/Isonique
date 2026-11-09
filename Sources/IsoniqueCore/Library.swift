@@ -248,6 +248,7 @@ public struct Photo: Codable, Identifiable, Equatable {
     }
 }
 public struct Library: Codable {
+    var projectExportMembership: ProjectExportMembership?
     public var history: EditHistory?
     public var stackBrowser: StackBrowserState?
     public var version = 1
