@@ -37,8 +37,10 @@ Auto Curves and Loupe-sampled curve points use the existing channel curve recipe
 
 Grid, List and filmstrip share a 64 MiB thumbnail cache and a bounded, cancellable decode queue. Native browsing and a deterministic 1,200-photo request replay were exercised.
 
+The Browser reuses its last metadata-only filter and sort result and a photo selection index. Queries that depend on original availability still check the files live.
+
 ## Next implementation slice
 
-1. Reduce repeated metadata-only filter and sort work in the Browser while preserving live original availability checks.
+1. Add persistent Grid thumbnail sizes without changing List or filmstrip sizing.
 
 Other open core work includes Finder Trash handoff, batch relinking, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
