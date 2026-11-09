@@ -17,6 +17,60 @@ final class LibraryTests: XCTestCase {
         XCTAssertNil(CropRules.aspectRatio(width: 2, height: .infinity))
         XCTAssertNil(CropRules.aspectRatio(width: .nan, height: 2))
     }
+    func testImportJobCancellationKeepsCommittedFilesAndProject() async throws {
+        let directory = temporary!
+        let first = try fixture("01.png", red: 0.1)
+        let second = try fixture("02.png", red: 0.2)
+        let third = try fixture("03.png", red: 0.3)
+        let repo = try LibraryRepository.createEmpty(at: directory.appendingPathComponent("Library"))
+        let (draft, report, updates) = await Task.detached {
+            var draft = Library()
+            var updates: [ImportProgress] = []
+            let report = await ImportJob.run(urls: [third, first, second], options: ImportOptions(), repository: repo,
+                                             projectID: nil, albumID: nil, newProjectName: "Studio", into: &draft) { update in
+                updates.append(update)
+                if update.processed == 1 {
+                    withUnsafeCurrentTask { $0?.cancel() }
+                }
+            }
+            return (draft, report, updates)
+        }.value
+        XCTAssertTrue(report.cancelled)
+        XCTAssertEqual(report.imported, 1)
+        XCTAssertEqual(draft.photos.map(\.originalName), ["01.png"])
+        XCTAssertEqual(updates.map(\.processed), [0, 1, 1])
+        XCTAssertTrue(updates.allSatisfy { $0.total == 3 })
+        let persisted = try repo.load()
+        XCTAssertEqual(persisted.projects.map(\.name), ["Studio"])
+        XCTAssertEqual(persisted.photos.first?.projectID, report.createdProject)
+        XCTAssertEqual(persisted.photos, draft.photos)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: repo.root.appendingPathComponent("Originals").path).count, 1)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: second.path))
+    }
+
+    func testImportJobRecoversFromPerFileErrorsAndSkipsEmptyProject() async throws {
+        let input = temporary.appendingPathComponent("Input")
+        try FileManager.default.createDirectory(at: input, withIntermediateDirectories: false)
+        let unsupported = input.appendingPathComponent("bad.png")
+        try Data("not an image".utf8).write(to: unsupported)
+        let valid = try fixture("valid.png", directory: input)
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        let result = await ImportJob.run(urls: [input], options: ImportOptions(), repository: repo, projectID: nil,
+                                         albumID: nil, into: &library)
+        XCTAssertFalse(result.cancelled)
+        XCTAssertEqual(result.imported, 1)
+        XCTAssertEqual(result.errors.count, 1)
+        XCTAssertTrue(result.errors.first?.contains("bad.png") == true)
+        let empty = await ImportJob.run(urls: [valid, unsupported], options: ImportOptions(), repository: repo,
+                                        projectID: nil, albumID: nil, newProjectName: "Empty", into: &library)
+        XCTAssertEqual(empty.duplicates, 1)
+        XCTAssertEqual(empty.imported, 0)
+        XCTAssertNil(empty.createdProject)
+        XCTAssertTrue(library.projects.isEmpty)
+        XCTAssertTrue(try repo.load().projects.isEmpty)
+    }
+
     func testReferencedOriginalRelinkExportAndConsolidation() throws {
         let source = try fixture()
         let fm = FileManager.default
@@ -329,11 +383,11 @@ final class LibraryTests: XCTestCase {
         try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
     }
     override func tearDownWithError() throws { try FileManager.default.removeItem(at: temporary) }
-    func fixture(_ name: String = "source.png", directory: URL? = nil) throws -> URL {
+    func fixture(_ name: String = "source.png", directory: URL? = nil, red: CGFloat = 0.25) throws -> URL {
         let url = (directory ?? temporary).appendingPathComponent(name)
         let colorSpace = CGColorSpaceCreateDeviceRGB()
         let context = CGContext(data: nil, width: 32, height: 24, bitsPerComponent: 8, bytesPerRow: 128, space: colorSpace, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
-        context.setFillColor(CGColor(red: 0.25, green: 0.4, blue: 0.65, alpha: 1)); context.fill(CGRect(x: 0, y: 0, width: 32, height: 24))
+        context.setFillColor(CGColor(red: red, green: 0.4, blue: 0.65, alpha: 1)); context.fill(CGRect(x: 0, y: 0, width: 32, height: 24))
         let writer = CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil)!
         CGImageDestinationAddImage(writer, context.makeImage()!, nil)
         XCTAssertTrue(CGImageDestinationFinalize(writer))

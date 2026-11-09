@@ -29,6 +29,9 @@ enum EditTool: String { case select, crop, straighten }
     @Published var originalStatusRevision = 0
     @Published var busy = false
     @Published private(set) var importInProgress = false
+    @Published private(set) var importProgress: ImportProgress?
+    @Published private(set) var cancellingImport = false
+    private var importTask: Task<(Library, ImportReport), Never>?
     @Published var status = "Ready · originals are preserved"
     @Published var error: String?
     @Published var viewer = false
@@ -279,68 +282,51 @@ enum EditTool: String { case select, crop, straighten }
         showSlideshow = !slideshowPhotos.isEmpty
     }
     func importPanel() {
+        guard !busy, repository != nil else { return }
         let panel = NSOpenPanel(); panel.title = "Import photographs"
         panel.canChooseDirectories = true; panel.canChooseFiles = true; panel.allowsMultipleSelection = true
         guard panel.runModal() == .OK else { return }
         pendingImport = panel.urls; showImportOptions = true
     }
-    func importURLs(_ urls: [URL], options: ImportOptions = ImportOptions()) {
+    func importURLs(_ urls: [URL], options: ImportOptions = ImportOptions(), newProjectName: String? = nil) {
         guard !busy, let repository else { return }
-        busy = true; importInProgress = true; status = "Importing and verifying originals…"
-        var snapshot = library
+        busy = true; importInProgress = true; status = "Importing originals…"
+        let initialLibrary = library
         let projectID = library.projects.first(where: { scope == "project:\($0.id)" })?.id
         let albumID = library.albums.first(where: { $0.rule == nil && scope == "album:\($0.id)" })?.id
-        Task {
-            let result = await Task.detached(priority: .userInitiated) { () -> (Library, Int, Int, [String], UUID?) in
-                var imported = 0, duplicates = 0, errors: [String] = []
-                var importedSelection: UUID?
-                var candidates: [URL] = []
-                for url in urls {
-                    if ["aplibrary", "aperturelibrary", "photoslibrary", "photolibrary", "app"].contains(url.pathExtension.lowercased()) { errors.append("\(url.lastPathComponent): use legacy recovery"); continue }
-                    var directory: ObjCBool = false
-                    FileManager.default.fileExists(atPath: url.path, isDirectory: &directory)
-                    candidates += directory.boolValue ? LibraryRepository.imageFiles(in: url) : [url]
-                }
-                let files = options.files(candidates)
-                var pairs: [String: [(UUID, Bool)]] = [:]
-                for file in files {
-                    do {
-                        if try repository.importPhoto(file, projectID: projectID, into: &snapshot, options: options, albumID: albumID) {
-                            let id = snapshot.photos[snapshot.photos.count - 1].id
-                            importedSelection = id
-                            if options.pairing.linksCompanions, ImportOptions.isRAW(file) || ImportOptions.isJPEG(file) {
-                                pairs[ImportOptions.key(file), default: []].append((id, ImportOptions.isRAW(file)))
-                            }
-                            imported += 1
-                        } else { duplicates += 1 }
-                    } catch { errors.append("\(file.lastPathComponent): \(error.localizedDescription)") }
-                }
-                let matchedPairs = pairs.values.filter { members in
-                    members.contains { $0.1 } && members.contains { !$0.1 }
-                }
-                if !matchedPairs.isEmpty {
-                    var paired = snapshot
-                    var pairedSelection = importedSelection
-                    for members in matchedPairs {
-                        let pairID = UUID(), ids = Set(members.map { $0.0 })
-                        for index in paired.photos.indices where ids.contains(paired.photos[index].id) { paired.photos[index].pairID = pairID }
-                        if let selected = importedSelection, ids.contains(selected),
-                           let primary = members.first(where: { $0.1 == (options.pairing == .linkedRAW) }) {
-                            pairedSelection = primary.0
-                        }
-                    }
-                    do {
-                        try repository.save(paired)
-                        snapshot = paired
-                        importedSelection = pairedSelection
-                    } catch { errors.append("RAW + JPEG linking: \(error.localizedDescription)") }
-                }
-                return (snapshot, imported, duplicates, errors, importedSelection)
-            }.value
-            library = result.0; selection = result.4 ?? selection; importInProgress = false; busy = false
-            status = "Imported \(result.1) · duplicates \(result.2) · failed \(result.3.count)"
-            if !result.3.isEmpty { error = result.3.prefix(8).joined(separator: "\n") }
+        let task = Task.detached(priority: .userInitiated) {
+            var draft = initialLibrary
+            let report = await ImportJob.run(urls: urls, options: options, repository: repository, projectID: projectID,
+                                             albumID: albumID, newProjectName: newProjectName, into: &draft) { progress in
+                await self.reportImportProgress(progress)
+            }
+            return (draft, report)
         }
+        importTask = task
+        Task {
+            let (draft, report) = await task.value
+            library = draft
+            if let project = report.createdProject {
+                showBrowser(allPhotos: true)
+                scope = "project:\(project)"
+            }
+            selection = report.selection ?? selection
+            importTask = nil; importProgress = nil; cancellingImport = false
+            importInProgress = false; busy = false
+            let prefix = report.cancelled ? "Import cancelled · " : ""
+            status = prefix + "Imported \(report.imported) · duplicates \(report.duplicates) · failed \(report.errors.count)"
+            if !report.errors.isEmpty { error = report.errors.prefix(8).joined(separator: "\n") }
+        }
+    }
+
+    private func reportImportProgress(_ progress: ImportProgress) {
+        if !cancellingImport { importProgress = progress }
+    }
+
+    func cancelImport() {
+        guard let importTask, !cancellingImport else { return }
+        cancellingImport = true
+        importTask.cancel()
     }
     func recoverPanel() {
         guard let repository, !busy else { return }
@@ -435,6 +421,9 @@ enum EditTool: String { case select, crop, straighten }
             }
             CommandGroup(after: .newItem) {
                 Button("Import Photos…", action: workspace.importPanel).keyboardShortcut("i").disabled(workspace.busy || workspace.repository == nil)
+                if workspace.importInProgress {
+                    Button("Cancel Import", action: workspace.cancelImport).disabled(workspace.cancellingImport)
+                }
                 Button("Import XML / XMP Metadata…", action: workspace.importMetadataPanel)
                     .disabled(workspace.busy || workspace.isViewingTrash || workspace.library.activePhotos.isEmpty)
                 Button("Import & History Options…") { workspace.pendingImport = []; workspace.showImportOptions = true }.disabled(workspace.busy)
@@ -497,7 +486,7 @@ struct ContentView: View {
     @State private var collectionName = ""
     @State private var creatingProject = true
     @State private var showCollection = false
-    var body: some View {
+    private var workspaceView: some View {
         NavigationSplitView {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 10) {
@@ -625,6 +614,12 @@ struct ContentView: View {
             ToolbarItem { Button(action: model.importPanel) { Label("Import", systemImage: "square.and.arrow.down") } }
             ToolbarItem { Button(action: model.exportPanel) { Label("Export", systemImage: "square.and.arrow.up") }.disabled(model.isViewingTrash || (model.batchMode ? model.batchPhotos.isEmpty : model.selected == nil)) }
         }
+    }
+    var body: some View {
+        VStack(spacing: 0) {
+            workspaceView
+            if model.importInProgress { ImportProgressBar() }
+        }
         .sheet(isPresented: $model.showAutoStack) { AutoStackView().environmentObject(model) }
         .sheet(isPresented: $model.showSlideshow) {
             if let repository = model.repository, !model.slideshowPhotos.isEmpty { SlideshowView(photos: model.slideshowPhotos, repository: repository) }
@@ -642,7 +637,7 @@ struct ContentView: View {
         .alert("Isonique", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button("OK") { model.error = nil } } message: { Text(model.error ?? "") }
         .onChange(of: model.scope) { _, _ in
             if model.isViewingTrash { model.search = ""; model.ratingFilter = .all; model.originalFilter = .all }
-            model.selection = model.photos.first?.id
+            if model.selected == nil { model.selection = model.photos.first?.id }
             model.batchSelection = []
             model.showBrowser()
         }

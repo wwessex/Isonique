@@ -12,6 +12,7 @@ public enum PairingMode: String, Codable, CaseIterable, Identifiable {
 public struct ImportOptions: Codable, Equatable {
     public var pairing = PairingMode.linked
     public var storage: OriginalStorage?
+    public var createProject: Bool?
     public var prefix = ""
     public var caption = ""
     public var keywords = ""

@@ -50,7 +50,7 @@ struct FeatureGuide: View {
             Feature(title: "Export format, quality, size and metadata", detail: "Choose JPEG, PNG, TIFF or unchanged original; set JPEG quality and longest-edge size; save reusable presets; choose EXIF, IPTC and GPS for edited exports."),
             Feature(title: "Precise crop and selective metadata Stamp", detail: "Move and resize crops, lock aspect, switch portrait/landscape, enter exact pixels, and Stamp selected captions, keywords and ratings."),
             Feature(title: "Multiple Isonique libraries", detail: "Create a separate folder using File → New Isonique Library and switch using File → Open Isonique Library."),
-            Feature(title: "Import and organize", detail: "Import files or folders, verify managed copies, skip exact duplicates, create projects and albums, and search names, keywords and cameras."),
+            Feature(title: "Import and organize", detail: "Import files or folders, verify managed copies, skip exact duplicates, and optionally create a project. Cancel Import stops after the current file and keeps completed photos."),
             Feature(title: "Review and metadata", detail: "Ratings, rejection, flags, rating filters, sorting, captions, keywords, photo information and Reveal Managed Original are available."),
             Feature(title: "Non-destructive editing", detail: "Exposure, contrast, saturation, warmth, tint, shadows, highlights, presets, rotation, straighten, crop, original comparison and selective Stamp preserve managed originals.")
         ])
