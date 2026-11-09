@@ -100,6 +100,49 @@ final class TonalToolsTests: XCTestCase {
         XCTAssertEqual(bins.channelCurves.red.reduce(0, +), 1)
         XCTAssertEqual(bins.channelCurves.green[0], 1)
     }
+
+    func testQuarterTonesPreserveNeutralRecipesAndAnchorEndpointsAndMidpoint() throws {
+        var recipe = Adjustments()
+        recipe.blackPoint = 0.13
+        recipe.whitePoint = 0.83
+        recipe.gamma = 1.7
+        recipe.curveMidtones = 0.62
+        let neutral = (0...255).map { TonalTools.map(Double($0) / 255, adjustments: recipe) }
+        recipe.darkLevelQuarter = 0.40
+        recipe.lightLevelQuarter = 0.60
+        XCTAssertNotEqual((0...255).map { TonalTools.map(Double($0) / 255, adjustments: recipe) }, neutral)
+        recipe.darkLevelQuarter = 0.25
+        recipe.lightLevelQuarter = 0.75
+        XCTAssertNil(recipe.levelQuarterTones)
+        XCTAssertEqual((0...255).map { TonalTools.map(Double($0) / 255, adjustments: recipe) }, neutral)
+        var levels = try JSONDecoder().decode(LevelValues.self, from: Data(#"{"blackPoint":0,"whitePoint":1,"gamma":1}"#.utf8))
+        XCTAssertNil(levels.quarterTones)
+        levels.darkQuarter = 0.38
+        levels.lightQuarter = 0.61
+        let inputs = [0.0, 0.125, 0.25, 0.5, 0.75, 1.0]
+        let outputs = [0.0, 0.19, 0.38, 0.5, 0.61, 1.0]
+        for (input, output) in zip(inputs, outputs) {
+            XCTAssertEqual(levels.map(input), output, accuracy: 1e-12)
+        }
+        recipe.setLevels(levels, for: .blue)
+        XCTAssertTrue(recipe.hasLevelQuarterTones)
+        XCTAssertEqual(try JSONDecoder().decode(Adjustments.self, from: JSONEncoder().encode(recipe)), recipe)
+        XCTAssertEqual(recipe.stamping(onto: Adjustments(), groups: [.tone]).levels(for: .blue), levels)
+        XCTAssertFalse(AdjustmentPreset.natural.applying(to: recipe).hasLevelQuarterTones)
+    }
+
+    func testAutoLevelsPercentilesSkipOutliersAndLeaveFlatChannelsAlone() {
+        var bins = [Int](repeating: 0, count: 256)
+        bins[0] = 1; bins[32] = 49; bins[200] = 49; bins[255] = 1
+        XCTAssertEqual(AutoLevels.endpoints(bins, blackClipPercent: 0, whiteClipPercent: 0), 0...1)
+        XCTAssertEqual(AutoLevels.endpoints(bins, blackClipPercent: 1, whiteClipPercent: 0), (32.0 / 255)...1)
+        XCTAssertEqual(AutoLevels.endpoints(bins, blackClipPercent: 1, whiteClipPercent: 1),
+                       (32.0 / 255)...(200.0 / 255))
+        bins = [Int](repeating: 0, count: 256)
+        XCTAssertNil(AutoLevels.endpoints(bins, blackClipPercent: 1, whiteClipPercent: 1))
+        bins[150] = 40; bins[152] = 60
+        XCTAssertNil(AutoLevels.endpoints(bins, blackClipPercent: 1, whiteClipPercent: 1))
+    }
     func testAutoStackGapsInvalidDatesAndExistingStacks() {
         func photo(_ date: String) -> Photo { Photo(filename: "a", originalName: "a", projectID: nil, width: 1, height: 1, camera: "", captureDate: date, sha256: "hash") }
         let a = photo("2026:11:09 12:00:00"), b = photo("2026:11:09 12:00:02"), c = photo("2026:11:09 12:00:04"), d = photo("2026:11:09 12:01:00")

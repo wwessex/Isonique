@@ -166,6 +166,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         let nextHistory = newHistory ?? history
         var saved = draft
         saved.history = keepHistory ? nextHistory : nil
+        saved.upgradeForQuarterTones()
         saved.upgradeForChannelLevels()
         saved.upgradeForChannelCurves()
         saved.upgradeForBrushRecipes()
@@ -1233,7 +1234,20 @@ struct Inspector: View {
                     adjustment("Black point", path: \.adjustments.blackPoint, range: 0...max(0, photo.adjustments.whitePoint - 0.01))
                     adjustment("White point", path: \.adjustments.whitePoint, range: min(1, photo.adjustments.blackPoint + 0.01)...1, neutral: 1)
                     adjustment("Gamma", path: \.adjustments.gamma, range: 0.1...4, neutral: 1)
-                    Button("Reset Levels") { model.edit { $0.adjustments.blackPoint = 0; $0.adjustments.whitePoint = 1; $0.adjustments.gamma = 1 } }
+                    adjustment("Dark quarter", path: \.adjustments.darkLevelQuarter, range: 0...0.5, neutral: 0.25)
+                    adjustment("Light quarter", path: \.adjustments.lightLevelQuarter, range: 0.5...1, neutral: 0.75)
+                    HStack {
+                        AutoLevelsButton(mode: .combined, input: inputs?.combinedLevels, photo: photo)
+                        Button("Reset Levels") {
+                            model.edit {
+                                $0.adjustments.blackPoint = 0
+                                $0.adjustments.whitePoint = 1
+                                $0.adjustments.gamma = 1
+                                $0.adjustments.darkLevelQuarter = 0.25
+                                $0.adjustments.lightLevelQuarter = 0.75
+                            }
+                        }
+                    }
                 }.padding(.top, 10)
             }
             DisclosureGroup("Channel Levels", isExpanded: $channelLevelsExpanded) {

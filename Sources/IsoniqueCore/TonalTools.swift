@@ -46,7 +46,8 @@ public enum TonalTools {
     private static func combinedLevels(_ input: Double, adjustments a: Adjustments) -> Double {
         let black = safe(a.blackPoint, 0, 0...0.99)
         let white = max(black + 0.001, safe(a.whitePoint, 1, 0.01...1))
-        return pow(min(1, max(0, (input - black) / (white - black))), 1 / safe(a.gamma, 1, 0.1...4))
+        let x = pow(min(1, max(0, (input - black) / (white - black))), 1 / safe(a.gamma, 1, 0.1...4))
+        return a.levelQuarterTones?.normalized.map(x) ?? x
     }
     static func applying(_ image: CGImage, table: [Double], curves: ChannelCurves? = nil,
                          channelLevels: ChannelLevels? = nil) throws -> CGImage {

@@ -33,8 +33,13 @@ struct ChannelLevelsEditor: View {
             slider("Channel black point", \.blackPoint, in: 0...max(0, levels.whitePoint - 0.01))
             slider("Channel white point", \.whitePoint, in: min(1, levels.blackPoint + 0.01)...1)
             slider("Channel gamma", \.gamma, in: 0.1...4)
-            Button("Reset Channel Levels") { commit(LevelValues()) }
-                .disabled(saved == LevelValues())
+            slider("Channel dark quarter", \.darkQuarter, in: 0...0.5)
+            slider("Channel light quarter", \.lightQuarter, in: 0.5...1)
+            HStack {
+                AutoLevelsButton(mode: .separate, input: input, photo: photo)
+                Button("Reset Channel Levels") { commit(LevelValues()) }
+                    .disabled(saved == LevelValues())
+            }
         }.onChange(of: channel) { _, _ in draft = nil }
     }
 

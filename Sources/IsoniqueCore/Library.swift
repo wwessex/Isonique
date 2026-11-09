@@ -107,10 +107,11 @@ public struct Adjustments: Codable, Equatable {
     public var curveHighlights: Double = 0.75
     public internal(set) var channelCurves: ChannelCurves?
     public internal(set) var channelLevels: ChannelLevels?
+    public internal(set) var levelQuarterTones: LevelQuarterTones?
     public var lensDistortion: Double = 0
     public var localBrushes: [LocalBrushStroke] = []
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, localBrushes }
+    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
@@ -137,6 +138,7 @@ public struct Adjustments: Codable, Equatable {
         curveHighlights = try values.decodeIfPresent(Double.self, forKey: .curveHighlights) ?? 0.75
         channelCurves = try values.decodeIfPresent(ChannelCurves.self, forKey: .channelCurves)
         channelLevels = try values.decodeIfPresent(ChannelLevels.self, forKey: .channelLevels)
+        levelQuarterTones = try values.decodeIfPresent(LevelQuarterTones.self, forKey: .levelQuarterTones)
         lensDistortion = try values.decodeIfPresent(Double.self, forKey: .lensDistortion) ?? 0
         localBrushes = try values.decodeIfPresent([LocalBrushStroke].self, forKey: .localBrushes) ?? []
     }
@@ -184,6 +186,7 @@ public extension Adjustments {
             result.curveShadows = curveShadows; result.curveMidtones = curveMidtones; result.curveHighlights = curveHighlights
             result.channelCurves = channelCurves
             result.channelLevels = channelLevels
+            result.levelQuarterTones = levelQuarterTones
         }
         if groups.contains(.geometry) {
             result.quarterTurns = quarterTurns; result.straighten = straighten
@@ -276,7 +279,13 @@ public struct Library: Codable {
         if version < 6, hasRecipe(where: { $0.channelLevels?.isEmpty == false }) { version = 6 }
     }
 
+    public mutating func upgradeForQuarterTones() {
+        if version < 7, hasRecipe(where: \.hasLevelQuarterTones) { version = 7 }
+    }
+
     func validateSchema() throws {
+        if version == 7 { return }
+        guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
         if version == 5 { return }

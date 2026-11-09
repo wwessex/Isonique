@@ -83,6 +83,14 @@ final class ChannelCurvesTests: XCTestCase {
         library.upgradeForChannelLevels()
         XCTAssertEqual(library.version, 6)
         try repository.save(library)
+        recipe.darkLevelQuarter = 0.35
+        levels.lightQuarter = 0.65
+        recipe.setLevels(levels, for: .blue)
+        library.photos[0].adjustments = recipe
+        XCTAssertThrowsError(try repository.save(library))
+        library.upgradeForQuarterTones()
+        XCTAssertEqual(library.version, 7)
+        try repository.save(library)
         let photo = try XCTUnwrap(repository.load().photos.first)
         XCTAssertEqual(photo.adjustments, recipe)
         XCTAssertEqual(recipe.stamping(onto: Adjustments(), groups: [.tone]), recipe)

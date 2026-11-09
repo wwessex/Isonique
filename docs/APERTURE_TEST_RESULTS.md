@@ -114,3 +114,8 @@
 - All 88 XCTest cases passed and the signed arm64 app built. Fixtures verified the inputs before combined Levels, master curve, channel Levels and channel curves, including the encoded luminance axis and transparent pixels. Existing export equality tests continued to pass.
 - Native QA switched the Curves graph from Red to Luminance, opened the separate Channel Levels input histogram, and changed the selected photo with both panels open. The request tests cover selection and upstream recipe changes and cancellation before opening a file.
 - Sampling uses a 384-pixel version of the full oriented image at the tone stages, before lens correction and crop. The Inspector discards obsolete task results.
+
+## Quarter-tones and Auto Levels
+
+- All 91 automated cases passed on Apple Silicon. Tests verified exact neutral output for existing recipes, quarter-tone anchors and interpolation, automatic percentile selection, flat-channel handling, stale selection, one-step automatic Undo/Redo, and format-7 persistence. The full-size PNG export of a combined Levels and curves recipe matched the shared preview.
+- Native QA applied combined Auto Levels, adjusted the dark quarter, applied separate RGB Auto Levels, and opened the clipping tolerance settings. The disposable catalogue recorded combined endpoints near 0.204 and 0.796, the 0.35 dark quarter, and distinct RGB endpoints. The arm64 release built and passed signature verification.

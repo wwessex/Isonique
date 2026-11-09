@@ -6,7 +6,7 @@ Isonique is an independent, native SwiftUI photo workspace for Apple Silicon Mac
 
 The current build supports managed and referenced originals, cancellable imports, multiple libraries, photo Trash, verified backups, compound Smart Albums, keyboard culling and non-destructive editing with local Dodge and Burn masks. Browsable versions share originals and can be compared side by side. Stacks support library-wide and album-specific picks, plus persistent collapse.
 
-The 9 November 2026 validation run passed 88 XCTest cases and the signed arm64 release build on Apple M5 Pro with macOS 27.3. Native QA exercised the Levels and Curves input histograms on a disposable library. Older macOS runtimes and physical camera workflows remain unverified. [Feature parity audit](docs/APERTURE_FEATURE_PARITY.md) · [Implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
+The 9 November 2026 validation run passed 91 XCTest cases and the signed arm64 release build on Apple M5 Pro with macOS 27.3. Native QA exercised input histograms, Auto Levels and quarter-tones on disposable libraries. Older macOS runtimes and physical camera workflows remain unverified. [Feature parity audit](docs/APERTURE_FEATURE_PARITY.md) · [Implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
 
 ## Build and run
 
@@ -43,7 +43,7 @@ Bulk import, rendering and recovery run off the UI thread. Edits are disabled du
 
 Legacy recovery imports embedded originals and supported embedded metadata from Aperture libraries. Proprietary recipes, database relationships, externally referenced files, Faces, Places, stacks and versions remain outside that recovery workflow. [Legacy library compatibility](COMPATIBILITY.md)
 
-Isonique reads catalogue formats 1–6. Referenced originals and compound or project-scoped Smart Albums require format 2 or later. Browsable versions and stack controls require format 3 or later. Local brushes, channel curves and channel Levels require formats 4, 5 and 6 respectively. A library upgrades when it saves the relevant recipe in a photo, adjustment snapshot or persistent history. Backups include managed originals and retain the paths to referenced files. Keep a separate backup of those files.
+Isonique reads catalogue formats 1–7. Referenced originals and compound or project-scoped Smart Albums require format 2 or later. Browsable versions and stack controls require format 3 or later. Local brushes, channel curves, channel Levels and quarter-tones require formats 4, 5, 6 and 7 respectively. A library upgrades when it saves the relevant recipe in a photo, adjustment snapshot or persistent history. Backups include managed originals and retain the paths to referenced files. Keep a separate backup of those files.
 
 RAW decoding uses the Mac's ImageIO codecs. Camera RAW samples, high-bit-depth output and calibrated wide-gamut display behavior remain unqualified. Edited exports use 8-bit sRGB. The native macOS app is the sole maintained version.
 
@@ -86,6 +86,8 @@ Use **Photos → New Version from Original** (Option-G) for neutral adjustments 
 Inspector → Adjustments shows a live **histogram** of a 384-pixel edited preview with Luminance, combined RGB, or separate Red, Green and Blue views. The Inspector remembers the selected view. **Levels** provides combined black and white input points and gamma, and the **Master Tone Curve** provides three output controls at 25%, 50% and 75% input. **Channel Levels** adds independent black point, white point and gamma for red, green and blue. Open **Channel Curves** to edit red, green, blue or luminance independently. Click to add a point, drag to move it, or use the point picker and numeric controls. A completed drag is one Undo step. In preview and export, combined Levels and the master curve run before channel Levels, then channel curves, then lens and geometry. Reset, presets, persistent history, versions and the tone Stamp group include these settings.
 
 Each Levels and Curves panel has its own input histogram. It samples the full oriented source before crop and lens correction, with the preceding tonal edits applied. The luminance curve uses an sRGB-encoded linear luminance axis.
+
+Levels and Channel Levels offer dark and light quarter controls. They adjust the two ranges independently while holding black, the midpoint and white fixed after gamma. **Auto Levels Combined** derives shared black and white points from luminance. **Auto Levels Separate** uses each RGB input histogram and leaves flat channels alone. Both preserve gamma and quarter-tone settings. The black and white clipping tolerances are saved in Settings under Auto Levels and default to 0.5% each.
 
 Choose **View → Highlight Hot & Cold Areas** or press **Option-Shift-H** to toggle both Viewer warnings. The View menu also has independent highlight and shadow switches. Red marks pixels where any rendered sRGB channel reaches the highlight threshold, blue marks pixels at or below the shadow threshold, and magenta marks pixels that meet both conditions. **Settings → Clipping Warnings** changes the default 100% highlight and 0% shadow thresholds. The warnings use the current preview before RGB proofing. They appear in the Viewer and side-by-side comparison and are excluded from exports.
 
