@@ -77,8 +77,10 @@ The default is Add new items only. The two review options list differing adjustm
 
 The Apply source Library Trash to matching photos checkbox starts off. When enabled, the review names active destination photos with explicit source Trash records and matching photo IDs, original IDs and recorded fingerprints. Conflicting Trash identities block publication. The approved move records the source Trash date and keeps the destination edits and memberships for Put Back. Destination-only records and existing Trash stay in place.
 
+File → Review Empty Library Trash and the Trash browser review all trashed catalogue records. The read-only inventory groups originals by identity and lists managed Finder Trash candidates, originals kept for active versions, referenced files kept in place, and managed files that require a check. It uses file metadata for candidates and conservatively protects case-equivalent paths.
+
 ## Next implementation slice
 
-1. Add a read-only Empty Library Trash review. List the catalogue records eligible for removal and identify managed originals that would need a Finder Trash handoff. Protect originals still used by another version and keep referenced originals in their current locations.
+1. Implement Empty Library Trash publication after review. Recheck the catalogue snapshot and candidate fingerprints, preserve active versions and referenced originals, and test recovery from a partial Finder Trash handoff before enabling the action.
 
 Other open core work includes Finder Trash handoff for Library Trash, relocation naming and subfolders, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
