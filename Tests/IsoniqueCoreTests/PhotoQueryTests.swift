@@ -33,6 +33,20 @@ final class PhotoQueryTests: XCTestCase {
         XCTAssertFalse(query.includes(photo))
     }
 
+    func testColorLabelRuleUsesStableColorAndSupportsUnlabelled() throws {
+        var photo = fixture()
+        var query = PhotoQuery()
+        query.criteria = [PhotoQueryCriterion(field: .colorLabel, comparison: .equals, value: "0")]
+        XCTAssertTrue(query.includes(photo))
+        photo.colorLabel = .blue
+        XCTAssertFalse(query.includes(photo))
+        query.criteria[0].value = String(PhotoColorLabel.blue.rawValue)
+        let restored = try JSONDecoder().decode(PhotoQuery.self, from: JSONEncoder().encode(query))
+        XCTAssertTrue(restored.includes(photo))
+        query.criteria[0].value = "9"
+        XCTAssertFalse(query.criteria[0].isValid)
+    }
+
     func testCaptureDateAndAvailabilityMatchOnlyKnownValues() {
         var photo = fixture()
         var query = PhotoQuery()

@@ -28,6 +28,7 @@ public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
     case imported = "Import date"
     case rating = "Rating"
     case flag = "Flag"
+    case colorLabel = "Color label"
     case storage = "Original storage"
     case availability = "Original availability"
     case adjusted = "Adjustments"
@@ -36,7 +37,7 @@ public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
     public var operators: [PhotoQueryOperator] {
         switch self {
         case .filename, .caption, .keyword, .camera: return [.contains, .excludes, .equals, .differs]
-        case .format: return [.equals, .differs]
+        case .format, .colorLabel: return [.equals, .differs]
         case .captured, .imported: return [.since, .until, .equals, .differs]
         case .rating: return [.minimum, .maximum, .equals, .differs]
         case .flag, .storage, .availability, .adjusted: return [.equals]
@@ -63,6 +64,7 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
         switch field {
         case .captured, .imported: return Self.dayNumber(term, separator: "-") != nil
         case .format: return !Self.normalizedExtension(term).isEmpty
+        case .colorLabel: return term == "0" || Int(term).flatMap(PhotoColorLabel.init(rawValue:)) != nil
         case .rating: return Int(term).map { (RatingRules.rejected...RatingRules.maximum).contains($0) } ?? false
         case .flag, .storage, .availability, .adjusted: return term == "true" || term == "false"
         default: return true
@@ -99,6 +101,10 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
             default: return false
             }
         case .flag: return matchesBool(photo.flagged)
+        case .colorLabel:
+            guard isValid else { return false }
+            let found = (photo.colorLabel?.rawValue ?? 0) == Int(term)
+            return comparison == .equals ? found : !found
         case .storage: return matchesBool(photo.referencedPath != nil)
         case .availability: return originalAvailable().map(matchesBool) ?? false
         case .adjusted: return matchesBool(photo.adjustments != Adjustments())

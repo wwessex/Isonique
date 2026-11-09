@@ -1,5 +1,21 @@
 import Foundation
 
+public enum PhotoColorLabel: Int, Codable, CaseIterable, Identifiable {
+    case red = 1, orange, yellow, green, blue, purple, gray
+    public var id: Self { self }
+    public var title: String {
+        switch self {
+        case .red: return "Red"
+        case .orange: return "Orange"
+        case .yellow: return "Yellow"
+        case .green: return "Green"
+        case .blue: return "Blue"
+        case .purple: return "Purple"
+        case .gray: return "Gray"
+        }
+    }
+}
+
 /// Rules use the current photo values, so album membership updates after every edit.
 public struct SmartAlbumRule: Codable, Equatable {
     public var minimumRating: Int

@@ -17,6 +17,7 @@ struct BatchBar: View {
                                 Button(rating == -1 ? "Rejected" : rating == 0 ? "Unrated" : "\(rating) stars") { model.editBatch { $0.rating = rating } }
                             }
                         }
+                        ColorLabelMenu()
                         Menu("Flag") {
                             Button("Flag Selected") { model.editBatch { $0.flagged = true } }
                             Button("Unflag Selected") { model.editBatch { $0.flagged = false } }

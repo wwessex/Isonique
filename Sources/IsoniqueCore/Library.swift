@@ -216,6 +216,7 @@ public struct Photo: Codable, Identifiable, Equatable {
     public var albumIDs: Set<UUID> = []
     public var rating = 0
     public var flagged = false
+    public var colorLabel: PhotoColorLabel?
     public var caption = ""
     public var keywords = ""
     public var width: Int
