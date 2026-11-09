@@ -59,7 +59,7 @@ public enum BrowserFilterRules {
     }
 }
 
-/// Crop coordinates are fractions of the rotated/straightened image, from its top left.
+/// Crop coordinates are fractions of the oriented and straightened image, from its top left.
 public struct PhotoCrop: Codable, Equatable {
     public var x: Double
     public var y: Double
@@ -85,6 +85,9 @@ public enum StraightenRules {
 }
 public struct Adjustments: Codable, Equatable {
     public var exposure: Double = 0
+    public var brightness: Double = 0
+    public var vibrancy: Double = 0
+    public var sepia: Double = 0
     public var contrast: Double = 1
     public var saturation: Double = 1
     public var warmth: Double = 0
@@ -92,6 +95,8 @@ public struct Adjustments: Codable, Equatable {
     public var shadows: Double = 0
     public var highlights: Double = 0
     public var quarterTurns: Int = 0
+    public var flipHorizontal = false
+    public var flipVertical = false
     public var straighten: Double = 0
     public var crop: PhotoCrop?
     public var blackPoint: Double = 0
@@ -102,10 +107,13 @@ public struct Adjustments: Codable, Equatable {
     public var curveHighlights: Double = 0.75
     public var lensDistortion: Double = 0
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights }
+    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
+        brightness = try values.decodeIfPresent(Double.self, forKey: .brightness) ?? 0
+        vibrancy = try values.decodeIfPresent(Double.self, forKey: .vibrancy) ?? 0
+        sepia = try values.decodeIfPresent(Double.self, forKey: .sepia) ?? 0
         contrast = try values.decodeIfPresent(Double.self, forKey: .contrast) ?? 1
         saturation = try values.decodeIfPresent(Double.self, forKey: .saturation) ?? 1
         warmth = try values.decodeIfPresent(Double.self, forKey: .warmth) ?? 0
@@ -113,6 +121,8 @@ public struct Adjustments: Codable, Equatable {
         shadows = try values.decodeIfPresent(Double.self, forKey: .shadows) ?? 0
         highlights = try values.decodeIfPresent(Double.self, forKey: .highlights) ?? 0
         quarterTurns = try values.decodeIfPresent(Int.self, forKey: .quarterTurns) ?? 0
+        flipHorizontal = try values.decodeIfPresent(Bool.self, forKey: .flipHorizontal) ?? false
+        flipVertical = try values.decodeIfPresent(Bool.self, forKey: .flipVertical) ?? false
         // Recovered gesture bounds (0x10042f5e6) also constrain restored inspector values.
         straighten = StraightenRules.clamp(try values.decodeIfPresent(Double.self, forKey: .straighten) ?? 0)
         crop = try values.decodeIfPresent(PhotoCrop.self, forKey: .crop)
@@ -130,18 +140,48 @@ public enum AdjustmentGroup: String, CaseIterable, Identifiable {
     case basic = "Exposure & color", whiteBalance = "White balance", tone = "Highlights & shadows", geometry = "Crop, rotation & lens"
     public var id: String { rawValue }
 }
+public enum FlipAxis: String, CaseIterable, Identifiable {
+    case horizontal = "Flip Horizontally"
+    case vertical = "Flip Vertically"
+    public var id: Self { self }
+}
+
 public extension Adjustments {
+    mutating func toggleFlip(_ axis: FlipAxis) {
+        switch axis {
+        case .horizontal:
+            flipHorizontal.toggle()
+            if var crop {
+                crop.x = max(0, 1 - crop.x - crop.width)
+                self.crop = crop
+            }
+        case .vertical:
+            flipVertical.toggle()
+            if var crop {
+                crop.y = max(0, 1 - crop.y - crop.height)
+                self.crop = crop
+            }
+        }
+    }
+
     func stamping(onto target: Adjustments, groups: Set<AdjustmentGroup>) -> Adjustments {
         var result = target
-        if groups.contains(.basic) { result.exposure = exposure; result.contrast = contrast; result.saturation = saturation }
+        if groups.contains(.basic) {
+            result.exposure = exposure; result.contrast = contrast; result.saturation = saturation
+            result.brightness = brightness; result.vibrancy = vibrancy; result.sepia = sepia
+        }
         if groups.contains(.whiteBalance) { result.warmth = warmth; result.tint = tint }
         if groups.contains(.tone) { result.shadows = shadows; result.highlights = highlights; result.blackPoint = blackPoint; result.whitePoint = whitePoint; result.gamma = gamma; result.curveShadows = curveShadows; result.curveMidtones = curveMidtones; result.curveHighlights = curveHighlights }
-        if groups.contains(.geometry) { result.quarterTurns = quarterTurns; result.straighten = straighten; result.crop = crop; result.lensDistortion = lensDistortion }
+        if groups.contains(.geometry) {
+            result.quarterTurns = quarterTurns; result.straighten = straighten
+            result.crop = crop; result.lensDistortion = lensDistortion
+            result.flipHorizontal = flipHorizontal; result.flipVertical = flipVertical
+        }
         return result
     }
 }
 public enum AdjustmentPreset: String, CaseIterable, Identifiable {
-    case natural = "Natural", vivid = "Vivid", monochrome = "Black & White", warm = "Warm"
+    case natural = "Natural", vivid = "Vivid", monochrome = "Black & White", warm = "Warm", sepia = "Sepia"
     public var id: String { rawValue }
     public func applying(to current: Adjustments) -> Adjustments {
         var recipe = Adjustments()
@@ -150,6 +190,7 @@ public enum AdjustmentPreset: String, CaseIterable, Identifiable {
         case .vivid: recipe.contrast = 1.12; recipe.saturation = 1.25
         case .monochrome: recipe.saturation = 0; recipe.contrast = 1.1
         case .warm: recipe.warmth = 0.3; recipe.saturation = 1.05
+        case .sepia: recipe.sepia = 1
         }
         return recipe.stamping(onto: current, groups: [.basic, .whiteBalance, .tone])
     }
@@ -454,6 +495,9 @@ public enum Renderer {
         let pixels = data.bindMemory(to: UInt8.self, capacity: decoded.width * decoded.height * 4)
         let toneTable = (0...255).map { TonalTools.map(Double($0) / 255, adjustments: adjustments) }
         let multiplier = pow(2.0, adjustments.exposure)
+        let brightness = adjustments.brightness.isFinite ? min(1, max(-1, adjustments.brightness)) : 0
+        let vibrancy = adjustments.vibrancy.isFinite ? min(1, max(-1, adjustments.vibrancy)) : 0
+        let sepia = adjustments.sepia.isFinite ? min(1, max(0, adjustments.sepia)) : 0
         func expose(_ channel: Double) -> Double {
             let linear = channel <= 0.04045 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
             let exposed = max(0, linear * multiplier)
@@ -466,11 +510,28 @@ public enum Renderer {
             let green = expose(Double(pixels[offset + 1]) / (255 * alpha))
             let blue = expose(Double(pixels[offset + 2]) / (255 * alpha))
             let luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
-            for (index, value) in [red, green, blue].enumerated() {
-                let saturated = luminance + (value - luminance) * adjustments.saturation
-                let contrasted = (saturated - 0.5) * adjustments.contrast + 0.5
-                pixels[offset + index] = UInt8((min(1, max(0, contrasted)) * alpha * 255).rounded())
+            var lift = 0.0
+            if brightness != 0 {
+                let luma = min(1, max(0, luminance))
+                lift = brightness * luma * (1 - luma)
             }
+            var saturation = adjustments.saturation
+            if vibrancy != 0 {
+                let peak = max(red, green, blue)
+                let relativeChroma = peak > 0 ? (peak - min(red, green, blue)) / peak : 0
+                saturation *= 1 + vibrancy * (1 - relativeChroma)
+            }
+            let sepiaLuma = sepia == 0 ? 0 : min(1, max(0, (luminance - 0.5) * adjustments.contrast + 0.5 + lift))
+            let warmth = 0.56 * sepiaLuma * (1 - sepiaLuma)
+            func encode(_ channel: Double, sepiaTint: Double) -> UInt8 {
+                let saturated = luminance + (channel - luminance) * saturation
+                let contrasted = (saturated - 0.5) * adjustments.contrast + 0.5 + lift
+                let toned = contrasted + sepia * (sepiaLuma + sepiaTint - contrasted)
+                return UInt8((min(1, max(0, toned)) * alpha * 255).rounded())
+            }
+            pixels[offset] = encode(red, sepiaTint: warmth)
+            pixels[offset + 1] = encode(green, sepiaTint: warmth * 0.24)
+            pixels[offset + 2] = encode(blue, sepiaTint: -warmth * 0.6)
         }
         guard let result = context.makeImage() else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
         let toned = try applyTone(result, adjustments: adjustments)
@@ -533,6 +594,15 @@ public enum Renderer {
             context.draw(image, in: CGRect(x: -w / 2, y: -h / 2, width: w, height: h))
             guard let straightened = context.makeImage() else { throw LibraryError.unsupportedImage("straightening") }
             image = straightened
+        }
+        if adjustments.flipHorizontal || adjustments.flipVertical {
+            let width = CGFloat(image.width), height = CGFloat(image.height)
+            let context = try geometryContext(width: image.width, height: image.height)
+            context.translateBy(x: adjustments.flipHorizontal ? width : 0, y: adjustments.flipVertical ? height : 0)
+            context.scaleBy(x: adjustments.flipHorizontal ? -1 : 1, y: adjustments.flipVertical ? -1 : 1)
+            context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+            guard let flipped = context.makeImage() else { throw LibraryError.unsupportedImage("flip") }
+            image = flipped
         }
         if let crop = adjustments.crop, [crop.x, crop.y, crop.width, crop.height].allSatisfy({ $0.isFinite }), crop.width > 0, crop.height > 0 {
             let bounds = CGRect(x: 0, y: 0, width: image.width, height: image.height)

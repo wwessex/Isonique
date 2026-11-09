@@ -254,6 +254,10 @@ enum EditTool: String { case select, crop, straighten }
         compareOriginal = false; tool = .select
         edit { $0.adjustments.quarterTurns = (($0.adjustments.quarterTurns % 4) + turns + 4) % 4; $0.adjustments.crop = nil }
     }
+    func flip(_ axis: FlipAxis) {
+        compareOriginal = false; tool = .select
+        edit { $0.adjustments.toggleFlip(axis) }
+    }
     func showBrowser(allPhotos: Bool = false) {
         viewer = false; tool = .select; compareOriginal = false
         if allPhotos {
@@ -443,6 +447,12 @@ enum EditTool: String { case select, crop, straighten }
                 Button("Start Slideshow…") {
                     workspace.startSlideshow()
                 }.disabled(workspace.busy || workspace.isViewingTrash || workspace.photos.isEmpty || workspace.repository == nil)
+            }
+            CommandMenu("Photos") {
+                ForEach(FlipAxis.allCases) { axis in
+                    Button(axis.rawValue) { workspace.flip(axis) }
+                        .disabled(workspace.busy || workspace.isViewingTrash || workspace.selected == nil)
+                }
             }
             CommandMenu("Rating") {
                 Button("Raise Rating") { workspace.adjustRating(by: 1) }
@@ -781,6 +791,9 @@ struct EditBar: View {
                 tool("Select", icon: "cursorarrow", mode: .select)
                 Button { model.rotate(-1) } label: { Label("Left", systemImage: "rotate.left") }.help("Rotate 90° left; clears crop")
                 Button { model.rotate(1) } label: { Label("Right", systemImage: "rotate.right") }.help("Rotate 90° right; clears crop")
+                Menu {
+                    ForEach(FlipAxis.allCases) { axis in Button(axis.rawValue) { model.flip(axis) } }
+                } label: { Label("Flip", systemImage: "arrow.left.and.right") }
                 Divider().frame(height: 20)
                 tool("Crop", icon: "crop", mode: .crop)
                 tool("Straighten", icon: "level", mode: .straighten)
@@ -959,8 +972,11 @@ struct Inspector: View {
             } label: { Label("Apply Preset", systemImage: "slider.horizontal.3") }
             Text("Presets replace color and tone settings; crop and rotation are kept.").font(.caption2).foregroundStyle(.secondary)
             adjustment("Exposure", path: \.adjustments.exposure, range: -4...4)
+            adjustment("Brightness", path: \.adjustments.brightness, range: -1...1)
             adjustment("Contrast", path: \.adjustments.contrast, range: 0.5...1.5, neutral: 1)
             adjustment("Saturation", path: \.adjustments.saturation, range: 0...2, neutral: 1)
+            adjustment("Vibrancy", path: \.adjustments.vibrancy, range: -1...1)
+            adjustment("Sepia", path: \.adjustments.sepia, range: 0...1)
             Divider()
             Text("WHITE BALANCE").font(.caption).foregroundStyle(.secondary)
             adjustment("Warmth", path: \.adjustments.warmth, range: -1...1)
@@ -1000,6 +1016,8 @@ struct Inspector: View {
             DisclosureGroup("Crop & Rotation") {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack { Button("Rotate Left") { model.rotate(-1) }; Button("Rotate Right") { model.rotate(1) } }
+                    Toggle("Flip horizontally", isOn: Binding(get: { photo.adjustments.flipHorizontal }, set: { _ in model.flip(.horizontal) }))
+                    Toggle("Flip vertically", isOn: Binding(get: { photo.adjustments.flipVertical }, set: { _ in model.flip(.vertical) }))
                     Button(photo.adjustments.crop == nil ? "Crop…" : "Edit Crop…") { model.chooseTool(.crop) }
                     Button("Remove Crop") { model.tool = .select; model.edit { $0.adjustments.crop = nil } }.disabled(photo.adjustments.crop == nil)
                     adjustment("Straighten", path: \.adjustments.straighten, range: StraightenRules.range, clearsCrop: true)

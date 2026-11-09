@@ -148,6 +148,27 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(reopened.photos, [photo])
     }
 
+    @MainActor
+    func testFlipRetainsCropAndParticipatesInHistory() async throws {
+        let root = try temporaryLibrary()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let workspace = Workspace(libraryRoot: root)
+        var photo = Photo(filename: "a.png", originalName: "a.png", projectID: nil,
+                          width: 32, height: 24, camera: "", captureDate: "", sha256: "fixture")
+        photo.adjustments.crop = PhotoCrop(x: 0.125, y: 0.25, width: 0.5, height: 0.5)
+        var draft = workspace.library
+        draft.photos = [photo]
+        XCTAssertTrue(workspace.commit(draft))
+        workspace.selection = photo.id
+        workspace.flip(.horizontal)
+        XCTAssertEqual(workspace.selected?.adjustments.flipHorizontal, true)
+        XCTAssertEqual(workspace.selected?.adjustments.crop?.x, 0.375)
+        workspace.undoEdit()
+        XCTAssertEqual(workspace.selected, photo)
+        workspace.redoEdit()
+        XCTAssertEqual(try workspace.repository?.load().photos.first, workspace.selected)
+    }
+
     private func temporaryLibrary() throws -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueUI-\(UUID().uuidString)")
         return try LibraryRepository.createEmpty(at: root).root

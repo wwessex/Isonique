@@ -40,16 +40,16 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 | Aperture workflow | Status | Isonique audit |
 | --- | --- | --- |
 | Exposure, contrast, saturation, preset monochrome | Implemented but needs improvement | Shared renderer, numeric fields, resets and tested pixel results. 8-bit sRGB intermediate and adjustment clipping limit grading latitude. |
-| Exposure brightness, recovery, black point and highlight/shadow detail | Partially implemented | Shadows, highlights and a Levels black point are real. Dedicated brightness, highlight recovery and extended-range RAW treatment are absent. |
+| Exposure brightness, recovery, black point and highlight/shadow detail | Partially implemented | Shadows, highlights and a Levels black point are real. Midtone-weighted brightness is available. Highlight recovery and extended-range RAW treatment remain absent. |
 | White balance and tint | Partially implemented | Warmth and tint channel gain. No picker, Kelvin/RAW neutral, skin tone or natural gray modes. |
-| Enhance, vibrancy, definition, color correction and targeted color | Missing | No equivalent to vibrancy, local contrast, auto enhance, color targeting or tint wheels. |
+| Enhance, vibrancy, definition, color correction and targeted color | Partially implemented | Vibrancy scales saturation by relative chroma. Skin-tone protection, local contrast, auto enhance, color targeting and tint wheels remain open. |
 | Curves and Levels | Partially implemented | Three fixed-position master controls and black/white/gamma. No editable points, separate RGB/luminance channels or quarter-tone Levels. |
 | Sharpen/edge sharpen, noise reduction, chromatic aberration, vignette/devignette | Missing | Manual radial distortion is a separate control. No lens profile database. |
 | Rotate and straighten | Implemented but needs improvement | Pixel geometry tested, including blank-corner trimming. Rotation/angle clears an existing crop. |
 | Crop, presets, custom ratio and guides | Implemented but needs improvement | Draw/move/resize, aspect lock, orientation presets and pixel dimensions. Crop edges round to available pixels at render resolution. |
-| Flip and orientation | Partially implemented | EXIF normalization and quarter turns. No horizontal or vertical flip command at baseline. |
+| Flip and orientation | Implemented but needs improvement | EXIF normalization, quarter turns and horizontal/vertical flips are in the renderer. Flip preserves the crop subject and is available in the Photos menu, edit strip and Inspector. Pixel and export tests cover orientation; live menu test is tracked separately. |
 | Red-eye, retouch, clone, heal and spot/patch | Missing | No controls or corresponding image operations. |
-| Black-and-white channel mix, monochrome tint and sepia | Partially implemented | Desaturation and monochrome preset; no channel mixer, tint or sepia. |
+| Black-and-white channel mix, monochrome tint and sepia | Partially implemented | Desaturation, a monochrome preset and adjustable Sepia with a preset. No black-and-white channel mixer or user-selectable monochrome tint. |
 | RAW fine-tuning and decoder reprocess | Missing | ImageIO decoding depends on the host. No RAW controls or camera fixture qualification. |
 | Brushes, edges, size, softness, opacity, masks, multiple adjustment instances | Missing | No masks or brush engine. Historical Quick Brushes also included skin smoothing, polarize, contrast, tint, saturation, definition, sharpening, blur, noise reduction and halos. |
 | Adjustment presets, custom recipes, Lift/Stamp, reset and history | Partially implemented | Four built-in presets, selective/batch Stamp, individual/reset-all, optional bounded persistent undo/redo. No custom adjustment presets or named global history UI. A slider can save many intermediate events and rerender at each one. |
