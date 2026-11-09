@@ -74,7 +74,7 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 | Aperture workflow | Status | Isonique audit |
 | --- | --- | --- |
 | File/folder import, naming, metadata presets, duplicate rejection | Implemented but needs improvement | Background execution and presets. Metadata, naming and membership commit with the original in one catalogue write per file. Pair linking remains a separate final transaction. Duplicate hashing and catalogue writes still scale poorly for large batches. |
-| Import preview, automatic projects, progress, cancellation and post-import actions | Partially implemented | Global busy spinner and outcome counts; no per-file progress, cancellation, import selection grid, time-zone correction, automatic split, backup-on-import, move source or eject. |
+| Import preview, automatic projects, progress, cancellation and post-import actions | Partially implemented | Background scanning, per-file progress, cancellation between files and optional project creation. Completed imports survive cancellation. No import selection grid, time-zone correction, automatic project splitting, backup-on-import, move source or eject. |
 | RAW+JPEG pairing and preferred original | Partially implemented | By folder/stem, limited to newly imported partners. No switching one version’s underlying original. |
 | Camera/cards/devices and tethered capture | Missing | Mounted folders import as files. No camera transport, shutter control or hardware validation. |
 | Original/adjusted export, JPEG/TIFF/PNG/PSD and modern HEIF | Partially implemented | JPEG/TIFF/PNG and byte-copy original; no HEIF/PSD, 16-bit working output or export color-space choice. |
