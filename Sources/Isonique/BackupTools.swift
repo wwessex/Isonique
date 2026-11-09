@@ -6,7 +6,7 @@ extension Workspace {
     private func activateLibrary(_ repo: LibraryRepository, library restored: Library) {
         repository = repo; library = restored
         history = keepHistory ? (library.history ?? EditHistory()) : EditHistory()
-        scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all
+        scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all; advancedSearch = nil
         batchMode = false; batchSelection = []; selection = nil
         viewer = false; tool = .select; compareOriginal = false; liftedAdjustments = nil
         if !ProcessInfo.processInfo.arguments.contains("--library") {

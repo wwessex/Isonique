@@ -19,6 +19,8 @@ enum EditTool: String { case select, crop, straighten }
     @Published var showSlideshow = false
     @Published var slideshowPhotos: [Photo] = []
     @Published var showSmartAlbum = false
+    @Published var showAdvancedSearch = false
+    @Published var advancedSearch: PhotoQuery?
     @Published var editingSmartAlbum: UUID?
     @Published var search = ""
     @Published var sort = PhotoSort.imported
@@ -77,19 +79,51 @@ enum EditTool: String { case select, crop, straighten }
         } catch { self.error = error.localizedDescription; status = "Library unavailable" }
     }
     var isViewingTrash: Bool { scope == "trash" }
-    var photos: [Photo] {
-        library.photos.filter { photo in
+    var photos: [Photo] { filteredPhotos(advancedQuery: advancedSearch) }
+
+    func filteredPhotos(advancedQuery: PhotoQuery?) -> [Photo] {
+        let identifier = scope.split(separator: ":").last.flatMap { UUID(uuidString: String($0)) }
+        let smartRule = scope.hasPrefix("album:") ? library.albums.first { $0.id == identifier }?.rule : nil
+        return library.photos.filter { photo in
             guard (photo.trashedAt != nil) == isViewingTrash else { return false }
             let inScope: Bool
-            if scope.hasPrefix("project:"), let id = UUID(uuidString: String(scope.dropFirst(8))) { inScope = photo.projectID == id }
-            else if scope.hasPrefix("album:"), let id = UUID(uuidString: String(scope.dropFirst(6))) {
-                if let rule = library.albums.first(where: { $0.id == id })?.rule { inScope = rule.includes(photo) }
-                else { inScope = photo.albumIDs.contains(id) }
+            if scope.hasPrefix("project:"), let identifier { inScope = photo.projectID == identifier }
+            else if scope.hasPrefix("album:"), let identifier {
+                inScope = smartRule?.includes(photo, originalAvailable: { self.isOriginalAvailable(photo) }) ?? photo.albumIDs.contains(identifier)
             }
-            else if scope.hasPrefix("stack:"), let id = UUID(uuidString: String(scope.dropFirst(6))) { inScope = photo.stackID == id }
+            else if scope.hasPrefix("stack:"), let identifier { inScope = photo.stackID == identifier }
             else { inScope = true }
-            return inScope && originalFilter.includes(photo, repository: repository) && BrowserFilterRules.includes(rating: photo.rating, flagged: photo.flagged, ratingFilter: ratingFilter, flaggedOnly: scope == "flagged") && (search.isEmpty || [photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(search))
+            return inScope &&
+                originalFilter.includes(photo, repository: repository) &&
+                BrowserFilterRules.includes(rating: photo.rating, flagged: photo.flagged, ratingFilter: ratingFilter, flaggedOnly: scope == "flagged") &&
+                (search.isEmpty || [photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(search)) &&
+                (advancedQuery?.includes(photo, originalAvailable: { self.isOriginalAvailable(photo) }) ?? true)
         }.sorted { lhs, rhs in sortDescending ? orderedBefore(rhs, lhs) : orderedBefore(lhs, rhs) }
+    }
+
+    func isOriginalAvailable(_ photo: Photo) -> Bool? {
+        guard let repository else { return nil }
+        return (try? repository.availableOriginalURL(photo)) != nil
+    }
+
+    @discardableResult
+    func saveSmartAlbum(name: String, rule: SmartAlbumRule, editingID: UUID? = nil) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, rule.query?.criteria.allSatisfy(\.isValid) != false else { return false }
+        var draft = library
+        var album = Collection(name: trimmed)
+        album.rule = rule
+        if let editingID, let index = draft.albums.firstIndex(where: { $0.id == editingID }) {
+            album.id = editingID
+            draft.albums[index] = album
+        } else {
+            draft.albums.append(album)
+        }
+        if rule.query != nil || rule.projectID != nil { draft.version = 2 }
+        guard commit(draft) else { return false }
+        showBrowser(allPhotos: true)
+        scope = "album:\(album.id)"
+        return true
     }
     private func orderedBefore(_ lhs: Photo, _ rhs: Photo) -> Bool {
         switch sort {
@@ -220,7 +254,9 @@ enum EditTool: String { case select, crop, straighten }
     }
     func showBrowser(allPhotos: Bool = false) {
         viewer = false; tool = .select; compareOriginal = false
-        if allPhotos { scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all }
+        if allPhotos {
+            scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all; advancedSearch = nil
+        }
     }
     func chooseTool(_ next: EditTool) {
         viewer = true; compareOriginal = false; tool = next
@@ -392,6 +428,13 @@ enum EditTool: String { case select, crop, straighten }
         }
         .defaultSize(width: 1440, height: 900)
         .commands {
+            CommandGroup(after: .toolbar) {
+                Button("Advanced Search…") { workspace.showAdvancedSearch = true }
+                    .keyboardShortcut("f", modifiers: [.command, .shift])
+                    .disabled(workspace.busy || workspace.repository == nil)
+                Button("Clear Advanced Search") { workspace.advancedSearch = nil }
+                    .disabled(workspace.advancedSearch == nil || workspace.busy)
+            }
             CommandMenu("Review") {
                 Button("Auto Stack by Capture Time…") { workspace.showAutoStack = true }.disabled(workspace.busy || workspace.isViewingTrash || workspace.photos.isEmpty)
                 Button("Start Slideshow…") {
@@ -417,6 +460,9 @@ enum EditTool: String { case select, crop, straighten }
                 Button("Redo Photo Edit") { workspace.redoEdit() }.keyboardShortcut("z", modifiers: [.command, .shift]).disabled(!workspace.canRedo || workspace.busy)
             }
             CommandGroup(after: .newItem) {
+                Button("New Smart Album…") { workspace.editingSmartAlbum = nil; workspace.showSmartAlbum = true }
+                    .keyboardShortcut("l", modifiers: [.command, .shift])
+                    .disabled(workspace.busy || workspace.repository == nil)
                 Button("Import Photos…", action: workspace.importPanel).keyboardShortcut("i").disabled(workspace.busy || workspace.repository == nil)
                 if workspace.importInProgress {
                     Button("Cancel Import", action: workspace.cancelImport).disabled(workspace.cancellingImport)
@@ -524,12 +570,16 @@ struct ContentView: View {
                     if model.viewer {
                         Button { model.showBrowser() } label: { Label("Back to \(model.title)", systemImage: "chevron.left") }
                             .help("Return to the photo grid; Escape also goes back")
-                        if model.scope != "all" || !model.search.isEmpty || model.ratingFilter != .all || model.originalFilter != .all {
+                        if model.scope != "all" || !model.search.isEmpty || model.ratingFilter != .all || model.originalFilter != .all || model.advancedSearch != nil {
                             Button("All Photos") { model.showBrowser(allPhotos: true) }
                         }
                     }
                     VStack(alignment: .leading, spacing: 3) { Text(model.title).font(.title2.weight(.semibold)); Text("\(model.photos.count) photographs").font(.caption).foregroundStyle(.secondary) }
                     Spacer()
+                    if model.advancedSearch != nil {
+                        Button("Clear Advanced Search", systemImage: "xmark.circle") { model.advancedSearch = nil }
+                            .labelStyle(.iconOnly).help("Clear Advanced Search")
+                    }
                     if model.isViewingTrash {
                         Button("Put Back") { model.setPhotosTrashed(model.selectedTrashActionIDs, trashed: false) }
                             .disabled(model.selectedTrashActionIDs.isEmpty)
@@ -595,6 +645,8 @@ struct ContentView: View {
                     Picker("Sort by", selection: $model.sort) { ForEach(PhotoSort.allCases) { Text($0.rawValue).tag($0) } }
                     Toggle("Descending", isOn: $model.sortDescending)
                     Divider()
+                    Button("Advanced Search…") { model.showAdvancedSearch = true }
+                    Divider()
                     Picker("Originals", selection: $model.originalFilter) {
                         ForEach(OriginalFilter.allCases) { filter in Text(filter.rawValue).tag(filter) }
                     }
@@ -622,6 +674,7 @@ struct ContentView: View {
             if let repository = model.repository, !model.slideshowPhotos.isEmpty { SlideshowView(photos: model.slideshowPhotos, repository: repository) }
         }
         .sheet(isPresented: $model.showSmartAlbum) { SmartAlbumView().environmentObject(model) }
+        .sheet(isPresented: $model.showAdvancedSearch) { AdvancedSearchView().environmentObject(model) }
         .sheet(isPresented: $model.showImportOptions) { ImportOptionsView().environmentObject(model) }
         .sheet(isPresented: $model.showExportOptions) { ExportOptionsView().environmentObject(model) }
         .sheet(isPresented: $showCollection) {
@@ -633,7 +686,9 @@ struct ContentView: View {
         }
         .alert("Isonique", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button("OK") { model.error = nil } } message: { Text(model.error ?? "") }
         .onChange(of: model.scope) { _, _ in
-            if model.isViewingTrash { model.search = ""; model.ratingFilter = .all; model.originalFilter = .all }
+            if model.isViewingTrash {
+                model.search = ""; model.ratingFilter = .all; model.originalFilter = .all; model.advancedSearch = nil
+            }
             if model.selected == nil { model.selection = model.photos.first?.id }
             model.batchSelection = []
             model.showBrowser()
@@ -643,6 +698,7 @@ struct ContentView: View {
         .onChange(of: model.search) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onChange(of: model.ratingFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onChange(of: model.originalFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
+        .onChange(of: model.advancedSearch) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didMountNotification)) { _ in model.refreshOriginalStatus() }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didUnmountNotification)) { _ in model.refreshOriginalStatus() }
         .onChange(of: model.selection) { _, _ in model.tool = .select; model.compareOriginal = false }

@@ -52,43 +52,6 @@ struct BatchBar: View {
     }
 }
 
-struct SmartAlbumView: View {
-    @EnvironmentObject var model: Workspace
-    @Environment(\.dismiss) var dismiss
-    @State private var name = ""
-    @State private var rule = SmartAlbumRule()
-    var body: some View {
-        VStack(alignment: .leading, spacing: 18) {
-            Text(model.editingSmartAlbum == nil ? "New Smart Album" : "Edit Smart Album").font(.title2.bold())
-            TextField("Album name", text: $name)
-            Picker("Rating", selection: Binding(get: { rule.selectedRatingFilter }, set: { rule.setRatingFilter($0) })) {
-                ForEach(RatingFilter.allCases) { filter in Text(filter.label).tag(filter) }
-            }
-            Toggle("Flagged photos only", isOn: $rule.flaggedOnly)
-            TextField("Name, caption, keyword or camera contains", text: $rule.text)
-            Text("Photos must match all rules. Membership updates automatically as you edit photos.").font(.caption).foregroundStyle(.secondary)
-            Text("\(model.library.activePhotos.filter { rule.includes($0) }.count) matching photos")
-            HStack {
-                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
-                Spacer()
-                Button(model.editingSmartAlbum == nil ? "Create" : "Save") {
-                    var album = Collection(name: name.trimmingCharacters(in: .whitespacesAndNewlines)); album.rule = rule
-                    var draft = model.library
-                    if let id = model.editingSmartAlbum, let index = draft.albums.firstIndex(where: { $0.id == id }) {
-                        album.id = id; draft.albums[index] = album
-                    } else { draft.albums.append(album) }
-                    guard model.commit(draft) else { return }
-                    model.scope = "album:\(album.id)"; model.showBrowser(); dismiss()
-                }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty).keyboardShortcut(.defaultAction)
-            }
-        }.padding(26).frame(width: 440).onAppear {
-            if let album = model.library.albums.first(where: { $0.id == model.editingSmartAlbum }), let savedRule = album.rule {
-                name = album.name; rule = savedRule
-            }
-        }
-    }
-}
-
 struct VersionsView: View {
     @EnvironmentObject var model: Workspace
     let photo: Photo

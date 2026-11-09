@@ -106,6 +106,48 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(workspace.selected?.referencedPath, relinked)
     }
 
+    @MainActor
+    func testAdvancedSearchAndSmartAlbumShareScopeAndLiveEdits() async throws {
+        let root = try temporaryLibrary()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let workspace = Workspace(libraryRoot: root)
+        let project = Collection(name: "Client")
+        var photo = Photo(filename: "a.png", originalName: "portrait.png", projectID: project.id,
+                          width: 32, height: 24, camera: "", captureDate: "", sha256: "fixture")
+        photo.caption = "Ready for delivery"
+        var unassigned = photo
+        unassigned.id = UUID()
+        unassigned.filename = "b.png"
+        unassigned.projectID = nil
+        var draft = workspace.library
+        draft.projects = [project]
+        draft.photos = [photo, unassigned]
+        XCTAssertTrue(workspace.commit(draft))
+        var query = PhotoQuery()
+        query.criteria = [PhotoQueryCriterion(field: .caption, comparison: .contains, value: "DELIVERY")]
+        XCTAssertEqual(workspace.filteredPhotos(advancedQuery: query).count, 2)
+        workspace.scope = "project:\(project.id)"
+        workspace.advancedSearch = query
+        XCTAssertEqual(workspace.photos, [photo])
+
+        var rule = SmartAlbumRule()
+        rule.query = query
+        rule.projectID = project.id
+        XCTAssertTrue(workspace.saveSmartAlbum(name: "Delivery", rule: rule))
+        let album = try XCTUnwrap(workspace.library.albums.first)
+        XCTAssertEqual(workspace.library.version, 2)
+        XCTAssertNil(workspace.advancedSearch)
+        XCTAssertEqual(workspace.photos, [photo])
+        workspace.selection = photo.id
+        workspace.edit { $0.caption = "Hold for approval" }
+        XCTAssertTrue(workspace.photos.isEmpty)
+        workspace.undoEdit()
+        XCTAssertEqual(workspace.photos, [photo])
+        let reopened = Workspace(libraryRoot: root)
+        reopened.scope = "album:\(album.id)"
+        XCTAssertEqual(reopened.photos, [photo])
+    }
+
     private func temporaryLibrary() throws -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueUI-\(UUID().uuidString)")
         return try LibraryRepository.createEmpty(at: root).root

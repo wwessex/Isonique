@@ -189,7 +189,9 @@ public struct Library: Codable {
     public init() {}
 
     func validateSchema() throws {
-        guard version == 2 || (version == 1 && !photos.contains { $0.referencedPath != nil }) else {
+        if version == 2 { return }
+        guard version == 1, !photos.contains(where: { $0.referencedPath != nil }),
+              !albums.contains(where: { $0.rule?.query != nil || $0.rule?.projectID != nil }) else {
             throw LibraryError.unsupportedVersion
         }
     }
