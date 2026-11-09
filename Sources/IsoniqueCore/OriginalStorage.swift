@@ -69,46 +69,60 @@ public extension LibraryRepository {
     /// Reconnect missing references by known filenames and verified fingerprints.
     func reconnectMissingReferences(in folder: URL, library: inout Library,
                                     originalIDs: Set<UUID>? = nil) throws -> OriginalReconnectReport {
+        try reconnectMissingReferences(in: folder, library: &library, originalIDs: originalIDs,
+                                        includeTrashed: false, expectedCatalogue: nil)
+    }
+
+    internal func reconnectMissingReferences(in folder: URL, library: inout Library, originalIDs: Set<UUID>?,
+                                             includeTrashed: Bool, expectedCatalogue: Data?) throws -> OriginalReconnectReport {
         try Task.checkCancellation()
         let activeOriginalIDs = Set(library.activePhotos.map(\.originalID))
         let missing = try library.uniqueOriginals().filter { photo in
-            photo.referencedPath != nil && activeOriginalIDs.contains(photo.originalID) &&
+            photo.referencedPath != nil && (includeTrashed || activeOriginalIDs.contains(photo.originalID)) &&
                 originalIDs?.contains(photo.originalID) != false &&
                 (try? availableOriginalURL(photo)) == nil
         }
         var report = OriginalReconnectReport()
         let matches = try originalMatches(in: folder, for: missing, includeStoredName: false, scanErrors: &report.scanErrors)
 
-        var paths: [UUID: String] = [:]
-        for photo in missing {
-            try Task.checkCancellation()
-            guard (try? availableOriginalURL(photo)) == nil else { continue }
-            let candidates = matches[photo.originalID] ?? []
-            if candidates.count > 1 {
-                report.ambiguous.append(photo.originalName)
-            } else if let candidate = candidates.first {
-                let verified = try Self.referenceURL(candidate.path, libraryRoot: root)
-                try Self.verifyOriginal(verified, photo: photo)
-                paths[photo.originalID] = verified.path
-                report.reconnected.append(photo.originalName)
-            } else {
-                report.unmatched.append(photo.originalName)
+        return try applyOriginalRecovery(expecting: expectedCatalogue) {
+            var paths: [UUID: String] = [:]
+            for photo in missing {
+                try Task.checkCancellation()
+                guard (try? availableOriginalURL(photo)) == nil else { continue }
+                let candidates = matches[photo.originalID] ?? []
+                if candidates.count > 1 {
+                    report.ambiguous.append(photo.originalName)
+                } else if let candidate = candidates.first {
+                    let verified = try Self.referenceURL(candidate.path, libraryRoot: root)
+                    try Self.verifyOriginal(verified, photo: photo)
+                    paths[photo.originalID] = verified.path
+                    report.reconnected.append(photo.originalName)
+                } else {
+                    report.unmatched.append(photo.originalName)
+                }
             }
+            guard !paths.isEmpty else { return report }
+            var updated = library
+            for index in updated.photos.indices {
+                if let path = paths[updated.photos[index].originalID] { updated.photos[index].referencedPath = path }
+            }
+            try Task.checkCancellation()
+            if expectedCatalogue != nil { try writeCatalogue(updated) }
+            else { try save(updated) }
+            library = updated
+            return report
         }
-        guard !paths.isEmpty else { return report }
-        var updated = library
-        for index in updated.photos.indices {
-            if let path = paths[updated.photos[index].originalID] { updated.photos[index].referencedPath = path }
-        }
-        try Task.checkCancellation()
-        try save(updated)
-        library = updated
-        return report
     }
 
     /// Restore exact copies at the existing managed paths. Each file is installed independently.
     func recoverMissingManagedOriginals(in folder: URL, library: Library,
                                         originalIDs: Set<UUID>? = nil) throws -> ManagedOriginalRecoveryReport {
+        try recoverMissingManagedOriginals(in: folder, library: library, originalIDs: originalIDs, expectedCatalogue: nil)
+    }
+
+    internal func recoverMissingManagedOriginals(in folder: URL, library: Library, originalIDs: Set<UUID>?,
+                                                 expectedCatalogue: Data?) throws -> ManagedOriginalRecoveryReport {
         try Task.checkCancellation()
         var report = ManagedOriginalRecoveryReport()
         var missing: [Photo] = []
@@ -123,35 +137,45 @@ public extension LibraryRepository {
             }
         }
         let matches = try originalMatches(in: folder, for: missing, includeStoredName: true, scanErrors: &report.scanErrors)
-        for photo in missing {
-            if Task.isCancelled {
-                report.cancelled = true
-                break
-            }
-            let candidates = matches[photo.originalID] ?? []
-            if candidates.count > 1 {
-                report.ambiguous.append(photo.originalName)
-            } else if let candidate = candidates.first {
-                do {
-                    let verified = try Self.referenceURL(candidate.path, libraryRoot: root)
-                    try installManagedOriginal(from: verified, photo: photo)
-                    report.restored.append(photo.originalName)
-                } catch is CancellationError {
+        return try applyOriginalRecovery(expecting: expectedCatalogue) {
+            for photo in missing {
+                if Task.isCancelled {
                     report.cancelled = true
                     break
-                } catch {
-                    if let target = try? managedOriginalURL(photo.filename),
-                       !FileManager.default.fileExists(atPath: target.path) {
-                        report.failed.append(photo.originalName)
-                    } else {
-                        report.occupied.append(photo.originalName)
-                    }
                 }
-            } else {
-                report.unmatched.append(photo.originalName)
+                let candidates = matches[photo.originalID] ?? []
+                if candidates.count > 1 {
+                    report.ambiguous.append(photo.originalName)
+                } else if let candidate = candidates.first {
+                    do {
+                        let verified = try Self.referenceURL(candidate.path, libraryRoot: root)
+                        try installManagedOriginal(from: verified, photo: photo)
+                        report.restored.append(photo.originalName)
+                    } catch is CancellationError {
+                        report.cancelled = true
+                        break
+                    } catch {
+                        if let target = try? managedOriginalURL(photo.filename),
+                           !FileManager.default.fileExists(atPath: target.path) {
+                            report.failed.append(photo.originalName)
+                        } else {
+                            report.occupied.append(photo.originalName)
+                        }
+                    }
+                } else {
+                    report.unmatched.append(photo.originalName)
+                }
             }
+            return report
         }
-        return report
+    }
+
+    private func applyOriginalRecovery<Result>(expecting catalogue: Data?, _ apply: () throws -> Result) throws -> Result {
+        guard let catalogue else { return try apply() }
+        return try withCatalogueWriteLock {
+            try checkFirstAidCatalogue(catalogue)
+            return try apply()
+        }
     }
 
     private func originalMatches(in folder: URL, for originals: [Photo], includeStoredName: Bool,

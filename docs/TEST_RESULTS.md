@@ -299,3 +299,10 @@
 - Repository tests distinguished missing managed originals, offline references and untracked files. Shared versions counted once. Trash records and pending Finder moves kept their managed paths out of the untracked list. Tests also covered case aliases, unsafe paths and an absent Originals directory. Catalogue bytes and file contents matched before and after the report.
 - In the signed app, File → Library First Aid listed one finding in each requested category. The catalogue records and managed file hashes matched after dismissal.
 - The optimized suite passed all 173 tests without skips, including four camera RAW fixtures and the native Finder Trash handoff. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
+
+## Library First Aid recovery
+
+- Tests recovered a verified managed original and reconnected a verified offline reference in Library Trash. Same-name files with different fingerprints stayed unmatched. An original that went missing after the report and an untracked managed file stayed outside the recovery scope.
+- Both entry points rejected a stale report. The publication guard also rejected a stale snapshot after searching for matching originals. Catalogue bytes matched the newer save and no managed copy was published.
+- In the signed app, First Aid restored one managed original and reconnected one offline reference. The restored file matched its saved fingerprint, the new reference persisted, and the pre-existing file hashes matched.
+- The optimized suite passed all 175 tests without skips, including four camera RAW fixtures and the native Finder Trash handoff. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.

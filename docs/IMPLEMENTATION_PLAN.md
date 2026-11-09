@@ -83,8 +83,10 @@ On approval, Empty Library Trash checks the reviewed catalogue snapshot and cand
 
 File → Library First Aid reports missing managed originals, offline references, and untracked regular files directly inside Originals. It counts shared originals once, includes Library Trash records in the catalogue inventory, and lists pending Finder Trash moves separately. The report reads file metadata. Check Library Integrity verifies original hashes.
 
+First Aid can recover reviewed missing managed originals or reconnect reviewed offline references from a selected folder. The search matches known names and verifies the saved fingerprints. Before copying or changing references, Isonique checks the report's catalogue snapshot under the catalogue write lock. Reconnected originals update every version, including Library Trash records.
+
 ## Next implementation slice
 
-1. Add recovery actions to Library First Aid using the verified managed-original recovery and referenced-original reconnect flows. Recheck the current catalogue before applying a repair.
+1. Add an inspection step for untracked managed files that compares their fingerprints with catalogue originals and backup records.
 
 Other open core work includes relocation naming and subfolders, library merging and repair, import from camera devices, and detection of stale edits from independently opened workspaces. Build and interaction evidence should stay in the test record.
