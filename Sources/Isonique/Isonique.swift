@@ -39,6 +39,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var status = "Ready · originals are preserved"
     @Published var error: String?
     @Published var viewer = false
+    @Published var showLoupe = false
     @Published var browserLayout: BrowserPresentation
     @Published var showInspector = true
     @Published var compareOriginal = false
@@ -492,6 +493,10 @@ enum EditTool: String { case select, crop, straighten, brush }
                     .keyboardShortcut("h", modifiers: [.option, .shift])
                 Toggle("Highlight Clipping Warning", isOn: $workspace.clipping.highlights)
                 Toggle("Shadow Clipping Warning", isOn: $workspace.clipping.shadows)
+                Divider()
+                Button(workspace.loupeActive ? "Hide Loupe" : "Show Loupe", action: workspace.toggleLoupe)
+                    .keyboardShortcut("`", modifiers: [])
+                    .disabled(!workspace.loupeActive && !workspace.canShowLoupe)
             }
             CommandMenu("Review") {
                 Button("Auto Stack by Capture Time…") { workspace.showAutoStack = true }.disabled(workspace.busy || workspace.isViewingTrash || workspace.photos.isEmpty)
@@ -967,6 +972,8 @@ struct PhotoViewer: View {
     let url: URL
     let original: Bool
     @State private var image: ViewerImage?
+    @State private var completedRequest: RenderRequest?
+    @State private var loupePoint = CGPoint(x: 0.5, y: 0.5)
     @State private var geometry: PhotoGeometry?
     @State private var erasingBrush = false
     @AppStorage("brush.size") private var brushSize = 12.0
@@ -1002,11 +1009,13 @@ struct PhotoViewer: View {
                 else if zoom && model.tool == .select {
                     ScrollView([.horizontal, .vertical]) {
                         ClippingPreview(image: image).frame(width: image.size.width, height: image.size.height)
+                            .overlay { if model.loupeActive { LoupeTarget(point: $loupePoint) } }
                     }
                 }
                 else {
                     ClippingPreview(image: image).aspectRatio(image.size, contentMode: .fit)
                         .overlay {
+                            if model.loupeActive { LoupeTarget(point: $loupePoint) }
                             if model.tool == .straighten {
                                 GeometryReader { geometry in
                                     Path { path in
@@ -1030,8 +1039,22 @@ struct PhotoViewer: View {
                 if model.proofEnabled { Text("RGB Proof").font(.caption).foregroundStyle(.yellow) }
                 if image != nil && model.clipping.enabled { ClippingLegend(settings: model.clipping) }
                 Divider().frame(height: 16)
+                Button(action: model.toggleLoupe) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(model.loupeActive ? Color.accentColor : .primary)
+                }.buttonStyle(.plain).help(model.loupeActive ? "Hide Loupe" : "Show Loupe")
+                    .accessibilityLabel(model.loupeActive ? "Hide Loupe" : "Show Loupe")
+                    .disabled(model.tool != .select)
                 Button(zoom ? "Fit" : "100%") { zoom.toggle() }.buttonStyle(.plain).font(.caption.monospacedDigit()).help("Toggle actual pixels").disabled(model.tool != .select)
             }.padding(.horizontal, 16).padding(.vertical, 11).workspaceGlass(radius: 24).padding(16)
+        }.overlay(alignment: .bottomTrailing) {
+            if model.loupeActive {
+                if let image, completedRequest == request {
+                    LoupePanel(image: image, point: loupePoint).workspaceGlass().padding(16)
+                } else if failure == nil {
+                    ProgressView("Loading Loupe").font(.caption).padding(12).workspaceGlass().padding(16)
+                }
+            }
         }.safeAreaInset(edge: .bottom) {
             if model.tool == .crop {
                 CropOptionsView(crop: $draft, aspect: $cropAspect, locked: $cropLocked, size: cropSize,
@@ -1066,10 +1089,12 @@ struct PhotoViewer: View {
             case .success(let (preview, layout)):
                 image = preview
                 geometry = layout
+                completedRequest = request
                 failure = nil
             case .failure(let error):
                 image = nil
                 geometry = nil
+                completedRequest = nil
                 failure = error.localizedDescription
             }
         }
@@ -1080,7 +1105,7 @@ struct PhotoViewer: View {
         if model.tool == .crop { settings.crop = nil }
         return RenderRequest(url: url, originalStatus: model.originalStatusRevision, isCropping: model.tool == .crop,
                              adjustments: settings,
-                             maximum: zoom && model.tool == .select ? nil : 2400,
+                             maximum: model.tool == .select && (zoom || model.loupeActive) ? nil : 2400,
                              profile: model.proofEnabled ? model.proofProfile : nil)
     }
 }

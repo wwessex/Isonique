@@ -84,3 +84,9 @@
 - PNG, JPEG, TIFF and original exports produced identical decoded pixels with warnings enabled and disabled. The edited PNG also matched the unmarked render, and original export matched the source file byte for byte. The workspace test verified preference persistence, threshold reset and that the switches leave catalogue bytes and edit history intact.
 - Native QA on a signed copy exercised each View menu switch and Option-Shift-H, changed the Settings thresholds from 100%/0% to 90%/10%, and checked the Viewer at Fit and 100%. The near-white band gained a warning at 90%, red/blue/magenta overlays aligned with both comparison panes, and filmstrip thumbnails retained the original colors.
 - Warnings describe the 8-bit preview at its current rendering resolution. Downsampling in Fit can change small clipped areas. The current presentation uses fixed colors and detects clipping before RGB proofing.
+
+## Viewer Loupe
+
+- All 78 XCTest cases and the signed arm64 build passed on Apple M5 Pro, macOS 27.3. Automated tests verified center, edge and tiny-image regions, top-left pixel coordinates and unpremultiplied color readings.
+- Native QA opened the Loupe through View on a signed test copy, read RGB 240/240/240 in the expected synthetic stripe, selected the 800% control, and hid it with the grave accent key. The Loupe has its own display panel and settings. Export recipes and catalogue format are unaffected.
+- The Loupe requests a full-resolution render while active, uses the proofed image for magnification when proofing is on, and reads 8-bit sRGB before proofing. Inspection is currently available in the single-photo Viewer.
