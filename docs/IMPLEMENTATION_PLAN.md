@@ -51,8 +51,10 @@ The File menu consolidates selected references into verified managed copies. Sha
 
 The File menu relocates selected managed originals outside the library. It checks copies, saves new references for all versions, and then sends old managed files to Finder Trash. A failed or cancelled save can leave verified destination copies that a retry can reuse.
 
+Relocation also works for already-referenced originals. The chooser defaults to keeping old external files. If the user elects to move them, a source that another record still references remains in place. Selecting the current folder reports the file without moving it.
+
 ## Next implementation slice
 
-1. Extend relocation to existing references. Protect source files shared by other records and make the old-copy choice explicit.
+1. Add a File menu for switching to recently opened Isonique libraries. Reuse verified opening and persist a bounded list.
 
-Other open core work includes Finder Trash handoff, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
+Other open core work includes Finder Trash handoff for Library Trash, relocation naming and subfolders, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

@@ -21,7 +21,7 @@ final class OriginalRelocationTests: XCTestCase {
         try repo.save(library)
 
         var released: [String] = []
-        let report = try repo.relocateManagedOriginals([first.id, second.id, occupied.id], to: fixture.target, in: &library) { source in
+        let report = try repo.relocateOriginals([first.id, second.id, occupied.id], to: fixture.target, in: &library) { source in
             let saved = try repo.load()
             XCTAssertNotNil(saved.photos[0].referencedPath)
             XCTAssertEqual(saved.photos[0].referencedPath, saved.photos[4].referencedPath)
@@ -60,7 +60,7 @@ final class OriginalRelocationTests: XCTestCase {
         let before = try Data(contentsOf: catalogue)
         try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: catalogue.path)
         defer { try? FileManager.default.setAttributes([.immutable: false], ofItemAtPath: catalogue.path) }
-        XCTAssertThrowsError(try repo.relocateManagedOriginals([photo.id], to: fixture.target, in: &library) { _ in
+        XCTAssertThrowsError(try repo.relocateOriginals([photo.id], to: fixture.target, in: &library) { _ in
             XCTFail("An unsaved relocation must never release the source")
         })
         try FileManager.default.setAttributes([.immutable: false], ofItemAtPath: catalogue.path)
@@ -71,7 +71,7 @@ final class OriginalRelocationTests: XCTestCase {
         let destination = fixture.target.appendingPathComponent("Photo.png")
         let fileID = try XCTUnwrap(try FileManager.default.attributesOfItem(atPath: destination.path)[.systemFileNumber] as? NSNumber)
 
-        let report = try repo.relocateManagedOriginals([photo.id], to: fixture.target, in: &library) { _ in
+        let report = try repo.relocateOriginals([photo.id], to: fixture.target, in: &library) { _ in
             throw CocoaError(.fileWriteNoPermission)
         }
         XCTAssertEqual(report.relocated, ["Photo.png"])
@@ -93,13 +93,13 @@ final class OriginalRelocationTests: XCTestCase {
         library.photos = [photo]
         try repo.save(library)
         let inside = repo.root.appendingPathComponent("Originals")
-        XCTAssertThrowsError(try repo.relocateManagedOriginals([photo.id], to: inside, in: &library) { _ in XCTFail() })
+        XCTAssertThrowsError(try repo.relocateOriginals([photo.id], to: inside, in: &library) { _ in XCTFail() })
         let saved = library
         let target = fixture.target
         let cancelled = Task.detached {
             withUnsafeCurrentTask { $0?.cancel() }
             var draft = saved
-            return try repo.relocateManagedOriginals([photo.id], to: target, in: &draft) { _ in XCTFail() }
+            return try repo.relocateOriginals([photo.id], to: target, in: &draft) { _ in XCTFail() }
         }
         do {
             _ = try await cancelled.value
@@ -108,6 +108,76 @@ final class OriginalRelocationTests: XCTestCase {
         XCTAssertEqual(try repo.load().photos, [photo])
         XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: target.path).isEmpty)
         XCTAssertEqual(try Data(contentsOf: repo.availableOriginalURL(photo)), Data([8]))
+    }
+
+    func testRelocatingReferencesKeepsAliasedSourceAndSkipsCurrentFolder() throws {
+        let fixture = try fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.folder) }
+        let repo = fixture.repo
+        let sharedSource = fixture.folder.appendingPathComponent("Shared.png")
+        let alias = fixture.folder.appendingPathComponent("Alias.png")
+        let independentSource = fixture.folder.appendingPathComponent("Independent.png")
+        let currentSource = fixture.target.appendingPathComponent("Current.png")
+        try Data([1]).write(to: sharedSource)
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: sharedSource)
+        try Data([2]).write(to: independentSource)
+        try Data([3]).write(to: currentSource)
+        let shared = try reference("Renamed version.png", filename: "one.png", source: sharedSource)
+        var other = try reference("Unselected.jpg", filename: "two.png", source: alias)
+        other.trashedAt = Date()
+        let independent = try reference("Independent.png", filename: "three.png", source: independentSource)
+        let current = try reference("Current.png", filename: "four.png", source: currentSource)
+        var library = Library()
+        library.version = 2
+        library.photos = [shared, other, independent, current]
+        try repo.save(library)
+
+        var released: [String] = []
+        let report = try repo.relocateOriginals([shared.id, independent.id, current.id], to: fixture.target,
+                                               in: &library, keepReferencedSources: false) { source in
+            try FileManager.default.moveItem(at: source, to: fixture.trash.appendingPathComponent(source.lastPathComponent))
+            released.append(source.lastPathComponent)
+        }
+
+        XCTAssertEqual(report.relocated, ["Renamed version.png", "Independent.png"])
+        XCTAssertEqual(report.retained, ["Renamed version.png"])
+        XCTAssertEqual(report.alreadyInFolder, ["Current.png"])
+        XCTAssertEqual(released, ["Independent.png"])
+        let saved = try repo.load()
+        XCTAssertEqual(saved.photos[0].referencedPath, fixture.target.appendingPathComponent("Shared.png").path)
+        XCTAssertEqual(saved.photos[2].referencedPath, fixture.target.appendingPathComponent("Independent.png").path)
+        XCTAssertEqual(saved.photos[1], other)
+        XCTAssertEqual(saved.photos[3], current)
+        XCTAssertEqual(try Data(contentsOf: sharedSource), Data([1]))
+        XCTAssertEqual(try Data(contentsOf: alias), Data([1]))
+        XCTAssertEqual(try LibraryBackup.verify(repo), 4)
+    }
+
+    func testKeepingPreviousExternalCopiesIsDefault() throws {
+        let fixture = try fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.folder) }
+        let repo = fixture.repo
+        let source = fixture.folder.appendingPathComponent("Original.png")
+        try Data([8]).write(to: source)
+        let photo = try reference("Original.png", filename: "storage.png", source: source)
+        var library = Library()
+        library.version = 2
+        library.photos = [photo]
+        try repo.save(library)
+        let report = try repo.relocateOriginals([photo.id], to: fixture.target, in: &library) { _ in
+            XCTFail("The previous referenced file should stay in place")
+        }
+        XCTAssertEqual(report.retained, ["Original.png"])
+        XCTAssertEqual(try Data(contentsOf: source), Data([8]))
+        XCTAssertEqual(try Data(contentsOf: repo.availableOriginalURL(library.photos[0])), Data([8]))
+        XCTAssertEqual(try repo.load().photos, library.photos)
+    }
+
+    private func reference(_ name: String, filename: String, source: URL) throws -> Photo {
+        var photo = Photo(filename: filename, originalName: name, projectID: nil, width: 8, height: 8,
+                          camera: "", captureDate: "", sha256: try LibraryRepository.digest(source))
+        photo.referencedPath = source.path
+        return photo
     }
 
     private func fixture() throws -> (folder: URL, repo: LibraryRepository, target: URL, trash: URL) {

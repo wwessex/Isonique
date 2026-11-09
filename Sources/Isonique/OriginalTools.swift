@@ -49,15 +49,15 @@ extension Workspace {
         !busy && repository != nil && library.photos.contains(where: operation.includes)
     }
 
-    private func selectedOriginalIDs(for operation: OriginalFolderOperation) -> Set<UUID> {
+    private func selectedOriginalIDs(matching includes: (Photo) -> Bool) -> Set<UUID> {
         let selectionIDs = batchMode ? batchSelection : Set(selection.map { [$0] } ?? [])
         guard !selectionIDs.isEmpty else { return [] }
-        return Set(photos.filter { selectionIDs.contains($0.id) && operation.includes($0) }.map(\.originalID))
+        return Set(photos.filter { selectionIDs.contains($0.id) && includes($0) }.map(\.originalID))
     }
 
     func originalFolderScopes(for operation: OriginalFolderOperation) -> [OriginalFolderScope] {
         var choices = [OriginalFolderScope(title: "Entire Library", originalIDs: nil)]
-        let selectedOriginals = selectedOriginalIDs(for: operation)
+        let selectedOriginals = selectedOriginalIDs(matching: operation.includes)
         if !selectedOriginals.isEmpty {
             choices.append(OriginalFolderScope(title: "Selected Photos", originalIDs: selectedOriginals))
         }
@@ -122,12 +122,12 @@ extension Workspace {
     }
 
     var canConsolidateSelectedOriginals: Bool {
-        !busy && repository != nil && batchMode && !isViewingTrash && !selectedOriginalIDs(for: .reconnect).isEmpty
+        !busy && repository != nil && batchMode && !isViewingTrash && !selectedOriginalIDs(matching: OriginalFolderOperation.reconnect.includes).isEmpty
     }
 
     func consolidateSelectedOriginals() async {
         guard canConsolidateSelectedOriginals else { return }
-        let ids = selectedOriginalIDs(for: .reconnect)
+        let ids = selectedOriginalIDs(matching: OriginalFolderOperation.reconnect.includes)
         await runOriginalJob(status: "Copying and verifying selected originals…") { repository, current in
             var draft = current
             let report = try repository.consolidateOriginals(ids, in: &draft)
@@ -139,31 +139,40 @@ extension Workspace {
     }
 
     var canRelocateSelectedOriginals: Bool {
-        !busy && repository != nil && !isViewingTrash && !selectedOriginalIDs(for: .recoverManaged).isEmpty
+        !busy && repository != nil && !isViewingTrash && !selectedOriginalIDs { $0.trashedAt == nil }.isEmpty
     }
 
     func relocateSelectedOriginalsPanel() {
         guard canRelocateSelectedOriginals else { return }
-        let ids = selectedOriginalIDs(for: .recoverManaged)
+        let ids = selectedOriginalIDs { $0.trashedAt == nil }
         let panel = NSOpenPanel()
         panel.title = "Relocate Originals"
-        panel.message = "Choose a folder outside this library. Isonique verifies the copies and saves their new references before sending the old managed files to Finder Trash."
+        panel.message = "Choose a folder outside this library. Isonique verifies the copies and saves their new references before sending eligible old files to Finder Trash."
         panel.prompt = "Relocate Originals"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
+        let keepReferences = NSButton(checkboxWithTitle: "Keep copies at previous referenced locations", target: nil, action: nil)
+        keepReferences.state = .on
+        if !selectedOriginalIDs(matching: OriginalFolderOperation.reconnect.includes).isEmpty {
+            keepReferences.frame.size = keepReferences.fittingSize
+            panel.accessoryView = keepReferences
+            panel.isAccessoryViewDisclosed = true
+        }
         guard panel.runModal() == .OK, let folder = panel.url else { return }
-        Task { await relocateOriginals(ids, to: folder) }
+        let keepReferencedSources = keepReferences.state == .on
+        Task { await relocateOriginals(ids, to: folder, keepReferencedSources: keepReferencedSources) }
     }
 
-    func relocateOriginals(_ ids: Set<UUID>, to folder: URL) async {
+    func relocateOriginals(_ ids: Set<UUID>, to folder: URL, keepReferencedSources: Bool) async {
         await runOriginalJob(status: "Copying and verifying originals for relocation…") { repository, current in
             var draft = current
-            let report = try repository.relocateManagedOriginals(ids, to: folder, in: &draft)
+            let report = try repository.relocateOriginals(ids, to: folder, in: &draft, keepReferencedSources: keepReferencedSources)
             let summary = "\(report.relocated.count) relocated · \(report.unavailable.count) unavailable"
             return (report.relocated.isEmpty ? nil : draft, OriginalJobResult(
                 title: "Relocate Originals", summary: summary, unavailable: report.unavailable,
-                occupied: report.occupied, failed: report.failed, renamed: report.renamed, retained: report.retained))
+                occupied: report.occupied, failed: report.failed, renamed: report.renamed, retained: report.retained,
+                alreadyInFolder: report.alreadyInFolder))
         }
     }
 
@@ -265,6 +274,7 @@ struct OriginalJobResult: Sendable {
     var failed: [String] = []
     var renamed: [String] = []
     var retained: [String] = []
+    var alreadyInFolder: [String] = []
     var scanErrors = 0
     var cancelled = false
 
@@ -272,7 +282,7 @@ struct OriginalJobResult: Sendable {
         var lines = [summary]
         let groups = [("Unmatched", unmatched), ("Multiple verified copies", ambiguous),
                       ("Original unavailable", unavailable), ("Destination unavailable", occupied), ("Operation failed for", failed),
-                      ("Saved under another name", renamed), ("Old file retained", retained)]
+                      ("Saved under another name", renamed), ("Old file retained", retained), ("Already in this folder", alreadyInFolder)]
         for (label, names) in groups where !names.isEmpty {
             let first = names.prefix(4).joined(separator: ", ")
             lines.append("\(label) — \(first)" + (names.count > 4 ? " and \(names.count - 4) more" : ""))
