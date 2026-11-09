@@ -160,27 +160,102 @@ extension Workspace {
         let ids = selectedOriginalIDs { $0.trashedAt == nil }
         let panel = NSOpenPanel()
         panel.title = "Relocate Originals"
-        panel.message = "Choose a folder outside this library. Isonique verifies the copies and saves their new references before sending eligible old files to Finder Trash."
-        panel.prompt = "Relocate Originals"
+        panel.message = "Choose a folder outside this library and how to name and organise the files."
+        panel.prompt = "Preview"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
+
+        let filenames = NSPopUpButton()
+        filenames.addItems(withTitles: OriginalRelocationFilename.allCases.map(\.rawValue))
+        filenames.setAccessibilityLabel("Filename preset")
+        let subfolders = NSPopUpButton()
+        subfolders.addItems(withTitles: OriginalRelocationSubfolders.allCases.map(\.rawValue))
+        subfolders.setAccessibilityLabel("Subfolder preset")
         let keepReferences = NSButton(checkboxWithTitle: "Keep copies at previous referenced locations", target: nil, action: nil)
         keepReferences.state = .on
-        if !selectedOriginalIDs(matching: OriginalFolderOperation.reconnect.includes).isEmpty {
-            keepReferences.frame.size = keepReferences.fittingSize
-            panel.accessoryView = keepReferences
-            panel.isAccessoryViewDisclosed = true
-        }
-        guard panel.runModal() == .OK, let folder = panel.url else { return }
-        let keepReferencedSources = keepReferences.state == .on
-        Task { await relocateOriginals(ids, to: folder, keepReferencedSources: keepReferencedSources) }
+        let accessories: [NSView] = [NSTextField(labelWithString: "Filenames"), filenames,
+                                     NSTextField(labelWithString: "Subfolders"), subfolders]
+        let hasReferences = !selectedOriginalIDs(matching: OriginalFolderOperation.reconnect.includes).isEmpty
+        let stack = NSStackView(views: accessories + (hasReferences ? [keepReferences] : []))
+        stack.orientation = .vertical
+        stack.alignment = .leading
+        stack.spacing = 5
+        stack.edgeInsets = NSEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
+        stack.frame.size = stack.fittingSize
+        panel.accessoryView = stack
+        panel.isAccessoryViewDisclosed = true
+
+        guard panel.runModal() == .OK, let folder = panel.url,
+              let filename = filenames.titleOfSelectedItem.flatMap(OriginalRelocationFilename.init(rawValue:)),
+              let subfolder = subfolders.titleOfSelectedItem.flatMap(OriginalRelocationSubfolders.init(rawValue:)) else { return }
+        let options = OriginalRelocationOptions(filename: filename, subfolders: subfolder,
+                                                keepReferencedSources: keepReferences.state == .on)
+        Task { await reviewRelocation(ids, to: folder, options: options) }
     }
 
-    func relocateOriginals(_ ids: Set<UUID>, to folder: URL, keepReferencedSources: Bool) async {
+    private func reviewRelocation(_ ids: Set<UUID>, to folder: URL, options: OriginalRelocationOptions) async {
+        guard !busy, let repository else { return }
+        let current = library
+        busy = true
+        status = "Preparing relocation preview…"
+        let preview: OriginalRelocationPreview
+        do {
+            preview = try await Task.detached(priority: .utility) {
+                try repository.previewRelocatingOriginals(ids, to: folder, in: current, options: options)
+            }.value
+        } catch {
+            busy = false
+            self.error = error.localizedDescription
+            status = "Could not preview relocation"
+            return
+        }
+        let approved = presentRelocationPreview(preview, options: options)
+        busy = false
+        guard approved else { status = "Relocation preview closed"; return }
+        await relocateOriginals(after: preview)
+    }
+
+    private func presentRelocationPreview(_ preview: OriginalRelocationPreview, options: OriginalRelocationOptions) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "Preview Relocate Originals"
+        let items = preview.items
+        let ready = preview.relocationCount
+        let skipped = items.count - ready
+        let action = options.keepReferencedSources ? "Previous referenced copies will be kept."
+            : "Previous referenced copies still used by the catalogue will be kept."
+        alert.informativeText = "\(ready) to relocate · \(skipped) skipped\n\(preview.destination.path)\n\n"
+            + "Isonique verifies the destination copies and saves their paths before sending eligible old files to Finder Trash. " + action
+        let scroll = NSTextView.scrollableTextView()
+        scroll.frame.size = NSSize(width: 480, height: min(265, max(70, items.count * 43)))
+        if let text = scroll.documentView as? NSTextView {
+            text.string = items.map { item in
+                let versions = item.versionCount > 1 ? " (\(item.versionCount) versions)" : ""
+                let relative = item.destinationPath ?? item.preferredPath
+                let outcome: String
+                switch item.disposition {
+                case .copy: outcome = relative == item.preferredPath ? "Copy" : "Copy using storage name (collision)"
+                case .reuse: outcome = relative == item.preferredPath ? "Reuse verified copy" : "Reuse verified copy under storage name"
+                case .alreadyThere: outcome = "Already at destination"
+                case .unavailable: outcome = "Original unavailable"
+                case .occupied: outcome = "Destination unavailable"
+                }
+                return "\(item.originalName)\(versions)\n\(outcome): \(relative)"
+            }.joined(separator: "\n\n")
+            text.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+            text.isEditable = false
+            text.setAccessibilityLabel("Relocation preview paths")
+        }
+        alert.accessoryView = scroll
+        alert.addButton(withTitle: ready == 0 ? "Done" : "Cancel")
+        if ready > 0 { alert.addButton(withTitle: "Relocate Originals").keyEquivalent = "" }
+        return alert.runModal() == .alertSecondButtonReturn && ready > 0
+    }
+
+    private func relocateOriginals(after preview: OriginalRelocationPreview) async {
         await runOriginalJob(status: "Copying and verifying originals for relocation…") { repository, current in
             var draft = current
-            let report = try repository.relocateOriginals(ids, to: folder, in: &draft, keepReferencedSources: keepReferencedSources)
+            let report = try repository.relocateOriginals(after: preview, in: &draft)
             let summary = "\(report.relocated.count) relocated · \(report.unavailable.count) unavailable"
             return (report.relocated.isEmpty ? nil : draft, OriginalJobResult(
                 title: "Relocate Originals", summary: summary, unavailable: report.unavailable,
@@ -295,7 +370,7 @@ struct OriginalJobResult: Sendable {
         var lines = [summary]
         let groups = [("Unmatched", unmatched), ("Multiple verified copies", ambiguous),
                       ("Original unavailable", unavailable), ("Destination unavailable", occupied), ("Operation failed for", failed),
-                      ("Saved under another name", renamed), ("Old file retained", retained), ("Already in this folder", alreadyInFolder)]
+                      ("Saved under another name", renamed), ("Old file retained", retained), ("Already at destination", alreadyInFolder)]
         for (label, names) in groups where !names.isEmpty {
             let first = names.prefix(4).joined(separator: ", ")
             lines.append("\(label) — \(first)" + (names.count > 4 ? " and \(names.count - 4) more" : ""))

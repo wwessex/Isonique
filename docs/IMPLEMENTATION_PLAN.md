@@ -51,7 +51,9 @@ The File menu consolidates selected references into verified managed copies. Sha
 
 The File menu relocates selected managed originals outside the library. It checks copies, saves new references for all versions, and then sends old managed files to Finder Trash. A failed or cancelled save can leave verified destination copies that a retry can reuse.
 
-Relocation also works for already-referenced originals. The chooser defaults to keeping old external files. If the user elects to move them, a source that another record still references remains in place. Selecting the current folder reports the file without moving it.
+Relocation also works for already-referenced originals. The chooser defaults to keeping old external files. If the user elects to move them, a source that another record still references remains in place. A reference that already matches its proposed path is skipped.
+
+The chooser offers original, catalogue or numbered filenames, with no subfolders or folders by project or capture year and month. The read-only preview shows the exact paths per original, how many versions share each one, and whether a collision will use the storage name, reuse a verified copy or skip a blocked path. Apply uses the approved paths, refuses a stale catalogue, and skips paths that become occupied or unsafe. A fresh preview is needed to approve a different path.
 
 File → Open Recent Library remembers up to ten successfully opened libraries. It uses verified opening and shows parent folders for duplicate names. Clearing the list preserves the startup library.
 
@@ -93,6 +95,6 @@ Catalogue writes from independently opened workspaces compare the revision they 
 
 ## Next implementation slice
 
-1. Add a preview for filename and subfolder presets in Relocate Originals, then verify destination paths, naming collisions and preservation of shared originals.
+1. Add reusable custom filename and subfolder presets for Relocate Originals, with path validation and the existing review before moving files.
 
 Other open core work includes library merging and repair, and import from camera devices. Build and interaction evidence should stay in the test record.

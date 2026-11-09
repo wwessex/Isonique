@@ -139,7 +139,7 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
         }
     }
 
-    private static func dayNumber(_ string: String, separator: Character) -> Int? {
+    static func dayNumber(_ string: String, separator: Character) -> Int? {
         let parts = string.split(separator: separator, omittingEmptySubsequences: false)
         guard parts.count == 3, parts[0].count == 4, parts[1].count == 2, parts[2].count == 2,
               let year = Int(parts[0]), let month = Int(parts[1]), let day = Int(parts[2]),
