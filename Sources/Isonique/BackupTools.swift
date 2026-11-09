@@ -200,6 +200,7 @@ extension Workspace {
             showProjectTransfer(result.library, project: result.project)
             let conflictLabel = result.conflicts == 1 ? "conflict" : "conflicts"
             status = "Merged \(result.project.name) · \(result.added) added · \(result.updated) updated · \(result.trashed) trashed · \(result.skipped) skipped · \(result.conflicts) \(conflictLabel)"
+            if result.albumUpdates > 0 { status += " · \(albumUpdateLabel(result.albumUpdates)) updated" }
             if result.stackUpdates > 0 { status += " · \(stackUpdateLabel(result.stackUpdates)) updated" }
         } catch is CancellationError {
             status = "Project merge cancelled"
@@ -218,11 +219,16 @@ extension Workspace {
             "\(preview.addedAlbums) albums to add, \(preview.copiedOriginals) originals to copy, \(preview.skipped) photos to skip."
         ]
         let preferred = preference == .current ? "Current values" : "Imported values"
+        if preview.albumUpdates > 0 { details.append("\(albumUpdateLabel(preview.albumUpdates)) to update.") }
         if preview.stackUpdates > 0 { details.append("\(stackUpdateLabel(preview.stackUpdates)) to update.") }
         if !preview.conflicts.isEmpty {
             let subject = preview.conflicts.count == 1 ? "photo" : "photos"
             details.append("\(preferred) will resolve conflicts on \(preview.conflicts.count) \(subject).")
             details += preview.conflicts.prefix(5).map { "\($0.photoName) — \($0.fields.joined(separator: ", "))" }
+        }
+        if !preview.albumConflicts.isEmpty {
+            details.append("\(preferred) will resolve conflicts on \(albumUpdateLabel(preview.albumConflicts.count)).")
+            details += preview.albumConflicts.prefix(5).map { "\($0.albumName) — \($0.fields.joined(separator: ", "))" }
         }
         if !preview.stackConflicts.isEmpty {
             let subject = preview.stackConflicts.count == 1 ? "stack" : "stacks"
@@ -245,6 +251,10 @@ extension Workspace {
 
     private func stackUpdateLabel(_ count: Int) -> String {
         "\(count) \(count == 1 ? "stack" : "stacks")"
+    }
+
+    private func albumUpdateLabel(_ count: Int) -> String {
+        "\(count) \(count == 1 ? "album" : "albums")"
     }
 
     private func showProjectTransfer(_ saved: Library, project: Collection) {

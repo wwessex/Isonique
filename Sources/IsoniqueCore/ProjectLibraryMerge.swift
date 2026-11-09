@@ -13,6 +13,7 @@ public struct ProjectLibraryMergeResult {
     public fileprivate(set) var skipped = 0
     public fileprivate(set) var conflicts = 0
     public fileprivate(set) var stackUpdates = 0
+    public fileprivate(set) var albumUpdates = 0
 }
 
 public struct ProjectPhotoMergeConflict: Sendable {
@@ -22,6 +23,11 @@ public struct ProjectPhotoMergeConflict: Sendable {
 
 public struct ProjectStackMergeConflict: Sendable {
     public let representativeName: String
+    public let fields: [String]
+}
+
+public struct ProjectAlbumMergeConflict: Sendable {
+    public let albumName: String
     public let fields: [String]
 }
 
@@ -38,6 +44,8 @@ public struct ProjectLibraryMergePreview: Sendable {
     public let legacyMatches: Int
     public let stackUpdates: Int
     public let stackConflicts: [ProjectStackMergeConflict]
+    public let albumUpdates: Int
+    public let albumConflicts: [ProjectAlbumMergeConflict]
 }
 
 public extension LibraryRepository {
@@ -79,6 +87,14 @@ public extension LibraryRepository {
         var result = ProjectLibraryMergeResult(library: destination, project: current)
         var draft = destination
         draft.version = max(source.version, destination.version)
+        let membership = source.projectExportMembership.flatMap { $0.projectID == project.id ? $0 : nil }
+        var albumConflicts: [ProjectAlbumMergeConflict] = []
+        if let baseline = membership?.albumDefinitions {
+            let definitions = try draft.mergeAlbumDefinitions(from: source.albums, baseline: baseline,
+                                                              projectID: project.id, prefer: preference)
+            result.albumUpdates = definitions.updated
+            albumConflicts = definitions.conflicts
+        }
         let currentAlbumIDs = Set(destination.albums.map(\.id))
         let newAlbums = source.albums.filter { !currentAlbumIDs.contains($0.id) }
         for album in newAlbums {
@@ -98,7 +114,6 @@ public extension LibraryRepository {
         var trashNames: [String] = []
         var conflicts: [ProjectPhotoMergeConflict] = []
         var legacyMatches = 0
-        let membership = source.projectExportMembership.flatMap { $0.projectID == project.id ? $0 : nil }
         for photo in source.photos {
             try Task.checkCancellation()
             if let index = indices[photo.id] {
@@ -215,7 +230,8 @@ public extension LibraryRepository {
                                                  trashed: result.trashed, skipped: result.skipped, addedAlbums: newAlbums.count,
                                                  copiedOriginals: copiedNames.count, trashNames: trashNames,
                                                  conflicts: conflicts, legacyMatches: legacyMatches,
-                                                 stackUpdates: result.stackUpdates, stackConflicts: stackConflicts)
+                                                 stackUpdates: result.stackUpdates, stackConflicts: stackConflicts,
+                                                 albumUpdates: result.albumUpdates, albumConflicts: albumConflicts)
         guard await review(preview) else { throw CancellationError() }
         try Task.checkCancellation()
         let transfers = incomingOriginals.map { (original: $0, filename: copiedNames[$0.originalID]) }
@@ -223,7 +239,8 @@ public extension LibraryRepository {
                                        transfers: transfers, progress: progress)
         return ProjectLibraryMergeResult(library: draft, project: current, added: result.added,
                                          updated: result.updated, trashed: result.trashed, skipped: result.skipped,
-                                         conflicts: conflicts.count + stackConflicts.count, stackUpdates: result.stackUpdates)
+                                         conflicts: conflicts.count + stackConflicts.count + albumConflicts.count,
+                                         stackUpdates: result.stackUpdates, albumUpdates: result.albumUpdates)
     }
 }
 

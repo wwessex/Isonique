@@ -169,6 +169,36 @@ final class WorkspaceTests: XCTestCase {
     }
 
     @MainActor
+    func testRenameRegularAlbumPreservesIdentityAndMembershipOnReopen() throws {
+        let root = try temporaryLibrary()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let workspace = Workspace(libraryRoot: root)
+        let album = Collection(name: "Selects")
+        var smart = Collection(name: "Smart Selects")
+        smart.rule = SmartAlbumRule()
+        var photo = Photo(filename: "a.png", originalName: "a.png", projectID: nil,
+                          width: 32, height: 24, camera: "", captureDate: "", sha256: "fixture")
+        photo.albumIDs = [album.id]
+        var draft = workspace.library
+        draft.albums = [album, smart]
+        draft.photos = [photo]
+        XCTAssertTrue(workspace.commit(draft))
+        workspace.scope = "album:\(album.id)"
+
+        XCTAssertFalse(workspace.renameRegularAlbum(album.id, to: " "))
+        XCTAssertFalse(workspace.renameRegularAlbum(smart.id, to: "Wrong editor"))
+        XCTAssertTrue(workspace.renameRegularAlbum(album.id, to: "  Delivery  "))
+        XCTAssertEqual(workspace.title, "Delivery")
+        XCTAssertEqual(workspace.photos, [photo])
+
+        let reopened = Workspace(libraryRoot: root)
+        reopened.scope = "album:\(album.id)"
+        XCTAssertEqual(reopened.title, "Delivery")
+        XCTAssertEqual(reopened.photos, [photo])
+        XCTAssertEqual(reopened.library.albums.last, smart)
+    }
+
+    @MainActor
     func testFlipRetainsCropAndParticipatesInHistory() async throws {
         let root = try temporaryLibrary()
         defer { try? FileManager.default.removeItem(at: root) }

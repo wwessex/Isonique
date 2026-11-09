@@ -69,8 +69,10 @@ Independent controls such as Exposure and Contrast merge separately. Geometry, L
 
 Project exports also record the starting collapsed state, global stack picks and album picks. Merge applies one-sided changes and pick removals, and previews conflicting picks separately from photo conflicts. It limits presentation changes to stacks fully within the merge scope. Older exports keep the previous stack merge behavior.
 
+Project exports record eligible album definitions. Merge compares names independently from complete Smart Album rules, and the review identifies conflicting fields. Right-click a regular album to rename it. Regular albums shared across projects at export or merge are protected, including memberships in Library Trash. Smart Albums must stay scoped to the matching project on both sides. Rules exported as fixed memberships, album type or scope changes, and matching definitions in older exports keep their destination values. Album deletion reconciliation remains open.
+
 ## Next implementation slice
 
-1. Record exported album names and Smart Album rules. Reconcile one-sided changes to album definitions scoped to the matching project, preview conflicts, and protect albums shared with other projects. Preserve the existing behavior for exports without an album baseline.
+1. Add a read-only whole-library merge preflight. Match projects and originals by stable IDs, report incompatible fingerprints and shared originals, and preview additions across multiple projects before enabling catalogue writes.
 
 Other open core work includes Finder Trash handoff for Library Trash, relocation naming and subfolders, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

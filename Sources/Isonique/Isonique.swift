@@ -435,6 +435,16 @@ enum EditTool: String { case select, crop, straighten, brush }
         scope = project ? "project:\(item.id)" : "album:\(item.id)"
         selection = nil
     }
+    @discardableResult
+    func renameRegularAlbum(_ id: UUID, to name: String) -> Bool {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !busy, !trimmed.isEmpty,
+              let index = library.albums.firstIndex(where: { $0.id == id && $0.rule == nil }) else { return false }
+        if library.albums[index].name == trimmed { return true }
+        var draft = library
+        draft.albums[index].name = trimmed
+        return commit(draft)
+    }
     func startSlideshow() {
         guard !importInProgress else { error = "Wait for the import to finish before starting a slideshow."; return }
         guard !busy, !isViewingTrash, repository != nil else { return }
@@ -767,12 +777,73 @@ private extension View {
     func workspaceGlass(radius: CGFloat = 16) -> some View { modifier(WorkspaceGlass(radius: radius)) }
 }
 
+private enum CollectionEditor: Identifiable {
+    case newProject, newAlbum, renameAlbum(Collection)
+
+    var id: String {
+        switch self {
+        case .newProject: return "newProject"
+        case .newAlbum: return "newAlbum"
+        case .renameAlbum(let album): return album.id.uuidString
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .newProject: return "New Project"
+        case .newAlbum: return "New Album"
+        case .renameAlbum: return "Rename Album"
+        }
+    }
+}
+
+private struct CollectionNameSheet: View {
+    @EnvironmentObject private var model: Workspace
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String
+    let editor: CollectionEditor
+
+    init(_ editor: CollectionEditor) {
+        self.editor = editor
+        if case .renameAlbum(let album) = editor { _name = State(initialValue: album.name) }
+        else { _name = State(initialValue: "") }
+    }
+
+    private var actionTitle: String {
+        if case .renameAlbum = editor { return "Rename" }
+        return "Create"
+    }
+
+    private var validName: Bool { !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text(editor.title).font(.title2)
+            TextField("Name", text: $name).frame(width: 320).onSubmit(save)
+            HStack {
+                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
+                Spacer()
+                Button(actionTitle, action: save).buttonStyle(.borderedProminent).disabled(!validName)
+            }
+        }.padding(28)
+    }
+
+    private func save() {
+        guard validName else { return }
+        switch editor {
+        case .newProject: model.addCollection(name, project: true)
+        case .newAlbum: model.addCollection(name, project: false)
+        case .renameAlbum(let album):
+            guard model.renameRegularAlbum(album.id, to: name) else { return }
+        }
+        dismiss()
+    }
+}
+
 struct ContentView: View {
     @EnvironmentObject var model: Workspace
     @Environment(\.openWindow) private var openWindow
-    @State private var collectionName = ""
-    @State private var creatingProject = true
-    @State private var showCollection = false
+    @State private var collectionEditor: CollectionEditor?
     @FocusState private var browserFocused: Bool
     private var workspaceView: some View {
         NavigationSplitView {
@@ -813,12 +884,23 @@ struct ContentView: View {
                     Section("Albums") {
                         ForEach(model.library.albums) { album in Label(album.name, systemImage: album.rule == nil ? "rectangle.stack" : "gearshape.2").tag("album:\(album.id)")
                             .contextMenu {
-                                if album.rule != nil { Button("Edit Smart Album…") { model.editingSmartAlbum = album.id; model.showSmartAlbum = true } }
+                                if album.rule != nil {
+                                    Button("Edit Smart Album…") { model.editingSmartAlbum = album.id; model.showSmartAlbum = true }
+                                        .disabled(model.busy)
+                                } else {
+                                    Button("Rename Album…") {
+                                        collectionEditor = .renameAlbum(album)
+                                    }.disabled(model.busy)
+                                }
                             } }
                     }
                 }.listStyle(.sidebar).scrollContentBackground(.hidden)
                 HStack {
-                    Menu { Button("New Project") { creatingProject = true; showCollection = true }; Button("New Album") { creatingProject = false; showCollection = true }; Button("New Smart Album…") { model.editingSmartAlbum = nil; model.showSmartAlbum = true } } label: { Image(systemName: "plus"); Text("Create") }
+                    Menu {
+                        Button("New Project") { collectionEditor = .newProject }
+                        Button("New Album") { collectionEditor = .newAlbum }
+                        Button("New Smart Album…") { model.editingSmartAlbum = nil; model.showSmartAlbum = true }
+                    } label: { Image(systemName: "plus"); Text("Create") }
                         .menuStyle(.borderlessButton)
                     Spacer()
                     Text("\(model.library.activePhotos.count) photos").font(.caption).foregroundStyle(.secondary)
@@ -963,13 +1045,7 @@ struct ContentView: View {
         .sheet(isPresented: $model.showAdvancedSearch) { AdvancedSearchView().environmentObject(model) }
         .sheet(isPresented: $model.showImportOptions) { ImportOptionsView().environmentObject(model) }
         .sheet(isPresented: $model.showExportOptions) { ExportOptionsView().environmentObject(model) }
-        .sheet(isPresented: $showCollection) {
-            VStack(alignment: .leading, spacing: 20) {
-                Text(creatingProject ? "New Project" : "New Album").font(.title2)
-                TextField("Name", text: $collectionName).frame(width: 320).onSubmit(createCollection)
-                HStack { Button("Cancel") { showCollection = false }; Spacer(); Button("Create", action: createCollection).buttonStyle(.borderedProminent).disabled(collectionName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty) }
-            }.padding(28)
-        }
+        .sheet(item: $collectionEditor) { CollectionNameSheet($0).environmentObject(model) }
         .alert("Isonique", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button("OK") { model.error = nil } } message: { Text(model.error ?? "") }
         .alert(model.originalJobResult?.title ?? "Original Search",
                isPresented: Binding(get: { model.originalJobResult != nil },
@@ -1004,7 +1080,6 @@ struct ContentView: View {
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didUnmountNotification)) { _ in model.refreshOriginalStatus() }
         .onChange(of: model.selection) { _, _ in model.tool = .select; model.compareOriginal = false }
     }
-    func createCollection() { model.addCollection(collectionName, project: creatingProject); collectionName = ""; showCollection = false }
     @ViewBuilder func photoCell(_ photo: Photo, compact: Bool) -> some View {
         if let repo = model.repository {
             let url = try? repo.availableOriginalURL(photo)
