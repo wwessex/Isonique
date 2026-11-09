@@ -199,3 +199,9 @@
 
 - Repository tests covered keeping previous external files by default, opting to move them, preserving an aliased file still used by a trashed record, and skipping originals already in the destination.
 - The signed app showed the keep-copies option enabled by default. With it disabled, two references and a shared version changed paths. An unselected aliased reference still opened its old source, and the unshared old file was released. Destination and retained-source hashes matched.
+
+## Recent library switching
+
+- Workspace tests covered verified switching, same-name library labels, bounded and deduplicated preferences, failed opening of a missing library, and persistence of the list and startup library. Clearing recents preserved the startup library.
+- In the signed app, opening an alternate library populated File → Open Recent Library. The submenu switched back to the original library and cleared the saved list. The active library preference still pointed to the original library.
+- The optimized suite executed 126 tests with zero failures or skips, including four camera RAW fixtures. The signed arm64 app and release archive passed strict verification on Apple M5 Pro, macOS 27.3 and Xcode 27.2.

@@ -15,7 +15,7 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 | Aperture workflow | Status | Isonique audit |
 | --- | --- | --- |
 | Create and switch independent Isonique libraries | Fully implemented and tested | File → New Isonique Library (⇧⌘N) creates a new folder. File → Open Isonique Library verifies and switches libraries. Both commands exercised in the native app. Normal launch remembers the selected path. |
-| Library recents and relocation | Partially implemented | Existing libraries can be opened from a new location. Present managed originals are verified and missing files can be relinked. No recents or Finder document handler. |
+| Library recents and relocation | Partially implemented | File → Open Recent Library switches between up to ten saved library paths. The same verified opener is used when selecting a library from a new location. Finder document opening remains open. Aperture provided a Switch to Library submenu. [Aperture Help](https://aperture.skydocu.com/en/work-with-projects-and-the-library/work-with-library-files/view-other-libraries/) |
 | Managed originals and byte-exact original export | Implemented but needs improvement | SHA-256-verified copies and original export have automated coverage. Missing managed originals can be restored individually or in a batch from matching bytes. |
 | Folder-based recovery for managed originals | Fully implemented and tested | The File menu restores verified copies from a backup or folder into their existing managed paths. Search can target selected photos, the current project or the entire library. It reports unmatched files, ambiguous copies and blocked destinations. Each completed copy remains available after cancellation or restart. |
 | Referenced originals, offline badges, reconnect, relocate, consolidate | Partially implemented | Optional referenced import, offline browser filter, verified single-file relink and copy consolidation. Relocation handles managed and referenced originals. Offline previews remain open. |
@@ -101,7 +101,7 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 
 | Surface | Status | Audit |
 | --- | --- | --- |
-| File | Partially implemented | Import (⌘I), export (⇧⌘E), New Smart Album (⇧⌘L), metadata import, create/open/verify/backup/restore, single relink, batch reconnect and managed recovery, single and batch consolidation, photo Trash, legacy recovery and import options. Library merge, version deletion semantics and print remain open. |
+| File | Partially implemented | Import (⌘I), export (⇧⌘E), New Smart Album (⇧⌘L), metadata import, create/open/open recent/verify/backup/restore, relocate originals, single relink, batch reconnect and managed recovery, single and batch consolidation, photo Trash, legacy recovery and import options. Library merge, version deletion semantics and print remain open. |
 | Edit | Partially implemented | Undo/redo photo edit (⌘Z / ⇧⌘Z). Native text editing should retain text undo in focused inputs; application-wide override needs interaction review. |
 | View / Window | Partially implemented | SwiftUI window menu, sidebar/inspector, Advanced Search (⇧⌘F), grid/list/viewer controls and Escape to Browser. Dedicated Aperture layouts, HUDs, overlays and window controls are absent. |
 | Images / Photos, Metadata, Adjustments | Partially implemented | Photos, Metadata, Rating and Review menus, Inspector and edit strip expose flip, labels, flags, ratings, slideshow and auto-stack commands. Full menu parity is pending. |
