@@ -87,8 +87,10 @@ First Aid can recover reviewed missing managed originals or reconnect reviewed o
 
 Inspect Untracked Files hashes the files in the reviewed report. It compares them with saved catalogue fingerprints, including offline originals, and can inspect selected Isonique backups. It checks each backup's catalogue and manifest and reads the matching managed files to verify their bytes. The inspection is read-only.
 
+After inspection, Review Quarantine lists the files before moving them to First Aid Quarantine inside the library. Restore Quarantined Files reviews the return to Originals under the same names. Both actions check the live catalogue under its write lock and verify the reviewed fingerprints before moving. Claimed paths, pending Finder Trash files and occupied destinations are skipped. Each move is atomic, and quarantined files remain available after reopening.
+
 ## Next implementation slice
 
-1. Add a review for reclaiming untracked managed files, with a reversible quarantine path and a fresh check of catalogue ownership before any move.
+1. Detect stale catalogue writes from independently opened workspaces and provide a way to reload the current library.
 
 Other open core work includes relocation naming and subfolders, library merging and repair, import from camera devices, and detection of stale edits from independently opened workspaces. Build and interaction evidence should stay in the test record.

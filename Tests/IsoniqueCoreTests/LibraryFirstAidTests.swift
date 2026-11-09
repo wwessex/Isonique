@@ -273,6 +273,84 @@ final class LibraryFirstAidTests: XCTestCase {
         XCTAssertThrowsError(try repository.inspectUntrackedManagedFiles(after: review)) { verifyStale($0) }
     }
 
+    func testQuarantineCanBeRestoredAfterReopeningAndSkipsOccupiedPaths() throws {
+        let (folder, repository) = try fixture()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let originals = repository.root.appendingPathComponent("Originals")
+        let first = try recoveryPhoto("First.png", byte: 1, in: originals)
+        let second = try recoveryPhoto("Second.png", byte: 2, in: originals)
+        let catalogue = repository.root.appendingPathComponent("catalog.json")
+        let before = try Data(contentsOf: catalogue)
+        let inspection = try repository.inspectUntrackedManagedFiles(after: repository.libraryFirstAidReport())
+        XCTAssertEqual(try LibraryRepository.digest(repository.managedOriginalURL(first.filename)), first.sha256)
+        XCTAssertEqual(try LibraryRepository.digest(repository.managedOriginalURL(second.filename)), second.sha256)
+
+        let moved = try repository.quarantineUntrackedManagedFiles(after: inspection)
+        XCTAssertEqual(moved.moved, [first.filename, second.filename])
+        XCTAssertEqual(try repository.libraryFirstAidReport().untrackedManagedFiles, [])
+        let quarantine = repository.root.appendingPathComponent("First Aid Quarantine")
+        XCTAssertEqual(try LibraryRepository.digest(quarantine.appendingPathComponent(first.filename)), first.sha256)
+        XCTAssertEqual(try LibraryRepository.digest(quarantine.appendingPathComponent(second.filename)), second.sha256)
+
+        let reopened = try LibraryRepository(root: repository.root)
+        XCTAssertEqual(try reopened.libraryFirstAidReport().quarantinedFiles, [first.filename, second.filename])
+        let review = try reopened.reviewQuarantinedManagedFiles()
+        XCTAssertEqual(review.files.map(\.sha256), [first.sha256, second.sha256])
+        let occupied = try reopened.managedOriginalURL(first.filename)
+        try Data([9]).write(to: occupied)
+        let partial = try reopened.restoreQuarantinedManagedFiles(after: review)
+        XCTAssertEqual(partial.moved, [second.filename])
+        XCTAssertEqual(partial.occupied, [first.filename])
+        XCTAssertEqual(try Data(contentsOf: occupied), Data([9]))
+
+        try FileManager.default.removeItem(at: occupied)
+        let retry = try reopened.restoreQuarantinedManagedFiles(after: reopened.reviewQuarantinedManagedFiles())
+        XCTAssertEqual(retry.moved, [first.filename])
+        XCTAssertEqual(try LibraryRepository.digest(reopened.managedOriginalURL(first.filename)), first.sha256)
+        XCTAssertEqual(try LibraryRepository.digest(reopened.managedOriginalURL(second.filename)), second.sha256)
+        XCTAssertTrue(try reopened.libraryFirstAidReport().quarantinedFiles.isEmpty)
+        XCTAssertEqual(try Data(contentsOf: catalogue), before)
+    }
+
+    func testQuarantineChecksFreshOwnershipAndReviewedBytesBeforeMoving() throws {
+        let (folder, repository) = try fixture()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let originals = repository.root.appendingPathComponent("Originals")
+        let claimed = try recoveryPhoto("Claimed.png", byte: 1, in: originals)
+        let pending = try recoveryPhoto("Pending.png", byte: 2, in: originals)
+        let changed = try recoveryPhoto("Changed.png", byte: 3, in: originals)
+        let eligible = try recoveryPhoto("Eligible.png", byte: 4, in: originals)
+        let inspection = try repository.inspectUntrackedManagedFiles(after: repository.libraryFirstAidReport())
+        XCTAssertEqual(inspection.files.count, 4)
+
+        var library = Library()
+        library.photos = [claimed]
+        library.pendingFinderTrash = [PendingFinderTrash(filename: pending.filename, sha256: pending.sha256)]
+        try repository.save(library)
+        let catalogue = repository.root.appendingPathComponent("catalog.json")
+        let newer = try Data(contentsOf: catalogue)
+        let changedURL = try repository.managedOriginalURL(changed.filename)
+        try Data([9]).write(to: changedURL)
+
+        let moved = try repository.quarantineUntrackedManagedFiles(after: inspection)
+        XCTAssertEqual(moved.claimed, [claimed.filename, pending.filename])
+        XCTAssertEqual(moved.changedOrUnavailable, [changed.filename])
+        XCTAssertEqual(moved.moved, [eligible.filename])
+        XCTAssertEqual(try Data(contentsOf: catalogue), newer)
+        XCTAssertEqual(try LibraryRepository.digest(repository.availableOriginalURL(claimed)), claimed.sha256)
+        XCTAssertEqual(try LibraryRepository.digest(repository.managedOriginalURL(pending.filename)), pending.sha256)
+        XCTAssertEqual(try Data(contentsOf: changedURL), Data([9]))
+
+        let restore = try repository.reviewQuarantinedManagedFiles()
+        library.photos.append(eligible)
+        try repository.save(library)
+        let refused = try repository.restoreQuarantinedManagedFiles(after: restore)
+        XCTAssertEqual(refused.claimed, [eligible.filename])
+        XCTAssertTrue(refused.moved.isEmpty)
+        XCTAssertThrowsError(try repository.availableOriginalURL(eligible))
+        XCTAssertEqual(try repository.reviewQuarantinedManagedFiles().files.map(\.sha256), [eligible.sha256])
+    }
+
     private func verifyStale(_ error: Error) {
         guard case LibraryError.integrity(let message) = error else { return XCTFail("Unexpected error: \(error)") }
         XCTAssertTrue(message.contains("catalogue changed"))

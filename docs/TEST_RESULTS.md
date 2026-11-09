@@ -313,3 +313,10 @@
 - A corrupt matching backup file failed verification, and a changed catalogue invalidated the reviewed report. Catalogue and file contents matched before and after inspection.
 - In the signed app, First Aid displayed one catalogue match and one verified backup file for the same untracked file. The library catalogue, backup catalogue, backup manifest and tested file hashes matched after dismissal.
 - The optimized suite passed all 177 tests without skips, including four camera RAW fixtures and the native Finder Trash handoff. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
+
+## First Aid quarantine and restore
+
+- Tests quarantined two inspected files and reopened the library. Restore kept an occupied destination intact and returned the other file. Retrying after clearing the destination restored the remaining file under its original name. Catalogue bytes and file fingerprints matched the starting fixture.
+- A fresh catalogue check protected a newly claimed original and a pending Finder Trash file. A changed fingerprint blocked a move, and a later catalogue claim blocked restore into the claimed path.
+- In the signed app, the quarantine and restore dialogs each listed the reviewed file before confirmation. The restored file returned to Originals with the same hash, and the catalogue contents matched.
+- The optimized suite passed all 179 tests without skips, including four camera RAW fixtures and the native Finder Trash handoff. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
