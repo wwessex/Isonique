@@ -97,3 +97,8 @@
 - Full-resolution edited PNG pixels matched the preview byte for byte. Both the source and managed original retained their SHA-256 hashes. Formats 1–4 continue to load, and the first saved channel curve selects format 5.
 - Native QA opened the Inspector graph, added a red point, changed output from 127 to 128 through the accessible stepper, undid and redid the change, then switched to an independent luminance curve. The format-5 catalogue saved the red point.
 - On Apple M5 Pro, an optimized 4000 × 3000 synthetic JPEG render had median times of 639 ms with neutral settings, 650 ms with three RGB curves, and 712 ms with RGB plus luminance. Each measurement was the median of five runs after one warm-up. Luminance uses linear-light blending toward black or white, with an sRGB graph and bounded lookup tables. This benchmark covers one synthetic image and one machine.
+
+## Inspector histogram channels
+
+- All 83 XCTest cases and the signed arm64 build passed on the native Apple Silicon macOS app. Synthetic fixtures verified bin counts, alpha handling, and that a red curve moves the expected red bin while leaving green and blue unchanged.
+- Native QA confirmed all five choices in the Inspector and switched between luminance, combined RGB and blue. Switching modes left edit history empty. All four distributions are counted from the same edited 384-pixel preview, so toggling the presentation does not decode the photo again.

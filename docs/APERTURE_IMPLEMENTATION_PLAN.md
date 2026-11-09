@@ -21,9 +21,11 @@ The single-photo Viewer has a pointer-driven Loupe with full-resolution sampling
 
 The shared renderer and Inspector support independent red, green, blue and luminance curves. Format 5 protects the new recipes. Native QA covered point controls and Undo/Redo, and automated tests cover channel isolation, persistence and export pixels. The test record includes a 12 MP render measurement.
 
+The Inspector histogram supports luminance, combined RGB and individual channels from one edited preview. Selecting a histogram view is a persistent UI preference.
+
 ## Next implementation slice
 
-1. Expand the edited histogram with combined RGB and independent channel displays.
-2. Extend Levels with per-channel controls and preserve existing recipes and export rendering.
+1. Extend Levels with per-channel controls and preserve existing recipes and export rendering.
+2. Use the channel histograms in the adjustment graphs and qualify higher-resolution tone workflows.
 
 Other open core work includes Finder Trash handoff, batch relinking, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
