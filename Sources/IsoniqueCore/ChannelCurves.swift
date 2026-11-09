@@ -71,6 +71,26 @@ public struct ChannelCurve: Codable, Equatable {
         guard index > 0, index < points.count - 1 else { return }
         points.remove(at: index)
     }
+
+    /// Add an anchor on the current curve, or select the point already at that input.
+    @discardableResult
+    public mutating func anchor(input: Int) -> Int? {
+        if let existing = points.firstIndex(where: { $0.input == input }) { return existing }
+        guard (1..<255).contains(input) else { return nil }
+        let output = Int((value(at: Double(input) / 255) * 255).rounded())
+        return insertPoint(input: input, output: output)
+    }
+
+    /// Spread the occupied tonal range over the output axis. Degenerate histograms leave the curve unchanged.
+    public static func automatic(from bins: [Int]) -> Self? {
+        guard let range = AutoLevels.endpoints(bins, blackClipPercent: 0.5, whiteClipPercent: 0.5) else { return nil }
+        let black = Int((range.lowerBound * 255).rounded())
+        let white = Int((range.upperBound * 255).rounded())
+        var curve = identity
+        curve.insertPoint(input: black, output: 0)
+        curve.insertPoint(input: white, output: 255)
+        return curve
+    }
 }
 
 public struct ChannelCurves: Codable, Equatable {

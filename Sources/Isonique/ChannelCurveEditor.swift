@@ -16,6 +16,7 @@ struct ChannelCurveEditor: View {
     let input: ToneHistogram?
     @State private var channel: CurveChannel = .red
     @State private var pointIndex = 0
+    @State private var handledSampleID: UUID?
     @State private var drag: CurveDrag?
 
     private struct CurveDrag {
@@ -26,7 +27,14 @@ struct ChannelCurveEditor: View {
 
     private var saved: ChannelCurve { photo.adjustments.curve(for: channel) }
     private var curve: ChannelCurve { drag?.curve ?? saved }
-    private var index: Int { min(pointIndex, curve.points.count - 1) }
+    private var index: Int {
+        if let selection = model.curvePointSelection, selection.id != handledSampleID,
+           selection.photoID == photo.id, selection.channel == channel,
+           let sampled = curve.points.firstIndex(where: { $0.input == selection.input }) {
+            return sampled
+        }
+        return min(pointIndex, curve.points.count - 1)
+    }
     private var isInteriorPoint: Bool { index > 0 && index < curve.points.count - 1 }
     private var tint: Color {
         switch channel {
@@ -52,8 +60,23 @@ struct ChannelCurveEditor: View {
             Picker("Curve channel", selection: $channel) {
                 ForEach(CurveChannel.allCases) { Text($0.rawValue).tag($0) }
             }.pickerStyle(.segmented)
+            HStack {
+                Menu("Auto Curves") {
+                    Button("Auto Curves Combined") {
+                        if let input { model.applyAutoCurves(.combined, input: input, for: photo) }
+                    }.help("Set the luminance curve from its input histogram")
+                    Button("Auto Curves Separate") {
+                        if let input { model.applyAutoCurves(.separate, input: input, for: photo) }
+                    }.help("Set each RGB curve from its own input histogram")
+                }.fixedSize().disabled(input == nil || model.busy || model.batchMode || model.isViewingTrash)
+                Button {
+                    model.startCurveSampling(channel, photoID: photo.id)
+                } label: {
+                    Label("Sample with Loupe", systemImage: "eyedropper")
+                }.disabled(model.busy || !model.canShowLoupe)
+            }
             graph
-            Picker("Point", selection: Binding(get: { index }, set: { pointIndex = $0 })) {
+            Picker("Point", selection: Binding(get: { index }, set: selectPoint)) {
                 ForEach(curve.points.indices, id: \.self) { point in
                     Text("\(curve.points[point].input) → \(curve.points[point].output)").tag(point)
                 }
@@ -67,21 +90,27 @@ struct ChannelCurveEditor: View {
                 Button("Remove Point") {
                     var edit = saved
                     edit.removePoint(at: index)
-                    pointIndex = max(0, index - 1)
+                    selectPoint(max(0, index - 1))
                     commit(edit)
                 }.disabled(!isInteriorPoint)
                 Spacer()
                 Button("Reset Channel") {
-                    pointIndex = 0
+                    selectPoint(0)
                     commit(.identity)
                 }.disabled(saved == .identity)
             }
             Text("Drag points on the graph or use the input and output controls. Each curve uses values from 0 to 255.")
                 .font(.caption2).foregroundStyle(.secondary)
         }.onChange(of: channel) { _, _ in
-            pointIndex = 0
+            selectPoint(0)
             drag = nil
+            if model.curveSampling?.photoID == photo.id { model.curveSampling = nil }
         }
+    }
+
+    private func selectPoint(_ index: Int) {
+        pointIndex = index
+        handledSampleID = model.curvePointSelection?.id
     }
 
     private var graph: some View {
@@ -134,7 +163,9 @@ struct ChannelCurveEditor: View {
 
     private func movePoint(input: Int, output: Int) {
         var edit = saved
-        edit.movePoint(at: index, input: input, output: output)
+        let selected = index
+        selectPoint(selected)
+        edit.movePoint(at: selected, input: input, output: output)
         commit(edit)
     }
 
@@ -143,9 +174,8 @@ struct ChannelCurveEditor: View {
         let intervals = zip(edit.points, edit.points.dropFirst())
         guard let (left, right) = intervals.max(by: { $0.1.input - $0.0.input < $1.1.input - $1.0.input }) else { return }
         let input = (left.input + right.input) / 2
-        let output = Int((edit.value(at: Double(input) / 255) * 255).rounded())
-        guard let index = edit.insertPoint(input: input, output: output) else { return }
-        pointIndex = index
+        guard let index = edit.anchor(input: input) else { return }
+        selectPoint(index)
         commit(edit)
     }
 
@@ -167,7 +197,7 @@ struct ChannelCurveEditor: View {
                 guard let inserted = edit.insertPoint(input: input, output: output) else { return }
                 index = inserted
             }
-            pointIndex = index
+            selectPoint(index)
             drag = CurveDrag(curve: edit, index: index, start: edit.points[index])
         }
         guard var edit = drag else { return }

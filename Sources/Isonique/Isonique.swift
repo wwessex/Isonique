@@ -40,6 +40,8 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var error: String?
     @Published var viewer = false
     @Published var showLoupe = false
+    @Published var curveSampling: CurveSamplingRequest?
+    @Published var curvePointSelection: CurvePointSelection?
     @Published var browserLayout: BrowserPresentation
     @Published var showInspector = true
     @Published var compareOriginal = false
@@ -292,6 +294,10 @@ enum EditTool: String { case select, crop, straighten, brush }
         }
     }
     func exitViewer() {
+        if curveSampling != nil {
+            curveSampling = nil
+            return
+        }
         if comparisonID != nil { stopComparison() }
         else { showBrowser() }
     }
@@ -832,6 +838,9 @@ struct ContentView: View {
             else { model.tool = .select; model.compareOriginal = false; model.stopComparison() }
         }
         .onChange(of: model.compareOriginal) { _, original in if original { model.stopComparison() } }
+        .onChange(of: model.activeCurveSampling) { _, active in
+            if active == nil, model.curveSampling != nil { model.curveSampling = nil }
+        }
         .onChange(of: model.search) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onChange(of: model.ratingFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onChange(of: model.originalFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
@@ -975,6 +984,7 @@ struct PhotoViewer: View {
     @State private var image: ViewerImage?
     @State private var completedRequest: RenderRequest?
     @State private var loupePoint = CGPoint(x: 0.5, y: 0.5)
+    @State private var pendingSample: CurveSampleWork?
     @State private var geometry: PhotoGeometry?
     @State private var erasingBrush = false
     @AppStorage("brush.size") private var brushSize = 12.0
@@ -997,6 +1007,8 @@ struct PhotoViewer: View {
 
     var body: some View {
         let request = renderRequest
+        let sampler = model.activeCurveSampling
+        let sampleWork = pendingSample.flatMap { $0.request == sampler ? $0 : nil }
         VStack(spacing: 10) {
             
             if let image {
@@ -1010,13 +1022,13 @@ struct PhotoViewer: View {
                 else if zoom && model.tool == .select {
                     ScrollView([.horizontal, .vertical]) {
                         ClippingPreview(image: image).frame(width: image.size.width, height: image.size.height)
-                            .overlay { if model.loupeActive { LoupeTarget(point: $loupePoint) } }
+                            .overlay { if model.loupeActive { loupeTarget } }
                     }
                 }
                 else {
                     ClippingPreview(image: image).aspectRatio(image.size, contentMode: .fit)
                         .overlay {
-                            if model.loupeActive { LoupeTarget(point: $loupePoint) }
+                            if model.loupeActive { loupeTarget }
                             if model.tool == .straighten {
                                 GeometryReader { geometry in
                                     Path { path in
@@ -1051,7 +1063,22 @@ struct PhotoViewer: View {
         }.overlay(alignment: .bottomTrailing) {
             if model.loupeActive {
                 if let image, completedRequest == request {
-                    LoupePanel(image: image, point: loupePoint).workspaceGlass().padding(16)
+                    VStack(spacing: 0) {
+                        LoupePanel(image: image, point: loupePoint)
+                        if let sampler {
+                            VStack(spacing: 6) {
+                                Text("\(sampler.channel.rawValue) curve").font(.caption.weight(.semibold))
+                                if sampleWork != nil {
+                                    ProgressView("Sampling pixel").controlSize(.small)
+                                } else {
+                                    Text("Click the image or use the current target.")
+                                        .multilineTextAlignment(.center).foregroundStyle(.secondary)
+                                    Button("Add Curve Point") { queueSample(at: loupePoint) }
+                                }
+                                Button("Cancel Sampling") { model.curveSampling = nil }
+                            }.font(.caption).frame(width: 156).padding([.horizontal, .bottom], 10)
+                        }
+                    }.workspaceGlass().padding(16)
                 } else if failure == nil {
                     ProgressView("Loading Loupe").font(.caption).padding(12).workspaceGlass().padding(16)
                 }
@@ -1075,6 +1102,20 @@ struct PhotoViewer: View {
             if tool != .brush { erasingBrush = false }
         }
         .onChange(of: model.brushAdjustment) { _, _ in erasingBrush = false }
+        .task(id: sampleWork) {
+            guard let sampleWork else { return }
+            do {
+                let input = try await sampleWork.load(from: url)
+                guard !Task.isCancelled, model.activeCurveSampling == sampleWork.request else { return }
+                pendingSample = nil
+                model.finishCurveSampling(sampleWork.request, input: input)
+            } catch {
+                guard !Task.isCancelled, model.activeCurveSampling == sampleWork.request else { return }
+                pendingSample = nil
+                model.curveSampling = nil
+                model.error = error.localizedDescription
+            }
+        }
         .task(id: request) {
             if request.isCropping, let size = try? Renderer.dimensions(url, adjustments: request.adjustments) { cropSize = size }
             do {
@@ -1094,6 +1135,20 @@ struct PhotoViewer: View {
                 failure = error.localizedDescription
             }
         }
+    }
+
+    private var loupeTarget: some View {
+        LoupeTarget(point: $loupePoint, sample: model.activeCurveSampling == nil ? nil : queueSample)
+    }
+
+    private func queueSample(at point: CGPoint) {
+        guard let request = model.activeCurveSampling, request.photoID == photo.id,
+              pendingSample?.request != request, completedRequest == renderRequest, let image else { return }
+        let width = image.rendered.width, height = image.rendered.height
+        let pixel = LoupeSample(point: point, width: width, height: height, span: 1)
+        let center = CGPoint(x: (Double(pixel.x) + 0.5) / Double(width),
+                             y: (Double(pixel.y) + 0.5) / Double(height))
+        pendingSample = CurveSampleWork(request: request, point: center)
     }
 
     private var renderRequest: RenderRequest {

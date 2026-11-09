@@ -570,6 +570,19 @@ public enum Renderer {
         return try TonalTools.adjustmentHistograms(toned, adjustments: adjustments)
     }
 
+    /// Sample the nearest oriented source pixel under a normalized point in the full-size Viewer.
+    public static func sampleCurveInput(_ url: URL, adjustments: Adjustments, channel: CurveChannel,
+                                        viewerPoint: CGPoint) throws -> Int? {
+        guard (0...1).contains(viewerPoint.x), (0...1).contains(viewerPoint.y) else { return nil }
+        let (toned, geometry) = try renderToneInput(url, adjustments: adjustments, maxDimension: nil)
+        try Task.checkCancellation()
+        let source = geometry.sourcePoint(x: viewerPoint.x, y: viewerPoint.y)
+        let x = min(toned.width - 1, Int(source.x * Double(toned.width)))
+        let y = min(toned.height - 1, Int(source.y * Double(toned.height)))
+        return try TonalTools.curveInput(toned, pixel: CGRect(x: x, y: y, width: 1, height: 1),
+                                         adjustments: adjustments, channel: channel)
+    }
+
     private static func renderToneInput(_ url: URL, adjustments: Adjustments,
                                         maxDimension: CGFloat?) throws -> (CGImage, PhotoGeometry) {
         try Task.checkCancellation()
