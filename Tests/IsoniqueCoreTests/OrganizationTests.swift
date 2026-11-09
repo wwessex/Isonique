@@ -93,3 +93,29 @@ final class OrganizationTests: XCTestCase {
         XCTAssertThrowsError(try BatchExport.prepareDirectory(folder, repository: repository))
     }
 }
+
+extension OrganizationTests {
+    func testStackPresentationKeepsFilteredMembersAndIsolatesAlbumOverrides() throws {
+        let stack = UUID(), album = UUID(), otherAlbum = UUID()
+        var first = Photo(filename: "a.png", originalName: "a.png", projectID: nil, width: 5, height: 5,
+                          camera: "", captureDate: "", sha256: "fixture-a")
+        var second = Photo(filename: "b.png", originalName: "b.png", projectID: nil, width: 5, height: 5,
+                           camera: "", captureDate: "", sha256: "fixture-b")
+        first.stackID = stack
+        second.stackID = stack
+        let unstacked = Photo(filename: "c.png", originalName: "c.png", projectID: nil, width: 5, height: 5,
+                              camera: "", captureDate: "", sha256: "fixture-c")
+        var library = Library()
+        library.photos = [first, second, unstacked]
+        library.setStackCollapsed(true, stackID: stack)
+        library.applyStackPick(StackPickChange(stackID: stack, photoID: second.id, selectionID: second.id))
+        let previous = library.applyStackPick(StackPickChange(stackID: stack, albumID: album,
+                                                              photoID: first.id, selectionID: first.id))
+        XCTAssertNil(previous.photoID)
+        let encoded = try JSONEncoder().encode(library)
+        let state = try XCTUnwrap(JSONDecoder().decode(Library.self, from: encoded).stackBrowser)
+        XCTAssertEqual(state.presenting([first, unstacked, second], albumID: album), [first, unstacked])
+        XCTAssertEqual(state.presenting([first, unstacked, second], albumID: otherAlbum), [second, unstacked])
+        XCTAssertEqual(state.presenting([first, unstacked], albumID: nil), [first, unstacked])
+    }
+}

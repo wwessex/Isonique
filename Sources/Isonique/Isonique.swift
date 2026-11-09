@@ -87,10 +87,10 @@ enum EditTool: String { case select, crop, straighten }
     var isViewingTrash: Bool { scope == "trash" }
     var photos: [Photo] { filteredPhotos(advancedQuery: advancedSearch) }
 
-    func filteredPhotos(advancedQuery: PhotoQuery?) -> [Photo] {
+    func filteredPhotos(advancedQuery: PhotoQuery?, includingCollapsed: Bool = false) -> [Photo] {
         let identifier = scope.split(separator: ":").last.flatMap { UUID(uuidString: String($0)) }
         let smartRule = scope.hasPrefix("album:") ? library.albums.first { $0.id == identifier }?.rule : nil
-        return library.photos.filter { photo in
+        let filtered = library.photos.filter { photo in
             guard (photo.trashedAt != nil) == isViewingTrash else { return false }
             let inScope: Bool
             if scope.hasPrefix("project:"), let identifier { inScope = photo.projectID == identifier }
@@ -106,6 +106,8 @@ enum EditTool: String { case select, crop, straighten }
                 (search.isEmpty || [photo.displayName, photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(search)) &&
                 (advancedQuery?.includes(photo, originalAvailable: { self.isOriginalAvailable(photo) }) ?? true)
         }.sorted { lhs, rhs in sortDescending ? orderedBefore(rhs, lhs) : orderedBefore(lhs, rhs) }
+        guard !includingCollapsed, !isViewingTrash, !isViewingStack, let state = library.stackBrowser else { return filtered }
+        return state.presenting(filtered, albumID: currentAlbumID)
     }
 
     func isOriginalAvailable(_ photo: Photo) -> Bool? {
@@ -173,11 +175,14 @@ enum EditTool: String { case select, crop, straighten }
         var draft = library
         guard let entry = nextHistory.step(in: &draft, redoing: redo),
               commit(draft, history: nextHistory) else { return }
-        selectAfterChange(preferred: entry.photo.id)
+        selectAfterChange(preferred: entry.selectionID)
     }
     func selectAfterChange(preferred: UUID?) {
         let visible = photos
-        selection = visible.first { $0.id == preferred }?.id ?? visible.first?.id
+        let stack = library.photos.first { $0.id == preferred }?.stackID
+        selection = visible.first { $0.id == preferred }?.id
+            ?? stack.flatMap { id in visible.first { $0.stackID == id }?.id }
+            ?? visible.first?.id
         compareOriginal = false; tool = .select
         if comparisonPhoto == nil { stopComparison() }
         if visible.isEmpty { viewer = false }
@@ -295,7 +300,12 @@ enum EditTool: String { case select, crop, straighten }
     }
     func stackSelection() {
         guard StackRules.canStack(photoCount: batchPhotos.count) else { return }
-        let id = UUID(); editBatch { $0.stackID = id }
+        let id = UUID()
+        let pick = photos.first { batchSelection.contains($0.id) } ?? batchPhotos.first
+        var draft = library
+        let previous = draft.updatePhotos(Set(batchPhotos.map(\.id))) { $0.stackID = id }
+        if let pick { draft.applyStackPick(StackPickChange(stackID: id, photoID: pick.id, selectionID: pick.id)) }
+        if commitPhotoChanges(draft, previous: previous) { status = "Created photo stack" }
     }
     func stamp() {
         guard !isViewingTrash, let liftedAdjustments, !stampGroups.isEmpty || !stampMetadata.isEmpty else { return }
@@ -467,6 +477,20 @@ enum EditTool: String { case select, crop, straighten }
                         .disabled(workspace.busy || workspace.isViewingTrash || workspace.selected == nil)
                 }
             }
+            CommandMenu("Stacks") {
+                Button("Stack Selected", action: workspace.stackSelection)
+                    .keyboardShortcut("k").disabled(workspace.busy || !workspace.batchMode || !StackRules.canStack(photoCount: workspace.batchPhotos.count))
+                Divider()
+                Button("Set Stack Pick") { workspace.setStackPick() }
+                    .keyboardShortcut("\\").disabled(!workspace.canSetStackPick)
+                Button(workspace.selectedIsAlbumPick ? "Clear Album Pick" : "Set Album Pick") {
+                    workspace.setStackPick(inAlbum: true)
+                }.keyboardShortcut("\\", modifiers: [.command, .shift]).disabled(!workspace.canSetAlbumPick)
+                Divider()
+                Button(workspace.selectedStackIsCollapsed ? "Expand Stack" : "Collapse Stack") {
+                    if let stackID = workspace.selected?.stackID { workspace.toggleStack(stackID) }
+                }.disabled(!workspace.canToggleSelectedStack)
+            }
             CommandMenu("Metadata") {
                 Button("Clear Color Label") { workspace.setColorLabel(nil) }
                     .keyboardShortcut("0").disabled(!workspace.canReviewSelection)
@@ -578,6 +602,7 @@ struct ContentView: View {
                     Image(systemName: "camera.aperture").font(.system(size: 29, weight: .light)).foregroundStyle(.white).frame(width: 46, height: 46).workspaceGlass(radius: 14)
                     VStack(alignment: .leading) { Text("Isonique").font(.system(size: 22, weight: .semibold, design: .rounded)); Text("PHOTO WORKSPACE").font(.system(size: 9, weight: .medium)).tracking(1.6).foregroundStyle(.secondary) }
                 }.padding(20)
+                let stacks = model.activeStacks
                 List(selection: $model.scope) {
                     Section("Library") {
                         Label("All Photos", systemImage: "photo.on.rectangle.angled").tag("all").simultaneousGesture(TapGesture().onEnded { model.showBrowser(allPhotos: true) })
@@ -588,8 +613,10 @@ struct ContentView: View {
                         ForEach(model.library.projects) { project in Label(project.name, systemImage: "folder").tag("project:\(project.id)") }
                     }
                     Section("Stacks") {
-                        ForEach(Array(Set(model.library.activePhotos.compactMap(\.stackID))).sorted { $0.uuidString < $1.uuidString }, id: \.self) { id in
-                            Label(model.library.activePhotos.first(where: { $0.stackID == id })?.originalName ?? "Stack", systemImage: "square.3.layers.3d").tag("stack:\(id)")
+                        ForEach(stacks.keys.sorted { $0.uuidString < $1.uuidString }, id: \.self) { id in
+                            let members = stacks[id] ?? []
+                            let pick = model.library.stackBrowser?.preferredPick(stackID: id, albumID: nil, members: members) ?? members.first
+                            Label(pick?.displayName ?? "Stack", systemImage: "square.3.layers.3d").tag("stack:\(id)")
                         }
                     }
                     Section("Albums") {
@@ -781,7 +808,9 @@ struct ContentView: View {
                         if model.batchMode { Image(systemName: model.batchSelection.contains(photo.id) ? "checkmark.circle.fill" : "circle") }
                         Text(photo.displayName).lineLimit(1)
                         if photo.id == model.comparisonID { Image(systemName: "pin.fill").accessibilityLabel("Comparison reference") }
-                        if photo.stackID != nil { Image(systemName: "square.3.layers.3d") }
+                        if let stackID = photo.stackID {
+                            StackBadge(stackID: stackID, photoID: photo.id)
+                        }
                         if photo.referencedPath != nil { Image(systemName: "link").accessibilityLabel("Referenced original") }
                         if let label = photo.colorLabel {
                             Image(systemName: "circle.fill").foregroundStyle(label.tint).accessibilityLabel(model.name(for: label))
@@ -797,6 +826,7 @@ struct ContentView: View {
                     model.setPhotosTrashed([photo.id], trashed: !model.isViewingTrash)
                 }
                 if !model.isViewingTrash {
+                    StackContextActions(photo: photo)
                     Button("New Version from Original") { model.createVersion(from: .original, of: photo.id) }.disabled(model.batchMode)
                     Button("Duplicate Version") { model.createVersion(from: .current, of: photo.id) }.disabled(model.batchMode)
                     if model.selection != photo.id {

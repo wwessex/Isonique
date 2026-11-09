@@ -11,12 +11,11 @@ Keep the existing native app, independent catalogue and shared renderer. Deliver
 
 ## Checkpoint
 
-Baseline audited at `0ebda9a`. Per-file import transaction, photo Trash/Put Back, independent library creation and atomic workspace photo edits are complete. Referenced import, missing-file status, verified single-file relink and copy consolidation are implemented. Import runs as a cancellable job with per-file progress and optional new project creation. Compound Smart Albums and advanced browser search now use shared criteria. Horizontal/vertical flip and basic brightness, vibrancy and sepia are in the shared renderer. Keyboard culling, color labels and persistent label names are in the native workspace. Browsable versions and side-by-side comparison now use a stable shared-original identity. Historical evidence, baseline status and remaining gaps are indexed in [feature parity](APERTURE_FEATURE_PARITY.md). Runtime evidence belongs in [test results](APERTURE_TEST_RESULTS.md).
+Baseline audited at `0ebda9a`. Per-file import transaction, photo Trash/Put Back, independent library creation and atomic workspace photo edits are complete. Referenced import, missing-file status, verified single-file relink and copy consolidation are implemented. Import runs as a cancellable job with per-file progress and optional new project creation. Compound Smart Albums and advanced browser search now use shared criteria. Horizontal/vertical flip and basic brightness, vibrancy and sepia are in the shared renderer. Keyboard culling, color labels and persistent label names are in the native workspace. Browsable versions and side-by-side comparison now use a stable shared-original identity. Stacks have persistent picks, album picks and collapsed Browser covers. Historical evidence, baseline status and remaining gaps are indexed in [feature parity](APERTURE_FEATURE_PARITY.md). Runtime evidence belongs in [test results](APERTURE_TEST_RESULTS.md).
 
 ## Next implementation slice
 
-1. Add persistent stack picks and album-specific picks, with expanded and collapsed Browser presentation.
-2. Add a list browser using the same filters and selection. Test culling, version commands and multi-selection in both layouts.
-3. Continue with local masks and brush recipes, starting with preview/export parity and non-destructive persistence.
+1. Add a list browser using the same filters and selection. Test culling, version commands and multi-selection in both layouts.
+2. Continue with local masks and brush recipes, starting with preview/export parity and non-destructive persistence.
 
 Other open core work includes Finder Trash handoff, batch relinking, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

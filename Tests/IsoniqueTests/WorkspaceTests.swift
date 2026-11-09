@@ -263,6 +263,65 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(reopened.library.version, 3)
     }
 
+    @MainActor
+    func testStackAndAlbumPicksAcrossCollapseFiltersTrashAndRestart() async throws {
+        let root = try temporaryLibrary()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let workspace = Workspace(libraryRoot: root)
+        let album = Collection(name: "Delivery")
+        var first = Photo(filename: "a.png", originalName: "a.png", projectID: nil,
+                          width: 32, height: 24, camera: "", captureDate: "", sha256: "fixture-a")
+        first.albumIDs = [album.id]
+        first.importedAt = Date(timeIntervalSinceReferenceDate: 1)
+        var second = Photo(filename: "b.png", originalName: "b.png", projectID: nil,
+                           width: 32, height: 24, camera: "", captureDate: "", sha256: "fixture-b")
+        second.albumIDs = [album.id]
+        second.importedAt = Date(timeIntervalSinceReferenceDate: 2)
+        var draft = workspace.library
+        draft.photos = [first, second]
+        draft.albums = [album]
+        XCTAssertTrue(workspace.commit(draft))
+        workspace.batchMode = true
+        workspace.batchSelection = [first.id, second.id]
+        workspace.stackSelection()
+        let stackID = try XCTUnwrap(workspace.library.photos[0].stackID)
+        XCTAssertEqual(workspace.library.stackBrowser?.picks[stackID], first.id)
+        workspace.batchMode = false
+        workspace.selection = second.id
+        workspace.setStackPick()
+        XCTAssertEqual(workspace.library.stackBrowser?.picks[stackID], second.id)
+        workspace.toggleStack(stackID)
+        XCTAssertEqual(workspace.photos.map(\.id), [second.id])
+        workspace.search = "a.png"
+        XCTAssertEqual(workspace.photos.map(\.id), [first.id])
+        workspace.search = ""
+        workspace.scope = "stack:\(stackID)"
+        XCTAssertEqual(workspace.photos.map(\.id), [first.id, second.id])
+
+        workspace.scope = "album:\(album.id)"
+        workspace.toggleStack(stackID)
+        workspace.selection = first.id
+        workspace.setStackPick(inAlbum: true)
+        workspace.toggleStack(stackID)
+        XCTAssertEqual(workspace.photos.map(\.id), [first.id])
+        workspace.undoEdit()
+        XCTAssertEqual(workspace.photos.map(\.id), [second.id])
+        workspace.redoEdit()
+        XCTAssertEqual(workspace.photos.map(\.id), [first.id])
+        workspace.setPhotosTrashed([first.id], trashed: true)
+        XCTAssertEqual(workspace.photos.map(\.id), [second.id])
+        workspace.setPhotosTrashed([first.id], trashed: false)
+        XCTAssertEqual(workspace.photos.map(\.id), [first.id])
+
+        let reopened = Workspace(libraryRoot: root)
+        XCTAssertEqual(reopened.photos.map(\.id), [second.id])
+        reopened.scope = "album:\(album.id)"
+        XCTAssertEqual(reopened.photos.map(\.id), [first.id])
+        reopened.selection = first.id
+        reopened.setStackPick(inAlbum: true)
+        XCTAssertEqual(reopened.photos.map(\.id), [second.id])
+    }
+
     private func temporaryLibrary() throws -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueUI-\(UUID().uuidString)")
         return try LibraryRepository.createEmpty(at: root).root

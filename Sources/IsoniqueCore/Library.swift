@@ -234,6 +234,7 @@ public struct Photo: Codable, Identifiable, Equatable {
 }
 public struct Library: Codable {
     public var history: EditHistory?
+    public var stackBrowser: StackBrowserState?
     public var version = 1
     public var photos: [Photo] = []
     public var projects: [Collection] = []
@@ -242,7 +243,7 @@ public struct Library: Codable {
 
     func validateSchema() throws {
         if version == 3 { return }
-        guard (1...2).contains(version),
+        guard (1...2).contains(version), stackBrowser == nil,
               !photos.contains(where: { $0.sharedOriginalID != nil || $0.versionName != nil }) else {
             throw LibraryError.unsupportedVersion
         }
