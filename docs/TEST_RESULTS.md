@@ -224,3 +224,9 @@
 
 - Repository tests covered both matching-photo policies, metadata and edit conflicts, album and stack membership, shared originals, explicit Trash, and absent and moved photos. Wrong project IDs and conflicting fingerprints were rejected. Cancellation and a forced catalogue write failure left the destination catalogue and original files intact.
 - In the signed app, File → Merge Project Library added one version, updated one photo and moved one photo into Library Trash. The saved catalogue and original hashes confirmed the changes. The incoming catalogue and files matched their pre-merge hashes.
+
+## Merge review and export membership
+
+- Tests recorded membership in an actual export, removed a previously exported photo, and verified that only matching originals were eligible for inferred Trash. Destination-only additions and photos moved to another project were retained. A declined preview left the catalogue, originals and staging area unchanged.
+- Native QA cancelled the merge from its review, then accepted the same plan. The previously exported photo went to Library Trash, the destination-only version stayed visible, and the new version shared the verified original. The saved catalogue matched the reviewed plan and the incoming file hashes were unchanged.
+- The signed native Apple Silicon build passed strict verification on macOS 27.3. The optimized test suite passed all 141 tests, including four camera RAW fixtures.

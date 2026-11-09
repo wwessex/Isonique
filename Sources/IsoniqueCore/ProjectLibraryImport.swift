@@ -116,7 +116,8 @@ private extension Library {
               photos.allSatisfy({ $0.albumIDs.isSubset(of: regularIDs) }) else {
             throw LibraryError.integrity("project album membership")
         }
-        if let stackBrowser {
+        // An edited export can retain presentation picks for a removed version.
+        if !allowTrashed, let stackBrowser {
             let photosByID = Dictionary(uniqueKeysWithValues: photos.map { ($0.id, $0) })
             let stackIDs = Set(photos.compactMap(\.stackID))
             guard stackBrowser.collapsed.isSubset(of: stackIDs),

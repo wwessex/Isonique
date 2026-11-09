@@ -162,7 +162,7 @@ extension Workspace {
         let preference = NSPopUpButton()
         preference.addItems(withTitles: ["Keep current edits and memberships", "Use imported edits and memberships"])
         preference.setAccessibilityLabel("Matching photos")
-        let applyTrash = NSButton(checkboxWithTitle: "Move matching photos marked as Trash into Library Trash", target: nil, action: nil)
+        let applyTrash = NSButton(checkboxWithTitle: "Apply export deletions to Library Trash", target: nil, action: nil)
         let choice = NSStackView(views: [NSTextField(labelWithString: "Matching photos"), preference])
         choice.spacing = 8
         let accessory = NSStackView(views: [choice, applyTrash])
@@ -183,7 +183,9 @@ extension Workspace {
         busy = true
         status = "Checking project library for merge…"
         let task = Task.detached(priority: .utility) {
-            try await repository.mergeProjectLibrary(from: source, prefer: preference, applyTrash: applyTrash) { progress in
+            try await repository.mergeProjectLibrary(from: source, prefer: preference, applyTrash: applyTrash, review: { preview in
+                await self.reviewProjectMerge(preview)
+            }) { progress in
                 await self.reportProjectImportProgress(progress)
             }
         }
@@ -203,6 +205,25 @@ extension Workspace {
             self.error = error.localizedDescription
             status = "Project merge failed"
         }
+    }
+
+    private func reviewProjectMerge(_ preview: ProjectLibraryMergePreview) -> Bool {
+        guard projectMergeTask?.isCancelled == false else { return false }
+        let alert = NSAlert()
+        alert.messageText = "Review Merge into \(preview.projectName)"
+        var details = [
+            "\(preview.added) photos to add, \(preview.updated) to update, \(preview.trashed) to move to Library Trash.",
+            "\(preview.addedAlbums) albums to add, \(preview.copiedOriginals) originals to copy, \(preview.skipped) photos to skip."
+        ]
+        if !preview.trashNames.isEmpty {
+            let names = preview.trashNames.prefix(8).joined(separator: ", ")
+            let remaining = preview.trashNames.count - min(8, preview.trashNames.count)
+            details.append("Library Trash — \(names)" + (remaining > 0 ? " and \(remaining) more" : ""))
+        }
+        alert.informativeText = details.joined(separator: "\n\n")
+        alert.addButton(withTitle: "Merge Project")
+        alert.addButton(withTitle: "Cancel")
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     private func showProjectTransfer(_ saved: Library, project: Collection) {
