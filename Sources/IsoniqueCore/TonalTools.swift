@@ -134,6 +134,30 @@ public enum TonalTools {
         return bins
     }
 
+    static func curveInput(_ image: CGImage, pixel: CGRect, adjustments: Adjustments, channel: CurveChannel) throws -> Int? {
+        guard let crop = image.cropping(to: pixel) else { return nil }
+        let context = try bitmap(crop)
+        guard let data = context.data else { throw LibraryError.unsupportedImage("curve input") }
+        let bytes = data.assumingMemoryBound(to: UInt8.self)
+        let alpha = Double(bytes[3]) / 255
+        guard alpha > 0 else { return nil }
+        let r = straightCode(bytes[0], alpha: alpha)
+        let g = straightCode(bytes[1], alpha: alpha)
+        let b = straightCode(bytes[2], alpha: alpha)
+        let master = (0...255).map { map(Double($0) / 255, adjustments: adjustments) }
+        let tables = ChannelTables(master: master, levels: adjustments.channelLevels, curves: adjustments.channelCurves)
+        let value: Double
+        switch channel {
+        case .red: value = tables.red.curveInput[r]
+        case .green: value = tables.green.curveInput[g]
+        case .blue: value = tables.blue.curveInput[b]
+        case .luminance:
+            let linear = (linearSRGB(tables.red.output[r]), linearSRGB(tables.green.output[g]), linearSRGB(tables.blue.output[b]))
+            value = LuminanceCurve.axisValue(for: weighted(linear))
+        }
+        return Int((value * 255).rounded())
+    }
+
     private static func weighted(_ rgb: RGBValues) -> Double {
         0.2126 * rgb.red + 0.7152 * rgb.green + 0.0722 * rgb.blue
     }

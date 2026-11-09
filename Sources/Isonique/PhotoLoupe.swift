@@ -48,6 +48,7 @@ struct LoupeSample {
 
 struct LoupeTarget: View {
     @Binding var point: CGPoint
+    var sample: ((CGPoint) -> Void)?
 
     var body: some View {
         GeometryReader { geometry in
@@ -55,9 +56,14 @@ struct LoupeTarget: View {
             Color.clear.contentShape(Rectangle())
                 .onContinuousHover { phase in
                     guard case .active(let location) = phase, size.width > 0, size.height > 0 else { return }
-                    point = CGPoint(x: min(1, max(0, location.x / size.width)),
-                                    y: min(1, max(0, location.y / size.height)))
+                    point = normalized(location, in: size)
                 }
+                .simultaneousGesture(SpatialTapGesture().onEnded { tap in
+                    guard let sample, size.width > 0, size.height > 0 else { return }
+                    let location = normalized(tap.location, in: size)
+                    point = location
+                    sample(location)
+                }, including: sample == nil ? .none : .all)
                 .overlay(alignment: .topLeading) {
                     Circle().strokeBorder(.black, lineWidth: 3)
                         .overlay { Circle().strokeBorder(.white, lineWidth: 1) }
@@ -66,6 +72,11 @@ struct LoupeTarget: View {
                         .allowsHitTesting(false)
                 }
         }.accessibilityHidden(true)
+    }
+
+    private func normalized(_ location: CGPoint, in size: CGSize) -> CGPoint {
+        CGPoint(x: min(1, max(0, location.x / size.width)),
+                y: min(1, max(0, location.y / size.height)))
     }
 }
 
