@@ -194,3 +194,8 @@
 
 - Repository tests covered shared and trashed versions, filename conflicts, occupied destinations, cancellation, a rejected destination inside the library, a blocked catalogue write and retry without replacing the verified copy. A simulated cleanup failure retained the managed file.
 - In the signed app, File → Relocate Originals converted two managed originals and a shared version to references. It reported a fallback filename for a collision. The saved paths and destination hashes matched the catalogue, the occupied file stayed intact, and the old managed paths were released.
+
+## Referenced original relocation
+
+- Repository tests covered keeping previous external files by default, opting to move them, preserving an aliased file still used by a trashed record, and skipping originals already in the destination.
+- The signed app showed the keep-copies option enabled by default. With it disabled, two references and a shared version changed paths. An unselected aliased reference still opened its old source, and the unshared old file was released. Destination and retained-source hashes matched.
