@@ -277,20 +277,35 @@ extension Workspace {
         let panel = NSOpenPanel()
         panel.title = "Merge Libraries"
         panel.prompt = "Review"
-        panel.message = "Choose another Isonique library. Review its additions before merging them into the current library."
+        panel.message = "Choose another Isonique library and how to handle matching photos. Review changes before merging."
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
+        let choices: [(title: String, policy: LibraryMergePhotoPolicy)] = [
+            ("Add new items only", .addOnly),
+            ("Review differences and keep current values", .preferCurrent),
+            ("Review differences and use imported values", .preferIncoming)
+        ]
+        let policyPicker = NSPopUpButton()
+        policyPicker.addItems(withTitles: choices.map(\.title))
+        policyPicker.setAccessibilityLabel("Matching photo policy")
+        let accessory = NSStackView(views: [NSTextField(labelWithString: "Matching photos"), policyPicker])
+        accessory.spacing = 8
+        accessory.frame.size = accessory.fittingSize
+        panel.accessoryView = accessory
+        panel.isAccessoryViewDisclosed = true
         guard panel.runModal() == .OK, let source = panel.url else { return }
-        Task { await mergeLibraries(from: source) }
+        let selectedPolicy = policyPicker.indexOfSelectedItem
+        let policy = choices.indices.contains(selectedPolicy) ? choices[selectedPolicy].policy : .addOnly
+        Task { await mergeLibraries(from: source, photoPolicy: policy) }
     }
 
-    func mergeLibraries(from source: URL) async {
+    func mergeLibraries(from source: URL, photoPolicy: LibraryMergePhotoPolicy = .addOnly) async {
         guard let repository, !busy else { return }
         busy = true
         status = "Comparing library catalogues…"
         let reservedHistory = history
         let task = Task.detached(priority: .utility) {
-            try await repository.mergeLibrary(from: source, reserving: reservedHistory, review: { preview in
+            try await repository.mergeLibrary(from: source, photoPolicy: photoPolicy, reserving: reservedHistory, review: { preview in
                 await self.reviewLibraryMerge(preview, sourceName: source.lastPathComponent)
             }) { progress in
                 await self.reportLibraryMergeProgress(progress)
@@ -304,13 +319,17 @@ extension Workspace {
             } onCancel: {
                 task.cancel()
             }
-            if result.preview.hasAdditions {
+            if result.preview.hasChanges {
                 library = result.library
                 let photos = mergeCount(result.preview.photosToAdd, "photo or version", "photos or versions")
                 let originals = mergeCount(result.preview.originalsToCopy, "original", "originals")
                 status = "Merged library · \(photos) added · \(originals) copied"
+                if result.preview.photosToUpdate > 0 {
+                    let updated = mergeCount(result.preview.photosToUpdate, "matching photo", "matching photos")
+                    status += " · \(updated) updated"
+                }
             } else {
-                status = "Library merge found no additions"
+                status = "Library merge found no changes to apply"
             }
         } catch LibraryMergeError.identityConflicts {
             status = "Library merge blocked by identity conflicts"
@@ -339,8 +358,17 @@ extension Workspace {
         var summary = [
             "\(projects), \(albums), \(photos).",
             "\(originals) to copy, \(preview.reusableOriginals) reusable by ID and fingerprint, \(preview.sharedOriginalsInSource) shared by source versions.",
-            "Existing records are kept. Source Library Trash is excluded (\(trashed))."
+            "Source Library Trash is excluded (\(trashed))."
         ]
+        let differences = mergeCount(preview.photoDifferences.count, "matching photo", "matching photos")
+        switch preview.photoPolicy {
+        case .addOnly:
+            summary.append("Matching photos keep their current values.")
+        case .preferCurrent:
+            summary.append("Differences on \(differences). Current edits and metadata will be kept.")
+        case .preferIncoming:
+            summary.append("Imported edits and metadata will replace differing values on \(differences).")
+        }
         let projectRows = preview.projects.map {
             "\($0.name)\($0.isNew ? " (new project)" : "") — \($0.photosToAdd) to add, \($0.matchingPhotos) matching"
         }
@@ -349,7 +377,11 @@ extension Workspace {
             summary.append("Identity conflicts prevent the merge.")
         }
         alert.informativeText = summary.joined(separator: "\n\n")
-        let report = preview.conflicts + projectRows
+        let photoRows = preview.photoDifferences.map {
+            let scope = $0.projectName.map { " (\($0))" } ?? ""
+            return "\($0.photoName)\(scope) — \($0.fields.joined(separator: ", "))"
+        }
+        let report = preview.conflicts + projectRows + (photoRows.isEmpty ? [] : ["", "Matching photo differences"] + photoRows)
         if !report.isEmpty {
             let scroll = NSTextView.scrollableTextView()
             scroll.frame.size = NSSize(width: 400, height: min(180, max(65, report.count * 24)))
@@ -357,11 +389,11 @@ extension Workspace {
                 text.string = report.joined(separator: "\n")
                 text.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
                 text.isEditable = false
-                text.setAccessibilityLabel("Project breakdown and identity conflicts")
+                text.setAccessibilityLabel("Project breakdown, photo differences and identity conflicts")
             }
             alert.accessoryView = scroll
         }
-        let canMerge = preview.hasAdditions && preview.conflicts.isEmpty
+        let canMerge = preview.hasChanges && preview.conflicts.isEmpty
         alert.addButton(withTitle: canMerge ? "Merge Libraries" : "Done")
         if canMerge { alert.addButton(withTitle: "Cancel") }
         let accepted = alert.runModal() == .alertFirstButtonReturn

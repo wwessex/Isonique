@@ -1,5 +1,23 @@
 import Foundation
 
+public enum LibraryMergePhotoPolicy: Sendable {
+    case addOnly, preferCurrent, preferIncoming
+
+    fileprivate var preference: ProjectMergePreference? {
+        switch self {
+        case .addOnly: return nil
+        case .preferCurrent: return .current
+        case .preferIncoming: return .incoming
+        }
+    }
+}
+
+public struct LibraryMergePhotoDifference: Sendable {
+    public let photoName: String
+    public let projectName: String?
+    public let fields: [String]
+}
+
 public struct LibraryMergeProjectPreview: Sendable {
     public let name: String
     public let isNew: Bool
@@ -15,9 +33,13 @@ public struct LibraryMergePreview: Sendable {
     public let sharedOriginalsInSource: Int
     public let trashedPhotosExcluded: Int
     public let conflicts: [String]
+    public let photoPolicy: LibraryMergePhotoPolicy
+    public let photoDifferences: [LibraryMergePhotoDifference]
 
     public var photosToAdd: Int { projects.reduce(0) { $0 + $1.photosToAdd } }
     public var hasAdditions: Bool { photosToAdd > 0 || albumsToAdd > 0 || projects.contains(where: \.isNew) }
+    public var photosToUpdate: Int { photoPolicy == .preferIncoming ? photoDifferences.count : 0 }
+    public var hasChanges: Bool { hasAdditions || photosToUpdate > 0 }
 }
 
 public struct LibraryMergeResult {
@@ -35,42 +57,49 @@ public enum LibraryMergeError: LocalizedError {
 
 public extension LibraryRepository {
     /// Compare catalogues without opening or creating either library and without reading original files.
-    func previewLibraryMerge(from folder: URL, reserving history: EditHistory? = nil) throws -> LibraryMergePreview {
+    func previewLibraryMerge(from folder: URL, photoPolicy: LibraryMergePhotoPolicy = .addOnly,
+                             reserving history: EditHistory? = nil) throws -> LibraryMergePreview {
         let sourceRoot = try wholeLibraryMergeSource(folder)
         let (_, source) = try LibraryBackup.readCatalogue(sourceRoot)
         let (_, destination) = try LibraryBackup.readCatalogue(root)
-        return try WholeLibraryMergePlan(source: source, destination: destination, history: history).preview
+        return try WholeLibraryMergePlan(source: source, destination: destination, photoPolicy: photoPolicy, history: history).preview
     }
 
-    /// Add compatible records across a whole library, preserving existing records.
-    func mergeLibrary(from folder: URL, reserving history: EditHistory? = nil,
+    /// Add compatible records and optionally reconcile editable values on matching photos.
+    func mergeLibrary(from folder: URL, photoPolicy: LibraryMergePhotoPolicy = .addOnly, reserving history: EditHistory? = nil,
                       review: (LibraryMergePreview) async -> Bool,
                       progress: (ImportProgress) async -> Void = { _ in }) async throws -> LibraryMergeResult {
         let sourceRoot = try wholeLibraryMergeSource(folder)
         let (sourceCatalogue, source) = try LibraryBackup.readCatalogue(sourceRoot)
         let (catalogue, destination) = try LibraryBackup.readCatalogue(root)
-        let plan = try WholeLibraryMergePlan(source: source, destination: destination, history: history)
+        let plan = try WholeLibraryMergePlan(source: source, destination: destination, photoPolicy: photoPolicy, history: history)
         try Task.checkCancellation()
         let approved = await review(plan.preview)
         try Task.checkCancellation()
         guard plan.preview.conflicts.isEmpty else { throw LibraryMergeError.identityConflicts }
         guard approved else { throw CancellationError() }
-        guard plan.preview.hasAdditions else { return LibraryMergeResult(library: destination, preview: plan.preview) }
+        guard plan.preview.hasChanges else { return LibraryMergeResult(library: destination, preview: plan.preview) }
 
+        var originalsToVerify = Set(plan.updatedPhotos.values.map(\.originalID))
         var reservedNames = Set(destination.photos.map { $0.filename.lowercased() })
         var names: [UUID: String] = [:]
         var transfers: [(original: Photo, filename: String?)] = []
         for original in plan.incomingOriginals {
             try Task.checkCancellation()
             if let existing = plan.existingOriginals[original.originalID] {
-                try Self.verifyOriginal(availableOriginalURL(existing), photo: existing)
+                originalsToVerify.insert(existing.originalID)
             } else {
                 let name = nextProjectOriginalFilename(original.filename, reserved: &reservedNames)
                 names[original.originalID] = name
                 transfers.append((original, name))
             }
         }
-        let draft = try plan.applyingAdditions(to: destination, source: source, filenames: names)
+        for id in originalsToVerify {
+            try Task.checkCancellation()
+            guard let original = plan.existingOriginals[id] else { throw LibraryError.integrity("missing matching original") }
+            try Self.verifyOriginal(availableOriginalURL(original), photo: original)
+        }
+        let draft = try plan.applying(to: destination, source: source, filenames: names)
         try await commitLibraryTransfer(draft, catalogue: catalogue, sourceRoot: sourceRoot,
                                         sourceCatalogue: sourceCatalogue, transfers: transfers, progress: progress)
         return LibraryMergeResult(library: draft, preview: plan.preview)
@@ -92,12 +121,13 @@ private struct WholeLibraryMergePlan {
     let newProjects: [Collection]
     let newAlbums: [Collection]
     let newPhotos: [Photo]
+    let updatedPhotos: [UUID: Photo]
     let incomingOriginals: [Photo]
     let existingOriginals: [UUID: Photo]
     let occupiedStacks: Set<UUID>
     let occupiedPairs: Set<UUID>
 
-    init(source: Library, destination: Library, history: EditHistory?) throws {
+    init(source: Library, destination: Library, photoPolicy: LibraryMergePhotoPolicy, history: EditHistory?) throws {
         let sourceOriginals = try source.uniqueOriginals()
         let destinationOriginals = try destination.uniqueOriginals()
         let sourceProjectIDs = Set(source.projects.map(\.id))
@@ -111,6 +141,7 @@ private struct WholeLibraryMergePlan {
         }
 
         let currentPhotos = Dictionary(uniqueKeysWithValues: destination.photos.map { ($0.id, $0) })
+        let currentProjectNames = Dictionary(uniqueKeysWithValues: destination.projects.map { ($0.id, $0.name) })
         let currentOriginals = Dictionary(uniqueKeysWithValues: destinationOriginals.map { ($0.originalID, $0) })
         let currentAlbums = Dictionary(uniqueKeysWithValues: destination.albums.map { ($0.id, $0) })
         let historyEntries = (destination.history?.undo ?? []) + (destination.history?.redo ?? [])
@@ -134,6 +165,8 @@ private struct WholeLibraryMergePlan {
         let sourceRegularAlbums = Set(source.albums.filter { $0.rule == nil }.map(\.id))
         let active = source.activePhotos
         var additions: [Photo] = []
+        var updates: [UUID: Photo] = [:]
+        var differences: [LibraryMergePhotoDifference] = []
         var additionCounts: [UUID?: Int] = [:]
         var matchCounts: [UUID?: Int] = [:]
         var sourceUses: [UUID: Int] = [:]
@@ -153,6 +186,16 @@ private struct WholeLibraryMergePlan {
                     if current.trashedAt == nil {
                         if let stackID = photo.stackID, current.stackID == stackID { sharedStacks.insert(stackID) }
                         if let pairID = photo.pairID, current.pairID == pairID { sharedPairs.insert(pairID) }
+                        if let preference = photoPolicy.preference, current.sha256 == photo.sha256 {
+                            let edit = ProjectPhotoMergeValues.mergingEditableValues(current, with: photo, baseline: nil,
+                                                                                      prefer: preference)
+                            if !edit.conflicts.isEmpty {
+                                differences.append(LibraryMergePhotoDifference(
+                                    photoName: current.displayName, projectName: current.projectID.flatMap { currentProjectNames[$0] },
+                                    fields: edit.conflicts))
+                            }
+                            if edit.photo != current { updates[current.id] = edit.photo }
+                        }
                     }
                 }
             } else {
@@ -215,21 +258,29 @@ private struct WholeLibraryMergePlan {
         preview = LibraryMergePreview(projects: projects, albumsToAdd: incomingAlbums.count,
                                       originalsToCopy: needed.filter { currentOriginals[$0.originalID] == nil }.count,
                                       reusableOriginals: reused, sharedOriginalsInSource: sourceUses.values.filter { $0 > 1 }.count,
-                                      trashedPhotosExcluded: source.photos.count - active.count, conflicts: conflicts)
+                                      trashedPhotosExcluded: source.photos.count - active.count, conflicts: conflicts,
+                                      photoPolicy: photoPolicy, photoDifferences: differences)
         newProjects = incomingProjects
         newAlbums = incomingAlbums
         newPhotos = additions
+        updatedPhotos = updates
         incomingOriginals = needed
         existingOriginals = currentOriginals
         occupiedStacks = storedStacks
         occupiedPairs = storedPairs
     }
 
-    func applyingAdditions(to destination: Library, source: Library, filenames: [UUID: String]) throws -> Library {
+    func applying(to destination: Library, source: Library, filenames: [UUID: String]) throws -> Library {
         var draft = destination
         draft.version = max(destination.version, source.version)
         draft.projects.append(contentsOf: newProjects)
         draft.albums.append(contentsOf: newAlbums)
+        if !updatedPhotos.isEmpty {
+            for index in draft.photos.indices {
+                try Task.checkCancellation()
+                if let updated = updatedPhotos[draft.photos[index].id] { draft.photos[index] = updated }
+            }
+        }
         var newStackCounts: [UUID: Int] = [:]
         var newPairOriginals: [UUID: Set<UUID>] = [:]
         for photo in newPhotos {

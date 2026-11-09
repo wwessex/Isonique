@@ -41,50 +41,64 @@ struct ProjectPhotoMergeValues: Codable {
 
     func merging(_ current: Photo, with incoming: Photo, prefer preference: ProjectMergePreference,
                  representedAlbums: Set<UUID>) -> (photo: Photo, conflicts: [String]) {
-        var photo = current
-        let edits = adjustments.mergingProjectEdits(current.adjustments, with: incoming.adjustments, prefer: preference)
-        photo.adjustments = edits.value
-        var conflicts = edits.conflicts
-        func apply<Value: Equatable>(_ field: WritableKeyPath<Photo, Value>, baseline: Value, label: String) {
-            let choice = resolveProjectValue(current[keyPath: field], incoming[keyPath: field],
-                                             baseline: baseline, prefer: preference)
-            photo[keyPath: field] = choice.value
-            if choice.conflict { conflicts.append(label) }
-        }
-        apply(\.versions, baseline: versions, label: "Saved recipes")
-        apply(\.originalName, baseline: originalName, label: "Photo name")
-        apply(\.versionName, baseline: versionName, label: "Version name")
-        apply(\.rating, baseline: rating, label: "Rating")
-        apply(\.flagged, baseline: flagged, label: "Flag")
-        apply(\.colorLabel, baseline: colorLabel, label: "Color label")
-        apply(\.caption, baseline: caption, label: "Caption")
-        apply(\.keywords, baseline: keywords, label: "Keywords")
-        apply(\.captureDate, baseline: captureDate, label: "Capture date")
+        var result = Self.mergingEditableValues(current, with: incoming, baseline: self, prefer: preference)
         // Membership is a Boolean per album. Changes to distinct albums can both survive.
         let touchedAlbums = albumIDs.union(incoming.albumIDs).intersection(representedAlbums)
         for album in touchedAlbums where albumIDs.contains(album) != incoming.albumIDs.contains(album) {
-            if incoming.albumIDs.contains(album) { photo.albumIDs.insert(album) }
-            else { photo.albumIDs.remove(album) }
+            if incoming.albumIDs.contains(album) { result.photo.albumIDs.insert(album) }
+            else { result.photo.albumIDs.remove(album) }
         }
+        return result
+    }
+
+    static func mergingEditableValues(_ current: Photo, with incoming: Photo, baseline: Self?,
+                                      prefer preference: ProjectMergePreference) -> (photo: Photo, conflicts: [String]) {
+        var photo = current
+        let edits = current.adjustments.mergingEdits(with: incoming.adjustments, baseline: baseline?.adjustments,
+                                                     prefer: preference)
+        photo.adjustments = edits.value
+        var conflicts = edits.conflicts
+        func apply<Value: Equatable>(_ field: WritableKeyPath<Photo, Value>, _ saved: KeyPath<Self, Value>, _ label: String) {
+            let choice = resolveEditableValue(current[keyPath: field], incoming[keyPath: field],
+                                              baseline: baseline.map { $0[keyPath: saved] }, prefer: preference)
+            photo[keyPath: field] = choice.value
+            if choice.conflict { conflicts.append(label) }
+        }
+        apply(\.versions, \.versions, "Saved recipes")
+        apply(\.originalName, \.originalName, "Photo name")
+        apply(\.versionName, \.versionName, "Version name")
+        apply(\.rating, \.rating, "Rating")
+        apply(\.flagged, \.flagged, "Flag")
+        apply(\.colorLabel, \.colorLabel, "Color label")
+        apply(\.caption, \.caption, "Caption")
+        apply(\.keywords, \.keywords, "Keywords")
+        apply(\.captureDate, \.captureDate, "Capture date")
         return (photo, conflicts)
     }
 }
 
+private func resolveEditableValue<Value: Equatable>(_ current: Value, _ incoming: Value, baseline: Value?,
+                                                    prefer preference: ProjectMergePreference) -> (value: Value, conflict: Bool) {
+    if let baseline { return resolveProjectValue(current, incoming, baseline: baseline, prefer: preference) }
+    return (preference == .incoming ? incoming : current, current != incoming)
+}
+
 private extension Adjustments {
-    func mergingProjectEdits(_ current: Adjustments, with incoming: Adjustments,
-                             prefer preference: ProjectMergePreference) -> (value: Adjustments, conflicts: [String]) {
-        var result = current
+    func mergingEdits(with incoming: Adjustments, baseline: Adjustments?,
+                      prefer preference: ProjectMergePreference) -> (value: Adjustments, conflicts: [String]) {
+        guard self != incoming else { return (self, []) }
+        var result = self
         var conflicts: [String] = []
 
-        func resolve<Value: Equatable>(_ current: Value, _ incoming: Value, baseline: Value, label: String) -> Value {
-            let choice = resolveProjectValue(current, incoming, baseline: baseline, prefer: preference)
+        func resolve<Value: Equatable>(_ current: Value, _ incoming: Value, baseline: Value?, label: String) -> Value {
+            let choice = resolveEditableValue(current, incoming, baseline: baseline, prefer: preference)
             if choice.conflict { conflicts.append(label) }
             return choice.value
         }
 
         func apply<Value: Equatable>(_ field: WritableKeyPath<Adjustments, Value>, _ label: String) {
-            result[keyPath: field] = resolve(current[keyPath: field], incoming[keyPath: field],
-                                             baseline: self[keyPath: field], label: label)
+            result[keyPath: field] = resolve(self[keyPath: field], incoming[keyPath: field],
+                                             baseline: baseline.map { $0[keyPath: field] }, label: label)
         }
 
         func applyGroup(_ label: String, copy: (inout Adjustments, Adjustments) -> Void) {
@@ -93,7 +107,7 @@ private extension Adjustments {
                 copy(&group, source)
                 return group
             }
-            let group = resolve(projected(current), projected(incoming), baseline: projected(self), label: label)
+            let group = resolve(projected(self), projected(incoming), baseline: baseline.map(projected), label: label)
             copy(&result, group)
         }
 
