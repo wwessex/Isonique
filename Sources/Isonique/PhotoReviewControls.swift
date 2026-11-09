@@ -144,6 +144,7 @@ struct ReviewSettingsView: View {
                     Text(BrowserPresentation.grid.rawValue).tag(BrowserPresentation.grid)
                     Text(BrowserPresentation.list.rawValue).tag(BrowserPresentation.list)
                 }
+                GridThumbnailSizePicker(model: model)
             }
             Section("Photo Review Keys") {
                 LabeledContent("Rating", value: "0–5")

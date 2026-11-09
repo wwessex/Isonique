@@ -160,3 +160,9 @@
 - Two XCTest cases covered catalogue edits, scope, search, rating, sort direction and selection, including live file appearance and removal for the originals filter, Advanced Search and Smart Albums. The local working-tree suite executed 106 cases with one optional RAW fixture skip and zero failures.
 - An optimized probe reused the disposable 1,200-photo catalogue. Over three runs of 200 unchanged name-sorted reads, the median dropped from 454.9 ms for direct filtering and sorting to 0.233 ms for reused results. This measures repeated catalogue reads. A changed query, sort or catalogue still recomputes the result.
 - The signed arm64 release archive passed strict verification.
+
+## Grid thumbnail sizes and optimized release
+
+- The Grid preference test covered the standard default, unknown saved values, persistence across reopened workspaces and libraries, an unchanged List layout, and an unchanged catalogue after choosing a size.
+- Native QA on the signed 1,200-photo test build chose Compact from the View menu and Large from Settings. The fixed window exposed 14 Standard, 16 Compact and 6 Large photo cards through accessibility. Browser search narrowed the catalogue to a single named photo, and Settings still showed Large after restart.
+- The isolated staged release executed 106 XCTest cases without failures or skips, including the four opt-in camera RAW fixtures. The arm64 bundle and signed archive passed strict verification on Apple M5 Pro and macOS 27.3 with Xcode 27.2.

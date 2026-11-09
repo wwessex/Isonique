@@ -39,8 +39,10 @@ Grid, List and filmstrip share a 64 MiB thumbnail cache and a bounded, cancellab
 
 The Browser reuses its last metadata-only filter and sort result and a photo selection index. Queries that depend on original availability still check the files live.
 
+Grid thumbnail size is now a persistent application preference in View and Settings. Three sizes use their own cache resolution and leave the List and filmstrip unchanged.
+
 ## Next implementation slice
 
-1. Add persistent Grid thumbnail sizes without changing List or filmstrip sizing.
+1. Add folder-based batch reconnect for unavailable referenced originals. Reuse fingerprint verification, update shared versions together in a single catalogue write, and report unmatched or ambiguous files. Cover reopen, failed verification and originals preservation before expanding to missing managed copies.
 
 Other open core work includes Finder Trash handoff, batch relinking, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

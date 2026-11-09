@@ -45,6 +45,9 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var curveSampling: CurveSamplingRequest?
     @Published var curvePointSelection: CurvePointSelection?
     @Published var browserLayout: BrowserPresentation
+    @Published var gridThumbnailSize: GridThumbnailSize {
+        didSet { preferences.set(gridThumbnailSize.rawValue, forKey: GridThumbnailSize.preferenceKey) }
+    }
     @Published var showInspector = true
     @Published var compareOriginal = false
     @Published var comparisonID: UUID?
@@ -92,6 +95,8 @@ enum EditTool: String { case select, crop, straighten, brush }
         clipping = ClippingSettings(preferences: preferences)
         let layout = preferences.string(forKey: "browser.layout").flatMap(BrowserPresentation.init(rawValue:))
         browserLayout = layout == .list ? .list : .grid
+        gridThumbnailSize = preferences.string(forKey: GridThumbnailSize.preferenceKey)
+            .flatMap(GridThumbnailSize.init(rawValue:)) ?? .standard
         labelNames = preferences.dictionary(forKey: "photo.labelNames") as? [String: String] ?? [:]
         do {
             let args = ProcessInfo.processInfo.arguments
@@ -529,6 +534,7 @@ enum EditTool: String { case select, crop, straighten, brush }
                         .keyboardShortcut(presentation.shortcut)
                         .disabled(workspace.busy || workspace.repository == nil || (presentation == .viewer && workspace.batchMode))
                 }
+                GridThumbnailSizePicker(model: workspace)
                 Divider()
                 Button("Advanced Search…") { workspace.showAdvancedSearch = true }
                     .keyboardShortcut("f", modifiers: [.command, .shift])
@@ -787,7 +793,11 @@ struct ContentView: View {
                         } else if model.browserLayout == .list {
                             PhotoListBrowser(model: model, photos: model.photos)
                         } else {
-                            ScrollView { LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 16)], spacing: 18) { ForEach(model.photos) { photo in photoCell(photo, compact: false) } }.padding(20) }
+                            ScrollView {
+                                LazyVGrid(columns: [GridItem(.adaptive(minimum: model.gridThumbnailSize.columnWidth), spacing: 16)], spacing: 18) {
+                                    ForEach(model.photos) { photo in photoCell(photo, compact: false) }
+                                }.padding(20)
+                            }
                         }
                     }.frame(minWidth: 400).background(Color(white: 0.055))
                         .focusable().focusEffectDisabled().focused($browserFocused)
@@ -910,11 +920,13 @@ struct ContentView: View {
                     Group {
                         if let url {
                             Thumbnail(request: .init(photoID: photo.id, url: url, adjustments: photo.adjustments,
-                                                     maximum: compact ? 220 : 360, revision: model.originalStatusRevision),
+                                                     maximum: compact ? 220 : model.gridThumbnailSize.decodeMaximum,
+                                                     revision: model.originalStatusRevision),
                                       cache: model.thumbnailCache)
                         }
                         else { Label("Original unavailable", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.secondary) }
-                    }.frame(height: compact ? 76 : 140).frame(maxWidth: .infinity).background(Color.black.opacity(0.3)).clipped()
+                    }.frame(height: compact ? 76 : model.gridThumbnailSize.imageHeight)
+                        .frame(maxWidth: .infinity).background(Color.black.opacity(0.3)).clipped()
                     HStack {
                         if model.batchMode { Image(systemName: model.batchSelection.contains(photo.id) ? "checkmark.circle.fill" : "circle") }
                         Text(photo.displayName).lineLimit(1)
