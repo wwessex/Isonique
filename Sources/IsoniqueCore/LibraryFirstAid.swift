@@ -91,9 +91,10 @@ public extension LibraryRepository {
     }
 
     /// Relink only originals listed as offline, including versions in Library Trash.
-    func reconnectOfflineReferences(in folder: URL, after report: LibraryFirstAidReport) throws
+    func reconnectOfflineReferences(in folder: URL, after report: LibraryFirstAidReport, basedOn workspace: Library? = nil) throws
         -> (library: Library, report: OriginalReconnectReport) {
         var library = try libraryForFirstAidAction(report)
+        try checkWorkspaceCatalogue(workspace, matches: library)
         let recovery = try reconnectMissingReferences(in: folder, library: &library,
                                                        originalIDs: Set(report.offlineReferences.map(\.id)),
                                                        includeTrashed: true, expectedCatalogue: report.catalogue)

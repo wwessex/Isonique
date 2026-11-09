@@ -24,6 +24,109 @@ final class WorkspaceTests: XCTestCase {
     }
 
     @MainActor
+    func testIndependentWorkspaceRejectsStaleEditsAndUndoThenReloads() async throws {
+        let root = try temporaryLibrary()
+        let suite = "IsoniqueCatalogueTests-\(UUID())"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            preferences.removePersistentDomain(forName: suite)
+        }
+        preferences.set(true, forKey: "history.persist")
+        let catalogue = root.appendingPathComponent("catalog.json")
+        let writer = Workspace(libraryRoot: root, preferences: preferences)
+        let project = Collection(name: "Shoot")
+        let photo = Photo(filename: "a.png", originalName: "a.png", projectID: project.id,
+                          width: 32, height: 24, camera: "", captureDate: "", sha256: "fixture")
+        var draft = writer.library
+        draft.projects = [project]; draft.photos = [photo]
+        XCTAssertTrue(writer.commit(draft))
+        writer.selection = photo.id
+        writer.edit { $0.caption = "Initial" }
+        var beforeOpen = try Data(contentsOf: catalogue)
+        beforeOpen.append(0x0A)
+        try beforeOpen.write(to: catalogue, options: .atomic)
+
+        // An existing catalogue opens read-only, even when it uses different JSON formatting.
+        let first = Workspace(libraryRoot: root, preferences: preferences)
+        let second = Workspace(libraryRoot: root, preferences: preferences)
+        XCTAssertEqual(try Data(contentsOf: catalogue), beforeOpen)
+        XCTAssertFalse(first.repository === second.repository)
+        second.scope = "project:\(project.id)"
+        XCTAssertEqual(second.selection, photo.id)
+        XCTAssertTrue(second.canUndo)
+
+        first.edit { $0.caption = "Newer caption" }
+        first.edit { $0.flagged = true }
+        let newest = try Data(contentsOf: catalogue)
+        let staleHistory = second.history
+        second.edit { $0.rating = 4 }
+        second.undoEdit()
+        XCTAssertEqual(second.selected?.caption, "Initial")
+        XCTAssertEqual(second.selected?.rating, 0)
+        XCTAssertEqual(second.history.undo, staleHistory.undo)
+        XCTAssertEqual(second.history.redo, staleHistory.redo)
+        XCTAssertTrue(second.error?.contains("File → Reload Library") == true)
+        XCTAssertEqual(try Data(contentsOf: catalogue), newest)
+
+        await second.reloadLibrary()
+        XCTAssertNil(second.error)
+        XCTAssertEqual(second.status, "Reloaded library")
+        XCTAssertEqual(second.scope, "project:\(project.id)")
+        XCTAssertEqual(second.selection, photo.id)
+        XCTAssertEqual(second.selected?.caption, "Newer caption")
+        XCTAssertEqual(second.selected?.flagged, true)
+        XCTAssertEqual(second.history.undo, first.history.undo)
+        XCTAssertEqual(second.history.redo, first.history.redo)
+        XCTAssertEqual(try Data(contentsOf: catalogue), newest)
+
+        second.edit { $0.rating = 4 }
+        let reopened = Workspace(libraryRoot: root, preferences: preferences)
+        XCTAssertEqual(reopened.selected?.rating, 4)
+        XCTAssertEqual(reopened.selected?.caption, "Newer caption")
+        XCTAssertEqual(reopened.selected?.flagged, true)
+    }
+
+    @MainActor
+    func testReloadKeepsSessionOnUnchangedOrMissingCatalogue() async throws {
+        let root = try temporaryLibrary()
+        let suite = "IsoniqueCatalogueTests-\(UUID())"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer {
+            try? FileManager.default.removeItem(at: root)
+            preferences.removePersistentDomain(forName: suite)
+        }
+        let workspace = Workspace(libraryRoot: root, preferences: preferences)
+        let photo = Photo(filename: "a.png", originalName: "a.png", projectID: nil,
+                          width: 32, height: 24, camera: "", captureDate: "", sha256: "fixture")
+        var draft = workspace.library
+        draft.photos = [photo]
+        XCTAssertTrue(workspace.commit(draft))
+        workspace.selection = photo.id
+        workspace.edit { $0.caption = "In session" }
+        let history = workspace.history
+        XCTAssertTrue(workspace.canUndo)
+
+        await workspace.reloadLibrary()
+        XCTAssertEqual(workspace.history.undo, history.undo)
+        XCTAssertEqual(workspace.history.redo, history.redo)
+        XCTAssertEqual(workspace.selected?.caption, "In session")
+
+        let catalogue = root.appendingPathComponent("catalog.json")
+        try FileManager.default.removeItem(at: catalogue)
+        await workspace.reloadLibrary()
+        XCTAssertEqual(workspace.status, "Could not reload library")
+        XCTAssertEqual(workspace.history.undo, history.undo)
+        XCTAssertEqual(workspace.history.redo, history.redo)
+        XCTAssertEqual(workspace.selected?.caption, "In session")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: catalogue.path))
+
+        workspace.edit { $0.caption = "Must not recreate the catalogue" }
+        XCTAssertEqual(workspace.selected?.caption, "In session")
+        XCTAssertFalse(FileManager.default.fileExists(atPath: catalogue.path))
+    }
+
+    @MainActor
     func testTrashFiltersSelectionUndoRedoAndRestart() async throws {
         let root = try temporaryLibrary()
         defer { try? FileManager.default.removeItem(at: root) }

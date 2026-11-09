@@ -248,7 +248,20 @@ public struct Photo: Codable, Identifiable, Equatable {
         self.width = width; self.height = height; self.camera = camera; self.captureDate = captureDate; self.sha256 = sha256
     }
 }
+enum CatalogueRevision: Equatable {
+    case missing
+    case saved(SHA256.Digest)
+
+    init(_ data: Data) { self = .saved(SHA256.hash(data: data)) }
+}
+
 public struct Library: Codable {
+    // This is the revision the value was based on, never part of the on-disk schema.
+    var catalogueRevision: CatalogueRevision?
+    private enum CodingKeys: String, CodingKey {
+        case projectExportMembership, pendingFinderTrash, history, stackBrowser, version, photos, projects, albums
+    }
+
     var projectExportMembership: ProjectExportMembership?
     var pendingFinderTrash: [PendingFinderTrash]?
     public var history: EditHistory?
@@ -258,6 +271,10 @@ public struct Library: Codable {
     public var projects: [Collection] = []
     public var albums: [Collection] = []
     public init() {}
+
+    public func hasSameCatalogueRevision(as other: Library) -> Bool {
+        catalogueRevision != nil && catalogueRevision == other.catalogueRevision
+    }
 
     private func hasRecipe(where includes: (Adjustments) -> Bool) -> Bool {
         func matches(_ photo: Photo) -> Bool {
@@ -307,7 +324,7 @@ public struct Library: Codable {
 }
 public enum LibraryError: LocalizedError {
     case unsafePath, unsupportedImage(String), integrity(String), unsupportedVersion, invalidLibrary
-    case originalUnavailable(String)
+    case originalUnavailable(String), staleCatalogue
     public var errorDescription: String? {
         switch self {
         case .unsafePath: return "This location is unsafe. Choose a separate Isonique library folder."
@@ -315,6 +332,7 @@ public enum LibraryError: LocalizedError {
         case .integrity(let name): return "Integrity verification failed: \(name). The source was not modified."
         case .unsupportedVersion: return "This library was created by an unsupported newer version."
         case .invalidLibrary: return "The selected folder is not an Aperture library with a Masters or Originals folder."
+        case .staleCatalogue: return "This library changed since it was loaded. Use File → Reload Library, then try your edit again."
         case .originalUnavailable(let name): return "Original unavailable: \(name). Reconnect its drive or relink the file."
         }
     }
@@ -345,7 +363,7 @@ public final class LibraryRepository {
         try fm.createDirectory(at: root, withIntermediateDirectories: false)
         do {
             let repository = try LibraryRepository(root: root)
-            try repository.save(Library())
+            _ = try repository.openOrCreateCatalogue()
             return repository
         } catch {
             try? fm.removeItem(at: root)
@@ -370,17 +388,68 @@ public final class LibraryRepository {
         try fm.createDirectory(at: self.root.appendingPathComponent("Originals"), withIntermediateDirectories: true)
         guard self.root.appendingPathComponent("Originals").resolvingSymlinksInPath().path == self.root.appendingPathComponent("Originals").path else { throw LibraryError.unsafePath }
     }
+    private var catalogueURL: URL { root.appendingPathComponent("catalog.json") }
+
+    private func catalogueDataIfPresent() throws -> Data? {
+        do {
+            try LibraryBackup.regularFile(catalogueURL)
+            return try Data(contentsOf: catalogueURL)
+        } catch let error as CocoaError where error.code == .fileNoSuchFile || error.code == .fileReadNoSuchFile {
+            return nil
+        }
+    }
+
     public func load() throws -> Library {
-        let url = root.appendingPathComponent("catalog.json")
-        guard fm.fileExists(atPath: url.path) else { return Library() }
-        var library = try JSONDecoder().decode(Library.self, from: Data(contentsOf: url))
-        try library.validateSchema()
+        guard let data = try catalogueDataIfPresent() else {
+            var empty = Library()
+            empty.catalogueRevision = .missing
+            return empty
+        }
+        return try loadedLibrary(from: data)
+    }
+
+    /// Open an existing catalogue without touching its bytes, or initialize a new library once.
+    public func openOrCreateCatalogue() throws -> Library {
+        let loaded = try load()
+        guard loaded.catalogueRevision == .missing else { return loaded }
+        return try withCatalogueWriteLock {
+            let current = try load()
+            return current.catalogueRevision == .missing ? try writeCatalogue(current) : current
+        }
+    }
+
+    public func reloadCatalogue() throws -> Library {
+        guard let data = try catalogueDataIfPresent() else { throw LibraryError.integrity("catalogue file is missing") }
+        return try loadedLibrary(from: data)
+    }
+
+    private func loadedLibrary(from data: Data) throws -> Library {
+        var library = try LibraryBackup.decodeCatalogue(data)
         for index in library.photos.indices { library.photos[index].rating = RatingRules.clamp(library.photos[index].rating) }
         for photo in try library.uniqueOriginals() { _ = try originalURL(photo) }
         return library
     }
-    public func save(_ library: Library) throws {
-        try withCatalogueWriteLock { try writeCatalogue(library) }
+
+    /// Publish a catalogue and return the new base for subsequent edits.
+    /// Detached catalogues constructed with Library() have no base to check.
+    @discardableResult
+    public func save(_ library: Library) throws -> Library {
+        try withCatalogueWriteLock {
+            try checkCatalogueRevision(of: library)
+            return try writeCatalogue(library)
+        }
+    }
+
+    // Call under the write lock when checking immediately before publication.
+    func checkCatalogueRevision(of library: Library) throws {
+        guard let expected = library.catalogueRevision else { return }
+        let current = try catalogueDataIfPresent().map(CatalogueRevision.init) ?? .missing
+        guard expected == current else { throw LibraryError.staleCatalogue }
+    }
+
+    func checkWorkspaceCatalogue(_ expected: Library?, matches current: Library) throws {
+        guard let expected else { return }
+        guard expected.hasSameCatalogueRevision(as: current) else { throw LibraryError.staleCatalogue }
     }
 
     func withCatalogueWriteLock<Result>(_ body: () throws -> Result) throws -> Result {
@@ -398,7 +467,7 @@ public final class LibraryRepository {
     }
 
     // The caller holds the catalogue write lock through this atomic replacement.
-    func writeCatalogue(_ library: Library) throws {
+    func writeCatalogue(_ library: Library) throws -> Library {
         try library.validateSchema()
         _ = try library.uniqueOriginals()
         var normalized = library
@@ -407,7 +476,9 @@ public final class LibraryRepository {
             normalized.photos[index].adjustments.straighten = StraightenRules.clamp(normalized.photos[index].adjustments.straighten)
         }
         let data = try JSONEncoder().encode(normalized)
-        try data.write(to: root.appendingPathComponent("catalog.json"), options: .atomic)
+        try data.write(to: catalogueURL, options: .atomic)
+        normalized.catalogueRevision = CatalogueRevision(data)
+        return normalized
     }
     public func originalURL(_ photo: Photo) throws -> URL {
         let managed = try managedOriginalURL(photo.filename)
@@ -497,7 +568,7 @@ public final class LibraryRepository {
         let oldVersion = library.version
         if referenced { library.version = max(library.version, 2) }
         library.photos.append(photo)
-        do { try save(library) } catch {
+        do { library = try save(library) } catch {
             library.photos.removeLast()
             library.version = oldVersion
             throw error
@@ -539,8 +610,9 @@ public final class LibraryRepository {
         let copied = try manifest(staging)
         guard copied == before, try manifest(resolved) == before else { throw LibraryError.integrity("legacy library copy") }
         let project = Collection(name: "Recovered · " + source.deletingPathExtension().lastPathComponent)
-        library.projects.append(project)
-        try save(library)
+        var draft = library
+        draft.projects.append(project)
+        library = try save(draft)
         var result = RecoveryResult()
         for folder in ["Masters", "Originals"] {
             let files = Self.imageFiles(in: staging.appendingPathComponent(folder))

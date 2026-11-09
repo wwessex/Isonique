@@ -130,8 +130,7 @@ enum EditTool: String { case select, crop, straighten, brush }
                 root = Self.defaultLibraryRoot(in: support)
             }
             let repo = try LibraryRepository(root: root)
-            library = try repo.load()
-            try repo.save(library)
+            library = try repo.openOrCreateCatalogue()
             repository = repo
             history = keepHistory ? (library.history ?? EditHistory()) : EditHistory()
             selection = photos.first?.id
@@ -251,8 +250,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         saved.upgradeForChannelCurves()
         saved.upgradeForBrushRecipes()
         do {
-            try repository.save(saved)
-            library = saved
+            library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
             return true
         } catch {
@@ -712,6 +710,8 @@ enum EditTool: String { case select, crop, straighten, brush }
                     Divider()
                     Button("Clear Recent Libraries") { workspace.recentLibraryPaths = [] }
                 }.disabled(workspace.busy || workspace.recentLibraryPaths.isEmpty)
+                Button("Reload Library") { Task { await workspace.reloadLibrary() } }
+                    .disabled(workspace.busy || workspace.repository == nil)
                 Button("Export Project as Library…") {
                     if let project = workspace.selectedProjectForExport { workspace.exportProjectPanel(project) }
                 }.disabled(workspace.busy || workspace.repository == nil || workspace.selectedProjectForExport == nil)

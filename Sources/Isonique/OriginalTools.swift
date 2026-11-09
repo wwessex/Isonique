@@ -105,7 +105,7 @@ extension Workspace {
                 var draft = current
                 let report: OriginalReconnectReport
                 if let firstAid {
-                    (draft, report) = try repository.reconnectOfflineReferences(in: folder, after: firstAid)
+                    (draft, report) = try repository.reconnectOfflineReferences(in: folder, after: firstAid, basedOn: current)
                 } else {
                     report = try repository.reconnectMissingReferences(in: folder, library: &draft, originalIDs: originalIDs)
                 }

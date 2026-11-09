@@ -130,7 +130,7 @@ final class WholeLibraryMergeTests: XCTestCase {
         incomingTrash.trashedAt = nil
         current.photos += [localTrash, incomingTrash]
         current.version = 3
-        try fixture.destination.save(current)
+        current = try fixture.destination.save(current)
 
         var source = try fixture.source.load()
         var edited = try XCTUnwrap(source.photos.first { $0.id == fixture.sharedPhoto.id })
@@ -264,7 +264,7 @@ final class WholeLibraryMergeTests: XCTestCase {
         current.photos[0].stackID = stack
         current.photos[2].stackID = stack
         current.applyStackPick(StackPickChange(stackID: stack, photoID: fixture.sharedPhoto.id, selectionID: fixture.sharedPhoto.id))
-        try fixture.destination.save(current)
+        current = try fixture.destination.save(current)
 
         var source = try fixture.source.load()
         var sourceTrash = try XCTUnwrap(source.photos.first { $0.id == fixture.sharedPhoto.id })
@@ -348,7 +348,7 @@ final class WholeLibraryMergeTests: XCTestCase {
             else { trashed.sha256 = String(repeating: "0", count: 64) }
             source.photos = [trashed]
             source.stackBrowser = nil
-            try fixture.source.save(source)
+            source = try fixture.source.save(source)
             XCTAssertTrue(try fixture.destination.previewLibraryMerge(from: fixture.source.root).conflicts.isEmpty)
             do {
                 _ = try await fixture.destination.mergeLibrary(from: fixture.source.root, applyTrash: true, review: {

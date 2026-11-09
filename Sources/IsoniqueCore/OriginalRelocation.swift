@@ -28,6 +28,7 @@ public extension LibraryRepository {
 
         let catalogue = root.appendingPathComponent("catalog.json")
         let before = try Data(contentsOf: catalogue)
+        try checkCatalogueRevision(of: library)
         let originals = try library.uniqueOriginals().filter { originalIDs.contains($0.originalID) }
         var report = OriginalRelocationReport()
         var transfers: [(photo: Photo, source: URL, destination: URL)] = []
@@ -70,8 +71,7 @@ public extension LibraryRepository {
         }
         try Task.checkCancellation()
         guard try Data(contentsOf: catalogue) == before else { throw LibraryError.integrity("catalogue changed during relocation") }
-        try save(updated)
-        library = updated
+        library = try save(updated)
 
         // Keep files that another catalogue record, including Trash, still references.
         let movesReferences = !keepReferencedSources && transfers.contains { $0.photo.referencedPath != nil }

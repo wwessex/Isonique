@@ -65,7 +65,7 @@ extension Workspace {
         guard panel.runModal() == .OK, let destination = panel.url else { return }
         do {
             let repository = try LibraryRepository.createEmpty(at: destination)
-            activateLibrary(repository, library: Library())
+            activateLibrary(repository, library: try repository.reloadCatalogue())
             status = "Created library · \(repository.root.path)"
         } catch { self.error = error.localizedDescription }
     }
@@ -91,6 +91,41 @@ extension Workspace {
         } catch {
             self.error = error.localizedDescription
             status = "Could not open library"
+        }
+    }
+
+    func reloadLibrary() async {
+        guard let repository, !busy else { return }
+        busy = true
+        status = "Reloading library…"
+        defer { busy = false }
+        do {
+            let loaded = try await Task.detached(priority: .userInitiated) { try repository.reloadCatalogue() }.value
+            if !loaded.hasSameCatalogueRevision(as: library) {
+                let preferred = selection
+                library = loaded
+                history = keepHistory ? (loaded.history ?? EditHistory()) : EditHistory()
+                let parts = scope.split(separator: ":")
+                if parts.count == 2, let id = UUID(uuidString: String(parts[1])) {
+                    switch parts[0] {
+                    case "project" where !loaded.projects.contains(where: { $0.id == id }),
+                         "album" where !loaded.albums.contains(where: { $0.id == id }),
+                         "stack" where !loaded.activePhotos.contains(where: { $0.stackID == id }):
+                        scope = "all"
+                    default: break
+                    }
+                }
+                selectAfterChange(preferred: preferred)
+                batchSelection.formIntersection(photos.map(\.id))
+                curveSampling = nil
+                curvePointSelection = nil
+            }
+            refreshOriginalStatus()
+            error = nil
+            status = "Reloaded library"
+        } catch {
+            self.error = error.localizedDescription
+            status = "Could not reload library"
         }
     }
 
@@ -155,8 +190,9 @@ extension Workspace {
         busy = true
         status = "Checking project library…"
         let reservedHistory = history
+        let workspace = library
         let task = Task.detached(priority: .utility) {
-            try await repository.importProjectLibrary(from: source, reserving: reservedHistory) { progress in
+            try await repository.importProjectLibrary(from: source, reserving: reservedHistory, basedOn: workspace) { progress in
                 await self.reportProjectImportProgress(progress)
             }
         }
@@ -220,8 +256,9 @@ extension Workspace {
         guard let repository, !busy else { return }
         busy = true
         status = "Checking project library for merge…"
+        let workspace = library
         let task = Task.detached(priority: .utility) {
-            try await repository.mergeProjectLibrary(from: source, prefer: preference, applyTrash: applyTrash, review: { preview in
+            try await repository.mergeProjectLibrary(from: source, prefer: preference, applyTrash: applyTrash, basedOn: workspace, review: { preview in
                 await self.reviewProjectMerge(preview, preference: preference)
             }) { progress in
                 await self.reportProjectImportProgress(progress)
@@ -349,9 +386,10 @@ extension Workspace {
         busy = true
         status = "Comparing library catalogues…"
         let reservedHistory = history
+        let workspace = library
         let task = Task.detached(priority: .utility) {
             try await repository.mergeLibrary(from: source, photoPolicy: photoPolicy, applyTrash: applyTrash,
-                                              reserving: reservedHistory, review: { preview in
+                                              reserving: reservedHistory, basedOn: workspace, review: { preview in
                 await self.reviewLibraryMerge(preview, sourceName: source.lastPathComponent)
             }) { progress in
                 await self.reportLibraryMergeProgress(progress)
@@ -703,7 +741,7 @@ extension Workspace {
         let restored = try await Task.detached { () -> (LibraryRepository, Library) in
             try LibraryBackup.restore(from: source, to: destination, excluding: current)
             let repo = try LibraryRepository(root: destination)
-            return (repo, try repo.load())
+            return (repo, try repo.reloadCatalogue())
         }.value
         activateLibrary(restored.0, library: restored.1)
         status = "Restored and verified \(library.photos.count) photos · \(destination.path)"

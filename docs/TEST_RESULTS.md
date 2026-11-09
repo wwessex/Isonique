@@ -320,3 +320,12 @@
 - A fresh catalogue check protected a newly claimed original and a pending Finder Trash file. A changed fingerprint blocked a move, and a later catalogue claim blocked restore into the claimed path.
 - In the signed app, the quarantine and restore dialogs each listed the reviewed file before confirmation. The restored file returned to Originals with the same hash, and the catalogue contents matched.
 - The optimized suite passed all 179 tests without skips, including four camera RAW fixtures and the native Finder Trash handoff. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
+
+## Stale catalogue write protection
+
+- Two independent workspaces opened the same library without changing its existing catalogue bytes. One saved a caption and flag; the other's stale rating edit and Undo were rejected. Both the newer bytes and the rejected workspace's local edit history stayed intact.
+- Reload preserved valid project scope and photo selection, read the newer values and saved Undo/Redo history, and let the second workspace save a rating. Reopening showed the rating alongside the first workspace's caption and flag. Reloading an unchanged catalogue kept session history; reloading a missing catalogue kept the current session and did not recreate the file.
+- A stale managed import rolled back its copy and kept the source and newer catalogue unchanged. A subsequent import based on the current catalogue succeeded, and its returned revision supported another edit.
+- The optimized suite passed all 182 tests without skips, including four camera RAW fixtures and the native Finder Trash handoff.
+- In two independently launched copies of the signed macOS app, the second copy rejected a stale three-star edit and displayed the reload instructions. File → Reload Library showed the first copy's five-star rating. A fresh flag edit then saved alongside that rating. Both values persisted, and the original SHA-256 matched.
+- The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2. Isonique has one maintained native macOS application in this repository.

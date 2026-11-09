@@ -51,10 +51,12 @@ public struct ProjectLibraryMergePreview: Sendable {
 public extension LibraryRepository {
     /// Merge an edited export into its matching project by stable catalogue identity.
     func mergeProjectLibrary(from folder: URL, prefer preference: ProjectMergePreference, applyTrash: Bool = false,
+                             basedOn workspace: Library? = nil,
                              review: (ProjectLibraryMergePreview) async -> Bool = { _ in true },
                              progress: (ImportProgress) async -> Void = { _ in }) async throws -> ProjectLibraryMergeResult {
         let (sourceRoot, source, project) = try readProjectLibrary(from: folder, allowTrashed: true)
         let (catalogue, destination) = try LibraryBackup.readCatalogue(root)
+        try checkWorkspaceCatalogue(workspace, matches: destination)
         guard let current = destination.projects.first(where: { $0.id == project.id }) else {
             throw LibraryError.integrity("the exported project's ID does not match a project in this library")
         }
@@ -235,9 +237,9 @@ public extension LibraryRepository {
         guard await review(preview) else { throw CancellationError() }
         try Task.checkCancellation()
         let transfers = incomingOriginals.map { (original: $0, filename: copiedNames[$0.originalID]) }
-        try await commitLibraryTransfer(draft, catalogue: catalogue, sourceRoot: sourceRoot,
-                                        transfers: transfers, progress: progress)
-        return ProjectLibraryMergeResult(library: draft, project: current, added: result.added,
+        let saved = try await commitLibraryTransfer(draft, catalogue: catalogue, sourceRoot: sourceRoot,
+                                                    transfers: transfers, progress: progress)
+        return ProjectLibraryMergeResult(library: saved, project: current, added: result.added,
                                          updated: result.updated, trashed: result.trashed, skipped: result.skipped,
                                          conflicts: conflicts.count + stackConflicts.count + albumConflicts.count,
                                          stackUpdates: result.stackUpdates, albumUpdates: result.albumUpdates)

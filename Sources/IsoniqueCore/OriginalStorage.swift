@@ -59,8 +59,7 @@ public extension LibraryRepository {
             for index in updated.photos.indices where updated.photos[index].originalID == photo.originalID {
                 updated.photos[index].referencedPath = input.path
             }
-            try save(updated)
-            library = updated
+            library = try save(updated)
         } else {
             try installManagedOriginal(from: input, photo: photo)
         }
@@ -85,7 +84,7 @@ public extension LibraryRepository {
         var report = OriginalReconnectReport()
         let matches = try originalMatches(in: folder, for: missing, includeStoredName: false, scanErrors: &report.scanErrors)
 
-        return try applyOriginalRecovery(expecting: expectedCatalogue) {
+        return try applyOriginalRecovery(expecting: expectedCatalogue, basedOn: library) {
             var paths: [UUID: String] = [:]
             for photo in missing {
                 try Task.checkCancellation()
@@ -108,9 +107,7 @@ public extension LibraryRepository {
                 if let path = paths[updated.photos[index].originalID] { updated.photos[index].referencedPath = path }
             }
             try Task.checkCancellation()
-            if expectedCatalogue != nil { try writeCatalogue(updated) }
-            else { try save(updated) }
-            library = updated
+            library = try writeCatalogue(updated)
             return report
         }
     }
@@ -170,10 +167,12 @@ public extension LibraryRepository {
         }
     }
 
-    private func applyOriginalRecovery<Result>(expecting catalogue: Data?, _ apply: () throws -> Result) throws -> Result {
-        guard let catalogue else { return try apply() }
+    private func applyOriginalRecovery<Result>(expecting catalogue: Data?, basedOn library: Library? = nil,
+                                               _ apply: () throws -> Result) throws -> Result {
+        guard catalogue != nil || library != nil else { return try apply() }
         return try withCatalogueWriteLock {
-            try checkFirstAidCatalogue(catalogue)
+            if let catalogue { try checkFirstAidCatalogue(catalogue) }
+            else if let library { try checkCatalogueRevision(of: library) }
             return try apply()
         }
     }
@@ -236,7 +235,7 @@ public extension LibraryRepository {
         for index in updated.photos.indices where updated.photos[index].originalID == photo.originalID {
             updated.photos[index].referencedPath = nil
         }
-        do { try save(updated) } catch {
+        do { updated = try save(updated) } catch {
             try? FileManager.default.removeItem(at: copy)
             throw error
         }
@@ -247,6 +246,7 @@ public extension LibraryRepository {
     func consolidateOriginals(_ originalIDs: Set<UUID>, in library: inout Library) throws -> OriginalConsolidationReport {
         let catalogue = root.appendingPathComponent("catalog.json")
         let before = try Data(contentsOf: catalogue)
+        try checkCatalogueRevision(of: library)
         let originals = try library.uniqueOriginals().filter { $0.referencedPath != nil && originalIDs.contains($0.originalID) }
         var report = OriginalConsolidationReport()
         var completed: Set<UUID> = []
@@ -292,8 +292,7 @@ public extension LibraryRepository {
         }
         // Keep exact copies if saving fails. A retry can verify and reuse them.
         guard try Data(contentsOf: catalogue) == before else { throw LibraryError.integrity("catalogue changed during consolidation") }
-        try save(updated)
-        library = updated
+        library = try save(updated)
         return report
     }
 
