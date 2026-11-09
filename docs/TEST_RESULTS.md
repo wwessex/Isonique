@@ -280,3 +280,9 @@
 - Conflicting original IDs or fingerprints blocked publication. An immutable destination catalogue forced a save failure after staging new originals and verified that both additions and Trash moves rolled back.
 - In the signed app, the default kept both photos active. The enabled review listed the exact photo to move. The local-only version remained active and Put Back restored the moved photo with its edits and memberships. The source catalogue and original-file hashes matched their starting values.
 - The optimized suite passed all 161 tests without skips, including four camera RAW fixtures. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
+
+## Read-only Empty Library Trash review
+
+- Repository tests covered an empty Trash, an original kept for an active version, one managed candidate shared by two trashed versions, and a referenced original kept in place. Missing files, symlinks and ambiguous names were excluded from the candidate list. Catalogue bytes, managed hashes and referenced contents matched before and after review.
+- In the signed app, both the File command and the Trash browser opened the same read-only report. It listed three photo records, one managed candidate, one original kept for the active version, and one referenced original kept in place. All three Trash records and every original file remained in place after closing the review.
+- The optimized suite passed all 164 tests without skips, including four camera RAW fixtures. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.

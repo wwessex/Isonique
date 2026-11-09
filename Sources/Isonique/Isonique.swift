@@ -747,6 +747,8 @@ enum EditTool: String { case select, crop, straighten, brush }
                 Button(workspace.isViewingTrash ? "Put Back Photos" : "Move Photos to Trash") {
                     workspace.setPhotosTrashed(workspace.selectedTrashActionIDs, trashed: !workspace.isViewingTrash)
                 }.keyboardShortcut(.delete, modifiers: [.command]).disabled(workspace.busy || workspace.selectedTrashActionIDs.isEmpty)
+                Button("Review Empty Library Trash…", action: workspace.showEmptyLibraryTrashReview)
+                    .disabled(!workspace.canReviewEmptyLibraryTrash)
             }
         }
         Window("Features & Limits", id: "features") {
@@ -931,6 +933,8 @@ struct ContentView: View {
                     if model.isViewingTrash {
                         Button("Put Back") { model.setPhotosTrashed(model.selectedTrashActionIDs, trashed: false) }
                             .disabled(model.selectedTrashActionIDs.isEmpty)
+                        Button("Review Empty Trash…", action: model.showEmptyLibraryTrashReview)
+                            .disabled(!model.canReviewEmptyLibraryTrash)
                     }
                     Picker("Rating filter", selection: $model.ratingFilter) { ForEach(RatingFilter.allCases) { filter in Text(filter.label).tag(filter) } }.labelsHidden().frame(width: 165)
                     Picker("View", selection: Binding(get: { model.presentation }, set: model.choosePresentation)) {
