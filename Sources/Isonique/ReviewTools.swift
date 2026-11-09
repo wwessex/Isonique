@@ -164,6 +164,7 @@ struct SlideshowView: View {
 
 struct ToneCurveGraph: View {
     let adjustments: Adjustments
+    let input: ToneHistogram?
     var body: some View {
         Canvas { context, size in
             var diagonal = Path(); diagonal.move(to: CGPoint(x: 0, y: size.height)); diagonal.addLine(to: CGPoint(x: size.width, y: 0))
@@ -175,6 +176,8 @@ struct ToneCurveGraph: View {
                 if index == 0 { curve.move(to: point) } else { curve.addLine(to: point) }
             }
             context.stroke(curve, with: .color(.yellow), lineWidth: 2)
-        }.frame(height: 100).background(.black.opacity(0.25)).accessibilityLabel("Master tone curve at quarter, half and three-quarter input brightness")
+        }.frame(height: 100)
+            .background { AdjustmentHistogramView(series: input?.rgbSeries ?? []).background(.black.opacity(0.25)) }
+            .accessibilityLabel("Master tone curve and RGB input histogram")
     }
 }

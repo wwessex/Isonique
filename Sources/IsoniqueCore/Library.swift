@@ -548,6 +548,21 @@ public enum Renderer {
 
     public static func renderWithGeometry(_ url: URL, adjustments: Adjustments,
                                           maxDimension: CGFloat? = nil) throws -> (image: CGImage, geometry: PhotoGeometry) {
+        let (toned, geometry) = try renderToneInput(url, adjustments: adjustments, maxDimension: maxDimension)
+        let toneTable = (0...255).map { TonalTools.map(Double($0) / 255, adjustments: adjustments) }
+        let levels = try TonalTools.applying(toned, table: toneTable, curves: adjustments.channelCurves,
+                                             channelLevels: adjustments.channelLevels)
+        let image = try applyGeometry(applyLens(levels, amount: geometry.lensAmount), geometry: geometry)
+        return (image, geometry)
+    }
+
+    public static func adjustmentHistograms(_ url: URL, adjustments: Adjustments) throws -> AdjustmentHistograms {
+        let (toned, _) = try renderToneInput(url, adjustments: adjustments, maxDimension: 384)
+        return try TonalTools.adjustmentHistograms(toned, adjustments: adjustments)
+    }
+
+    private static func renderToneInput(_ url: URL, adjustments: Adjustments,
+                                        maxDimension: CGFloat?) throws -> (CGImage, PhotoGeometry) {
         try Task.checkCancellation()
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
@@ -563,7 +578,6 @@ public enum Renderer {
               let data = context.data else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
         context.draw(decoded, in: CGRect(x: 0, y: 0, width: decoded.width, height: decoded.height))
         let pixels = data.bindMemory(to: UInt8.self, capacity: decoded.width * decoded.height * 4)
-        let toneTable = (0...255).map { TonalTools.map(Double($0) / 255, adjustments: adjustments) }
         let globalMultiplier = pow(2.0, adjustments.exposure)
         let brightness = adjustments.brightness.isFinite ? min(1, max(-1, adjustments.brightness)) : 0
         let vibrancy = adjustments.vibrancy.isFinite ? min(1, max(-1, adjustments.vibrancy)) : 0
@@ -609,11 +623,7 @@ public enum Renderer {
         }
         guard let result = context.makeImage() else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
         let toned = try applyTone(result, adjustments: adjustments)
-        let levels = try TonalTools.applying(toned, table: toneTable, curves: adjustments.channelCurves,
-                                             channelLevels: adjustments.channelLevels)
-        let geometry = PhotoGeometry(width: decoded.width, height: decoded.height, adjustments: adjustments)
-        let image = try applyGeometry(applyLens(levels, amount: geometry.lensAmount), geometry: geometry)
-        return (image, geometry)
+        return (toned, PhotoGeometry(width: decoded.width, height: decoded.height, adjustments: adjustments))
     }
     /// Shared independent sRGB tonal treatment for previews, exports and GPU-free hosts.
     /// Neutral settings bypass conversion; these are not Apple's proprietary RAW formulas.

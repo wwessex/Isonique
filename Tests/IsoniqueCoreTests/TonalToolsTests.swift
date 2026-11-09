@@ -69,6 +69,37 @@ final class TonalToolsTests: XCTestCase {
         XCTAssertEqual(edited.green, histogram.green)
         XCTAssertEqual(edited.blue, histogram.blue)
     }
+
+    func testAdjustmentHistogramsUseEachStagesInputAndLuminanceCurveAxis() throws {
+        let space = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
+        let info = CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+        let context = try XCTUnwrap(CGContext(data: nil, width: 2, height: 1, bitsPerComponent: 8,
+                                             bytesPerRow: 8, space: space, bitmapInfo: info))
+        let bytes = try XCTUnwrap(context.data).assumingMemoryBound(to: UInt8.self)
+        bytes[0] = 128; bytes[3] = 255
+        let image = try XCTUnwrap(context.makeImage())
+        var settings = Adjustments()
+        settings.gamma = 2
+        settings.curveMidtones = 0.65
+        var redLevels = LevelValues()
+        redLevels.blackPoint = 0.1
+        settings.setLevels(redLevels, for: .red)
+        var red = ChannelCurve.identity
+        red.movePoint(at: 0, input: 0, output: 255)
+        settings.setCurve(red, for: .red)
+        var luma = ChannelCurve.identity
+        luma.movePoint(at: 1, input: 255, output: 0)
+        settings.setCurve(luma, for: .luminance)
+        let bins = try TonalTools.adjustmentHistograms(image, adjustments: settings)
+        let master = TonalTools.map(128.0 / 255, adjustments: settings)
+        XCTAssertEqual(bins.combinedLevels.red[128], 1)
+        XCTAssertEqual(bins.masterCurve.red[181], 1)
+        XCTAssertEqual(bins.channelLevels.red[Int((master * 255).rounded())], 1)
+        XCTAssertEqual(bins.channelCurves.red[Int((redLevels.map(master) * 255).rounded())], 1)
+        XCTAssertEqual(bins.channelCurves.luminance[127], 1)
+        XCTAssertEqual(bins.channelCurves.red.reduce(0, +), 1)
+        XCTAssertEqual(bins.channelCurves.green[0], 1)
+    }
     func testAutoStackGapsInvalidDatesAndExistingStacks() {
         func photo(_ date: String) -> Photo { Photo(filename: "a", originalName: "a", projectID: nil, width: 1, height: 1, camera: "", captureDate: date, sha256: "hash") }
         let a = photo("2026:11:09 12:00:00"), b = photo("2026:11:09 12:00:02"), c = photo("2026:11:09 12:00:04"), d = photo("2026:11:09 12:01:00")

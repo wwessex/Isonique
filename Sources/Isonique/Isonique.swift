@@ -1111,6 +1111,12 @@ struct PhotoViewer: View {
 struct Inspector: View {
     @EnvironmentObject var model: Workspace
     @State private var tab = "Adjustments"
+    @State private var levelsExpanded = false
+    @State private var channelLevelsExpanded = false
+    @State private var masterCurveExpanded = false
+    @State private var channelCurvesExpanded = false
+    @State private var adjustmentInputs: (AdjustmentHistogramRequest, AdjustmentHistograms)?
+    @State private var inputHistogramError = false
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -1187,7 +1193,11 @@ struct Inspector: View {
         }.font(.caption)
     }
     func adjustments(_ photo: Photo) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
+        let showsInputs = levelsExpanded || channelLevelsExpanded || masterCurveExpanded || channelCurvesExpanded
+        let url = showsInputs ? try? model.repository?.originalURL(photo) : nil
+        let request = url.map { AdjustmentHistogramRequest(photo: photo, url: $0, originalRevision: model.originalStatusRevision) }
+        let inputs = adjustmentInputs.flatMap { $0.0 == request ? $0.1 : nil }
+        return VStack(alignment: .leading, spacing: 14) {
             Menu {
                 ForEach(AdjustmentPreset.allCases) { preset in
                     Button(preset.rawValue) {
@@ -1209,28 +1219,34 @@ struct Inspector: View {
             adjustment("Tint", path: \.adjustments.tint, range: -1...1)
             Divider()
             HistogramView(photo: photo)
-            DisclosureGroup("Levels") {
+            if showsInputs && inputHistogramError && inputs == nil {
+                Text("Adjustment input histograms unavailable").font(.caption2).foregroundStyle(.secondary)
+            }
+            DisclosureGroup("Levels", isExpanded: $levelsExpanded) {
                 VStack(spacing: 10) {
+                    AdjustmentHistogramView(series: inputs.map { [($0.combinedLevels.luminance, .white)] } ?? [])
+                        .frame(height: 48).background(.black.opacity(0.25))
+                        .accessibilityHidden(false).accessibilityLabel("Combined Levels input histogram")
                     adjustment("Black point", path: \.adjustments.blackPoint, range: 0...max(0, photo.adjustments.whitePoint - 0.01))
                     adjustment("White point", path: \.adjustments.whitePoint, range: min(1, photo.adjustments.blackPoint + 0.01)...1, neutral: 1)
                     adjustment("Gamma", path: \.adjustments.gamma, range: 0.1...4, neutral: 1)
                     Button("Reset Levels") { model.edit { $0.adjustments.blackPoint = 0; $0.adjustments.whitePoint = 1; $0.adjustments.gamma = 1 } }
                 }.padding(.top, 10)
             }
-            DisclosureGroup("Channel Levels") {
-                ChannelLevelsEditor(photo: photo).id(photo.id).padding(.top, 10)
+            DisclosureGroup("Channel Levels", isExpanded: $channelLevelsExpanded) {
+                ChannelLevelsEditor(photo: photo, input: inputs?.channelLevels).id(photo.id).padding(.top, 10)
             }
-            DisclosureGroup("Master Tone Curve") {
+            DisclosureGroup("Master Tone Curve", isExpanded: $masterCurveExpanded) {
                 VStack(spacing: 10) {
-                    ToneCurveGraph(adjustments: photo.adjustments)
+                    ToneCurveGraph(adjustments: photo.adjustments, input: inputs?.masterCurve)
                     adjustment("Shadow output", path: \.adjustments.curveShadows, range: 0...1, neutral: 0.25)
                     adjustment("Midtone output", path: \.adjustments.curveMidtones, range: 0...1, neutral: 0.5)
                     adjustment("Highlight output", path: \.adjustments.curveHighlights, range: 0...1, neutral: 0.75)
                     Button("Reset Curve") { model.edit { $0.adjustments.curveShadows = 0.25; $0.adjustments.curveMidtones = 0.5; $0.adjustments.curveHighlights = 0.75 } }
                 }.padding(.top, 10)
             }
-            DisclosureGroup("Channel Curves") {
-                ChannelCurveEditor(photo: photo).id(photo.id).padding(.top, 10)
+            DisclosureGroup("Channel Curves", isExpanded: $channelCurvesExpanded) {
+                ChannelCurveEditor(photo: photo, input: inputs?.channelCurves).id(photo.id).padding(.top, 10)
             }
             Text("HIGHLIGHTS & SHADOWS").font(.caption).foregroundStyle(.secondary)
             adjustment("Shadows", path: \.adjustments.shadows, range: 0...1)
@@ -1288,6 +1304,18 @@ struct Inspector: View {
             Button("Reset All Adjustments") { model.tool = .select; model.compareOriginal = false; model.edit { $0.adjustments = Adjustments() } }
             Text("Edits are saved separately. Originals are never rewritten.").font(.caption2).foregroundStyle(.secondary)
             Button("Export Photo…", action: model.exportPanel)
+        }.task(id: request) {
+            guard !Task.isCancelled else { return }
+            inputHistogramError = false
+            adjustmentInputs = nil
+            guard let request else { return }
+            do {
+                let histograms = try await request.load()
+                guard !Task.isCancelled else { return }
+                adjustmentInputs = (request, histograms)
+            } catch {
+                if !Task.isCancelled { inputHistogramError = true }
+            }
         }
     }
     func organisation() -> some View {

@@ -13,6 +13,7 @@ extension Workspace {
 struct ChannelCurveEditor: View {
     @EnvironmentObject private var model: Workspace
     let photo: Photo
+    let input: ToneHistogram?
     @State private var channel: CurveChannel = .red
     @State private var pointIndex = 0
     @State private var drag: CurveDrag?
@@ -33,6 +34,16 @@ struct ChannelCurveEditor: View {
         case .green: .green
         case .blue: .blue
         case .luminance: .primary
+        }
+    }
+
+    private var bins: [Int] {
+        guard let input else { return [] }
+        switch channel {
+        case .red: return input.red
+        case .green: return input.green
+        case .blue: return input.blue
+        case .luminance: return input.luminance
         }
     }
 
@@ -78,6 +89,7 @@ struct ChannelCurveEditor: View {
             let size = geometry.size
             ZStack {
                 Rectangle().fill(.black.opacity(0.35))
+                AdjustmentHistogramView(series: [(bins, tint)])
                 Path { path in
                     for division in 1...3 {
                         let x = size.width * CGFloat(division) / 4
@@ -107,7 +119,9 @@ struct ChannelCurveEditor: View {
                         if let drag { commit(drag.curve) }
                         drag = nil
                     })
-        }.frame(height: 130).padding(5).accessibilityHidden(true)
+        }.frame(height: 130).padding(5)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(channel.rawValue) curve and input histogram")
     }
 
     private var inputBinding: Binding<Int> {

@@ -108,3 +108,9 @@
 - All 85 XCTest cases passed on the native Apple Silicon macOS app. The arm64 release archive passed strict signature verification. Tests covered black and white clipping, gamma remapping, channel isolation, the order of Levels and curves, recipe reset, persistent Undo/Redo and neutral combined controls.
 - A combined Levels and curves recipe survived catalogue reopening in format 6. Its full-size PNG export matched the shared preview pixel for pixel. The input and managed original retained their hashes. Formats 1–5 remain readable.
 - Native QA opened Channel Levels, set Red black point to 0.20, switched to a neutral Blue channel, then set Blue gamma to 1.50. The catalogue saved both independently in format 6, and both test originals retained their hashes. Auto Levels, quarter-tones and adjustment-input histograms are tracked in the next checkpoint.
+
+## Adjustment input histograms
+
+- All 88 XCTest cases passed and the signed arm64 app built. Fixtures verified the inputs before combined Levels, master curve, channel Levels and channel curves, including the encoded luminance axis and transparent pixels. Existing export equality tests continued to pass.
+- Native QA switched the Curves graph from Red to Luminance, opened the separate Channel Levels input histogram, and changed the selected photo with both panels open. The request tests cover selection and upstream recipe changes and cancellation before opening a file.
+- Sampling uses a 384-pixel version of the full oriented image at the tone stages, before lens correction and crop. The Inspector discards obsolete task results.
