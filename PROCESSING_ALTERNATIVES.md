@@ -1,6 +1,6 @@
 # Isonique processing alternatives
 
-Reviewed 8 November 2026 against upstream documentation. The current app uses independent, source-defined pixel equations; it does not recover or reproduce Apple's proprietary RAW engine. Camera RAW decoding still uses Apple ImageIO. No third-party engine listed below is bundled or claimed to work in this build.
+This engineering note records the 8 November 2026 processing review. See the [test results](docs/TEST_RESULTS.md) for later RAW validation. The current app uses independent, source-defined pixel equations; it does not recover or reproduce Apple's proprietary RAW engine. Camera RAW decoding still uses Apple ImageIO. No third-party engine listed below is bundled or claimed to work in this build.
 
 ## Candidates
 
@@ -29,6 +29,6 @@ The independent tone, saturation and contrast equations are product choices, not
 
 ## Compatibility and limits
 
-Existing catalogues and adjustment values are retained. Isonique continues to read the former `ApertureNative/Library` storage location, avoiding a silent empty library after the rebrand. Output can differ from earlier Core Image renders, although originals are never changed. The current 8-bit path clips highlights and is unsuitable for preserving scene-linear HDR or full sensor precision. A production RAW replacement should keep float/high-bit-depth data until display/export and validate real RAW files from each supported camera before advertising support.
+Existing catalogues and adjustment values are retained. The [library compatibility notes](COMPATIBILITY.md) explain how Isonique finds earlier libraries. Output can differ from earlier Core Image renders, although originals are never changed. The current 8-bit path clips highlights and is unsuitable for preserving scene-linear HDR or full sensor precision. A production RAW replacement should keep float/high-bit-depth data until display/export and validate real RAW files from each supported camera before advertising support.
 
-Only the native arm64 macOS app exists here. There are no maintained web/PWA or separate mobile variants. Intel, older macOS runtimes, real camera RAW files and a LibRaw-backed decoder have not been validated.
+Only the native arm64 macOS app exists here. There are no maintained web/PWA or separate mobile variants. Intel, older macOS runtimes and a LibRaw-backed decoder have not been validated.

@@ -42,6 +42,7 @@ public struct LiftedSettings {
     }
 }
 public enum CropRules {
+    /// Use absolute field values and invert the ratio after a quarter turn.
     public static func aspectRatio(width: Double, height: Double, rotation: Int = 0) -> Double? {
         // Reject invalid input here; the original division has no such guard.
         guard width.isFinite, height.isFinite, width != 0, height != 0 else { return nil }

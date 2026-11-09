@@ -1,54 +1,23 @@
-# Compatibility and scope
+# Isonique library compatibility
 
+Isonique stores its catalogue and edit recipes in `catalog.json` and uses its own backup format. Its macOS bundle identifier is `io.github.wwessex.isonique`. A library cannot be created inside an application bundle or a legacy photo library.
 
-## Isolation
+## Isonique catalogues
 
-Apple's original Aperture.app and existing libraries are never patched or used as writable databases. The new app has a different bundle identifier (`io.github.wwessex.isonique`), a separate name, and a separate catalogue. Its own library cannot be created inside an application or legacy photo library. Imported originals are managed copies verified with SHA-256. Non-destructive edits live in `catalog.json`.
+New default libraries use `~/Library/Application Support/Isonique/Library`. If that location has no catalogue and the earlier default `~/Library/Application Support/ApertureNative/Library` exists, Isonique opens the earlier Isonique library in place. This fallback is for Isonique data. An explicit `--library` argument or a saved library selection takes precedence. File → Open Isonique Library can select another existing library.
 
-## Legacy recovery
+Isonique reads catalogue formats 1–7. Referenced originals and compound or project-scoped Smart Albums require format 2 or later. Browsable versions and stack controls require format 3 or later. Local brushes, channel curves, channel Levels and quarter-tones require formats 4, 5, 6 and 7 respectively. Saving a feature that needs a later format upgrades the catalogue. Older builds may reject newer formats or discard fields they do not understand.
 
-Legacy compatibility recovers embedded originals from `Masters` and `Originals`, including IPTC captions and keywords and embedded IPTC/XMP ratings when ImageIO exposes them. Ratings use the supported -1…5 range; XMP takes precedence over IPTC. Missing or invalid ratings default to unrated. Existing duplicate photos retain their current metadata. Recovery first makes and verifies a full disposable copy, compares file hashes before and after reading the source, and reads photographs from the copy. Symbolic links are refused. Duplicates and unsupported photographs are counted separately; unsupported relative filenames are shown (first 20 in the recovery dialog). Storage, catalogue-write and integrity errors stop recovery instead of being counted as unsupported images. A hash change stops recovery and is reported; already imported verified photos may remain in the new library. No recovery action writes a legacy database.
+Isonique backups copy the saved catalogue and its managed originals, including photos in Trash. A manifest records the catalogue hash and the original hashes are verified. Referenced originals remain at their external paths and need separate backups. Restore creates a new library folder. Preferences, uncatalogued files, library merging and automatic catalogue repair are outside this workflow.
 
-Tests use a **synthetic** `.aplibrary` directory with a generated PNG and opaque mock database. There is no supplied real user library to validate. Successful fixture recovery is not evidence of full Aperture compatibility. Referenced files outside a library, database projects/albums, database-only ratings and metadata, editing recipes and previews are not migrated. Embedded tags may be older than the latest changes in Aperture; read-only recovery cannot retrieve those database-only changes. Sidecar files are not imported. No claim is made that the original application's rendering can be reproduced.
+## Recovery from Aperture libraries
 
-## Supported implementation
+**File → Recover Aperture Originals** makes a temporary copy of the selected library, verifies file hashes and recovers embedded originals from `Masters` and `Originals`. Symbolic links are refused and the source is opened read-only. Embedded IPTC captions and keywords and supported IPTC/XMP ratings are carried over when ImageIO exposes them. XMP takes precedence over IPTC. Duplicate photos retain their current Isonique metadata, and unsupported files are reported separately.
 
-macOS desktop only: SwiftUI with AppKit panels and windows, ImageIO metadata/thumbnails, source-defined CPU pixel rendering, managed import, projects/albums, rating/flag, caption/keywords, search/filter, exposure/contrast/saturation, comparison, fit/100% viewer and edited JPEG export. System RAW decoding is used where available; exact camera support and original Aperture RAW rendering are unverified. Export metadata preservation is not implemented.
+Allow space for a complete temporary copy. The recovery workflow is limited to embedded originals and supported metadata in those files. Database projects, albums, relationships, previews, referenced originals, legacy edits and vaults are outside its scope. Tests cover a synthetic `.aplibrary` fixture with a generated image and a mock database. A real legacy library has not been tested.
 
-## Unsupported
+Normal import can also read matching XMP sidecars. **File → Import XML / XMP Metadata** accepts XMP, Isonique photo records and supported `AlbumData.xml` metadata. This command imports selected photo metadata rather than converting a library database. [Historical workflow comparison](docs/WORKFLOW_COMPARISON.md)
 
-Legacy library editing, automatic catalogue conversion, adjustment/plug-in parity, multiple editing versions, stacks, faces/places, tethering, lens correction, retouching, soft proofing, books, slideshows, video, network/cloud sync and external referenced-original relocation are not implemented. Some proprietary legacy processing and abandoned services may be impossible to reproduce exactly; no full compatibility promise is made.
+## Platform and image processing
 
-## Platforms
-
-Only the newly created arm64 macOS application is built and tested. The supplied legacy Intel macOS bundle is preserved. No separate web/PWA, iOS, or other native sources were supplied, created or validated. Physical-device camera import, representative real RAW files, older supported macOS releases, signed/notarised distribution and real Aperture libraries require further validation.
-
-## Isonique rebrand and rendering
-
-The previous `~/Library/Application Support/ApertureNative/Library` path is deliberately retained to keep existing catalogues visible. The bundle, executable, Swift modules and interface are named Isonique. Historical evidence and Apple Aperture recovery labels keep their original names. See `PROCESSING_ALTERNATIVES.md`: Apple ImageIO remains the decoder; LibRaw and libvips are researched alternatives only. All previews and exports now use the same independent CPU formulas, so earlier Core Image results may change without changing saved recipes or originals.
-
-## Remaining library features and options
-
-Available in Help → Features & Limits, searchable by feature name:
-
-- Direct opening or editing of `.aplibrary` catalogues; automatic database migration and round-trip interchange.
-- Project/folder hierarchy, album membership, smart album rules, stacks, versions, version names and color labels.
-- Database-only captions, keywords, ratings and flags; faces, places and other metadata relationships. Embedded metadata import does not reconstruct these relationships.
-- Referenced-original discovery, relinking, relocation and consolidation; offline volume handling and missing-original resolution.
-- Aperture XML catalogue and XMP sidecar import, preview recovery and original adjustment recipes.
-- Library merging, vault backup/restore and catalogue repair/rebuild.
-- Camera/tethered import, RAW+JPEG pairing, import renaming and metadata presets.
-- Batch selection/edit/export; TIFF/PNG/original export, output dimensions/quality presets and embedded metadata export.
-- Local brushes, retouching, red-eye, curves, levels, histogram, lens correction, soft proofing, printing, books, slideshows, plug-ins and video workflows.
-
-The sole maintained implementation is native Apple Silicon macOS. No real Aperture catalogue has been supplied for end-to-end validation; fixture success is limited evidence, not a full compatibility claim.
-
-Embedded metadata uses Apple's [IPTC caption property](https://developer.apple.com/documentation/imageio/kcgimagepropertyiptccaptionabstract) and [ImageIO metadata reader](https://developer.apple.com/documentation/imageio/cgimagemetadatacopystringvaluewithpath(_:_:_:)). No proprietary database schema was guessed or modified.
-
-## Options 6–10 compatibility update
-
-The only maintained variant is native Apple Silicon macOS. RAW/JPEG linking retains independent originals and recipes, and requires matching companions successfully imported together. Import presets rename catalogue display/export names only. XML/XMP support is metadata-only (README lists the accepted schemas), not full Aperture catalogue compatibility. Lens correction is independent radial resampling, not recovered Apple or automatic camera-profile processing. Proofing accepts RGB ICC only and affects the viewer, not output. Optional history is bounded to 100 edits in the catalogue; switching it off removes persisted snapshots. Older executables ignore new optional fields and can discard them when saving.
-
-## Isonique backup support — 9 November 2026
-
-Verified backup/restore, integrity checking and existing-library opening now work for this app's catalogue and managed originals. New destinations are mandatory. Backups retain the exact saved catalogue and every referenced original, with SHA-256 validation and a catalogue manifest. Restore switches the active library only after a successful verified copy. UserDefaults preferences and unreferenced files are excluded. Legacy Aperture vaults, library merging and automatic repair remain unsupported. No catalogue schema change; backup-manifest.json is an auxiliary file.
+The maintained app targets Apple Silicon and macOS 14 or later. Camera RAW support depends on system ImageIO codecs. Edited output uses 8-bit sRGB. The rendering notes describe the processing choices and the test record identifies the camera samples and OS tested. [Processing notes](PROCESSING_ALTERNATIVES.md) · [Test results](docs/TEST_RESULTS.md)

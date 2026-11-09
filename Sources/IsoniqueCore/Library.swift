@@ -4,12 +4,14 @@ import CoreGraphics
 import CryptoKit
 import UniformTypeIdentifiers
 
+/// Ratings shared by the catalogue, review controls and metadata import.
 public enum RatingRules {
     public static let rejected = -1
     public static let unrated = 0
     public static let maximum = 5
-    public static let invalid = -100 // Original internal sentinel, never a user rating.
+    public static let invalid = -100 // Internal sentinel, never a user rating.
     public static func clamp(_ value: Int) -> Int { min(maximum, max(rejected, value)) }
+    /// Add the requested delta and clamp it to the user rating range.
     public static func adjusting(_ current: Int, by delta: Int) -> Int {
         let (sum, overflow) = current.addingReportingOverflow(delta)
         return overflow ? (delta > 0 ? maximum : rejected) : clamp(sum)
@@ -18,6 +20,7 @@ public enum RatingRules {
     public static func stars(_ value: Int) -> String { String(repeating: "★", count: max(unrated, clamp(value))) }
 }
 
+/// Raw values are persisted in Isonique Smart Album rules.
 public enum RatingFilter: Int, CaseIterable, Identifiable {
     case all = 6, unratedAndAbove = 0, oneAndAbove = 1, twoAndAbove = 2
     case threeAndAbove = 3, fourAndAbove = 4, five = 5, unrated = 7, rejected = 8
@@ -47,6 +50,7 @@ public enum RatingFilter: Int, CaseIterable, Identifiable {
     }
 }
 
+/// Combine the rating and flag filters without changing either filter's behavior.
 public enum BrowserFilterRules {
     public static func includes(rating: Int, flagged: Bool, ratingFilter: RatingFilter, flaggedOnly: Bool) -> Bool {
         ratingFilter.includes(rating) && (!flaggedOnly || flagged)
@@ -63,6 +67,7 @@ public struct PhotoCrop: Codable, Equatable {
         self.x = x; self.y = y; self.width = width; self.height = height
     }
 }
+/// Straightening bounds shared by the editor and stored recipes.
 public enum StraightenRules {
     public static let minimum = -45.0
     public static let maximum = 45.0
@@ -70,7 +75,7 @@ public enum StraightenRules {
     public static func clamp(_ degrees: Double) -> Double {
         degrees.isFinite ? min(maximum, max(minimum, degrees)) : 0
     }
-    /// Original rotate: adds each event delta, then clamps, including at a limit.
+    /// Add each gesture delta, then clamp the result to the supported range.
     public static func applying(rotation delta: Double, to current: Double) -> Double {
         guard delta.isFinite else { return clamp(current) }
         return clamp(current + delta)
@@ -120,6 +125,7 @@ public struct Adjustments: Codable, Equatable {
         quarterTurns = try values.decodeIfPresent(Int.self, forKey: .quarterTurns) ?? 0
         flipHorizontal = try values.decodeIfPresent(Bool.self, forKey: .flipHorizontal) ?? false
         flipVertical = try values.decodeIfPresent(Bool.self, forKey: .flipVertical) ?? false
+        // Apply the same bounds when restoring a stored recipe.
         straighten = StraightenRules.clamp(try values.decodeIfPresent(Double.self, forKey: .straighten) ?? 0)
         crop = try values.decodeIfPresent(PhotoCrop.self, forKey: .crop)
         blackPoint = try values.decodeIfPresent(Double.self, forKey: .blackPoint) ?? 0

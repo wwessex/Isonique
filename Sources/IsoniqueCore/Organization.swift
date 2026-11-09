@@ -19,6 +19,7 @@ public enum PhotoColorLabel: Int, Codable, CaseIterable, Identifiable {
 /// Rules use the current photo values, so album membership updates after every edit.
 public struct SmartAlbumRule: Codable, Equatable {
     public var minimumRating: Int
+    /// Stored rating filter index. Older Isonique catalogues may omit it.
     public var ratingFilterIndex: Int?
     public var flaggedOnly: Bool
     public var text: String
@@ -55,6 +56,7 @@ public struct SmartAlbumRule: Codable, Equatable {
     }
 }
 
+/// A stack requires at least two photos.
 public enum StackRules {
     public static func canStack(photoCount: Int) -> Bool { photoCount >= 2 }
 }
