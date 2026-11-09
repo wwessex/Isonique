@@ -82,6 +82,14 @@ enum EditTool: String { case select, crop, straighten }
         editUndo.setActionName("Photo Edit")
         save()
     }
+    // Original delta action 0x100032854 and rejection control 0x1004320d4.
+    // Menu and inspector actions share the recovered rules and edit history.
+    func adjustRating(by delta: Int) {
+        edit { $0.rating = RatingRules.adjusting($0.rating, by: delta) }
+    }
+    func setRejected(_ rejected: Bool) {
+        edit { $0.rating = RatingRules.rejectionRating(isRejected: rejected) }
+    }
     func restore(_ photo: Photo) {
         guard let index = library.photos.firstIndex(where: { $0.id == photo.id }) else { return }
         let previous = library.photos[index]
@@ -229,6 +237,17 @@ enum EditTool: String { case select, crop, straighten }
         }
         .defaultSize(width: 1440, height: 900)
         .commands {
+            CommandMenu("Rating") {
+                Button("Raise Rating") { workspace.adjustRating(by: 1) }
+                    .disabled(workspace.busy || workspace.selected == nil || (workspace.selected?.rating ?? RatingRules.maximum) >= RatingRules.maximum)
+                Button("Lower Rating") { workspace.adjustRating(by: -1) }
+                    .disabled(workspace.busy || workspace.selected == nil || (workspace.selected?.rating ?? RatingRules.rejected) <= RatingRules.rejected)
+                Divider()
+                Button(workspace.selected?.rating == RatingRules.rejected ? "Unreject Photo" : "Reject Photo") {
+                    workspace.setRejected(workspace.selected?.rating != RatingRules.rejected)
+                }
+                .disabled(workspace.busy || workspace.selected == nil)
+            }
             CommandGroup(replacing: .help) {
                 Button("Features & Limits…") { openWindow(id: "features") }
             }
@@ -556,13 +575,13 @@ struct Inspector: View {
                 Toggle(isOn: model.binding(\.flagged, fallback: false)) { Image(systemName: "flag.fill") }.toggleStyle(.button).help("Flag photograph")
             }
             HStack {
-                Toggle("Rejected", isOn: Binding(get: { photo.rating == RatingRules.rejected }, set: { rejected in model.edit { $0.rating = RatingRules.rejectionRating(isRejected: rejected) } }))
+                Toggle("Rejected", isOn: Binding(get: { photo.rating == RatingRules.rejected }, set: { model.setRejected($0) }))
                 Button("Unrated") { model.edit { $0.rating = RatingRules.unrated } }
             }
             HStack {
-                Button("Lower Rating") { model.edit { $0.rating = RatingRules.adjusting($0.rating, by: -1) } }
+                Button("Lower Rating") { model.adjustRating(by: -1) }
                     .disabled(photo.rating <= RatingRules.rejected)
-                Button("Raise Rating") { model.edit { $0.rating = RatingRules.adjusting($0.rating, by: 1) } }
+                Button("Raise Rating") { model.adjustRating(by: 1) }
                     .disabled(photo.rating >= RatingRules.maximum)
             }
             Text("Caption").font(.caption).foregroundStyle(.secondary)

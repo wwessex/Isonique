@@ -1,4 +1,12 @@
-## Latest crop-options trace validation
+## Latest main-program trace and Rating menu validation — 9 November 2026
+
+- Original main executable opened with `core_target_open` in confirmed Deep mode. Six sequential, individually awaited/read pseudocode calls completed. All used the fallback lifter because Ghidra returned no result. Checked rating/rejection assembly and method implementation pointers; retained `evidence/rating-menu-main-trace.json`.
+- New Rating menu and inspector share `adjustRating(by:)` and `setRejected(_:)`, using the recovered delta, bounds and rejection rules through the existing save/undo operation. Menu placement and unit steps are independent UI choices.
+- `make test`: all 20 tests passed, zero failures, including recovered rating transitions/bounds, filter truth table, straighten, crop ratio, persistence, import/recovery and exports.
+- `rebuild_check`: release build passed, app launched and drew at 3472×1994, mechanics passed with 15 sourced entries and zero estimated. Screenshot inspected. Regenerated arm64 signed app/ZIP; signing verification runs in the build script. Interactive menu clicks were not automated.
+- Native macOS SwiftUI is the only maintained version found. No web/PWA, iOS, Android or Windows sources exist. Intel, older macOS, mobile devices and the original x86_64 program's runtime were not tested. Original proprietary RAW/pixel fidelity, catalogue migration and Stamp merge semantics remain unresolved.
+
+## Earlier crop-options trace validation
 
 - Original main program opened with `core_target_open` in Deep mode. Seven sequential pseudocode calls completed and were read individually; Ghidra returned no result, so fallback output was used. Crop ratio was checked against complete assembly, selector pointers and exact mask bytes. Evidence: `evidence/crop-options-main-trace.json`.
 - Added custom crop ratios and integrated `CropRules.aspectRatio` into pixel/lock updates. Existing positive aspect preferences retain their meaning. Source-coordinate rotation branches are unit tested; live UI uses already rotated display coordinates. New custom ratio interaction was not manually exercised.
