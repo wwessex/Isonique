@@ -70,15 +70,16 @@ extension Workspace {
         return choices
     }
 
-    func findOriginalsPanel(_ operation: OriginalFolderOperation) {
-        guard canFindOriginals(operation) else { return }
+    func findOriginalsPanel(_ operation: OriginalFolderOperation, firstAid: LibraryFirstAidReport? = nil) {
+        guard !busy, repository != nil, firstAid != nil || canFindOriginals(operation) else { return }
         let panel = NSOpenPanel()
         panel.title = operation.title
         panel.message = operation.prompt
+        if firstAid != nil { panel.message = operation.prompt + " Recovery applies to the originals in the reviewed report." }
         panel.prompt = "Search Folder"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
-        let choices = originalFolderScopes(for: operation)
+        let choices = firstAid == nil ? originalFolderScopes(for: operation) : []
         let picker = NSPopUpButton()
         picker.addItems(withTitles: choices.map(\.title))
         picker.setAccessibilityLabel("Apply to")
@@ -90,17 +91,24 @@ extension Workspace {
             panel.isAccessoryViewDisclosed = true
         }
         guard panel.runModal() == .OK, let folder = panel.url else { return }
-        let originalIDs = choices[picker.indexOfSelectedItem].originalIDs
-        Task { await findOriginals(in: folder, operation: operation, originalIDs: originalIDs) }
+        let selection = picker.indexOfSelectedItem
+        let originalIDs = choices.indices.contains(selection) ? choices[selection].originalIDs : nil
+        Task { await findOriginals(in: folder, operation: operation, originalIDs: originalIDs, firstAid: firstAid) }
     }
 
-    func findOriginals(in folder: URL, operation: OriginalFolderOperation, originalIDs: Set<UUID>? = nil) async {
-        guard canFindOriginals(operation) else { return }
+    func findOriginals(in folder: URL, operation: OriginalFolderOperation, originalIDs: Set<UUID>? = nil,
+                       firstAid: LibraryFirstAidReport? = nil) async {
+        guard firstAid != nil || canFindOriginals(operation) else { return }
         await runOriginalJob(status: "Searching for missing originals…") { repository, current in
             switch operation {
             case .reconnect:
                 var draft = current
-                let report = try repository.reconnectMissingReferences(in: folder, library: &draft, originalIDs: originalIDs)
+                let report: OriginalReconnectReport
+                if let firstAid {
+                    (draft, report) = try repository.reconnectOfflineReferences(in: folder, after: firstAid)
+                } else {
+                    report = try repository.reconnectMissingReferences(in: folder, library: &draft, originalIDs: originalIDs)
+                }
                 let summary = report.reconnected.isEmpty && report.unmatched.isEmpty && report.ambiguous.isEmpty
                     ? "No missing referenced originals"
                     : "\(report.reconnected.count) reconnected · \(report.unmatched.count) unmatched · \(report.ambiguous.count) ambiguous"
@@ -108,7 +116,12 @@ extension Workspace {
                     title: operation.title, summary: summary, unmatched: report.unmatched, ambiguous: report.ambiguous,
                     scanErrors: report.scanErrors))
             case .recoverManaged:
-                let report = try repository.recoverMissingManagedOriginals(in: folder, library: current, originalIDs: originalIDs)
+                let report: ManagedOriginalRecoveryReport
+                if let firstAid {
+                    report = try repository.recoverMissingManagedOriginals(in: folder, after: firstAid)
+                } else {
+                    report = try repository.recoverMissingManagedOriginals(in: folder, library: current, originalIDs: originalIDs)
+                }
                 let summary = report.restored.isEmpty && report.unmatched.isEmpty && report.ambiguous.isEmpty &&
                     report.occupied.isEmpty && report.failed.isEmpty && !report.cancelled
                     ? "No missing managed originals"

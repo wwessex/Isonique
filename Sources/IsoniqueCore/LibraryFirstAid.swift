@@ -12,6 +12,8 @@ public struct LibraryFirstAidReport: Sendable {
     public fileprivate(set) var untrackedManagedFiles: [String] = []
     public fileprivate(set) var originalsRequiringInspection: [LibraryFirstAidOriginal] = []
     public fileprivate(set) var pendingFinderTrash: [String] = []
+    let root: URL
+    let catalogue: Data
 }
 
 public extension LibraryRepository {
@@ -26,7 +28,7 @@ public extension LibraryRepository {
         func filenameKey(_ filename: String) -> String {
             caseSensitive ? filename : managedFilenameKey(filename)
         }
-        var report = LibraryFirstAidReport()
+        var report = LibraryFirstAidReport(root: root, catalogue: catalogue)
         report.pendingFinderTrash = (library.pendingFinderTrash ?? []).map(\.filename)
         let knownNames = Set((originals.filter { $0.referencedPath == nil }.map(\.filename) + report.pendingFinderTrash)
             .map(filenameKey))
@@ -56,10 +58,44 @@ public extension LibraryRepository {
             }
         }
         report.untrackedManagedFiles.sort()
-        guard try Data(contentsOf: root.appendingPathComponent("catalog.json")) == catalogue else {
-            throw LibraryError.integrity("catalogue changed during Library First Aid; run the report again")
-        }
+        try checkFirstAidCatalogue(catalogue)
         return report
+    }
+
+    /// Restore only managed originals listed as missing in the reviewed report.
+    func recoverMissingManagedOriginals(in folder: URL, after report: LibraryFirstAidReport) throws
+        -> ManagedOriginalRecoveryReport {
+        let library = try libraryForFirstAidRecovery(report)
+        return try recoverMissingManagedOriginals(in: folder, library: library,
+                                                   originalIDs: Set(report.missingManagedOriginals.map(\.id)),
+                                                   expectedCatalogue: report.catalogue)
+    }
+
+    /// Relink only originals listed as offline, including versions in Library Trash.
+    func reconnectOfflineReferences(in folder: URL, after report: LibraryFirstAidReport) throws
+        -> (library: Library, report: OriginalReconnectReport) {
+        var library = try libraryForFirstAidRecovery(report)
+        let recovery = try reconnectMissingReferences(in: folder, library: &library,
+                                                       originalIDs: Set(report.offlineReferences.map(\.id)),
+                                                       includeTrashed: true, expectedCatalogue: report.catalogue)
+        return (library, recovery)
+    }
+
+    private func libraryForFirstAidRecovery(_ report: LibraryFirstAidReport) throws -> Library {
+        guard report.root == root else { throw LibraryError.unsafePath }
+        let (catalogue, library) = try LibraryBackup.readCatalogue(root)
+        guard catalogue == report.catalogue else {
+            throw LibraryError.integrity("catalogue changed since the Library First Aid report; run it again")
+        }
+        return library
+    }
+
+    internal func checkFirstAidCatalogue(_ expected: Data) throws {
+        let url = root.appendingPathComponent("catalog.json")
+        try LibraryBackup.regularFile(url)
+        guard try Data(contentsOf: url) == expected else {
+            throw LibraryError.integrity("catalogue changed since the Library First Aid report; run it again")
+        }
     }
 
     private func firstAidManagedFiles(in directory: URL) throws -> [URL] {

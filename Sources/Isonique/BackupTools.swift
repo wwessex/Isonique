@@ -448,19 +448,23 @@ extension Workspace {
         busy = true
         status = "Checking library storage…"
         Task {
-            defer { busy = false }
+            let report: LibraryFirstAidReport
+            let recovery: OriginalFolderOperation?
             do {
-                let report = try await Task.detached(priority: .utility) { try repository.libraryFirstAidReport() }.value
-                presentLibraryFirstAid(report)
+                defer { busy = false }
+                report = try await Task.detached(priority: .utility) { try repository.libraryFirstAidReport() }.value
+                recovery = presentLibraryFirstAid(report)
                 status = "Library First Aid review complete"
             } catch {
                 self.error = error.localizedDescription
                 status = "Library First Aid review failed"
+                return
             }
+            if let recovery { findOriginalsPanel(recovery, firstAid: report) }
         }
     }
 
-    private func presentLibraryFirstAid(_ report: LibraryFirstAidReport) {
+    private func presentLibraryFirstAid(_ report: LibraryFirstAidReport) -> OriginalFolderOperation? {
         func originalRows(_ originals: [LibraryFirstAidOriginal]) -> [String] {
             originals.map { "\($0.name) — \($0.location)" }
         }
@@ -488,7 +492,12 @@ extension Workspace {
             alert.accessoryView = scroll
         }
         alert.addButton(withTitle: "Done")
-        alert.runModal()
+        var recoveries: [OriginalFolderOperation] = []
+        if !report.missingManagedOriginals.isEmpty { recoveries.append(.recoverManaged) }
+        if !report.offlineReferences.isEmpty { recoveries.append(.reconnect) }
+        for operation in recoveries { alert.addButton(withTitle: operation.title + "…") }
+        let index = alert.runModal().rawValue - NSApplication.ModalResponse.alertSecondButtonReturn.rawValue
+        return recoveries.indices.contains(index) ? recoveries[index] : nil
     }
 
     func backupLibraryPanel() {
