@@ -68,6 +68,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var pendingImport: [URL] = []
     @Published var pendingDeviceImport: DeviceImportSelection?
     @Published var showDeviceImport = false
+    @Published var showSimulatedTether = false
     let cameraDiscovery = CameraDiscovery()
     var hasPendingImport: Bool { !pendingImport.isEmpty || pendingDeviceImport != nil }
     @Published var proofProfile: Data?
@@ -725,6 +726,10 @@ enum EditTool: String { case select, crop, straighten, brush }
                 Button("Import Photos…", action: workspace.importPanel).keyboardShortcut("i").disabled(workspace.busy || workspace.repository == nil)
                 Button("Import from Camera or Card…", action: workspace.importDevicePanel)
                     .disabled(workspace.busy || workspace.repository == nil)
+                if ProcessInfo.processInfo.arguments.contains("--simulate-tether") {
+                    Button("Simulated Tethered Capture…") { workspace.showSimulatedTether = true }
+                        .disabled(workspace.busy || workspace.repository == nil)
+                }
                 if workspace.importInProgress {
                     Button("Cancel Import", action: workspace.cancelImport).disabled(workspace.cancellingImport)
                 }
@@ -1107,6 +1112,7 @@ struct ContentView: View {
         .sheet(isPresented: $model.showDeviceImport, onDismiss: model.finishDevicePicker) {
             DeviceImportView(discovery: model.cameraDiscovery).environmentObject(model)
         }
+        .sheet(isPresented: $model.showSimulatedTether) { SimulatedTetherView().environmentObject(model) }
         .sheet(isPresented: $model.showImportOptions, onDismiss: model.finishImportOptions) {
             ImportOptionsView().environmentObject(model)
         }

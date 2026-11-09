@@ -373,3 +373,10 @@
 - Simulated arrivals passed selected new files through the production camera importer. The initial catalogue photo was excluded, the new photo and XMP caption were saved, and replaying the event downloaded the files again but created no duplicate catalogue record. Both runs removed their staging directories.
 - Two simulated arrival batches for a JPEG and its RAW companion saved both files as independent originals. A separate existing test confirmed pairing when both arrive in a single batch. The simulation used synthetic image bytes and logical camera filenames to exercise pairing.
 - All 200 optimized XCTest cases passed without skips on native macOS arm64, including the four external RAW fixtures and Finder Trash handoff.
+
+## Simulated tethered capture prototype
+
+- The controlled transport verified that a second shutter request is rejected while a shot is active. Duplicate notifications within a shot and replays after completion caused no extra downloads. Separate RAW and JPEG notifications paired after the simulator ended the shot, and the RAW primary preference was respected.
+- Cancelling during a transfer preserved the earlier complete import and cleared both staging folders. Disconnecting during an open shot cancelled it. Reconnect excluded the fresh catalogue baseline and ignored late events from the old connection.
+- In the signed macOS app, the simulator imported one JPEG per completed shot. Cancel Shot produced no import, Disconnect disabled Capture, and double-clicking Capture after reconnect imported one fresh file. The disposable library contained the two expected originals with matching catalogue hashes.
+- All 203 optimized XCTest cases passed without skips on native macOS arm64, including the four external RAW fixtures and Finder Trash handoff. Branding and signed release packaging passed. The simulator supplies the shot-complete signal. Native PTP events and physical shutter behavior remain pending.

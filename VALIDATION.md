@@ -20,3 +20,16 @@ Use a disposable library and a physical USB camera in PTP or Photo Transfer mode
 3. Choose one photo and import it. Check the library count and filename, open the managed original, and confirm the other test photo was excluded.
 4. Start another import and click Cancel Import while a transfer is active. Record how many files completed before cancellation. Reopen the disposable library and confirm it contains only complete imports. Check that the camera still lists the source photos.
 5. Reopen the camera browser, select a photo and disconnect the cable. Check that the grid and selection clear and Import Options becomes unavailable. Reconnect, choose the camera again, confirm thumbnails load with an empty selection, and import a photo that has not already been imported.
+
+## Simulated tethered capture
+
+Run the signed build against a disposable library.
+
+```sh
+make build
+tether_dir=$(mktemp -d)
+ditto -x -k build/Isonique.zip "$tether_dir"
+open -na "$tether_dir/Isonique.app" --args --library "$tether_dir/Library" --simulate-tether
+```
+
+Open File → Simulated Tethered Capture. Capture a shot and check that one JPEG enters the library even though the simulator repeats the file notification. While a shot is active, Capture is disabled. Try Cancel Shot before transfer completes, then disconnect and reconnect. A new capture after reconnect should import one new photo. The XCTest simulator covers RAW/JPEG split arrivals and cancellation after a prior file commits.

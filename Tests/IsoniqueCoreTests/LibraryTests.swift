@@ -358,6 +358,144 @@ final class LibraryTests: XCTestCase {
         XCTAssertTrue(saved.photos.allSatisfy { $0.pairID == nil })
     }
 
+    func testTetherPrototypeSerializesShotsAndPairsSplitArrivalsWithoutReplayDownloads() async throws {
+        let baseline = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Old.JPG"]))
+        let jpeg = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Shot.JPG"]))
+        let raw = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Shot.NEF"]))
+        let first = TetherTestShot(started: expectation(description: "first shutter"))
+        let replay = TetherTestShot(started: expectation(description: "second shutter"))
+        let camera = TetherTestCamera(shots: [first, replay], payloads: [
+            jpeg: try Data(contentsOf: fixture("tether-jpeg.png", red: 0.3)),
+            raw: try Data(contentsOf: fixture("tether-raw.png", red: 0.6))
+        ])
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        let initial = try repo.load()
+        var options = ImportOptions()
+        options.pairing = .linkedRAW
+        let session = TetheredCaptureSession()
+        try await session.connect(await camera.connection(baseline: [baseline]))
+
+        let capture = Task { try await session.capture(repository: repo, library: initial, options: options) }
+        await fulfillment(of: [first.started], timeout: 3)
+        do {
+            _ = try await session.capture(repository: repo, library: initial)
+            XCTFail("A second shutter must wait for the first shot.")
+        } catch TetheredCaptureError.busy {}
+        let requestCount = await camera.requestCount
+        XCTAssertEqual(requestCount, 1)
+
+        first.events.yield(jpeg)
+        let earlyDownloads = await camera.downloads
+        XCTAssertTrue(earlyDownloads.isEmpty)
+        first.events.yield(jpeg)
+        first.events.yield(raw)
+        first.events.yield(baseline)
+        first.events.finish()
+
+        let result = try await capture.value
+        XCTAssertEqual(result.report.imported, 2)
+        XCTAssertTrue(result.report.errors.isEmpty)
+        let saved = try repo.load()
+        XCTAssertEqual(saved.photos.map(\.originalName), ["Shot.JPG", "Shot.NEF"])
+        let pair = try XCTUnwrap(saved.photos.first?.pairID)
+        XCTAssertTrue(saved.photos.allSatisfy { $0.pairID == pair })
+        XCTAssertEqual(result.report.selection, saved.photos.last?.id)
+
+        let repeated = Task { try await session.capture(repository: repo, library: result.library, options: options) }
+        await fulfillment(of: [replay.started], timeout: 3)
+        replay.events.yield(raw)
+        replay.events.yield(jpeg)
+        replay.events.finish()
+        let replayResult = try await repeated.value
+        XCTAssertEqual(replayResult.report.imported, 0)
+        XCTAssertTrue(replayResult.report.errors.isEmpty)
+        let downloads = await camera.downloads
+        XCTAssertEqual(downloads, [jpeg, raw])
+    }
+
+    func testTetherPrototypeCancellationKeepsCommittedPhotoAndRemovesStaging() async throws {
+        let first = try XCTUnwrap(CameraImportFile(components: ["DCIM", "A.JPG"]))
+        let second = try XCTUnwrap(CameraImportFile(components: ["DCIM", "B.JPG"]))
+        let transfer = expectation(description: "second transfer in flight")
+        let shot = TetherTestShot(started: expectation(description: "shutter"))
+        let camera = TetherTestCamera(shots: [shot], payloads: [
+            first: try Data(contentsOf: fixture("tether-first.png", red: 0.2)),
+            second: try Data(contentsOf: fixture("tether-second.png", red: 0.8))
+        ], pauseAfterWriting: { file in
+            if file == second {
+                transfer.fulfill()
+                try await Task.sleep(for: .seconds(10))
+            }
+        })
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        let initial = try repo.load()
+        let session = TetheredCaptureSession()
+        try await session.connect(await camera.connection())
+
+        let capture = Task { try await session.capture(repository: repo, library: initial) }
+        await fulfillment(of: [shot.started], timeout: 3)
+        shot.events.yield(first)
+        shot.events.yield(second)
+        shot.events.finish()
+        await fulfillment(of: [transfer], timeout: 3)
+        await session.cancel()
+
+        let result = try await capture.value
+        XCTAssertTrue(result.report.cancelled)
+        XCTAssertEqual(result.report.imported, 1)
+        XCTAssertTrue(result.report.errors.isEmpty)
+        XCTAssertEqual(result.library.photos.map(\.originalName), ["A.JPG"])
+        XCTAssertEqual(try repo.load().photos.map(\.originalName), ["A.JPG"])
+        let staging = await camera.staging
+        XCTAssertEqual(staging.count, 2)
+        XCTAssertTrue(staging.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
+    }
+
+    func testTetherPrototypeReconnectDiscardsOldEventsAndRefreshesBaseline() async throws {
+        let oldArrival = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Pending.JPG"]))
+        let fresh = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Fresh.JPG"]))
+        let oldShot = TetherTestShot(started: expectation(description: "old shutter"))
+        let newShot = TetherTestShot(started: expectation(description: "new shutter"))
+        let oldCamera = TetherTestCamera(shots: [oldShot], payloads: [:])
+        let newCamera = TetherTestCamera(shots: [newShot], payloads: [
+            fresh: try Data(contentsOf: fixture("tether-fresh.png"))
+        ])
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        let initial = try repo.load()
+        let session = TetheredCaptureSession()
+        try await session.connect(await oldCamera.connection())
+
+        let pending = Task { try await session.capture(repository: repo, library: initial) }
+        await fulfillment(of: [oldShot.started], timeout: 3)
+        oldShot.events.yield(oldArrival)
+        await session.disconnect()
+        let interrupted = try await pending.value
+        XCTAssertTrue(interrupted.report.cancelled)
+        XCTAssertTrue(interrupted.library.photos.isEmpty)
+
+        do {
+            _ = try await session.capture(repository: repo, library: initial)
+            XCTFail("A disconnected session must reject capture.")
+        } catch DeviceImportError.disconnected {}
+
+        try await session.connect(await newCamera.connection(baseline: [oldArrival]))
+        let capture = Task { try await session.capture(repository: repo, library: initial) }
+        await fulfillment(of: [newShot.started], timeout: 3)
+        oldShot.events.yield(oldArrival)
+        oldShot.events.finish()
+        newShot.events.yield(oldArrival)
+        newShot.events.yield(fresh)
+        newShot.events.finish()
+        let result = try await capture.value
+        XCTAssertEqual(result.report.imported, 1)
+        XCTAssertTrue(result.report.errors.isEmpty)
+        let oldDownloads = await oldCamera.downloads
+        let newDownloads = await newCamera.downloads
+        XCTAssertTrue(oldDownloads.isEmpty)
+        XCTAssertEqual(newDownloads, [fresh])
+        XCTAssertEqual(try repo.load().photos.map(\.originalName), ["Fresh.JPG"])
+    }
+
     func testCameraIncompleteDownloadAndCancellationKeepCommittedPhoto() async throws {
         let bytes = try Data(contentsOf: fixture())
         let files = try ["A.png", "B.png", "C.png", "D.png"].map {
@@ -1416,5 +1554,53 @@ extension LibraryTests {
         invalid.version = 2
         XCTAssertThrowsError(try repo.save(invalid))
         XCTAssertEqual(try repo.load().photos, library.photos)
+    }
+}
+
+
+private struct TetherTestShot {
+    let started: XCTestExpectation
+    let stream: AsyncThrowingStream<CameraImportFile, Error>
+    let events: AsyncThrowingStream<CameraImportFile, Error>.Continuation
+
+    init(started: XCTestExpectation) {
+        self.started = started
+        (stream, events) = AsyncThrowingStream.makeStream()
+    }
+}
+
+private actor TetherTestCamera {
+    private let shots: [TetherTestShot]
+    private let payloads: [CameraImportFile: Data]
+    private let pauseAfterWriting: @Sendable (CameraImportFile) async throws -> Void
+    private(set) var requestCount = 0
+    private(set) var downloads: [CameraImportFile] = []
+    private(set) var staging: Set<URL> = []
+
+    init(shots: [TetherTestShot], payloads: [CameraImportFile: Data],
+         pauseAfterWriting: @escaping @Sendable (CameraImportFile) async throws -> Void = { _ in }) {
+        self.shots = shots
+        self.payloads = payloads
+        self.pauseAfterWriting = pauseAfterWriting
+    }
+
+    func connection(baseline: [CameraImportFile] = []) -> TetheredCameraConnection {
+        TetheredCameraConnection(initialCatalogue: baseline, capture: { try await self.capture() },
+                                 download: { try await self.download($0, to: $1) })
+    }
+
+    private func capture() throws -> AsyncThrowingStream<CameraImportFile, Error> {
+        guard shots.indices.contains(requestCount) else { throw DeviceImportError.noPhotos }
+        let shot = shots[requestCount]
+        requestCount += 1
+        shot.started.fulfill()
+        return shot.stream
+    }
+
+    private func download(_ file: CameraImportFile, to destination: URL) async throws {
+        downloads.append(file)
+        staging.insert(destination.deletingLastPathComponent())
+        try XCTUnwrap(payloads[file]).write(to: destination)
+        try await pauseAfterWriting(file)
     }
 }
