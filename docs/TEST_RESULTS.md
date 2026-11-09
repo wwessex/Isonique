@@ -293,3 +293,9 @@
 - Tests checked that stale reviews and failed catalogue publication never reached Finder. Changed or unavailable originals kept their Trash records. Referenced originals and originals used by active versions retained their hashes after publication, and surviving edit history remained usable.
 - In the signed app, the review listed one Finder candidate, one original kept for an active version, and one referenced original. Cancel preserved the three Trash records. An opt-in native test used the system Trash API on a disposable original, checked its hash in Finder Trash, and restored it to the test fixture.
 - The optimized suite passed all 169 tests without skips, including the native Finder handoff and four camera RAW fixtures. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
+
+## Read-only Library First Aid report
+
+- Repository tests distinguished missing managed originals, offline references and untracked files. Shared versions counted once. Trash records and pending Finder moves kept their managed paths out of the untracked list. Tests also covered case aliases, unsafe paths and an absent Originals directory. Catalogue bytes and file contents matched before and after the report.
+- In the signed app, File → Library First Aid listed one finding in each requested category. The catalogue records and managed file hashes matched after dismissal.
+- The optimized suite passed all 173 tests without skips, including four camera RAW fixtures and the native Finder Trash handoff. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.

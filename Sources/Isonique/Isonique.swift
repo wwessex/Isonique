@@ -720,6 +720,7 @@ enum EditTool: String { case select, crop, straighten, brush }
                 }
                 Button("Back Up Library…", action: workspace.backupLibraryPanel).disabled(workspace.busy || workspace.repository == nil)
                 Button("Check Library Integrity", action: workspace.verifyLibrary).disabled(workspace.busy || workspace.repository == nil)
+                Button("Library First Aid…", action: workspace.showLibraryFirstAid).disabled(workspace.busy || workspace.repository == nil)
                 Button("Relink Original…") {
                     if let photo = workspace.selected { workspace.relinkOriginalPanel(photo) }
                 }.disabled(workspace.busy || workspace.isViewingTrash || !workspace.canRelinkSelectedOriginal)

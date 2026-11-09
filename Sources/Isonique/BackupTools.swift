@@ -443,6 +443,54 @@ extension Workspace {
         }
     }
 
+    func showLibraryFirstAid() {
+        guard let repository, !busy else { return }
+        busy = true
+        status = "Checking library storage…"
+        Task {
+            defer { busy = false }
+            do {
+                let report = try await Task.detached(priority: .utility) { try repository.libraryFirstAidReport() }.value
+                presentLibraryFirstAid(report)
+                status = "Library First Aid review complete"
+            } catch {
+                self.error = error.localizedDescription
+                status = "Library First Aid review failed"
+            }
+        }
+    }
+
+    private func presentLibraryFirstAid(_ report: LibraryFirstAidReport) {
+        func originalRows(_ originals: [LibraryFirstAidOriginal]) -> [String] {
+            originals.map { "\($0.name) — \($0.location)" }
+        }
+        let groups = [
+            ("Missing managed originals", originalRows(report.missingManagedOriginals)),
+            ("Offline references", originalRows(report.offlineReferences)),
+            ("Untracked managed files", report.untrackedManagedFiles),
+            ("Original paths requiring inspection", originalRows(report.originalsRequiringInspection)),
+            ("Originals awaiting Finder Trash", report.pendingFinderTrash)
+        ]
+        let alert = NSAlert()
+        alert.messageText = "Library First Aid"
+        let totals = groups.map { "\($0.0) (\($0.1.count))" }
+        alert.informativeText = (["Read-only report of catalogue and file locations."] + totals).joined(separator: "\n")
+        let sections = groups.filter { !$0.1.isEmpty }.map { [$0.0] + $0.1 }
+        if !sections.isEmpty {
+            let scroll = NSTextView.scrollableTextView()
+            scroll.frame.size = NSSize(width: 460, height: min(240, 22 * sections.reduce(0) { $0 + $1.count + 1 }))
+            if let text = scroll.documentView as? NSTextView {
+                text.string = sections.map { $0.joined(separator: "\n") }.joined(separator: "\n\n")
+                text.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+                text.isEditable = false
+                text.setAccessibilityLabel("Library First Aid findings")
+            }
+            alert.accessoryView = scroll
+        }
+        alert.addButton(withTitle: "Done")
+        alert.runModal()
+    }
+
     func backupLibraryPanel() {
         guard let repository, !busy else { return }
         let panel = NSSavePanel(); panel.title = "Back Up Isonique Library"

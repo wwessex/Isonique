@@ -81,8 +81,10 @@ File → Empty Library Trash and the Trash browser review all trashed catalogue 
 
 On approval, Empty Library Trash checks the reviewed catalogue snapshot and candidate fingerprints. The first catalogue write removes eligible records and records pending Finder moves together. The handoff runs after that write, so a failed move leaves a retry entry and an unreferenced managed file. Use the same command to retry after reopening. Retry verifies the fingerprint, protects a path claimed by another record, and clears an already absent file from the queue. Unavailable or changed candidates retain their Library Trash records.
 
+File → Library First Aid reports missing managed originals, offline references, and untracked regular files directly inside Originals. It counts shared originals once, includes Library Trash records in the catalogue inventory, and lists pending Finder Trash moves separately. The report reads file metadata. Check Library Integrity verifies original hashes.
+
 ## Next implementation slice
 
-1. Add a Library First Aid report that distinguishes missing managed originals, offline references, and untracked managed files before offering repairs.
+1. Add recovery actions to Library First Aid using the verified managed-original recovery and referenced-original reconnect flows. Recheck the current catalogue before applying a repair.
 
 Other open core work includes relocation naming and subfolders, library merging and repair, import from camera devices, and detection of stale edits from independently opened workspaces. Build and interaction evidence should stay in the test record.

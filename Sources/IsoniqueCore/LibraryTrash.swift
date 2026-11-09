@@ -66,8 +66,8 @@ public extension LibraryRepository {
                 draft.history?.discardEmptiedTrash(photoIDs: result.removedPhotoIDs, originalIDs: result.removedOriginalIDs)
                 let emptiedStacks = Set(removed.compactMap(\.stackID)).subtracting(draft.photos.compactMap(\.stackID))
                 draft.stackBrowser?.discardEmptiedTrash(photoIDs: result.removedPhotoIDs, stackIDs: emptiedStacks)
-                let verifiedNames = Set(verified.map { trashStorageKey($0.filename) })
-                pending.removeAll { verifiedNames.contains(trashStorageKey($0.filename)) }
+                let verifiedNames = Set(verified.map { managedFilenameKey($0.filename) })
+                pending.removeAll { verifiedNames.contains(managedFilenameKey($0.filename)) }
                 pending += verified
                 draft.pendingFinderTrash = pending.isEmpty ? nil : pending
                 try Task.checkCancellation()
@@ -77,11 +77,11 @@ public extension LibraryRepository {
             }
             guard !pending.isEmpty else { return result }
 
-            let claimedNames = Set(draft.photos.filter { $0.referencedPath == nil }.map { trashStorageKey($0.filename) })
+            let claimedNames = Set(draft.photos.filter { $0.referencedPath == nil }.map { managedFilenameKey($0.filename) })
             var remaining: [PendingFinderTrash] = []
             for item in pending {
                 // A new catalogue owner takes precedence over an earlier handoff request.
-                if claimedNames.contains(trashStorageKey(item.filename)) { continue }
+                if claimedNames.contains(managedFilenameKey(item.filename)) { continue }
                 do {
                     let original = try managedOriginalURL(item.filename)
                     if try managedTrashFileExists(original) {
