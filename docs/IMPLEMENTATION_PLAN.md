@@ -71,8 +71,10 @@ Project exports also record the starting collapsed state, global stack picks and
 
 Project exports record eligible album definitions. Merge compares names independently from complete Smart Album rules, and the review identifies conflicting fields. Right-click a regular album to rename it. Regular albums shared across projects at export or merge are protected, including memberships in Library Trash. Smart Albums must stay scoped to the matching project on both sides. Rules exported as fixed memberships, album type or scope changes, and matching definitions in older exports keep their destination values. Album deletion reconciliation remains open.
 
+File → Preview Library Merge compares two full catalogues without opening the source or reading original files. The review shows project and album additions, photo and version counts, originals that can be reused by stable ID and recorded fingerprint, and identity conflicts.
+
 ## Next implementation slice
 
-1. Add a read-only whole-library merge preflight. Match projects and originals by stable IDs, report incompatible fingerprints and shared originals, and preview additions across multiple projects before enabling catalogue writes.
+1. Publish compatible whole-library additions after review. Preserve matching records, verify and stage originals, retain shared-original links, and test cancellation and rollback.
 
 Other open core work includes Finder Trash handoff for Library Trash, relocation naming and subfolders, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

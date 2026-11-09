@@ -254,3 +254,8 @@
 - Tests protected albums shared at export or at merge, including an outside-project member in Library Trash. They also protected library-wide and broadened Smart Album definitions and verified that storage rules exported as fixed memberships stay outside the baseline.
 - Native QA caught and corrected stale presentation state in the shared collection sheet. The signed build opened the correct Rename Album and New Album sheets. Using Rename Album and File → Merge Project Library, the review showed a name conflict and a rule update. Prefer current values kept the local name, and the imported rule reduced the Smart Album to the one flagged photo. The saved catalogue retained the regular memberships and both libraries' original hashes matched.
 - The optimized suite passed all 149 tests without skips, including four camera RAW fixtures. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
+
+## Whole-library preflight
+
+- Tests compared multiple projects, an empty project, unassigned photos, shared versions and source Trash. Preflight completed with a missing source Originals directory and left both catalogues byte-for-byte intact. Separate cases reported incompatible fingerprints and album types and rejected a symlink to the current library.
+- The debug suite ran 152 tests with zero failures and one optional RAW fixture skip. The signed arm64 build passed on macOS 27.3.

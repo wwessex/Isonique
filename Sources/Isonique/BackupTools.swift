@@ -272,6 +272,63 @@ extension Workspace {
         status = "Cancelling project merge…"
     }
 
+    func previewLibraryMergePanel() {
+        guard repository != nil, !busy else { return }
+        let panel = NSOpenPanel()
+        panel.title = "Preview Library Merge"
+        panel.prompt = "Preview"
+        panel.message = "Choose another Isonique library to review additions and identity conflicts in the current library."
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        guard panel.runModal() == .OK, let source = panel.url else { return }
+        Task { await previewLibraryMerge(from: source) }
+    }
+
+    private func previewLibraryMerge(from source: URL) async {
+        guard let repository, !busy else { return }
+        busy = true
+        status = "Comparing library catalogues…"
+        let task = Task.detached(priority: .utility) { try repository.previewLibraryMerge(from: source) }
+        libraryMergePreviewTask = task
+        defer { libraryMergePreviewTask = nil; busy = false }
+        do {
+            let preview = try await task.value
+            guard !task.isCancelled else { throw CancellationError() }
+            showLibraryMergePreview(preview, sourceName: source.lastPathComponent)
+            status = "Library merge preview complete"
+        } catch is CancellationError {
+            status = "Library merge preview cancelled"
+        } catch {
+            self.error = error.localizedDescription
+            status = "Library merge preview failed"
+        }
+    }
+
+    private func showLibraryMergePreview(_ preview: LibraryMergePreview, sourceName: String) {
+        let alert = NSAlert()
+        alert.messageText = "Library Merge Preview for \(sourceName)"
+        let newProjects = preview.projects.filter(\.isNew).count
+        var details = [
+            "\(newProjects) new projects, \(preview.albumsToAdd) new albums, \(preview.photosToAdd) new photos or versions.",
+            "\(preview.originalsToCopy) originals to copy, \(preview.reusableOriginals) reusable by ID and fingerprint, \(preview.sharedOriginalsInSource) shared by source versions.",
+            "Matching photos stay in the current library. \(preview.trashedPhotosExcluded) photos in source Library Trash are excluded."
+        ]
+        details += preview.projects.prefix(8).map {
+            "\($0.name)\($0.isNew ? " (new project)" : "") — \($0.photosToAdd) to add, \($0.matchingPhotos) matching"
+        }
+        if preview.projects.count > 8 { details.append("And \(preview.projects.count - 8) more project rows.") }
+        if !preview.conflicts.isEmpty {
+            alert.alertStyle = .warning
+            details.append("\(preview.conflicts.count) identity conflicts")
+            details += preview.conflicts.prefix(5)
+            if preview.conflicts.count > 5 { details.append("And \(preview.conflicts.count - 5) more conflicts.") }
+        }
+        details.append("This read-only review compares recorded fingerprints.")
+        alert.informativeText = details.joined(separator: "\n\n")
+        alert.addButton(withTitle: "Done")
+        alert.runModal()
+    }
+
     func verifyLibrary() {
         guard let repository, !busy else { return }
         busy = true; status = "Checking catalogue and original hashes…"
