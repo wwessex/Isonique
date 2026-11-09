@@ -28,6 +28,8 @@ enum EditTool: String { case select, crop, straighten }
     @Published var stampGroups = Set(AdjustmentGroup.allCases)
     @Published var ratingFilter = RatingFilter.all
     @Published var originalFilter = OriginalFilter.all
+    @Published var colorFilter = ColorLabelFilter.all
+    @Published var labelNames: [String: String]
     @Published var originalStatusRevision = 0
     @Published var busy = false
     @Published private(set) var importInProgress = false
@@ -49,11 +51,14 @@ enum EditTool: String { case select, crop, straighten }
     @Published var proofName = ""
     @Published var proofEnabled = false
     @Published var history = EditHistory()
-    var keepHistory: Bool { UserDefaults.standard.bool(forKey: "history.persist") }
+    let preferences: UserDefaults
+    var keepHistory: Bool { preferences.bool(forKey: "history.persist") }
     var canUndo: Bool { !history.undo.isEmpty }
     var canRedo: Bool { !history.redo.isEmpty }
     var repository: LibraryRepository?
-    init(libraryRoot: URL? = nil) {
+    init(libraryRoot: URL? = nil, preferences: UserDefaults = .standard) {
+        self.preferences = preferences
+        labelNames = preferences.dictionary(forKey: "photo.labelNames") as? [String: String] ?? [:]
         do {
             let args = ProcessInfo.processInfo.arguments
             let root: URL
@@ -61,7 +66,7 @@ enum EditTool: String { case select, crop, straighten }
                 root = libraryRoot
             } else if let index = args.firstIndex(of: "--library"), args.indices.contains(index + 1) {
                 root = URL(fileURLWithPath: args[index + 1], isDirectory: true)
-            } else if let saved = UserDefaults.standard.string(forKey: "library.selectedRoot") {
+            } else if let saved = preferences.string(forKey: "library.selectedRoot") {
                 root = URL(fileURLWithPath: saved, isDirectory: true)
                 guard FileManager.default.fileExists(atPath: root.appendingPathComponent("catalog.json").path) else {
                     throw LibraryError.integrity("saved library is unavailable; use File → Open Isonique Library or Restore Library Backup")
@@ -95,6 +100,7 @@ enum EditTool: String { case select, crop, straighten }
             else { inScope = true }
             return inScope &&
                 originalFilter.includes(photo, repository: repository) &&
+                colorFilter.includes(photo) &&
                 BrowserFilterRules.includes(rating: photo.rating, flagged: photo.flagged, ratingFilter: ratingFilter, flaggedOnly: scope == "flagged") &&
                 (search.isEmpty || [photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(search)) &&
                 (advancedQuery?.includes(photo, originalAvailable: { self.isOriginalAvailable(photo) }) ?? true)
@@ -259,7 +265,7 @@ enum EditTool: String { case select, crop, straighten }
     func showBrowser(allPhotos: Bool = false) {
         viewer = false; tool = .select; compareOriginal = false
         if allPhotos {
-            scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all; advancedSearch = nil
+            scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all; colorFilter = .all; advancedSearch = nil
         }
     }
     func chooseTool(_ next: EditTool) {
@@ -451,16 +457,28 @@ enum EditTool: String { case select, crop, straighten }
                         .disabled(workspace.busy || workspace.isViewingTrash || workspace.selected == nil)
                 }
             }
-            CommandMenu("Rating") {
-                Button("Raise Rating") { workspace.adjustRating(by: 1) }
-                    .disabled(workspace.busy || workspace.isViewingTrash || workspace.selected == nil || (workspace.selected?.rating ?? RatingRules.maximum) >= RatingRules.maximum)
-                Button("Lower Rating") { workspace.adjustRating(by: -1) }
-                    .disabled(workspace.busy || workspace.isViewingTrash || workspace.selected == nil || (workspace.selected?.rating ?? RatingRules.rejected) <= RatingRules.rejected)
-                Divider()
-                Button(workspace.selected?.rating == RatingRules.rejected ? "Unreject Photo" : "Reject Photo") {
-                    workspace.setRejected(workspace.selected?.rating != RatingRules.rejected)
+            CommandMenu("Metadata") {
+                Button("Clear Color Label") { workspace.setColorLabel(nil) }
+                    .keyboardShortcut("0").disabled(!workspace.canReviewSelection)
+                ForEach(PhotoColorLabel.allCases) { label in
+                    Button("Set Color Label to " + workspace.name(for: label)) { workspace.setColorLabel(label) }
+                        .keyboardShortcut(KeyEquivalent(Character(String(label.rawValue))))
+                        .disabled(!workspace.canReviewSelection)
                 }
-                .disabled(workspace.busy || workspace.isViewingTrash || workspace.selected == nil)
+                Divider()
+                Button("Flag or Unflag Photos", action: workspace.toggleReviewFlag).disabled(!workspace.canReviewSelection)
+            }
+            CommandMenu("Rating") {
+                ForEach(0...5, id: \.self) { rating in
+                    Button(rating == 0 ? "Set Unrated" : "Set \(rating) Stars") { workspace.setReviewRating(rating) }
+                        .disabled(!workspace.canReviewSelection)
+                }
+                Button("Reject Photos") { workspace.setReviewRating(RatingRules.rejected) }.disabled(!workspace.canReviewSelection)
+                Divider()
+                Button("Raise Rating") { workspace.adjustReviewRating(by: 1) }
+                    .disabled(!workspace.canReviewSelection || (!workspace.batchMode && (workspace.selected?.rating ?? RatingRules.maximum) >= RatingRules.maximum))
+                Button("Lower Rating") { workspace.adjustReviewRating(by: -1) }
+                    .disabled(!workspace.canReviewSelection || (!workspace.batchMode && (workspace.selected?.rating ?? RatingRules.rejected) <= RatingRules.rejected))
             }
             CommandGroup(replacing: .help) {
                 Button("Features & Limits…") { openWindow(id: "features") }
@@ -506,6 +524,9 @@ enum EditTool: String { case select, crop, straighten }
             FeatureGuide().preferredColorScheme(.dark)
         }
         .defaultSize(width: 720, height: 700)
+        Settings {
+            ReviewSettingsView().environmentObject(workspace).preferredColorScheme(.dark)
+        }
     }
 }
 extension ProcessInfo {
@@ -539,6 +560,7 @@ struct ContentView: View {
     @State private var collectionName = ""
     @State private var creatingProject = true
     @State private var showCollection = false
+    @FocusState private var browserFocused: Bool
     private var workspaceView: some View {
         NavigationSplitView {
             VStack(alignment: .leading, spacing: 0) {
@@ -580,7 +602,7 @@ struct ContentView: View {
                     if model.viewer {
                         Button { model.showBrowser() } label: { Label("Back to \(model.title)", systemImage: "chevron.left") }
                             .help("Return to the photo grid; Escape also goes back")
-                        if model.scope != "all" || !model.search.isEmpty || model.ratingFilter != .all || model.originalFilter != .all || model.advancedSearch != nil {
+                        if model.scope != "all" || !model.search.isEmpty || model.ratingFilter != .all || model.originalFilter != .all || model.colorFilter != .all || model.advancedSearch != nil {
                             Button("All Photos") { model.showBrowser(allPhotos: true) }
                         }
                     }
@@ -629,6 +651,8 @@ struct ContentView: View {
                             ScrollView { LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 16)], spacing: 18) { ForEach(model.photos) { photo in photoCell(photo, compact: false) } }.padding(20) }
                         }
                     }.frame(minWidth: 400).background(Color(white: 0.055))
+                        .focusable().focusEffectDisabled().focused($browserFocused)
+                        .onKeyPress(keys: [.leftArrow, .rightArrow, "0", "1", "2", "3", "4", "5", "9", "=", "-", "/"], phases: .down, action: model.reviewKey)
                     if model.showInspector && !model.isViewingTrash {
                         Inspector().frame(minWidth: 260, idealWidth: 290, maxWidth: 340).workspaceGlass(radius: 20).padding(10)
                     }
@@ -659,6 +683,11 @@ struct ContentView: View {
                     Divider()
                     Picker("Originals", selection: $model.originalFilter) {
                         ForEach(OriginalFilter.allCases) { filter in Text(filter.rawValue).tag(filter) }
+                    }
+                    Picker("Color Labels", selection: $model.colorFilter) {
+                        Text("All labels").tag(ColorLabelFilter.all)
+                        Text("No label").tag(ColorLabelFilter.unlabelled)
+                        ForEach(PhotoColorLabel.allCases) { label in Text(model.name(for: label)).tag(ColorLabelFilter.color(label)) }
                     }
                 } label: { Label("Sort & Filter", systemImage: "arrow.up.arrow.down") }
             }
@@ -697,7 +726,7 @@ struct ContentView: View {
         .alert("Isonique", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button("OK") { model.error = nil } } message: { Text(model.error ?? "") }
         .onChange(of: model.scope) { _, _ in
             if model.isViewingTrash {
-                model.search = ""; model.ratingFilter = .all; model.originalFilter = .all; model.advancedSearch = nil
+                model.search = ""; model.ratingFilter = .all; model.originalFilter = .all; model.colorFilter = .all; model.advancedSearch = nil
             }
             if model.selected == nil { model.selection = model.photos.first?.id }
             model.batchSelection = []
@@ -709,6 +738,7 @@ struct ContentView: View {
         .onChange(of: model.ratingFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onChange(of: model.originalFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onChange(of: model.advancedSearch) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
+        .onChange(of: model.colorFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didMountNotification)) { _ in model.refreshOriginalStatus() }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didUnmountNotification)) { _ in model.refreshOriginalStatus() }
         .onChange(of: model.selection) { _, _ in model.tool = .select; model.compareOriginal = false }
@@ -722,6 +752,7 @@ struct ContentView: View {
                     if !model.batchSelection.insert(photo.id).inserted { model.batchSelection.remove(photo.id) }
                     model.selection = photo.id
                 } else { model.selection = photo.id; model.viewer = true }
+                browserFocused = true
             } label: {
                 VStack(alignment: .leading, spacing: 6) {
                     Group {
@@ -733,6 +764,9 @@ struct ContentView: View {
                         Text(photo.originalName).lineLimit(1)
                         if photo.stackID != nil { Image(systemName: "square.3.layers.3d") }
                         if photo.referencedPath != nil { Image(systemName: "link").accessibilityLabel("Referenced original") }
+                        if let label = photo.colorLabel {
+                            Image(systemName: "circle.fill").foregroundStyle(label.tint).accessibilityLabel(model.name(for: label))
+                        }
                     }.font(.caption)
                     if !compact { HStack { Text(photo.rating == RatingRules.rejected ? "Rejected" : RatingRules.stars(photo.rating)).foregroundStyle(.orange); Spacer(); if photo.flagged { Image(systemName: "flag.fill").foregroundStyle(.orange) } }.font(.caption).frame(height: 14) }
                 }.padding(7).frame(width: compact ? 110 : nil)
@@ -948,6 +982,12 @@ struct Inspector: View {
                 Text("Linked RAW + JPEG").foregroundStyle(.secondary)
                 ForEach(model.library.activePhotos.filter { $0.pairID == pair && $0.id != photo.id }) { companion in
                     Button("View " + companion.originalName) { model.selection = companion.id }
+                }
+            }
+            Picker("Color label", selection: model.binding(\.colorLabel, fallback: nil)) {
+                Text("No label").tag(nil as PhotoColorLabel?)
+                ForEach(PhotoColorLabel.allCases) { label in
+                    Label(model.name(for: label), systemImage: "circle.fill").foregroundStyle(label.tint).tag(Optional(label))
                 }
             }
             Text("Caption").font(.caption).foregroundStyle(.secondary)

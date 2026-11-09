@@ -51,7 +51,7 @@ struct FeatureGuide: View {
             Feature(title: "Precise crop and selective metadata Stamp", detail: "Move and resize crops, lock aspect, switch portrait/landscape, enter exact pixels, and Stamp selected captions, keywords and ratings."),
             Feature(title: "Multiple Isonique libraries", detail: "Create a separate folder using File → New Isonique Library and switch using File → Open Isonique Library."),
             Feature(title: "Import and organize", detail: "Import files or folders, verify managed copies, skip exact duplicates, and optionally create a project. Cancel Import stops after the current file and keeps completed photos."),
-            Feature(title: "Review and metadata", detail: "Ratings, rejection, flags, rating filters, sorting, captions, keywords, photo information and Reveal Managed Original are available."),
+            Feature(title: "Review and metadata", detail: "Click a photo to use 0–5 for ratings, 9 to reject, / to flag and the arrows to navigate. The Metadata menu assigns seven color labels. Rename them in Settings and filter them from Sort & Filter."),
             Feature(title: "Non-destructive editing", detail: "Exposure, brightness, contrast, saturation, vibrancy, sepia, warmth, tint, shadows, highlights, presets, rotation, flip, straighten, crop, original comparison and selective Stamp preserve originals.")
         ])
     ]

@@ -169,6 +169,47 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(try workspace.repository?.load().photos.first, workspace.selected)
     }
 
+    @MainActor
+    func testReviewCullingLabelFilterUndoAndLabelNamePreferences() async throws {
+        let root = try temporaryLibrary()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let suite = "IsoniqueTests.\(UUID().uuidString)"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { preferences.removePersistentDomain(forName: suite) }
+        let workspace = Workspace(libraryRoot: root, preferences: preferences)
+        var first = Photo(filename: "a.png", originalName: "a.png", projectID: nil,
+                           width: 32, height: 24, camera: "", captureDate: "", sha256: "fixture")
+        first.importedAt = Date(timeIntervalSinceReferenceDate: 1)
+        var second = first
+        second.id = UUID()
+        second.filename = "b.png"
+        second.importedAt = Date(timeIntervalSinceReferenceDate: 2)
+        var draft = workspace.library
+        draft.photos = [first, second]
+        XCTAssertTrue(workspace.commit(draft))
+        workspace.selection = first.id
+        workspace.ratingFilter = .unrated
+        workspace.setReviewRating(5)
+        XCTAssertEqual(workspace.selection, second.id)
+        XCTAssertEqual(workspace.photos.map(\.id), [second.id])
+        workspace.setColorLabel(.green)
+        XCTAssertEqual(workspace.selected?.colorLabel, .green)
+        workspace.ratingFilter = .all
+        workspace.colorFilter = .color(.green)
+        XCTAssertEqual(workspace.photos.map(\.id), [second.id])
+        workspace.rename(.green, to: "Ready to send")
+        workspace.undoEdit()
+        XCTAssertTrue(workspace.photos.isEmpty)
+        workspace.redoEdit()
+        XCTAssertEqual(workspace.photos.map(\.id), [second.id])
+
+        let reopened = Workspace(libraryRoot: root, preferences: preferences)
+        XCTAssertEqual(reopened.name(for: .green), "Ready to send")
+        XCTAssertEqual(reopened.library.photos[1].colorLabel, .green)
+        reopened.rename(.green, to: "")
+        XCTAssertEqual(reopened.name(for: .green), "Green")
+    }
+
     private func temporaryLibrary() throws -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueUI-\(UUID().uuidString)")
         return try LibraryRepository.createEmpty(at: root).root

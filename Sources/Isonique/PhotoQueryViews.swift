@@ -139,6 +139,7 @@ private struct PhotoQueryBuilder: View {
 
 private struct PhotoQueryRow: View {
     @Binding var criterion: PhotoQueryCriterion
+    @EnvironmentObject var model: Workspace
 
     var body: some View {
         Picker("Field", selection: $criterion.field) {
@@ -152,6 +153,7 @@ private struct PhotoQueryRow: View {
                 if let operation = field.operators.first { criterion.comparison = operation }
                 switch field {
                 case .rating: criterion.value = "3"
+                case .colorLabel: criterion.value = "1"
                 case .flag, .storage, .availability, .adjusted: criterion.value = "true"
                 default: criterion.value = ""
                 }
@@ -170,6 +172,11 @@ private struct PhotoQueryRow: View {
                 Text("Unrated").tag("0")
                 ForEach(1...5, id: \.self) { Text("\($0) stars").tag(String($0)) }
             }.labelsHidden().accessibilityLabel("Rule rating")
+        case .colorLabel:
+            Picker("Color label", selection: $criterion.value) {
+                Text("No label").tag("0")
+                ForEach(PhotoColorLabel.allCases) { label in Text(model.name(for: label)).tag(String(label.rawValue)) }
+            }.labelsHidden().accessibilityLabel("Rule color label")
         case .captured, .imported: TextField("YYYY-MM-DD", text: $criterion.value).accessibilityLabel("Rule date")
         case .format: TextField("Extension, e.g. jpg", text: $criterion.value).accessibilityLabel("Rule file extension")
         default: TextField("Value", text: $criterion.value).accessibilityLabel("Rule value")

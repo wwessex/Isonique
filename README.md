@@ -1,8 +1,10 @@
-# Isonique — working stage 1
+# Isonique
 
 A separate Swift/SwiftUI macOS photo workspace. This is an independent implementation, not a rebuilt or patched Apple Aperture. Requires macOS 14 or newer on Apple Silicon; no third-party packages or network downloads are needed.
 
-Source repository: [wwessex/Isonique](https://github.com/wwessex/Isonique). Clone the repository, then run `make build` from its root. Generated build folders, local screenshots and logs are excluded from source control.
+Clone the repository, then run `make build` from its root. Generated build folders, local screenshots and logs are excluded from source control. [Source repository](https://github.com/wwessex/Isonique)
+
+The ongoing Aperture work is documented in the [feature parity audit](docs/APERTURE_FEATURE_PARITY.md), [implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) and [test results](docs/APERTURE_TEST_RESULTS.md).
 
 ## Build and run
 
@@ -16,6 +18,8 @@ For compatibility, Isonique retains the previous application’s managed library
 
 ## Interface
 
+Click a photo to focus the Browser or Viewer. Use 0–5 for ratings, 9 to reject, = and − to raise or lower, / to flag and the left/right arrows to move between photos. Command-1 through Command-7 assign colors and Command-0 clears the label. Change label names in Isonique → Settings. Filter colors from Sort & Filter or use them in a Smart Album.
+
 Use the question-mark toolbar button or Help → Features & Limits to see what is still missing. The searchable guide separates unavailable tools, features with limits and working features; it initially shows missing or limited features only. It is an inventory, not a promise that unavailable features have been implemented.
 
 The workspace follows the supplied Aperture references: library navigation, a dark photo canvas, a bottom filmstrip, and an adjustment inspector. On macOS 26 and newer the filmstrip, inspector and floating viewer controls use native Liquid Glass. macOS 14–15 use native translucent materials. The toolbar can hide the inspector for a larger photograph and sort by import date, filename, rating or capture date in either direction. All star thresholds and exact Unrated only / Rejected only filters are available. Inspector has Info, Adjustments and Library tabs, numeric adjustment entry, individual resets, crop/rotation controls and selective Stamp options. Info includes the import date and Reveal Managed Original. The editing strip adds rotate left/right, crop with guides and aspect presets, straighten with an alignment grid and 0.1° fine-angle controls, Lift/Stamp to copy adjustments, original comparison and Undo/Redo. Existing libraries open in the photo grid. Click a photo to open it; Back or Escape returns to the grid. All Photos returns to the whole library and clears search/rating filters. See `FEATURE_AUDIT.md` for the online references and remaining feature gaps.
@@ -23,18 +27,19 @@ The workspace follows the supplied Aperture references: library navigation, a da
 ## Working workflows
 
 - A native three-pane workspace with Library, Projects, Albums, a grid, image viewer, filmstrip and inspector.
-- Import individual photographs or folders; retain full-resolution managed copies, verify SHA-256 against the source and skip exact duplicates. Import into the selected project or album.
+- Import individual photographs or folders. Copy originals into the library or reference their current location. Skip exact duplicates and optionally create a project on import. Cancel Import stops between files and keeps completed imports.
+- Create or switch libraries in the File menu. Move selected photos to the sidebar Trash with Command-Delete and use Put Back to restore their edits and membership. Sort & Filter can show unavailable originals, which can be reconnected to matching bytes from the Inspector or File menu.
 - Create projects and albums; assign an image to a project and multiple albums using the inspector.
 - Browse metadata, edit caption/keywords, assign zero to five stars or reject photographs, flag photographs and search/filter the library.
-- Adjust exposure, contrast, saturation, warmth, tint, shadows and highlights, rotate, straighten and crop non-destructively with a single source-defined CPU pipeline using 8-bit sRGB. Earlier Core Image previews may look different; saved adjustment values and originals remain compatible. All recipes are stored in the app's JSON catalogue, independently of immutable originals. Compare with the original, reset, undo/redo, lift adjustments from one photo and stamp them onto another, and view at fit or 100%. Geometry changes clear an earlier crop; reopen Crop to redraw it. Crop offers freeform selection and centered aspect presets. Lift copies the supported recipe; Stamp applies the groups checked in Inspector (exposure/color, white balance, tone and geometry), keeping unchecked groups and photo metadata. Natural, Vivid, Black & White and Warm presets replace tone/color settings while retaining geometry.
-- Export full-resolution edited JPEGs. Export refuses existing destinations and any location inside a managed or legacy library. Select a new filename if an export already exists.
+- Adjust exposure, brightness, contrast, saturation, vibrancy, sepia, warmth, tint, shadows and highlights, rotate, flip, straighten and crop non-destructively with a single source-defined CPU pipeline using 8-bit sRGB. Earlier Core Image previews may look different; saved adjustment values and originals remain compatible. All recipes are stored in the app's JSON catalogue, independently of immutable originals. Compare with the original, reset, undo/redo, lift adjustments from one photo and stamp them onto another, and view at fit or 100%. Rotation and straightening clear an earlier crop. Flipping keeps its subject. Crop offers freeform selection and centered aspect presets. Lift copies the supported recipe; Stamp applies the groups checked in Inspector (exposure/color, white balance, tone and geometry), keeping unchecked groups and photo metadata. Natural, Vivid, Black & White, Warm and Sepia presets replace tone/color settings while retaining geometry.
+- Export edited JPEG, PNG or TIFF, or make byte-exact original copies. Export refuses existing destinations and locations inside the current Isonique library or an Apple photo library.
 - Recover embedded originals from a legacy library using File → Recover Aperture Originals. The app hashes all regular files, makes a temporary complete copy inside its own library, verifies the copy and source, then imports from that copy's `Masters`/`Originals` directories. Embedded IPTC captions/keywords and IPTC/XMP ratings are retained when present; database-only metadata and sidecars are not migrated. Duplicates and unsupported files are reported separately, with unsupported filenames; storage/write failures stop recovery. The source is read only. Symlinks are rejected. Temporary recovery copies are removed afterward. Recovery can need substantial extra disk space.
 
 Bulk import, rendering and recovery run off the UI thread. Edits are disabled during bulk operations to avoid concurrent catalogue updates. Import errors and unsupported files are reported rather than silently counted as successes.
 
 ## Limits
 
-See `COMPATIBILITY.md`. This stage does not demonstrate full Aperture library compatibility. Preserve separate backups of all important libraries. There is no migration of proprietary adjustment recipes, project/album database relationships, referenced originals, faces/places, stacks, versions, plug-ins, videos or books. XML import supports metadata only, as described below. No cloud sync, mobile or web app is included. RAW availability and rendering depend on the host's macOS codecs, and have not been tested against actual camera RAW files here. Export currently produces JPEG only and does not copy EXIF/IPTC/GPS metadata. Captions and keywords are retained in the new catalogue.
+See `COMPATIBILITY.md`. This stage does not demonstrate full Aperture library compatibility. Preserve separate backups of all important libraries. There is no migration of proprietary adjustment recipes, project/album database relationships, referenced originals, faces/places, stacks, versions, plug-ins, videos or books. XML import supports metadata only, as described below. No cloud sync, mobile or web app is included. RAW availability and rendering depend on the host's macOS codecs, and have not been tested against actual camera RAW files here. Edited exports can include selected EXIF, IPTC and GPS metadata. Captions and keywords are retained in the new catalogue.
 
 ## Processing alternatives
 
@@ -62,7 +67,7 @@ Smart albums now use the recovered original rating filters: All ratings, star th
 
 Use **Select Photos** in the toolbar, then click photos or **Select All**. The selection bar applies ratings, flags, color presets and selective Stamp to selected photos, assigns albums/projects, and exports the selection using the existing format/metadata options. Batch export creates a new folder and numbers filenames to avoid collisions. It stops on the first error, reports how many files completed and retains those files. The inspector continues to edit one photo; Undo restores one photo per step.
 
-**Create → New Smart Album** combines minimum rating, flagged-only and text rules. Membership updates from current metadata. Right-click a smart album to edit its name/rules. **Organize → Stack Selected** groups selected photos; stacks appear in the sidebar and **Remove Selected from Stacks** ungroups selected members. Automatic time-based stacking and collapsed covers are not included.
+**Create → New Smart Album** combines All or Any rules for metadata, dates, labels, adjustments, file type and original status. Membership updates from current metadata. Right-click a Smart Album to edit its rules. **View → Advanced Search** (Shift-Command-F) uses the same rules in the current Browser and can save them as a Smart Album. **Organize → Stack Selected** groups selected photos. Stacks appear in the sidebar and **Remove Selected from Stacks** ungroups selected members.
 
 Inspector → Adjustments → **Editing Versions** saves named adjustment recipes and offers Restore/Delete. Restoring participates in Undo, keeps current metadata, and shares the immutable original. These features do not migrate legacy Aperture relationships or recipes. New optional catalogue fields preserve reads of existing libraries; older executables may discard these fields on save. This supersedes earlier statements that batch Stamp/export and smart albums/stacks/versions are unavailable.
 
@@ -77,7 +82,7 @@ Only native Apple Silicon macOS is maintained. No independent web/PWA/mobile imp
 
 ### Verified library backups and restore
 
-File → **Back Up Library** copies the saved catalogue (including metadata, collections, versions, recipes and any saved history) and all catalogued originals into a new folder. Each original must match its imported SHA-256; copied originals are checked again. A manifest protects the catalogue bytes during restore. Store backups on a separate drive for protection against disk loss. Uncatalogued files and per-user preferences are not included; this is an independent Isonique format, not an Aperture vault.
+File → **Back Up Library** copies the saved catalogue (including metadata, collections, versions, recipes and any saved history) and all catalogued managed originals into a new folder. Managed originals must match their imported SHA-256 and copied bytes are checked again. The catalogue retains external paths. Back up referenced files at their external locations. A manifest protects the catalogue bytes during restore. Store backups on a separate drive for protection against disk loss. Uncatalogued files and per-user preferences are not included; this is an independent Isonique format, not an Aperture vault.
 
 **Restore Library Backup** checks the selected backup’s format, manifest and originals before asking for a destination. It checks them again, copies into a separate new folder, and opens that library. Backup and restore require an existing writable parent directory. Existing destinations and locations inside the current library or backup are refused; failures remove the temporary copy. The current library and backup remain intact. **Open Isonique Library** lets you return to the previous library, checking its originals first. The last opened/restored library is remembered across ordinary launches; `--library` still overrides it. An unavailable saved location shows an error rather than silently creating an empty library. File menus remain usable to open/restore another library.
 
