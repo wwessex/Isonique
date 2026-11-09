@@ -358,7 +358,7 @@ final class LibraryTests: XCTestCase {
         try repo.save(library)
         let reopened = try repo.load()
         XCTAssertEqual(reopened.history?.undo.count, 100)
-        XCTAssertEqual(reopened.history?.undo.last?.photo.caption, "")
+        XCTAssertEqual(reopened.history?.undo.last?.photo?.caption, "")
         XCTAssertEqual(reopened.photos[0].caption, "After edit")
         library.history = nil; try repo.save(library); XCTAssertNil(try repo.load().history)
     }

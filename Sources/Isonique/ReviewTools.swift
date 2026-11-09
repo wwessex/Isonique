@@ -51,9 +51,16 @@ struct AutoStackView: View {
                 Spacer()
                 Button("Create Stacks") {
                     var assignments: [UUID: UUID] = [:]
-                    for group in groups { let stack = UUID(); for id in group { assignments[id] = stack } }
+                    var picks: [StackPickChange] = []
+                    for group in groups {
+                        guard let first = group.first else { continue }
+                        let stack = UUID()
+                        for id in group { assignments[id] = stack }
+                        picks.append(StackPickChange(stackID: stack, photoID: first, selectionID: first))
+                    }
                     var draft = model.library
                     let previous = draft.updatePhotos(Set(assignments.keys)) { $0.stackID = assignments[$0.id] }
+                    draft.applyStackPicks(picks)
                     guard model.commitPhotoChanges(draft, previous: previous) else { return }
                     model.status = "Created \(groups.count) stacks · Undo restores one photo per step"; dismiss()
                 }.disabled(groups.isEmpty || model.busy).keyboardShortcut(.defaultAction)

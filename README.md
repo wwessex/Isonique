@@ -4,7 +4,7 @@ Isonique is an independent, native SwiftUI photo workspace for Apple Silicon Mac
 
 ## Project status
 
-The current build supports managed and referenced originals, cancellable imports, multiple libraries, photo Trash, verified backups, compound Smart Albums, keyboard culling and non-destructive editing. Browsable versions share originals and can be compared side by side. Stack picks are the next development slice.
+The current build supports managed and referenced originals, cancellable imports, multiple libraries, photo Trash, verified backups, compound Smart Albums, keyboard culling and non-destructive editing. Browsable versions share originals and can be compared side by side. Stacks support library-wide and album-specific picks, plus persistent collapse.
 
 The 9 November 2026 validation run passed 60 XCTest cases, the signed arm64 release build and native workflow checks on Apple M5 Pro with macOS 27.3. Older macOS runtimes and physical camera workflows remain unverified. [Feature parity audit](docs/APERTURE_FEATURE_PARITY.md) · [Implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
 
@@ -43,7 +43,7 @@ Bulk import, rendering and recovery run off the UI thread. Edits are disabled du
 
 Legacy recovery imports embedded originals and supported embedded metadata from Aperture libraries. Proprietary recipes, database relationships, externally referenced files, Faces, Places, stacks and versions remain outside that recovery workflow. [Legacy library compatibility](COMPATIBILITY.md)
 
-Isonique reads catalogue formats 1–3. Referenced originals and compound or project-scoped Smart Albums require format 2 or later. Creating a browsable version upgrades the library to format 3. Backups include managed originals and retain the paths to referenced files. Keep a separate backup of those files.
+Isonique reads catalogue formats 1–3. Referenced originals and compound or project-scoped Smart Albums require format 2 or later. Creating a browsable version or using the new stack controls upgrades the library to format 3. Backups include managed originals and retain the paths to referenced files. Keep a separate backup of those files.
 
 RAW decoding uses the Mac's ImageIO codecs. Camera RAW samples, high-bit-depth output and calibrated wide-gamut display behavior remain unqualified. Edited exports use 8-bit sRGB. The native macOS app is the sole maintained version.
 
@@ -73,7 +73,7 @@ Smart albums now use the recovered original rating filters: All ratings, star th
 
 Use **Select Photos** in the toolbar, then click photos or **Select All**. The selection bar applies ratings, flags, color labels, adjustment presets and selective Stamp to selected photos, assigns albums/projects, and exports the selection using the existing format/metadata options. Batch export creates a new folder and numbers filenames to avoid collisions. It stops on the first error, reports how many files completed and retains those files. The inspector continues to edit one photo; Undo restores one photo per step.
 
-**Create → New Smart Album** combines All or Any rules for metadata, dates, labels, adjustments, file type and original status. Membership updates from current metadata. Right-click a Smart Album to edit its rules. **View → Advanced Search** (Shift-Command-F) uses the same rules in the current Browser and can save them as a Smart Album. **Organize → Stack Selected** groups selected photos. Stacks appear in the sidebar and **Remove Selected from Stacks** ungroups selected members.
+**Create → New Smart Album** combines All or Any rules for metadata, dates, labels, adjustments, file type and original status. Membership updates from current metadata. Right-click a Smart Album to edit its rules. **View → Advanced Search** (Shift-Command-F) uses the same rules in the current Browser and can save them as a Smart Album. **Organize → Stack Selected** groups selected photos. Stacks appear in the sidebar and **Remove Selected from Stacks** ungroups selected members. Use **Stacks → Set Stack Pick** (Command-Backslash) to set the cover, or **Set Album Pick** (Shift-Command-Backslash) for a regular album. Collapse from the Stacks or photo context menu. The sidebar stack view always shows every matching member.
 
 Use **Photos → New Version from Original** (Option-G) for neutral adjustments or **Duplicate Version** (Option-V) to retain the current edits. Each version starts with a copy of the selected photo’s catalogue metadata and has its own name, edits, ratings and album membership. The versions share the same original. **View → Compare Photos** (Option-O) opens a pinned reference beside the current selection. Command-Return closes comparison. **Adjustment Snapshots** in the Inspector still save and restore recipes on a single version.
 

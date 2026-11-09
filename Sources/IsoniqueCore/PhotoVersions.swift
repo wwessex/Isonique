@@ -79,26 +79,27 @@ public extension Library {
     }
 
     mutating func applyHistory(_ entry: PhotoHistoryEntry) -> PhotoHistoryEntry? {
-        let snapshot = entry.photo
         switch entry {
-        case .edit:
+        case .edit(let snapshot):
             guard let index = photos.firstIndex(where: { $0.id == snapshot.id }) else { return nil }
             let current = photos[index]
             var restored = snapshot
             restored.useOriginal(from: current)
             photos[index] = restored
             return .edit(current)
-        case .removeVersion:
+        case .removeVersion(let snapshot):
             guard let index = photos.firstIndex(where: { $0.id == snapshot.id && $0.sharedOriginalID != nil }),
                   photos.contains(where: { $0.id != snapshot.id && $0.originalID == snapshot.originalID }) else { return nil }
             return .restoreVersion(photos.remove(at: index))
-        case .restoreVersion:
+        case .restoreVersion(let snapshot):
             guard snapshot.sharedOriginalID != nil, !photos.contains(where: { $0.id == snapshot.id }),
                   let source = photos.first(where: { $0.originalID == snapshot.originalID }) else { return nil }
             var restored = snapshot
             restored.useOriginal(from: source)
             photos.append(restored)
             return .removeVersion(restored)
+        case .stackPick(let change):
+            return .stackPick(applyStackPick(change))
         }
     }
 }
@@ -107,11 +108,18 @@ public enum PhotoHistoryEntry: Codable, Equatable {
     case edit(Photo)
     case removeVersion(Photo)
     case restoreVersion(Photo)
+    case stackPick(StackPickChange)
 
-    public var photo: Photo {
+    public var photo: Photo? {
         switch self {
         case .edit(let photo), .removeVersion(let photo), .restoreVersion(let photo): return photo
+        case .stackPick: return nil
         }
+    }
+
+    public var selectionID: UUID? {
+        if case .stackPick(let change) = self { return change.selectionID }
+        return photo?.id
     }
 
     var isEdit: Bool {
@@ -161,8 +169,8 @@ public struct EditHistory: Codable {
     public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         if undo.allSatisfy(\.isEdit) && redo.allSatisfy(\.isEdit) {
-            try container.encode(undo.map(\.photo), forKey: .undo)
-            try container.encode(redo.map(\.photo), forKey: .redo)
+            try container.encode(undo.compactMap(\.photo), forKey: .undo)
+            try container.encode(redo.compactMap(\.photo), forKey: .redo)
         } else {
             try container.encode(undo, forKey: .undoEntries)
             try container.encode(redo, forKey: .redoEntries)

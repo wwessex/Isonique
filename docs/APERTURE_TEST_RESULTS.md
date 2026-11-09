@@ -54,3 +54,8 @@
 - Version tests covered stable original identity in older catalogues, independent names and recipes, neutral and edited creation, identical original hashes, distinct PNG exports, duplicate import detection, one managed file in backup, restore, relinking and consolidating a family including Trash, invalid original relationships, and persistent creation Undo/Redo after a restart.
 - Workspace tests covered comparison reference selection, swapping via the filmstrip selection action, ending comparison for crop, and discovering a sibling outside the current filter. First creation of a browsable version upgrades the catalogue to format 3. Formats 1 and 2 still load without relocating files.
 - A signed QA copy of the release opened a disposable three-image catalogue in the native app. Option-V duplicated exposure +1.00, Option-G created a version at 0.00, and Option-O showed the neutral and edited versions side by side. Command-Return closed comparison and Command-Z / Shift-Command-Z removed and restored the new version. The arm64 release build and archive signing passed.
+
+## Stack picks and collapsed stacks
+
+- All 66 XCTest cases passed. New tests cover a manual stack’s first pick, persistent global and album-specific picks, collapsed presentation, filtered fallback, fallback while a pick is in Trash, Put Back, and Undo/Redo for album picks. Opening a stack from the sidebar bypasses the collapsed display.
+- Stack preferences are stored per library in format 3. Existing stacks open expanded. Automatic stacking still uses the capture-time window and selects the first member by capture order.
