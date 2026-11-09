@@ -22,14 +22,24 @@ public struct LibraryTrashOriginal: Identifiable, Sendable {
 public struct LibraryTrashReview: Sendable {
     public let photos: [LibraryTrashPhoto]
     public let originals: [LibraryTrashOriginal]
+    public let pendingFilenames: [String]
+    let root: URL
+    let catalogue: Data
+
+    public var canEmpty: Bool {
+        !pendingFilenames.isEmpty || originals.contains { $0.disposition != .unavailable }
+    }
 }
 
 public extension LibraryRepository {
     /// Inventory Library Trash using a saved catalogue snapshot and file metadata.
     func reviewEmptyLibraryTrash() throws -> LibraryTrashReview {
-        let (_, library) = try LibraryBackup.readCatalogue(root)
+        let (catalogue, library) = try LibraryBackup.readCatalogue(root)
+        let pending = (library.pendingFinderTrash ?? []).map(\.filename)
         let trashed = library.photos.filter { $0.trashedAt != nil }
-        guard !trashed.isEmpty else { return LibraryTrashReview(photos: [], originals: []) }
+        guard !trashed.isEmpty else {
+            return LibraryTrashReview(photos: [], originals: [], pendingFilenames: pending, root: root, catalogue: catalogue)
+        }
 
         let originals = try library.uniqueOriginals()
         let active = library.activePhotos
@@ -62,12 +72,13 @@ public extension LibraryRepository {
             reviewedOriginals.append(LibraryTrashOriginal(id: original.originalID, filename: original.filename,
                                                           disposition: disposition))
         }
-        return LibraryTrashReview(photos: photos, originals: reviewedOriginals)
+        return LibraryTrashReview(photos: photos, originals: reviewedOriginals, pendingFilenames: pending,
+                                  root: root, catalogue: catalogue)
     }
 }
 
 // Default Mac volumes can resolve different spellings to the same directory entry.
-private func trashStorageKey(_ filename: String) -> String {
+func trashStorageKey(_ filename: String) -> String {
     filename.folding(options: .caseInsensitive, locale: Locale(identifier: "en_US_POSIX"))
         .precomposedStringWithCanonicalMapping
 }

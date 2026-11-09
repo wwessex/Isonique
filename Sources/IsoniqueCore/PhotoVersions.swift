@@ -144,6 +144,20 @@ public struct EditHistory: Codable {
         redo.removeAll()
     }
 
+    public mutating func discardEmptiedTrash(photoIDs: Set<UUID>, originalIDs: Set<UUID>) {
+        func isRemoved(_ entry: PhotoHistoryEntry) -> Bool {
+            if let photo = entry.photo {
+                return photoIDs.contains(photo.id) || originalIDs.contains(photo.originalID)
+            }
+            if case .stackPick(let change) = entry {
+                return photoIDs.contains(change.selectionID) || change.photoID.map(photoIDs.contains) == true
+            }
+            return false
+        }
+        undo.removeAll(where: isRemoved)
+        redo.removeAll(where: isRemoved)
+    }
+
     public mutating func step(in library: inout Library, redoing: Bool) -> PhotoHistoryEntry? {
         guard let entry = redoing ? redo.last : undo.last, let inverse = library.applyHistory(entry) else { return nil }
         if redoing {

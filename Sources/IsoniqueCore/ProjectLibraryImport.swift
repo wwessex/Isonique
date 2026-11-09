@@ -1,4 +1,3 @@
-import Darwin
 import Foundation
 
 public struct ProjectLibraryImportResult {
@@ -74,47 +73,40 @@ public extension LibraryRepository {
 
         try Task.checkCancellation()
         // Serialize publication with library transfers from this or another process.
-        let descriptor = open(root.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
-        guard descriptor >= 0 else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno)) }
-        defer { close(descriptor) }
-        guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else {
-            if errno == EWOULDBLOCK {
-                throw LibraryError.integrity("another library transfer is finishing; try again")
-            }
-            throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
-        }
-        var installed: [URL] = []
-        var committed = false
-        defer {
-            if !committed {
-                for url in installed { try? files.removeItem(at: url) }
-            }
-        }
-        let catalogueURL = root.appendingPathComponent("catalog.json")
-        func verifyCatalogues() throws {
-            guard try Data(contentsOf: catalogueURL) == catalogue else {
-                throw LibraryError.integrity("destination catalogue changed during transfer; try again")
-            }
-            if let sourceCatalogue {
-                let sourceURL = sourceRoot.appendingPathComponent("catalog.json")
-                try LibraryBackup.regularFile(sourceURL)
-                guard try Data(contentsOf: sourceURL) == sourceCatalogue else {
-                    throw LibraryError.integrity("source catalogue changed during transfer; try again")
+        try withCatalogueWriteLock {
+            var installed: [URL] = []
+            var committed = false
+            defer {
+                if !committed {
+                    for url in installed { try? files.removeItem(at: url) }
                 }
             }
-        }
-        try verifyCatalogues()
-        for filename in transfers.compactMap(\.filename) {
+            let catalogueURL = root.appendingPathComponent("catalog.json")
+            func verifyCatalogues() throws {
+                guard try Data(contentsOf: catalogueURL) == catalogue else {
+                    throw LibraryError.integrity("destination catalogue changed during transfer; try again")
+                }
+                if let sourceCatalogue {
+                    let sourceURL = sourceRoot.appendingPathComponent("catalog.json")
+                    try LibraryBackup.regularFile(sourceURL)
+                    guard try Data(contentsOf: sourceURL) == sourceCatalogue else {
+                        throw LibraryError.integrity("source catalogue changed during transfer; try again")
+                    }
+                }
+            }
+            try verifyCatalogues()
+            for filename in transfers.compactMap(\.filename) {
+                try Task.checkCancellation()
+                let target = try managedOriginalURL(filename)
+                try Self.publishStagedItem(staging.appendingPathComponent(filename), at: target)
+                installed.append(target)
+            }
             try Task.checkCancellation()
-            let target = try managedOriginalURL(filename)
-            try Self.publishStagedItem(staging.appendingPathComponent(filename), at: target)
-            installed.append(target)
+            try verifyCatalogues()
+            try Task.checkCancellation()
+            try writeCatalogue(library)
+            committed = true
         }
-        try Task.checkCancellation()
-        try verifyCatalogues()
-        try Task.checkCancellation()
-        try save(library)
-        committed = true
     }
 }
 

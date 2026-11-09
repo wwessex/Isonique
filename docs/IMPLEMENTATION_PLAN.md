@@ -77,10 +77,12 @@ The default is Add new items only. The two review options list differing adjustm
 
 The Apply source Library Trash to matching photos checkbox starts off. When enabled, the review names active destination photos with explicit source Trash records and matching photo IDs, original IDs and recorded fingerprints. Conflicting Trash identities block publication. The approved move records the source Trash date and keeps the destination edits and memberships for Put Back. Destination-only records and existing Trash stay in place.
 
-File → Review Empty Library Trash and the Trash browser review all trashed catalogue records. The read-only inventory groups originals by identity and lists managed Finder Trash candidates, originals kept for active versions, referenced files kept in place, and managed files that require a check. It uses file metadata for candidates and conservatively protects case-equivalent paths.
+File → Empty Library Trash and the Trash browser review all trashed catalogue records before removal. The inventory lists managed Finder Trash candidates, originals kept for active versions, referenced files kept in place, and managed files that require a check. It conservatively protects case-equivalent paths.
+
+On approval, Empty Library Trash checks the reviewed catalogue snapshot and candidate fingerprints. The first catalogue write removes eligible records and records pending Finder moves together. The handoff runs after that write, so a failed move leaves a retry entry and an unreferenced managed file. Use the same command to retry after reopening. Retry verifies the fingerprint, protects a path claimed by another record, and clears an already absent file from the queue. Unavailable or changed candidates retain their Library Trash records.
 
 ## Next implementation slice
 
-1. Implement Empty Library Trash publication after review. Recheck the catalogue snapshot and candidate fingerprints, preserve active versions and referenced originals, and test recovery from a partial Finder Trash handoff before enabling the action.
+1. Add a Library First Aid report that distinguishes missing managed originals, offline references, and untracked managed files before offering repairs.
 
-Other open core work includes Finder Trash handoff for Library Trash, relocation naming and subfolders, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
+Other open core work includes relocation naming and subfolders, library merging and repair, import from camera devices, and detection of stale edits from independently opened workspaces. Build and interaction evidence should stay in the test record.
