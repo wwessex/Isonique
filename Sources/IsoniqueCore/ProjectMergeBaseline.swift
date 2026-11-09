@@ -42,14 +42,15 @@ struct ProjectPhotoMergeValues: Codable {
     func merging(_ current: Photo, with incoming: Photo, prefer preference: ProjectMergePreference,
                  representedAlbums: Set<UUID>) -> (photo: Photo, conflicts: [String]) {
         var photo = current
-        var conflicts: [String] = []
+        let edits = adjustments.mergingProjectEdits(current.adjustments, with: incoming.adjustments, prefer: preference)
+        photo.adjustments = edits.value
+        var conflicts = edits.conflicts
         func apply<Value: Equatable>(_ field: WritableKeyPath<Photo, Value>, baseline: Value, label: String) {
             let choice = resolveProjectValue(current[keyPath: field], incoming[keyPath: field],
                                              baseline: baseline, prefer: preference)
             photo[keyPath: field] = choice.value
             if choice.conflict { conflicts.append(label) }
         }
-        apply(\.adjustments, baseline: adjustments, label: "Adjustments")
         apply(\.versions, baseline: versions, label: "Saved recipes")
         apply(\.originalName, baseline: originalName, label: "Photo name")
         apply(\.versionName, baseline: versionName, label: "Version name")
@@ -66,5 +67,65 @@ struct ProjectPhotoMergeValues: Codable {
             else { photo.albumIDs.remove(album) }
         }
         return (photo, conflicts)
+    }
+}
+
+private extension Adjustments {
+    func mergingProjectEdits(_ current: Adjustments, with incoming: Adjustments,
+                             prefer preference: ProjectMergePreference) -> (value: Adjustments, conflicts: [String]) {
+        var result = current
+        var conflicts: [String] = []
+
+        func resolve<Value: Equatable>(_ current: Value, _ incoming: Value, baseline: Value, label: String) -> Value {
+            let choice = resolveProjectValue(current, incoming, baseline: baseline, prefer: preference)
+            if choice.conflict { conflicts.append(label) }
+            return choice.value
+        }
+
+        func apply<Value: Equatable>(_ field: WritableKeyPath<Adjustments, Value>, _ label: String) {
+            result[keyPath: field] = resolve(current[keyPath: field], incoming[keyPath: field],
+                                             baseline: self[keyPath: field], label: label)
+        }
+
+        func applyGroup(_ label: String, copy: (inout Adjustments, Adjustments) -> Void) {
+            func projected(_ source: Adjustments) -> Adjustments {
+                var group = Adjustments()
+                copy(&group, source)
+                return group
+            }
+            let group = resolve(projected(current), projected(incoming), baseline: projected(self), label: label)
+            copy(&result, group)
+        }
+
+        apply(\.exposure, "Exposure")
+        apply(\.brightness, "Brightness")
+        apply(\.vibrancy, "Vibrancy")
+        apply(\.sepia, "Sepia")
+        apply(\.contrast, "Contrast")
+        apply(\.saturation, "Saturation")
+        apply(\.warmth, "Temperature")
+        apply(\.tint, "Tint")
+        apply(\.shadows, "Shadows")
+        apply(\.highlights, "Highlights")
+
+        // Crop coordinates belong to the orientation and geometry in which they were edited.
+        applyGroup(AdjustmentGroup.geometry.rawValue) { target, source in
+            target = source.stamping(onto: target, groups: [.geometry])
+        }
+        applyGroup("Levels") { target, source in
+            target.blackPoint = source.blackPoint
+            target.whitePoint = source.whitePoint
+            target.gamma = source.gamma
+            target.levelQuarterTones = source.levelQuarterTones
+        }
+        applyGroup("Curves") { target, source in
+            target.curveShadows = source.curveShadows
+            target.curveMidtones = source.curveMidtones
+            target.curveHighlights = source.curveHighlights
+        }
+        apply(\.channelCurves, "Channel Curves")
+        apply(\.channelLevels, "Channel Levels")
+        apply(\.localBrushes, AdjustmentGroup.localBrush.rawValue)
+        return (result, conflicts)
     }
 }

@@ -65,8 +65,10 @@ New exports record the project photo IDs and original fingerprints at export tim
 
 New exports record the starting editable values for each photo. Merge combines changes made on only one side and uses the conflict preference when both sides changed a field differently. The review identifies conflicting fields and matching photos without an edit baseline. Membership-only exports retain the previous merge behavior.
 
+Independent controls such as Exposure and Contrast merge separately. Geometry, Levels, Curves, channel adjustments and brush masks each stay grouped, and the review names the control or group that needs a decision.
+
 ## Next implementation slice
 
-1. Resolve independent adjustment controls separately while keeping crop geometry and other dependent values together.
+1. Record stack presentation at project export. Reconcile collapsed state, global picks and album picks against that baseline, preserve state outside the merge scope, and keep older exports compatible.
 
 Other open core work includes Finder Trash handoff for Library Trash, relocation naming and subfolders, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
