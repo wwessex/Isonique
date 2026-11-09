@@ -230,3 +230,8 @@
 - Tests recorded membership in an actual export, removed a previously exported photo, and verified that only matching originals were eligible for inferred Trash. Destination-only additions and photos moved to another project were retained. A declined preview left the catalogue, originals and staging area unchanged.
 - Native QA cancelled the merge from its review, then accepted the same plan. The previously exported photo went to Library Trash, the destination-only version stayed visible, and the new version shared the verified original. The saved catalogue matched the reviewed plan and the incoming file hashes were unchanged.
 - The signed native Apple Silicon build passed strict verification on macOS 27.3. The optimized test suite passed all 141 tests, including four camera RAW fixtures.
+
+## Three-way project photo merge
+
+- Tests exercised both conflict preferences, matching changes made on both sides, destination-only and imported-only metadata, saved recipes, album changes, shared originals and fallback for a membership-only export. Cancellation and forced catalogue write failure were also exercised with a full edit baseline.
+- Native QA reviewed an exposure conflict with Prefer current values selected. The saved library retained the current exposure and keywords and applied the imported rating and flag. Incoming file hashes were unchanged.

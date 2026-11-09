@@ -52,7 +52,7 @@ final class ProjectLibraryMergeTests: XCTestCase {
     }
 
     func testCancellationAndFailedSaveRollBackNewOriginals() async throws {
-        let fixture = try fixture()
+        let fixture = try fixture(keepsExportMembership: true)
         defer { try? FileManager.default.removeItem(at: fixture.root) }
         let root = fixture.destination.root
         let catalogue = root.appendingPathComponent("catalog.json")
@@ -177,6 +177,75 @@ final class ProjectLibraryMergeTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: catalogue), before)
         XCTAssertEqual(Set(try files.contentsOfDirectory(atPath: originals.path)), names)
         XCTAssertFalse(try files.contentsOfDirectory(atPath: root.path).contains { $0.hasPrefix(".isonique-project-import-") })
+    }
+
+    func testThreeWayMergeKeepsIndependentChangesWithEitherConflictPreference() async throws {
+        for preference in [ProjectMergePreference.current, .incoming] {
+            let fixture = try fixture(keepsExportMembership: true)
+            defer { try? FileManager.default.removeItem(at: fixture.root) }
+            var current = try fixture.destination.load()
+            current.photos[0].keywords = "Local keywords"
+            current.photos[0].rating = 4
+            try fixture.destination.save(current)
+            var incoming = try fixture.source.load()
+            incoming.photos[0].flagged = true
+            incoming.photos[0].colorLabel = .blue
+            incoming.photos[0].rating = 4
+            try fixture.source.save(incoming)
+
+            let result = try await fixture.destination.mergeProjectLibrary(from: fixture.source.root, prefer: preference,
+                                                                             review: { preview in
+                XCTAssertEqual(preview.legacyMatches, 0)
+                XCTAssertEqual(preview.conflicts.count, 1)
+                XCTAssertEqual(preview.conflicts.first?.photoName, fixture.edited.displayName)
+                XCTAssertEqual(preview.conflicts.first?.fields, ["Adjustments", "Caption"])
+                return true
+            })
+
+            let saved = try fixture.destination.load()
+            let edited = try XCTUnwrap(saved.photos.first { $0.id == fixture.edited.id })
+            XCTAssertEqual(result.conflicts, 1)
+            XCTAssertEqual(edited.adjustments.exposure, preference == .current ? 0.4 : 0.8)
+            XCTAssertEqual(edited.caption, preference == .current ? "Current caption" : "Incoming caption")
+            XCTAssertEqual(edited.keywords, "Local keywords")
+            XCTAssertEqual(edited.rating, 4)
+            XCTAssertEqual(edited.colorLabel, .blue)
+            XCTAssertTrue(edited.flagged)
+            XCTAssertEqual(edited.versions?.first?.name, "Incoming recipe")
+            XCTAssertEqual(edited.albumIDs, [fixture.localAlbum.id, fixture.newAlbum.id])
+            let version = try XCTUnwrap(saved.photos.first { $0.id == fixture.version.id })
+            XCTAssertEqual(version.filename, edited.filename)
+            XCTAssertEqual(version.stackID, edited.stackID)
+        }
+    }
+
+    func testMembershipOnlyExportUsesFallbackAndKeepsItsDeletionEvidence() async throws {
+        let fixture = try fixture(keepsExportMembership: true)
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let url = fixture.source.root.appendingPathComponent("catalog.json")
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
+        var membership = try XCTUnwrap(object["projectExportMembership"] as? [String: Any])
+        let records = try XCTUnwrap(membership["originalsByPhoto"] as? [Any])
+        membership["originalsByPhoto"] = records.map { record -> Any in
+            guard var record = record as? [String: Any] else { return record }
+            record.removeValue(forKey: "values")
+            return record
+        }
+        object["projectExportMembership"] = membership
+        try JSONSerialization.data(withJSONObject: object).write(to: url)
+
+        let result = try await fixture.destination.mergeProjectLibrary(from: fixture.source.root, prefer: .current,
+                                                                         applyTrash: true, review: { preview in
+            XCTAssertEqual(preview.legacyMatches, 1)
+            XCTAssertTrue(preview.conflicts.isEmpty)
+            XCTAssertEqual(preview.trashed, 2)
+            return true
+        })
+
+        XCTAssertEqual(result.conflicts, 0)
+        let saved = try fixture.destination.load()
+        XCTAssertEqual(saved.photos.first { $0.id == fixture.edited.id }?.adjustments.exposure, 0.4)
+        XCTAssertNotNil(saved.photos.first { $0.id == fixture.absent.id }?.trashedAt)
     }
 
     private struct Fixture {

@@ -11,6 +11,12 @@ public struct ProjectLibraryMergeResult {
     public fileprivate(set) var updated = 0
     public fileprivate(set) var trashed = 0
     public fileprivate(set) var skipped = 0
+    public fileprivate(set) var conflicts = 0
+}
+
+public struct ProjectPhotoMergeConflict: Sendable {
+    public let photoName: String
+    public let fields: [String]
 }
 
 public struct ProjectLibraryMergePreview: Sendable {
@@ -22,6 +28,8 @@ public struct ProjectLibraryMergePreview: Sendable {
     public let addedAlbums: Int
     public let copiedOriginals: Int
     public let trashNames: [String]
+    public let conflicts: [ProjectPhotoMergeConflict]
+    public let legacyMatches: Int
 }
 
 public extension LibraryRepository {
@@ -80,6 +88,9 @@ public extension LibraryRepository {
         var appliedStackPhotos: Set<UUID> = []
         var checkedOriginals: Set<UUID> = []
         var trashNames: [String] = []
+        var conflicts: [ProjectPhotoMergeConflict] = []
+        var legacyMatches = 0
+        let membership = source.projectExportMembership.flatMap { $0.projectID == project.id ? $0 : nil }
         for photo in source.photos {
             try Task.checkCancellation()
             if let index = indices[photo.id] {
@@ -94,25 +105,41 @@ public extension LibraryRepository {
                 }
                 guard existing.trashedAt == nil else { result.skipped += 1; continue }
                 var merged = existing
-                if preference == .incoming {
-                    merged = photo
-                    merged.useOriginal(from: existing)
-                    merged.albumIDs = existing.albumIDs.subtracting(sourceRegularIDs)
-                        .union(photo.albumIDs.intersection(sourceRegularIDs))
-                    if let stackID = existing.stackID, protectedStacks.contains(stackID) {
-                        merged.stackID = stackID
-                    } else if let stackID = photo.stackID, protectedStacks.contains(stackID), !knownStacks.contains(stackID) {
-                        merged.stackID = existing.stackID
+                var fields: [String] = []
+                if let record = membership?.originalsByPhoto[photo.id], record.matches(existing), let baseline = record.values {
+                    let values = baseline.merging(existing, with: photo, prefer: preference, representedAlbums: sourceRegularIDs)
+                    merged = values.photo
+                    fields = values.conflicts
+                    let stack = resolveProjectValue(existing.stackID, photo.stackID, baseline: baseline.stackID, prefer: preference)
+                    let pair = resolveProjectValue(existing.pairID, photo.pairID, baseline: baseline.pairID, prefer: preference)
+                    if permitsProjectGroupChange(existing.stackID, to: stack.value, protected: protectedStacks, known: knownStacks) {
+                        merged.stackID = stack.value
+                        if stack.conflict { fields.append("Stack membership") }
                     }
-                    if let pairID = existing.pairID, protectedPairs.contains(pairID) {
-                        merged.pairID = pairID
-                    } else if let pairID = photo.pairID, protectedPairs.contains(pairID), !knownPairs.contains(pairID) {
-                        merged.pairID = existing.pairID
+                    if permitsProjectGroupChange(existing.pairID, to: pair.value, protected: protectedPairs, known: knownPairs) {
+                        merged.pairID = pair.value
+                        if pair.conflict { fields.append("RAW+JPEG pair") }
                     }
                     appliedStackPhotos.insert(photo.id)
                 } else {
-                    merged.albumIDs.formUnion(photo.albumIDs.intersection(newRegularIDs))
+                    legacyMatches += 1
+                    if preference == .incoming {
+                        merged = photo
+                        merged.useOriginal(from: existing)
+                        merged.albumIDs = existing.albumIDs.subtracting(sourceRegularIDs)
+                            .union(photo.albumIDs.intersection(sourceRegularIDs))
+                        if !permitsProjectGroupChange(existing.stackID, to: photo.stackID, protected: protectedStacks, known: knownStacks) {
+                            merged.stackID = existing.stackID
+                        }
+                        if !permitsProjectGroupChange(existing.pairID, to: photo.pairID, protected: protectedPairs, known: knownPairs) {
+                            merged.pairID = existing.pairID
+                        }
+                        appliedStackPhotos.insert(photo.id)
+                    } else {
+                        merged.albumIDs.formUnion(photo.albumIDs.intersection(newRegularIDs))
+                    }
                 }
+                if !fields.isEmpty { conflicts.append(ProjectPhotoMergeConflict(photoName: existing.displayName, fields: fields)) }
                 if merged != existing {
                     draft.photos[index] = merged
                 }
@@ -138,7 +165,7 @@ public extension LibraryRepository {
                 result.added += 1
             }
         }
-        if applyTrash, let membership = source.projectExportMembership, membership.projectID == project.id {
+        if applyTrash, let membership {
             let exportedIDs = Set(source.photos.map(\.id))
             let trashDate = Date()
             for photo in destination.photos where photo.trashedAt == nil && !exportedIDs.contains(photo.id) {
@@ -168,15 +195,23 @@ public extension LibraryRepository {
         try Task.checkCancellation()
         let preview = ProjectLibraryMergePreview(projectName: current.name, added: result.added, updated: result.updated,
                                                  trashed: result.trashed, skipped: result.skipped, addedAlbums: newAlbums.count,
-                                                 copiedOriginals: copiedNames.count, trashNames: trashNames)
+                                                 copiedOriginals: copiedNames.count, trashNames: trashNames,
+                                                 conflicts: conflicts, legacyMatches: legacyMatches)
         guard await review(preview) else { throw CancellationError() }
         try Task.checkCancellation()
         let transfers = incomingOriginals.map { (original: $0, filename: copiedNames[$0.originalID]) }
         try await commitProjectLibrary(draft, catalogue: catalogue, sourceRoot: sourceRoot,
                                        transfers: transfers, progress: progress)
         return ProjectLibraryMergeResult(library: draft, project: current, added: result.added,
-                                         updated: result.updated, trashed: result.trashed, skipped: result.skipped)
+                                         updated: result.updated, trashed: result.trashed, skipped: result.skipped,
+                                         conflicts: conflicts.count)
     }
+}
+
+private func permitsProjectGroupChange(_ current: UUID?, to incoming: UUID?, protected: Set<UUID>, known: Set<UUID>) -> Bool {
+    if let current, protected.contains(current) { return false }
+    if let incoming, protected.contains(incoming), !known.contains(incoming) { return false }
+    return true
 }
 
 private extension Library {

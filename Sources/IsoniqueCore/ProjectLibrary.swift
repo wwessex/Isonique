@@ -4,10 +4,12 @@ struct ProjectExportMembership: Codable {
     struct Original: Codable {
         let id: UUID
         let fingerprint: String
+        let values: ProjectPhotoMergeValues?
 
         init(_ photo: Photo) {
             id = photo.originalID
             fingerprint = photo.sha256
+            values = ProjectPhotoMergeValues(photo)
         }
 
         func matches(_ photo: Photo) -> Bool { id == photo.originalID && fingerprint == photo.sha256 }
@@ -26,10 +28,6 @@ extension Library {
         var exported = Library()
         exported.version = version
         exported.projects = [project]
-        exported.projectExportMembership = ProjectExportMembership(
-            projectID: projectID,
-            originalsByPhoto: Dictionary(members.map { ($0.id, ProjectExportMembership.Original($0)) },
-                                        uniquingKeysWith: { first, _ in first }))
         exported.photos = members.map { photo in
             var copy = photo
             copy.referencedPath = nil
@@ -104,6 +102,10 @@ extension Library {
             }
             if state != StackBrowserState() { exported.stackBrowser = state }
         }
+        exported.projectExportMembership = ProjectExportMembership(
+            projectID: projectID,
+            originalsByPhoto: Dictionary(exported.photos.map { ($0.id, ProjectExportMembership.Original($0)) },
+                                        uniquingKeysWith: { first, _ in first }))
         try exported.validateSchema()
         return exported
     }
