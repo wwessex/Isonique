@@ -183,3 +183,9 @@
 - Workspace tests covered selection with a shared version, an offscreen batch selection, project membership, and saved paths for originals outside the scope. Managed recovery tests confirmed that only requested files were installed.
 - The signed app exposed Entire Library, Selected Photos and Current Project in the native folder chooser. Current Project reconnected two originals, including a shared version in another project. The other project's unrelated original remained offline. The saved catalogue confirmed the same paths.
 - The managed recovery suite executed 115 tests with the four camera RAW fixtures and zero failures or skips. The scoped release passed strict signature verification.
+
+## Batch consolidation of referenced originals
+
+- Repository tests covered scoped selection, shared versions including Trash, unavailable originals, occupied managed destinations, changed source fingerprints and cancellation. An immutable catalogue forced a filesystem write failure. Retrying reused the verified managed copy and preserved the source file.
+- The signed app consolidated two referenced originals and their shared version from a Browser batch selection. A third original was reported as unavailable. The saved catalogue and managed hashes confirmed the results, and all three source hashes remained intact.
+- The optimized suite executed 119 tests with zero failures or skips, including the four camera RAW fixtures. The signed arm64 app and archive passed strict verification on Apple M5 Pro with macOS 27.3 and Xcode 27.2.

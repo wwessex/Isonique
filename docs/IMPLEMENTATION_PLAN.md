@@ -47,8 +47,10 @@ Missing managed originals can be recovered from a backup or folder. Verified cop
 
 The folder picker can target selected Browser photos, the current project or the entire library for both original search commands. A scoped match still applies to every version of the original.
 
+The File menu consolidates selected references into verified managed copies. Shared versions change storage together, and external originals stay in place. If the catalogue cannot be saved, the references stay in use and a retry can reuse the verified copies.
+
 ## Next implementation slice
 
-1. Consolidate selected referenced originals into managed storage in one batch. Verify copies, preserve the external files, update shared versions and test cancellation, catalogue write failure and safe retry.
+1. Implement managed-to-referenced relocation for selected originals. Verify destination copies and save all shared-version paths before releasing managed copies. Cover naming collisions, occupied targets, cancellation, catalogue save failure and safe retry.
 
 Other open core work includes Finder Trash handoff, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
