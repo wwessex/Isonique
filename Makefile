@@ -1,4 +1,4 @@
-.PHONY: build test test-raw run
+.PHONY: build test test-raw run check-branding
 build:
 	./scripts/build.sh
 test:
@@ -8,3 +8,5 @@ test-raw:
 	SWIFT_EXEC="$$(xcrun --find swiftc)" CLANG_MODULE_CACHE_PATH="$(CURDIR)/.build/clang-cache" swift test --disable-sandbox --build-system native --scratch-path .build --configuration release --filter RawWorkflowTests
 run: build
 	open "build/Isonique.app"
+check-branding:
+	/bin/sh scripts/check-branding.sh

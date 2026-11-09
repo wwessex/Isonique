@@ -122,7 +122,6 @@ struct SlideshowView: View {
     let repository: LibraryRepository
     @State private var index = 0
     @State private var playing = true
-    // -[RKSlideshowPreset init] 0x10009ef9f -> setDisplayTime: with f64 3.0.
     @State private var interval = SlideshowRules.defaultDisplayTime
     @State private var image: NSImage?
     @State private var failure: String?
