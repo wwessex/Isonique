@@ -11,4 +11,4 @@ Keep the existing native app, independent catalogue and shared renderer. Deliver
 
 ## Checkpoint
 
-Baseline audited at `0ebda9a`. Begin with import transaction tests and the import entry point in `Sources/Isonique/Isonique.swift`. Historical evidence, baseline status and remaining gaps are indexed in [feature parity](APERTURE_FEATURE_PARITY.md). Runtime evidence belongs in [test results](APERTURE_TEST_RESULTS.md).
+Baseline audited at `0ebda9a`. Per-file import transaction, photo Trash/Put Back, independent library creation and atomic workspace photo edits are complete. Next implement referenced originals, missing-file reporting, verified relink and consolidation. Retain managed-file compatibility and define snapshot behavior for offline originals. Historical evidence, baseline status and remaining gaps are indexed in [feature parity](APERTURE_FEATURE_PARITY.md). Runtime evidence belongs in [test results](APERTURE_TEST_RESULTS.md).

@@ -52,9 +52,10 @@ struct AutoStackView: View {
                 Button("Create Stacks") {
                     var assignments: [UUID: UUID] = [:]
                     for group in groups { let stack = UUID(); for id in group { assignments[id] = stack } }
-                    let old = model.library.updatePhotos(Set(assignments.keys)) { $0.stackID = assignments[$0.id] }
-                    for photo in old { model.history.record(photo) }
-                    model.save(); model.status = "Created \(groups.count) stacks · Undo restores one photo per step"; dismiss()
+                    var draft = model.library
+                    let previous = draft.updatePhotos(Set(assignments.keys)) { $0.stackID = assignments[$0.id] }
+                    guard model.commitPhotoChanges(draft, previous: previous) else { return }
+                    model.status = "Created \(groups.count) stacks · Undo restores one photo per step"; dismiss()
                 }.disabled(groups.isEmpty || model.busy).keyboardShortcut(.defaultAction)
             }
         }.padding(26).frame(width: 480)

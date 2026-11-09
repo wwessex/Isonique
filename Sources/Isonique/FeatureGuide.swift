@@ -33,6 +33,7 @@ struct FeatureGuide: View {
             Feature(title: "10. Persistent edit history", detail: "Enable Keep Undo/Redo history in Import & History Options to retain the latest 100 edits per library across launches. Turning it off removes saved history.")
         ]),
         Group(title: "Available with limits", symbol: "exclamationmark.circle", features: [
+            Feature(title: "Photo Trash", detail: "Move a photo to Trash from its context menu or press Command-Delete. Select Trash in the sidebar and use Put Back to restore its edits and memberships. Photos in Trash remain in verified backups. Empty Trash and container deletion are unavailable."),
             Feature(title: "7. Library backup and repair", detail: "File → Back Up Library, Restore Library Backup and Check Library Integrity now verify catalogue copies and original hashes. Restores open a separate new library. Legacy vaults, library merging and automatic catalogue repair remain missing."),
             Feature(title: "4. Histogram, Levels and master curve", detail: "Inspector shows a live luminance histogram of the edited preview, black/white input points, gamma and a master curve with three adjustable output points. Levels and curve settings apply to preview/export and the tone Stamp group. Independent 8-bit sRGB processing; per-channel curves and masks remain unavailable."),
             Feature(title: "Slideshow playback", detail: "Review → Start Slideshow plays the current filtered/sorted view or batch selection. Pause/play, previous/next, 3/5/10-second timing and Escape to finish. Uses saved edits, loops and leaves the library selection unchanged. No soundtrack or movie export."),
@@ -48,6 +49,7 @@ struct FeatureGuide: View {
         Group(title: "Available now", symbol: "checkmark.circle", features: [
             Feature(title: "Export format, quality, size and metadata", detail: "Choose JPEG, PNG, TIFF or unchanged original; set JPEG quality and longest-edge size; save reusable presets; choose EXIF, IPTC and GPS for edited exports."),
             Feature(title: "Precise crop and selective metadata Stamp", detail: "Move and resize crops, lock aspect, switch portrait/landscape, enter exact pixels, and Stamp selected captions, keywords and ratings."),
+            Feature(title: "Multiple Isonique libraries", detail: "Create a separate folder using File → New Isonique Library and switch using File → Open Isonique Library."),
             Feature(title: "Import and organize", detail: "Import files or folders, verify managed copies, skip exact duplicates, create projects and albums, and search names, keywords and cameras."),
             Feature(title: "Review and metadata", detail: "Ratings, rejection, flags, rating filters, sorting, captions, keywords, photo information and Reveal Managed Original are available."),
             Feature(title: "Non-destructive editing", detail: "Exposure, contrast, saturation, warmth, tint, shadows, highlights, presets, rotation, straighten, crop, original comparison and selective Stamp preserve managed originals.")

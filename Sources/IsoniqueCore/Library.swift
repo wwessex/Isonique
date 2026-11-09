@@ -154,6 +154,7 @@ public struct Collection: Codable, Identifiable, Equatable {
 }
 public struct Photo: Codable, Identifiable, Equatable {
     public var id = UUID()
+    public var trashedAt: Date?
     public var stackID: UUID?
     public var versions: [PhotoVersion]?
     public var pairID: UUID?
@@ -207,10 +208,41 @@ public struct RecoveryResult {
 public final class LibraryRepository {
     public let root: URL
     private let fm = FileManager.default
+    public static func createEmpty(at destination: URL) throws -> LibraryRepository {
+        let target = destination.standardizedFileURL
+        let parent = target.deletingLastPathComponent().resolvingSymlinksInPath()
+        let root = parent.appendingPathComponent(target.lastPathComponent, isDirectory: true)
+        let fm = FileManager.default
+        try validateRoot(root)
+        var ancestor = parent
+        while ancestor.path != "/" {
+            guard !fm.fileExists(atPath: ancestor.appendingPathComponent("catalog.json").path) else {
+                throw LibraryError.unsafePath
+            }
+            ancestor.deleteLastPathComponent()
+        }
+        // Non-recursive creation rejects existing folders, symlinks and missing parents.
+        try fm.createDirectory(at: root, withIntermediateDirectories: false)
+        do {
+            let repository = try LibraryRepository(root: root)
+            try repository.save(Library())
+            return repository
+        } catch {
+            try? fm.removeItem(at: root)
+            throw error
+        }
+    }
+
+    private static func validateRoot(_ root: URL) throws {
+        // Never create our catalogue inside a legacy library or application bundle.
+        guard !root.pathComponents.contains(where: {
+            ["aplibrary", "aperturelibrary", "photolibrary", "photoslibrary", "app"].contains(URL(fileURLWithPath: $0).pathExtension.lowercased())
+        }) else { throw LibraryError.unsafePath }
+    }
+
     public init(root: URL) throws {
         self.root = root.standardizedFileURL.resolvingSymlinksInPath()
-        // Never create our catalogue inside a legacy library or application bundle.
-        guard !self.root.pathComponents.contains(where: { ["aplibrary", "aperturelibrary", "photolibrary", "photoslibrary", "app"].contains(URL(fileURLWithPath: $0).pathExtension.lowercased()) }) else { throw LibraryError.unsafePath }
+        try Self.validateRoot(self.root)
         if fm.fileExists(atPath: self.root.path), !fm.fileExists(atPath: self.root.appendingPathComponent("catalog.json").path) {
             let entries = try fm.contentsOfDirectory(atPath: self.root.path)
             guard entries.isEmpty else { throw LibraryError.unsafePath }
@@ -237,9 +269,12 @@ public final class LibraryRepository {
         try data.write(to: root.appendingPathComponent("catalog.json"), options: .atomic)
     }
     public func originalURL(_ photo: Photo) throws -> URL {
-        guard photo.filename == (photo.filename as NSString).lastPathComponent, !photo.filename.isEmpty, photo.filename != ".", photo.filename != ".." else { throw LibraryError.unsafePath }
+        try managedOriginalURL(photo.filename)
+    }
+    private func managedOriginalURL(_ filename: String) throws -> URL {
+        guard filename == (filename as NSString).lastPathComponent, !filename.isEmpty, filename != ".", filename != ".." else { throw LibraryError.unsafePath }
         let base = root.appendingPathComponent("Originals").resolvingSymlinksInPath()
-        let url = base.appendingPathComponent(photo.filename).resolvingSymlinksInPath()
+        let url = base.appendingPathComponent(filename).resolvingSymlinksInPath()
         guard base.path == root.appendingPathComponent("Originals").path, url.deletingLastPathComponent() == base else { throw LibraryError.unsafePath }
         return url
     }
@@ -250,38 +285,62 @@ public final class LibraryRepository {
         while let data = try handle.read(upToCount: 1024 * 1024), !data.isEmpty { hash.update(data: data) }
         return hash.finalize().map { String(format: "%02x", $0) }.joined()
     }
-    public func importPhoto(_ source: URL, projectID: UUID?, into library: inout Library) throws -> Bool {
-        guard let imageSource = CGImageSourceCreateWithURL(source as CFURL, nil), CGImageSourceGetCount(imageSource) > 0,
+    public func importPhoto(_ source: URL, projectID: UUID?, into library: inout Library,
+                            options: ImportOptions? = nil, albumID: UUID? = nil) throws -> Bool {
+        let input = source.standardizedFileURL.resolvingSymlinksInPath()
+        guard try input.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile == true else {
+            throw LibraryError.unsupportedImage(source.lastPathComponent)
+        }
+        let hash = try Self.digest(input)
+        if library.photos.contains(where: { $0.sha256 == hash }) { return false }
+
+        let sidecar = source.deletingPathExtension().appendingPathExtension("xmp")
+        let metadata = options?.readSidecars == true && fm.fileExists(atPath: sidecar.path)
+            ? try MetadataXML.read(sidecar) : []
+        let suffix = input.pathExtension.lowercased()
+        let filename = UUID().uuidString + (suffix.isEmpty ? "" : "." + suffix)
+        let destination = try managedOriginalURL(filename)
+        var committed = false
+        defer { if !committed { try? fm.removeItem(at: destination) } }
+        // Copy the resolved regular file, so a selected Finder symlink never becomes a managed link.
+        try fm.copyItem(at: input, to: destination)
+        guard try Self.digest(destination) == hash, try Self.digest(input) == hash else {
+            throw LibraryError.integrity(source.lastPathComponent)
+        }
+        guard let imageSource = CGImageSourceCreateWithURL(destination as CFURL, nil),
+              CGImageSourceGetCount(imageSource) > 0,
               let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [String: Any],
               let width = properties[kCGImagePropertyPixelWidth as String] as? Int,
-              let height = properties[kCGImagePropertyPixelHeight as String] as? Int else { throw LibraryError.unsupportedImage(source.lastPathComponent) }
-        let hash = try Self.digest(source)
-        if library.photos.contains(where: { $0.sha256 == hash }) { return false }
-        let filename = UUID().uuidString + "." + source.pathExtension.lowercased()
-        let destination = root.appendingPathComponent("Originals").appendingPathComponent(filename)
-        try fm.copyItem(at: source, to: destination)
-        do {
-            guard try Self.digest(destination) == hash, try Self.digest(source) == hash else { throw LibraryError.integrity(source.lastPathComponent) }
-            let tiff = properties[kCGImagePropertyTIFFDictionary as String] as? [String: Any] ?? [:]
-            let exif = properties[kCGImagePropertyExifDictionary as String] as? [String: Any] ?? [:]
-            let camera = [tiff[kCGImagePropertyTIFFMake as String] as? String, tiff[kCGImagePropertyTIFFModel as String] as? String].compactMap { $0 }.joined(separator: " ")
-            var photo = Photo(filename: filename, originalName: source.lastPathComponent, projectID: projectID, width: width, height: height, camera: camera, captureDate: exif[kCGImagePropertyExifDateTimeOriginal as String] as? String ?? "", sha256: hash)
-            // Only metadata actually embedded in the file is available here. Aperture's
-            // database-only metadata and sidecars are deliberately not inferred.
-            let iptc = properties[kCGImagePropertyIPTCDictionary as String] as? [String: Any] ?? [:]
-            photo.caption = iptc[kCGImagePropertyIPTCCaptionAbstract as String] as? String ?? ""
-            if let keywords = iptc[kCGImagePropertyIPTCKeywords as String] as? [String] {
-                photo.keywords = keywords.joined(separator: ", ")
-            }
-            var rating = (iptc[kCGImagePropertyIPTCStarRating as String] as? NSNumber)?.intValue
-            if let metadata = CGImageSourceCopyMetadataAtIndex(imageSource, 0, nil),
-               let value = CGImageMetadataCopyStringValueWithPath(metadata, nil, "xmp:Rating" as CFString) as String?,
-               let embeddedRating = Int(value) { rating = embeddedRating }
-            if let rating { photo.rating = RatingRules.clamp(rating) }
-            library.photos.append(photo)
-            do { try save(library) } catch { library.photos.removeLast(); throw error }
-            return true
-        } catch { try? fm.removeItem(at: destination); throw error }
+              let height = properties[kCGImagePropertyPixelHeight as String] as? Int else {
+            throw LibraryError.unsupportedImage(source.lastPathComponent)
+        }
+        let tiff = properties[kCGImagePropertyTIFFDictionary as String] as? [String: Any] ?? [:]
+        let exif = properties[kCGImagePropertyExifDictionary as String] as? [String: Any] ?? [:]
+        let camera = [tiff[kCGImagePropertyTIFFMake as String] as? String, tiff[kCGImagePropertyTIFFModel as String] as? String].compactMap { $0 }.joined(separator: " ")
+        var photo = Photo(filename: filename, originalName: source.lastPathComponent, projectID: projectID,
+                          width: width, height: height, camera: camera,
+                          captureDate: exif[kCGImagePropertyExifDateTimeOriginal as String] as? String ?? "", sha256: hash)
+        let iptc = properties[kCGImagePropertyIPTCDictionary as String] as? [String: Any] ?? [:]
+        photo.caption = iptc[kCGImagePropertyIPTCCaptionAbstract as String] as? String ?? ""
+        if let keywords = iptc[kCGImagePropertyIPTCKeywords as String] as? [String] {
+            photo.keywords = keywords.joined(separator: ", ")
+        }
+        var rating = (iptc[kCGImagePropertyIPTCStarRating as String] as? NSNumber)?.intValue
+        if let embedded = CGImageSourceCopyMetadataAtIndex(imageSource, 0, nil),
+           let value = CGImageMetadataCopyStringValueWithPath(embedded, nil, "xmp:Rating" as CFString) as String?,
+           let embeddedRating = Int(value) { rating = embeddedRating }
+        if let rating { photo.rating = RatingRules.clamp(rating) }
+        if let options {
+            photo.sourceName = source.lastPathComponent
+            photo = options.applying(to: photo)
+        }
+        for record in metadata { photo = record.applying(to: photo) }
+        if let albumID { photo.albumIDs.insert(albumID) }
+
+        library.photos.append(photo)
+        do { try save(library) } catch { library.photos.removeLast(); throw error }
+        committed = true
+        return true
     }
     public static func imageFiles(in folder: URL) -> [URL] {
         guard let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey], options: [.skipsHiddenFiles, .skipsPackageDescendants]) else { return [] }

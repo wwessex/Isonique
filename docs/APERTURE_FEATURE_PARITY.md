@@ -14,7 +14,8 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 
 | Aperture workflow | Status | Isonique audit |
 | --- | --- | --- |
-| Multiple libraries, create and switch in session, library relocation | Partially implemented | File opens an existing verified library and remembers its path. No creation UI, recents or Finder library document handler at baseline. |
+| Create and switch independent Isonique libraries | Fully implemented and tested | File → New Isonique Library (⇧⌘N) creates a new folder. File → Open Isonique Library verifies and switches libraries. Both commands exercised in the native app. Normal launch remembers the selected path. |
+| Library recents and relocation | Partially implemented | Existing verified libraries can be opened from a new location. No recents or Finder document handler. |
 | Managed originals and byte-exact original export | Implemented but needs improvement | SHA-256-verified copies and original export have automated coverage. Missing or moved files have no recovery UI. |
 | Referenced originals, offline badges, reconnect, relocate, consolidate | Missing | Managed copies only. |
 | Projects, albums, sidebar navigation and project overview/skimming | Partially implemented | Flat projects and albums; membership, filters and sidebar navigation. No project covers or skimming. |
@@ -27,7 +28,8 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 | IPTC/EXIF/XMP, metadata views, custom fields and autofill | Partially implemented | Import reads selected embedded fields; Info edits caption/keywords, XML/XMP supports selected fields, export can include EXIF/IPTC/GPS. No full field editor, views, autofill or custom fields. |
 | Metadata presets, Lift and Stamp, batch metadata and date adjustment | Partially implemented | Presets at import and selective caption/keywords/rating Stamp. No dedicated batch metadata editor or capture-time correction. |
 | Duplicate detection | Implemented but needs improvement | Exact SHA-256 on import. No library-wide visual similarity review or comparison tools. |
-| Photo, version and container Trash, Put Back and empty to Finder Trash | Missing | No recoverable deletion at baseline. |
+| Photo Trash and Put Back | Fully implemented and tested | Sidebar, photo context menu, File command (⌘Delete), batch actions and edit history. Restores project, albums, stack, edits and original identity. Tested with restart, backup, and native controls. |
+| Version and container Trash, empty to Finder Trash | Missing | Trash is photo-only and retains original files on disk. |
 | Library export/merge, original relocation and consolidation | Missing | Existing backup/restore can make a separate copy. No reconciliation or project-level export. |
 | Vaults, backup, verification and restoration | Implemented but needs improvement | Independent verified full snapshots and restore to new folder, with automated coverage. No incremental vault updates or backup scheduling. |
 | Library First Aid, permissions and catalogue repair | Partially implemented | Read-only verification of catalogue and original hashes. No repair or rebuild. |
@@ -71,7 +73,7 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 
 | Aperture workflow | Status | Isonique audit |
 | --- | --- | --- |
-| File/folder import, naming, metadata presets, duplicate rejection | Implemented but needs improvement | Background execution and presets. At baseline the base import is saved before import options and album assignment, causing duplicate catalogue writes and possible partial metadata after interruption. |
+| File/folder import, naming, metadata presets, duplicate rejection | Implemented but needs improvement | Background execution and presets. Metadata, naming and membership commit with the original in one catalogue write per file. Pair linking remains a separate final transaction. Duplicate hashing and catalogue writes still scale poorly for large batches. |
 | Import preview, automatic projects, progress, cancellation and post-import actions | Partially implemented | Global busy spinner and outcome counts; no per-file progress, cancellation, import selection grid, time-zone correction, automatic split, backup-on-import, move source or eject. |
 | RAW+JPEG pairing and preferred original | Partially implemented | By folder/stem, limited to newly imported partners. No switching one version’s underlying original. |
 | Camera/cards/devices and tethered capture | Missing | Mounted folders import as files. No camera transport, shutter control or hardware validation. |
@@ -101,4 +103,4 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 
 16-bit or float processing, wide-gamut/EDR previews and exports, measured CPU/GPU selection, cancellable render scheduling, bounded thumbnail caching, catalogue scaling, undo coalescing and recovery after interruption are modernization work. Vision face detection is a candidate for local processing. GPS browsing can use embedded coordinates with optional map tiles. Neither task requires an account for the local library. Proprietary Apple artwork, historical pixel formulas and direct legacy catalogue writes are outside this implementation.
 
-Baseline risks to address in order include the import transaction, in-memory edits that survive a failed catalogue save, overlapping preview renders during slider drags, repeated catalogue scans and sorting in view updates, and missing large-library and physical camera tests.
+Baseline persistence bugs fixed include partial import records and in-memory photo edits that survived a failed catalogue save. Remaining risks include overlapping preview renders during slider drags, repeated catalogue scans and sorting in view updates, and missing large-library and physical camera tests.
