@@ -15,6 +15,7 @@ extension Workspace {
 struct ChannelLevelsEditor: View {
     @EnvironmentObject private var model: Workspace
     let photo: Photo
+    let input: ToneHistogram?
     @State private var channel: LevelsChannel = .red
     @State private var draft: LevelValues?
 
@@ -26,12 +27,23 @@ struct ChannelLevelsEditor: View {
             Picker("Levels channel", selection: $channel) {
                 ForEach(LevelsChannel.allCases) { Text($0.rawValue).tag($0) }
             }.pickerStyle(.segmented)
+            AdjustmentHistogramView(series: input.map { [series(from: $0)] } ?? [])
+                .frame(height: 48).background(.black.opacity(0.25))
+                .accessibilityHidden(false).accessibilityLabel("\(channel.rawValue) Levels input histogram")
             slider("Channel black point", \.blackPoint, in: 0...max(0, levels.whitePoint - 0.01))
             slider("Channel white point", \.whitePoint, in: min(1, levels.blackPoint + 0.01)...1)
             slider("Channel gamma", \.gamma, in: 0.1...4)
             Button("Reset Channel Levels") { commit(LevelValues()) }
                 .disabled(saved == LevelValues())
         }.onChange(of: channel) { _, _ in draft = nil }
+    }
+
+    private func series(from input: ToneHistogram) -> ([Int], Color) {
+        switch channel {
+        case .red: (input.red, .red)
+        case .green: (input.green, .green)
+        case .blue: (input.blue, .blue)
+        }
     }
 
     private func slider(_ title: String, _ path: WritableKeyPath<LevelValues, Double>,

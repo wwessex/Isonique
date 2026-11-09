@@ -25,10 +25,11 @@ The Inspector histogram supports luminance, combined RGB and individual channels
 
 Channel Levels provides independent black point, white point and gamma for each RGB channel. Format 6 protects the new recipes. Channel Levels runs after the legacy combined controls and before the independent curves. Tests cover isolation, rendering order, persistence, Undo/Redo and export.
 
+Levels and Curves have input histograms sampled at the corresponding renderer stages. The Inspector uses one cancellable sample for all open adjustment panels. The channel luminance histogram matches the curve axis.
+
 ## Next implementation slice
 
-1. Add an input histogram behind the channel adjustment graphs. In the shared renderer, capture distributions after the preceding tone stages and before the adjustment the graph controls. Match the luminance curve’s axis encoding, and verify cancellation when selection or the edit recipe changes.
-2. Extend Levels with quarter-tone controls and percentile-based automatic black/white points. Verify that existing combined and channel recipes still render identically when the new controls are neutral.
-3. Qualify higher-resolution tone workflows with real RAW samples and profile full-resolution render and cache performance.
+1. Extend Levels with quarter-tone controls and percentile-based automatic black/white points. Verify that existing combined and channel recipes still render identically when the new controls are neutral.
+2. Qualify higher-resolution tone workflows with real RAW samples and profile full-resolution render and cache performance.
 
 Other open core work includes Finder Trash handoff, batch relinking, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
