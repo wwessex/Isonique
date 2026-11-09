@@ -31,9 +31,11 @@ Combined and per-channel Levels have dark and light quarter controls. Format 7 p
 
 Four real camera RAW samples passed full-size tonal render, edited PNG and original-copy checks on macOS 27.3. The opt-in test and sample links are recorded in the README and test results.
 
+The single Viewer and comparison panes reuse recent unproofed frames within a per-workspace byte and entry budget. A Nikon Z 6 sample confirmed reuse after switching render resolution, and tests cover eviction, cancellation and changed or missing originals.
+
 ## Next implementation slice
 
-1. Profile repeated full-resolution Viewer loads and add a bounded in-memory render cache if it avoids expensive duplicate renders.
-2. Add Auto Curves and image-sampled curve points using the staged histograms and Viewer Loupe.
+1. Add Auto Curves and image-sampled curve points using the staged histograms and Viewer Loupe. Keep automatic and sampled changes in the existing curve recipe and verify one-step Undo and full-size export.
+2. Profile thumbnail generation and scrolling against a larger disposable catalogue. Use file identity and edit-recipe invalidation to keep thumbnail reuse consistent with the Viewer.
 
 Other open core work includes Finder Trash handoff, batch relinking, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

@@ -118,6 +118,20 @@ struct ViewerImage {
         self.rendered = rendered
         display = try proofProfile.map { try Renderer.proof(rendered, profile: $0) } ?? rendered
     }
+
+    static func prepare(_ rendered: CGImage, proofProfile: Data?) async throws -> ViewerImage {
+        try Task.checkCancellation()
+        guard let proofProfile else { return try ViewerImage(rendered, proofProfile: nil) }
+        let proof = Task.detached(priority: .userInitiated) {
+            try Task.checkCancellation()
+            return try ViewerImage(rendered, proofProfile: proofProfile)
+        }
+        let result = await withTaskCancellationHandler {
+            await proof.result
+        } onCancel: { proof.cancel() }
+        try Task.checkCancellation()
+        return try result.get()
+    }
 }
 
 struct ClippingPreview: View {

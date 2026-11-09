@@ -133,3 +133,10 @@
 | Ricoh GR III DNG | 6000 × 4000 | 34 ms | 1,694 ms |
 
 - The fixture files remain external. The regular suite skips this test when `ISONIQUE_RAW_FIXTURES` is unset. The sample results cover this version of macOS ImageIO. Other camera models, decoder versions, demosaicing fidelity and high-bit-depth output remain unqualified.
+
+## Viewer render cache
+
+- The final optimized suite passed all 96 XCTest cases with the four external camera RAW fixtures enabled. The extracted Apple Silicon release app passed strict signature verification. The fixture-free debug suite passed 95 cases and skipped the optional RAW test.
+- Automated tests cover render and geometry reuse, different edit recipes and resolutions, original refresh, file replacement and removal, least-recently-used eviction, pre-crop backing-store accounting, and cancellation. Native QA opened the Nikon NEF in Fit, switched to 100%, read pixels in the Loupe, and compared the NEF side by side with a PNG.
+- In the optimized cache probe, a cold full-size Nikon Z 6 render took 2,005 ms. After a Fit render, five repeat full-size requests returned the same image object with a median lookup of 0.041 ms. The lookup measures the frame cache and file metadata check before proofing, overlays and display.
+- The 128 MiB and eight-entry limits cover retained unproofed frames. Active views, in-flight rendering, proofing and warning overlays use separate memory. File changes are detected by path, filesystem identity, size and timestamps on lookup, with explicit refresh as an additional key.
