@@ -70,3 +70,27 @@ Implemented the five options ranked in FeatureGuide: format; quality/size/preset
 
 Prepared source for https://github.com/wwessex/Isonique on main, preserving the repository's existing license and files. Excluded Swift build caches, generated app/ZIP output, screenshots and logs. Native Apple Silicon macOS is the only maintained application; no separate web/PWA, mobile or Windows variants exist.
 
+
+## Next five options — 9 November 2026
+
+Implemented native options 6–10: RAW/JPEG import modes and companion links, naming/metadata presets, XML/XMP metadata import, RGB ICC proof simulation/manual lens distortion, and optional persistent photo history. `make test`: 24 tests passed, zero failures, including pairing preference and prefix behavior, XMP/XML/AlbumData parsing, old-catalogue defaults and bounded saved history, lens recipe persistence/selective Stamp and RGB proof acceptance/rejection. `make build`: arm64 release and ad-hoc bundle/archive signature verification passed. Compiler errors from the initial XML import and inspector references were fixed.
+
+
+## Batch workflows, organization and photo navigation — 9 November 2026
+
+Interpreted the ambiguous “two 5 features” request as missing-feature ranks 2 and 5 after an unanswered clarification: batch workflows, smart albums/stacks/versions. Added explicit Back to current grid, Escape, All Photos clearing search/rating filters, grid startup, and click-to-open photo navigation. Added stable-ID batch updates and numbered batch exports, smart album predicates/editor, manual stack grouping/sidebar and named adjustment versions. Feature guide and README disclose supported behavior and limits.
+
+## Five review/tonal additions — 9 November 2026
+
+- `make test`: 35 tests passed, zero failures. New coverage checks legacy neutral decoding, new-field persistence and selective Stamp, levels clipping/gamma/curve interpolation, histogram bins and processed pixels, and auto-stack gap boundaries, invalid dates and existing-stack exclusion.
+- `make build`: arm64 release succeeded; staged app signature and clean archive verified. New actor-isolation warnings were fixed; remaining warnings concern unavailable user caches and SwiftPM's existing native-build-system deprecation.
+- Direct interactive UI checking was unavailable: computer-use access to Isonique was not approved. Slideshow controls/timing and auto-stack sheet have build coverage and core logic coverage, but were not interactively exercised. No original screenshot exists in capture/reference for a new likeness comparison.
+- Sole maintained variant: native Apple Silicon macOS. No separate web/PWA/mobile/Windows code exists. Intel, older macOS runtimes, actual RAW cameras and devices remain untested. Full legacy migration and Apple rendering fidelity remain unresolved.
+## Verified library protection — 9 November 2026
+
+- Added independent Isonique backup, manifest-verified restore into a new folder, read-only integrity checking and verified existing-library opening. Saved location persists; missing saved libraries produce an actionable error. No original Aperture format or pixel reconstruction changes.
+- `make test`: 40 tests passed, zero failures. Five new backup tests cover exact catalogue/original round trips (metadata, collections, versions and history), corrupt/missing originals, tampered catalogue, existing/nested/legacy/symlink paths and empty libraries. Verified-open behavior is included. Tests use disposable synthetic libraries and never restore into user data.
+- `make build`: arm64 release, staged strict ad-hoc signature verification and refreshed app/ZIP passed. SwiftPM user-cache access warnings remain nonfatal environment limits.
+- Sole maintained variant checked: native Apple Silicon macOS. No web/PWA, Windows or separate mobile implementations exist. Intel, older macOS runtimes, physical devices and real Aperture catalogue migration remain untested/unavailable. Legacy vaults, automatic repair/merging, retouching and other inventory gaps remain.
+
+

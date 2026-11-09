@@ -17,6 +17,100 @@ final class LibraryTests: XCTestCase {
         XCTAssertNil(CropRules.aspectRatio(width: 2, height: .infinity))
         XCTAssertNil(CropRules.aspectRatio(width: .nan, height: 2))
     }
+    func testImportPairingAndNamingPreset() throws {
+        let raw = URL(fileURLWithPath: "/shoot/A.nef")
+        let jpeg = URL(fileURLWithPath: "/shoot/A.jpg")
+        let other = URL(fileURLWithPath: "/other/A.jpg")
+        var options = ImportOptions()
+        options.pairing = .raw
+        XCTAssertEqual(Set(options.files([raw, jpeg, other, raw])), Set([raw, other]))
+        options.pairing = .jpeg
+        XCTAssertEqual(Set(options.files([raw, jpeg, other])), Set([jpeg, other]))
+        options.pairing = .linked
+        XCTAssertEqual(options.files([raw, jpeg]).count, 2)
+        var photo = Photo(filename: "managed.jpg", originalName: "A.jpg", projectID: nil, width: 32, height: 24, camera: "", captureDate: "", sha256: "hash")
+        photo.caption = "embedded"
+        options.prefix = "Client/Set"; options.caption = "preset"; options.rating = 9
+        XCTAssertEqual(options.applying(to: photo).caption, "embedded")
+        options.applyMetadata = true
+        let imported = options.applying(to: photo)
+        XCTAssertEqual(imported.originalName, "Client-Set-A.jpg")
+        XCTAssertEqual(imported.filename, photo.filename)
+        XCTAssertEqual(imported.caption, "preset"); XCTAssertEqual(imported.rating, 5)
+        XCTAssertEqual(try JSONDecoder().decode(ImportOptions.self, from: JSONEncoder().encode(options)), options)
+    }
+    func testRecoveredImportDefaultAndStrictFormatFilters() throws {
+        var options = ImportOptions()
+        XCTAssertEqual(options.pairing, .linked)
+        let raw = URL(fileURLWithPath: "/shoot/A.NEF")
+        let jpeg = URL(fileURLWithPath: "/shoot/A.JPG")
+        let unpairedRAW = URL(fileURLWithPath: "/shoot/B.dng")
+        let unpairedJPEG = URL(fileURLWithPath: "/shoot/C.jpeg")
+        let png = URL(fileURLWithPath: "/shoot/D.png")
+        let files = [raw, jpeg, unpairedRAW, unpairedJPEG, png]
+        XCTAssertEqual(Set(options.files(files)), Set(files))
+        options.pairing = .onlyJPEG
+        XCTAssertEqual(Set(options.files(files)), Set([jpeg, unpairedJPEG]))
+        options.pairing = .onlyRAW
+        XCTAssertEqual(Set(options.files(files)), Set([raw, unpairedRAW]))
+        options.pairing = .linkedRAW
+        XCTAssertEqual(Set(options.files(files)), Set(files))
+        // Existing preferences and presets retain their old meaning after this update.
+        for mode in [PairingMode.separate, .linked, .raw, .jpeg] {
+            let encoded = try JSONEncoder().encode(mode.rawValue)
+            XCTAssertEqual(try JSONDecoder().decode(PairingMode.self, from: encoded), mode)
+        }
+    }
+    func testXMLAndXMPSidecarMetadata() throws {
+        let url = temporary.appendingPathComponent("source.xmp")
+        let xmp = """
+        <x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"><rdf:Description xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmp:Rating="4"><dc:description><rdf:Alt><rdf:li xml:lang="x-default">A &amp; B</rdf:li></rdf:Alt></dc:description><dc:subject><rdf:Bag><rdf:li>travel</rdf:li><rdf:li>night</rdf:li></rdf:Bag></dc:subject></rdf:Description></rdf:RDF></x:xmpmeta>
+        """
+        try xmp.write(to: url, atomically: true, encoding: .utf8)
+        let record = try XCTUnwrap(MetadataXML.read(url).first)
+        XCTAssertEqual(record.caption, "A & B"); XCTAssertEqual(record.keywords, "travel, night"); XCTAssertEqual(record.rating, 4)
+        try "<photos><photo filename=\"A.jpg\"><caption></caption><rating>-1</rating></photo></photos>".write(to: url, atomically: true, encoding: .utf8)
+        let xml = try XCTUnwrap(MetadataXML.read(url).first)
+        XCTAssertEqual(xml.filename, "A.jpg"); XCTAssertEqual(xml.caption, ""); XCTAssertEqual(xml.rating, -1)
+        try "<invalid>".write(to: url, atomically: true, encoding: .utf8)
+        XCTAssertThrowsError(try MetadataXML.read(url))
+    }
+    func testAlbumDataMetadataAndPersistentHistoryCompatibility() throws {
+        let url = temporary.appendingPathComponent("AlbumData.xml")
+        let plist: [String: Any] = ["Master Image List": ["1": ["ImagePath": "/old/A.jpg", "Comment": "Legacy", "Rating": 3]]]
+        try PropertyListSerialization.data(fromPropertyList: plist, format: .xml, options: 0).write(to: url)
+        let record = try XCTUnwrap(MetadataXML.read(url).first)
+        XCTAssertEqual(record.filename, "A.jpg"); XCTAssertEqual(record.caption, "Legacy")
+        let old = try JSONDecoder().decode(Library.self, from: Data(#"{"version":1,"photos":[],"projects":[],"albums":[]}"#.utf8))
+        XCTAssertNil(old.history)
+        let repo = try LibraryRepository(root: temporary.appendingPathComponent("history"))
+        var library = Library()
+        XCTAssertTrue(try repo.importPhoto(fixture(), projectID: nil, into: &library))
+        library.history = EditHistory()
+        for _ in 0..<110 { library.history?.record(library.photos[0]) }
+        library.photos[0].caption = "After edit"
+        try repo.save(library)
+        let reopened = try repo.load()
+        XCTAssertEqual(reopened.history?.undo.count, 100)
+        XCTAssertEqual(reopened.history?.undo.last?.caption, "")
+        XCTAssertEqual(reopened.photos[0].caption, "After edit")
+        library.history = nil; try repo.save(library); XCTAssertNil(try repo.load().history)
+    }
+    func testLensPreviewExportAndRGBProofing() throws {
+        let source = try fixture()
+        var settings = Adjustments(); settings.lensDistortion = 0.6
+        let image = try Renderer.render(source, adjustments: settings)
+        XCTAssertEqual(image.width, 32); XCTAssertEqual(image.height, 24)
+        let profile = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB)?.copyICCData()) as Data
+        let proof = try Renderer.proof(image, profile: profile)
+        XCTAssertEqual(proof.width, 32)
+        XCTAssertThrowsError(try Renderer.proof(image, profile: Data("bad".utf8)))
+        let old = try JSONDecoder().decode(Adjustments.self, from: Data("{}".utf8))
+        XCTAssertEqual(old.lensDistortion, 0)
+        XCTAssertEqual(try JSONDecoder().decode(Adjustments.self, from: JSONEncoder().encode(settings)).lensDistortion, 0.6)
+        XCTAssertEqual(settings.stamping(onto: old, groups: [.geometry]).lensDistortion, 0.6)
+        XCTAssertEqual(settings.stamping(onto: old, groups: [.tone]).lensDistortion, 0)
+    }
     var temporary: URL!
     override func setUpWithError() throws {
         temporary = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueTests-" + UUID().uuidString)

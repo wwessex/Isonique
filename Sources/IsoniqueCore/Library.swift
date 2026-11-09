@@ -87,8 +87,15 @@ public struct Adjustments: Codable, Equatable {
     public var quarterTurns: Int = 0
     public var straighten: Double = 0
     public var crop: PhotoCrop?
+    public var blackPoint: Double = 0
+    public var whitePoint: Double = 1
+    public var gamma: Double = 1
+    public var curveShadows: Double = 0.25
+    public var curveMidtones: Double = 0.5
+    public var curveHighlights: Double = 0.75
+    public var lensDistortion: Double = 0
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, straighten, crop }
+    enum CodingKeys: String, CodingKey { case exposure, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
@@ -101,11 +108,18 @@ public struct Adjustments: Codable, Equatable {
         quarterTurns = try values.decodeIfPresent(Int.self, forKey: .quarterTurns) ?? 0
         straighten = StraightenRules.clamp(try values.decodeIfPresent(Double.self, forKey: .straighten) ?? 0)
         crop = try values.decodeIfPresent(PhotoCrop.self, forKey: .crop)
+        blackPoint = try values.decodeIfPresent(Double.self, forKey: .blackPoint) ?? 0
+        whitePoint = try values.decodeIfPresent(Double.self, forKey: .whitePoint) ?? 1
+        gamma = try values.decodeIfPresent(Double.self, forKey: .gamma) ?? 1
+        curveShadows = try values.decodeIfPresent(Double.self, forKey: .curveShadows) ?? 0.25
+        curveMidtones = try values.decodeIfPresent(Double.self, forKey: .curveMidtones) ?? 0.5
+        curveHighlights = try values.decodeIfPresent(Double.self, forKey: .curveHighlights) ?? 0.75
+        lensDistortion = try values.decodeIfPresent(Double.self, forKey: .lensDistortion) ?? 0
     }
 }
 /// Independent editing groups; selective stamping preserves every unselected group.
 public enum AdjustmentGroup: String, CaseIterable, Identifiable {
-    case basic = "Exposure & color", whiteBalance = "White balance", tone = "Highlights & shadows", geometry = "Crop & rotation"
+    case basic = "Exposure & color", whiteBalance = "White balance", tone = "Highlights & shadows", geometry = "Crop, rotation & lens"
     public var id: String { rawValue }
 }
 public extension Adjustments {
@@ -113,8 +127,8 @@ public extension Adjustments {
         var result = target
         if groups.contains(.basic) { result.exposure = exposure; result.contrast = contrast; result.saturation = saturation }
         if groups.contains(.whiteBalance) { result.warmth = warmth; result.tint = tint }
-        if groups.contains(.tone) { result.shadows = shadows; result.highlights = highlights }
-        if groups.contains(.geometry) { result.quarterTurns = quarterTurns; result.straighten = straighten; result.crop = crop }
+        if groups.contains(.tone) { result.shadows = shadows; result.highlights = highlights; result.blackPoint = blackPoint; result.whitePoint = whitePoint; result.gamma = gamma; result.curveShadows = curveShadows; result.curveMidtones = curveMidtones; result.curveHighlights = curveHighlights }
+        if groups.contains(.geometry) { result.quarterTurns = quarterTurns; result.straighten = straighten; result.crop = crop; result.lensDistortion = lensDistortion }
         return result
     }
 }
@@ -135,10 +149,15 @@ public enum AdjustmentPreset: String, CaseIterable, Identifiable {
 public struct Collection: Codable, Identifiable, Equatable {
     public var id = UUID()
     public var name: String
+    public var rule: SmartAlbumRule?
     public init(name: String) { self.name = name }
 }
 public struct Photo: Codable, Identifiable, Equatable {
     public var id = UUID()
+    public var stackID: UUID?
+    public var versions: [PhotoVersion]?
+    public var pairID: UUID?
+    public var sourceName: String?
     public var filename: String
     public var originalName: String
     public var importedAt = Date()
@@ -160,6 +179,7 @@ public struct Photo: Codable, Identifiable, Equatable {
     }
 }
 public struct Library: Codable {
+    public var history: EditHistory?
     public var version = 1
     public var photos: [Photo] = []
     public var projects: [Collection] = []
@@ -334,6 +354,7 @@ public enum Renderer {
               let data = context.data else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
         context.draw(decoded, in: CGRect(x: 0, y: 0, width: decoded.width, height: decoded.height))
         let pixels = data.bindMemory(to: UInt8.self, capacity: decoded.width * decoded.height * 4)
+        let toneTable = (0...255).map { TonalTools.map(Double($0) / 255, adjustments: adjustments) }
         let multiplier = pow(2.0, adjustments.exposure)
         func expose(_ channel: Double) -> Double {
             let linear = channel <= 0.04045 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
@@ -354,7 +375,9 @@ public enum Renderer {
             }
         }
         guard let result = context.makeImage() else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
-        return try applyGeometry(applyTone(result, adjustments: adjustments), adjustments: adjustments)
+        let toned = try applyTone(result, adjustments: adjustments)
+        let levels = try TonalTools.applying(toned, table: toneTable)
+        return try applyGeometry(applyLens(levels, amount: adjustments.lensDistortion), adjustments: adjustments)
     }
     /// Shared independent sRGB tonal treatment for previews, exports and GPU-free hosts.
     /// Neutral settings bypass conversion; these are not Apple's proprietary RAW formulas.
