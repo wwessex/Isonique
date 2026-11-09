@@ -301,7 +301,11 @@ public extension LibraryRepository {
         try fm.copyItem(at: input, to: staging)
         try verifyOriginal(staging, photo: photo)
         try Task.checkCancellation()
-        // Install in one filesystem operation. A competing writer cannot replace an occupied path.
+        try publishStagedItem(staging, at: target)
+    }
+
+    internal static func publishStagedItem(_ staging: URL, at target: URL) throws {
+        // A competing writer cannot replace an occupied path.
         try staging.withUnsafeFileSystemRepresentation { stagedPath in
             try target.withUnsafeFileSystemRepresentation { targetPath in
                 guard let stagedPath, let targetPath else { throw LibraryError.unsafePath }

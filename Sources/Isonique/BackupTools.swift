@@ -65,6 +65,41 @@ extension Workspace {
         return name
     }
 
+    var selectedProjectForExport: Collection? {
+        library.projects.first { scope == "project:\($0.id)" }
+    }
+
+    func exportProjectPanel(_ project: Collection) {
+        guard repository != nil, !busy else { return }
+        let panel = NSSavePanel()
+        panel.title = "Export Project as Library"
+        panel.prompt = "Export Library"
+        panel.nameFieldStringValue = project.name.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
+        panel.message = "Choose a new folder for the active photos in \(project.name). The exported library contains copies of all originals, including referenced files."
+        guard panel.runModal() == .OK, let destination = panel.url else { return }
+        Task { await exportProject(project.id, to: destination) }
+    }
+
+    func exportProject(_ projectID: UUID, to destination: URL) async {
+        guard let repository, !busy else { return }
+        busy = true
+        status = "Copying and verifying project originals…"
+        let task = Task.detached(priority: .utility) {
+            try LibraryBackup.exportProject(projectID, from: repository, to: destination)
+        }
+        projectExportTask = task
+        defer { projectExportTask = nil; busy = false }
+        do {
+            let count = try await task.value
+            status = "Exported project library · \(count) photos · \(destination.path)"
+        } catch is CancellationError {
+            status = "Project export cancelled"
+        } catch {
+            self.error = error.localizedDescription
+            status = "Project export failed"
+        }
+    }
+
     func verifyLibrary() {
         guard let repository, !busy else { return }
         busy = true; status = "Checking catalogue and original hashes…"

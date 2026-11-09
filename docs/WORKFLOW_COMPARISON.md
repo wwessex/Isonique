@@ -34,7 +34,8 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 | Duplicate detection | Implemented but needs improvement | Exact SHA-256 on import. No library-wide visual similarity review or comparison tools. |
 | Photo Trash and Put Back | Fully implemented and tested | Sidebar, photo context menu, File command (⌘Delete), batch actions and edit history. Restores project, albums, stack, edits and original identity. Tested with restart, backup, and native controls. |
 | Version and container Trash, empty to Finder Trash | Missing | Trash is photo-only and retains original files on disk. |
-| Library export and merge | Missing | Existing backup and restore can make a separate copy. No reconciliation or project-level export. |
+| Export a project as an independent library | Fully implemented and tested | File and the project context menu export active project photos with their edits, versions and relevant albums and stacks. Both managed and referenced originals are copied and verified. Aperture also exported folders and albums and offered preview inclusion. [Aperture Help](https://aperture.skydocu.com/en/work-with-projects-and-the-library/work-with-library-files/merge-libraries/) |
+| Import and merge libraries | Missing | Library backup, restore and project export create independent libraries. Reconciliation and import as a separate project remain open. |
 | Vaults, backup, verification and restoration | Implemented but needs improvement | Independent verified snapshots and restore to a new folder. Copies managed originals and preserves external paths without copying their files, as with historical Aperture vaults. No incremental vault updates or scheduling. |
 | Library First Aid, permissions and catalogue repair | Partially implemented | Read-only verification of catalogue and original hashes. No repair or rebuild. |
 | Aperture/iPhoto interchange | Partially implemented | Read-only staged extraction of embedded originals plus some embedded metadata. No import of proprietary database relationships, referenced originals, historical adjustment recipes or vault format. |
@@ -101,7 +102,7 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 
 | Surface | Status | Audit |
 | --- | --- | --- |
-| File | Partially implemented | Import (⌘I), export (⇧⌘E), New Smart Album (⇧⌘L), metadata import, create/open/open recent/verify/backup/restore, relocate originals, single relink, batch reconnect and managed recovery, single and batch consolidation, photo Trash, legacy recovery and import options. Library merge, version deletion semantics and print remain open. |
+| File | Partially implemented | Import (⌘I), export (⇧⌘E), New Smart Album (⇧⌘L), metadata import, create/open/open recent/verify/backup/restore, relocate originals, single relink, batch reconnect and managed recovery, single and batch consolidation, photo Trash, project library export, legacy recovery and import options. Library merge, version deletion semantics and print remain open. |
 | Edit | Partially implemented | Undo/redo photo edit (⌘Z / ⇧⌘Z). Native text editing should retain text undo in focused inputs; application-wide override needs interaction review. |
 | View / Window | Partially implemented | SwiftUI window menu, sidebar/inspector, Advanced Search (⇧⌘F), grid/list/viewer controls and Escape to Browser. Dedicated Aperture layouts, HUDs, overlays and window controls are absent. |
 | Images / Photos, Metadata, Adjustments | Partially implemented | Photos, Metadata, Rating and Review menus, Inspector and edit strip expose flip, labels, flags, ratings, slideshow and auto-stack commands. Full menu parity is pending. |
