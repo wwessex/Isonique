@@ -235,3 +235,9 @@
 
 - Tests exercised both conflict preferences, matching changes made on both sides, destination-only and imported-only metadata, saved recipes, album changes, shared originals and fallback for a membership-only export. Cancellation and forced catalogue write failure were also exercised with a full edit baseline.
 - Native QA reviewed an exposure conflict with Prefer current values selected. The saved library retained the current exposure and keywords and applied the imported rating and flag. Incoming file hashes were unchanged.
+
+## Merge independent adjustments
+
+- Tests reopened a merged project under both conflict preferences. Current Exposure and imported Contrast survived together. Conflicting crop and rotation values came from the same library, as did Levels endpoints. The review named the affected groups.
+- The signed app reviewed a crop and rotation conflict and merged with Prefer current values. The Inspector showed Exposure 0.60 and Contrast 1.35. The catalogue retained the crop and orientation, and original file hashes matched in both libraries.
+- The optimized suite passed all 144 tests, including four camera RAW fixtures, on Apple M5 Pro, macOS 27.3 and Xcode 27.2. The branding check and signed arm64 build passed.

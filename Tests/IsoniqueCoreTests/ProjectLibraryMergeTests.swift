@@ -198,7 +198,7 @@ final class ProjectLibraryMergeTests: XCTestCase {
                 XCTAssertEqual(preview.legacyMatches, 0)
                 XCTAssertEqual(preview.conflicts.count, 1)
                 XCTAssertEqual(preview.conflicts.first?.photoName, fixture.edited.displayName)
-                XCTAssertEqual(preview.conflicts.first?.fields, ["Adjustments", "Caption"])
+                XCTAssertEqual(preview.conflicts.first?.fields, ["Exposure", "Caption"])
                 return true
             })
 
@@ -216,6 +216,42 @@ final class ProjectLibraryMergeTests: XCTestCase {
             let version = try XCTUnwrap(saved.photos.first { $0.id == fixture.version.id })
             XCTAssertEqual(version.filename, edited.filename)
             XCTAssertEqual(version.stackID, edited.stackID)
+        }
+    }
+
+    func testThreeWayMergeCombinesIndependentControlsAndKeepsDependentControlsTogether() async throws {
+        for preference in [ProjectMergePreference.current, .incoming] {
+            let fixture = try fixture(keepsExportMembership: true)
+            defer { try? FileManager.default.removeItem(at: fixture.root) }
+            let crop = PhotoCrop(x: 0.1, y: 0.1, width: 0.6, height: 0.7)
+            var current = try fixture.destination.load()
+            current.photos[0].adjustments.crop = crop
+            current.photos[0].adjustments.blackPoint = 0.8
+            try fixture.destination.save(current)
+            var incoming = try fixture.source.load()
+            incoming.photos[0].adjustments.exposure = 0
+            incoming.photos[0].adjustments.contrast = 1.35
+            incoming.photos[0].adjustments.quarterTurns = 1
+            incoming.photos[0].adjustments.whitePoint = 0.2
+            incoming.photos[0].caption = ""
+            try fixture.source.save(incoming)
+
+            let result = try await fixture.destination.mergeProjectLibrary(from: fixture.source.root, prefer: preference,
+                                                                             review: { preview in
+                XCTAssertEqual(preview.conflicts.count, 1)
+                XCTAssertEqual(preview.conflicts.first?.fields, [AdjustmentGroup.geometry.rawValue, "Levels"])
+                return true
+            })
+
+            let (_, saved) = try LibraryBackup.openVerified(fixture.destination.root)
+            let edited = try XCTUnwrap(saved.photos.first { $0.id == fixture.edited.id })
+            XCTAssertEqual(result.conflicts, 1)
+            XCTAssertEqual(edited.adjustments.exposure, 0.4)
+            XCTAssertEqual(edited.adjustments.contrast, 1.35)
+            XCTAssertEqual(edited.adjustments.crop, preference == .current ? crop : nil)
+            XCTAssertEqual(edited.adjustments.quarterTurns, preference == .current ? 0 : 1)
+            XCTAssertEqual(edited.adjustments.blackPoint, preference == .current ? 0.8 : 0)
+            XCTAssertEqual(edited.adjustments.whitePoint, preference == .current ? 1 : 0.2)
         }
     }
 
