@@ -106,8 +106,9 @@ public struct Adjustments: Codable, Equatable {
     public var curveMidtones: Double = 0.5
     public var curveHighlights: Double = 0.75
     public var lensDistortion: Double = 0
+    public var localBrushes: [LocalBrushStroke] = []
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights }
+    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, localBrushes }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
@@ -133,11 +134,13 @@ public struct Adjustments: Codable, Equatable {
         curveMidtones = try values.decodeIfPresent(Double.self, forKey: .curveMidtones) ?? 0.5
         curveHighlights = try values.decodeIfPresent(Double.self, forKey: .curveHighlights) ?? 0.75
         lensDistortion = try values.decodeIfPresent(Double.self, forKey: .lensDistortion) ?? 0
+        localBrushes = try values.decodeIfPresent([LocalBrushStroke].self, forKey: .localBrushes) ?? []
     }
 }
 /// Independent editing groups; selective stamping preserves every unselected group.
 public enum AdjustmentGroup: String, CaseIterable, Identifiable {
     case basic = "Exposure & color", whiteBalance = "White balance", tone = "Highlights & shadows", geometry = "Crop, rotation & lens"
+    case localBrush = "Local brush masks"
     public var id: String { rawValue }
 }
 public enum FlipAxis: String, CaseIterable, Identifiable {
@@ -177,6 +180,7 @@ public extension Adjustments {
             result.crop = crop; result.lensDistortion = lensDistortion
             result.flipHorizontal = flipHorizontal; result.flipVertical = flipVertical
         }
+        if groups.contains(.localBrush) { result.localBrushes = localBrushes }
         return result
     }
 }
@@ -241,7 +245,23 @@ public struct Library: Codable {
     public var albums: [Collection] = []
     public init() {}
 
+    private var hasBrushRecipes: Bool {
+        func hasBrush(_ photo: Photo) -> Bool {
+            !photo.adjustments.localBrushes.isEmpty ||
+                (photo.versions?.contains { !$0.adjustments.localBrushes.isEmpty } ?? false)
+        }
+        return photos.contains(where: hasBrush) ||
+            (history?.undo.contains { $0.photo.map(hasBrush) ?? false } ?? false) ||
+            (history?.redo.contains { $0.photo.map(hasBrush) ?? false } ?? false)
+    }
+
+    public mutating func upgradeForBrushRecipes() {
+        if version < 4, hasBrushRecipes { version = 4 }
+    }
+
     func validateSchema() throws {
+        if version == 4 { return }
+        guard !hasBrushRecipes else { throw LibraryError.unsupportedVersion }
         if version == 3 { return }
         guard (1...2).contains(version), stackBrowser == nil,
               !photos.contains(where: { $0.sharedOriginalID != nil || $0.versionName != nil }) else {
@@ -510,12 +530,20 @@ public enum Renderer {
     }
 
     static func renderOnCPU(_ url: URL, adjustments: Adjustments, maxDimension: CGFloat?) throws -> CGImage {
+        try renderWithGeometry(url, adjustments: adjustments, maxDimension: maxDimension).image
+    }
+
+    public static func renderWithGeometry(_ url: URL, adjustments: Adjustments,
+                                          maxDimension: CGFloat? = nil) throws -> (image: CGImage, geometry: PhotoGeometry) {
         try Task.checkCancellation()
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
         let width = properties[kCGImagePropertyPixelWidth as String] as? Int ?? 1
         let height = properties[kCGImagePropertyPixelHeight as String] as? Int ?? 1
         let size = maxDimension.map { min(Int($0), max(width, height)) } ?? max(width, height)
+        let orientation = properties[kCGImagePropertyOrientation as String] as? Int ?? 1
+        let (sourceWidth, sourceHeight) = (5...8).contains(orientation) ? (height, width) : (width, height)
+        let mask = try LocalExposureMask(strokes: adjustments.localBrushes, sourceWidth: sourceWidth, sourceHeight: sourceHeight)
         guard let decoded = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: size] as CFDictionary),
               let space = CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(data: nil, width: decoded.width, height: decoded.height, bitsPerComponent: 8, bytesPerRow: decoded.width * 4, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue),
@@ -523,11 +551,11 @@ public enum Renderer {
         context.draw(decoded, in: CGRect(x: 0, y: 0, width: decoded.width, height: decoded.height))
         let pixels = data.bindMemory(to: UInt8.self, capacity: decoded.width * decoded.height * 4)
         let toneTable = (0...255).map { TonalTools.map(Double($0) / 255, adjustments: adjustments) }
-        let multiplier = pow(2.0, adjustments.exposure)
+        let globalMultiplier = pow(2.0, adjustments.exposure)
         let brightness = adjustments.brightness.isFinite ? min(1, max(-1, adjustments.brightness)) : 0
         let vibrancy = adjustments.vibrancy.isFinite ? min(1, max(-1, adjustments.vibrancy)) : 0
         let sepia = adjustments.sepia.isFinite ? min(1, max(0, adjustments.sepia)) : 0
-        func expose(_ channel: Double) -> Double {
+        func expose(_ channel: Double, multiplier: Double) -> Double {
             let linear = channel <= 0.04045 ? channel / 12.92 : pow((channel + 0.055) / 1.055, 2.4)
             let exposed = max(0, linear * multiplier)
             return exposed <= 0.0031308 ? exposed * 12.92 : 1.055 * pow(exposed, 1 / 2.4) - 0.055
@@ -536,9 +564,12 @@ public enum Renderer {
             if offset.isMultiple(of: 65_536) { try Task.checkCancellation() }
             let alpha = Double(pixels[offset + 3]) / 255
             guard alpha > 0 else { continue }
-            let red = expose(Double(pixels[offset]) / (255 * alpha))
-            let green = expose(Double(pixels[offset + 1]) / (255 * alpha))
-            let blue = expose(Double(pixels[offset + 2]) / (255 * alpha))
+            let localEV = mask?.exposure(x: (offset / 4) % decoded.width, y: (offset / 4) / decoded.width,
+                                         imageWidth: decoded.width, imageHeight: decoded.height) ?? 0
+            let multiplier = localEV == 0 ? globalMultiplier : globalMultiplier * pow(2, localEV)
+            let red = expose(Double(pixels[offset]) / (255 * alpha), multiplier: multiplier)
+            let green = expose(Double(pixels[offset + 1]) / (255 * alpha), multiplier: multiplier)
+            let blue = expose(Double(pixels[offset + 2]) / (255 * alpha), multiplier: multiplier)
             let luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
             var lift = 0.0
             if brightness != 0 {
@@ -566,7 +597,9 @@ public enum Renderer {
         guard let result = context.makeImage() else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
         let toned = try applyTone(result, adjustments: adjustments)
         let levels = try TonalTools.applying(toned, table: toneTable)
-        return try applyGeometry(applyLens(levels, amount: adjustments.lensDistortion), adjustments: adjustments)
+        let geometry = PhotoGeometry(width: decoded.width, height: decoded.height, adjustments: adjustments)
+        let image = try applyGeometry(applyLens(levels, amount: geometry.lensAmount), geometry: geometry)
+        return (image, geometry)
     }
     /// Shared independent sRGB tonal treatment for previews, exports and GPU-free hosts.
     /// Neutral settings bypass conversion; these are not Apple's proprietary RAW formulas.
@@ -599,48 +632,41 @@ public enum Renderer {
     }
     /// Shared by preview and export, so geometry never depends on GPU availability.
     static func applyGeometry(_ source: CGImage, adjustments: Adjustments) throws -> CGImage {
+        try applyGeometry(source, geometry: PhotoGeometry(width: source.width, height: source.height, adjustments: adjustments))
+    }
+
+    private static func applyGeometry(_ source: CGImage, geometry: PhotoGeometry) throws -> CGImage {
         var image = source
-        let turns = ((adjustments.quarterTurns % 4) + 4) % 4
-        if turns != 0 {
-            let width = turns % 2 == 0 ? image.width : image.height
-            let height = turns % 2 == 0 ? image.height : image.width
-            let context = try geometryContext(width: width, height: height)
-            context.translateBy(x: CGFloat(width) / 2, y: CGFloat(height) / 2)
-            context.rotate(by: -CGFloat(turns) * .pi / 2)
-            context.draw(image, in: CGRect(x: -CGFloat(image.width) / 2, y: -CGFloat(image.height) / 2, width: CGFloat(image.width), height: CGFloat(image.height)))
+        if geometry.turns != 0 {
+            let size = geometry.rotatedSize
+            let context = try geometryContext(width: Int(size.width), height: Int(size.height))
+            context.translateBy(x: size.width / 2, y: size.height / 2)
+            context.rotate(by: -CGFloat(geometry.turns) * .pi / 2)
+            context.draw(image, in: CGRect(x: -CGFloat(image.width) / 2, y: -CGFloat(image.height) / 2,
+                                           width: CGFloat(image.width), height: CGFloat(image.height)))
             guard let rotated = context.makeImage() else { throw LibraryError.unsupportedImage("rotation") }
             image = rotated
         }
-        let degrees = StraightenRules.clamp(adjustments.straighten)
-        if degrees != 0 {
-            let angle = CGFloat(degrees) * .pi / 180
+        if geometry.angle != 0 {
+            let size = geometry.straightenedSize
             let w = CGFloat(image.width), h = CGFloat(image.height)
-            // Largest centered rectangle at the original aspect ratio with no blank corners.
-            let factor = min(w / (w * abs(cos(angle)) + h * abs(sin(angle))), h / (w * abs(sin(angle)) + h * abs(cos(angle))))
-            let width = max(1, Int(floor(w * factor))), height = max(1, Int(floor(h * factor)))
-            let context = try geometryContext(width: width, height: height)
-            context.translateBy(x: CGFloat(width) / 2, y: CGFloat(height) / 2)
-            context.rotate(by: -angle)
+            let context = try geometryContext(width: Int(size.width), height: Int(size.height))
+            context.translateBy(x: size.width / 2, y: size.height / 2)
+            context.rotate(by: -geometry.angle)
             context.draw(image, in: CGRect(x: -w / 2, y: -h / 2, width: w, height: h))
             guard let straightened = context.makeImage() else { throw LibraryError.unsupportedImage("straightening") }
             image = straightened
         }
-        if adjustments.flipHorizontal || adjustments.flipVertical {
+        if geometry.flipHorizontal || geometry.flipVertical {
             let width = CGFloat(image.width), height = CGFloat(image.height)
             let context = try geometryContext(width: image.width, height: image.height)
-            context.translateBy(x: adjustments.flipHorizontal ? width : 0, y: adjustments.flipVertical ? height : 0)
-            context.scaleBy(x: adjustments.flipHorizontal ? -1 : 1, y: adjustments.flipVertical ? -1 : 1)
+            context.translateBy(x: geometry.flipHorizontal ? width : 0, y: geometry.flipVertical ? height : 0)
+            context.scaleBy(x: geometry.flipHorizontal ? -1 : 1, y: geometry.flipVertical ? -1 : 1)
             context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
             guard let flipped = context.makeImage() else { throw LibraryError.unsupportedImage("flip") }
             image = flipped
         }
-        if let crop = adjustments.crop, [crop.x, crop.y, crop.width, crop.height].allSatisfy({ $0.isFinite }), crop.width > 0, crop.height > 0 {
-            let bounds = CGRect(x: 0, y: 0, width: image.width, height: image.height)
-            let requested = CGRect(x: crop.x * Double(image.width), y: crop.y * Double(image.height), width: crop.width * Double(image.width), height: crop.height * Double(image.height))
-            let aligned = CGRect(x: requested.minX.rounded(), y: requested.minY.rounded(), width: requested.width.rounded(), height: requested.height.rounded())
-            let rect = aligned.intersection(bounds)
-            if rect.width >= 1, rect.height >= 1, let cropped = image.cropping(to: rect) { image = cropped }
-        }
+        if let rect = geometry.cropRect, let cropped = image.cropping(to: rect) { image = cropped }
         return image
     }
     private static func geometryContext(width: Int, height: Int) throws -> CGContext {
@@ -654,15 +680,8 @@ public enum Renderer {
               let width = properties[kCGImagePropertyPixelWidth as String] as? Int,
               let height = properties[kCGImagePropertyPixelHeight as String] as? Int else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
         let orientation = properties[kCGImagePropertyOrientation as String] as? Int ?? 1
-        var w = Double(width), h = Double(height)
-        if (5...8).contains(orientation) { swap(&w, &h) }
-        if abs(adjustments.quarterTurns % 2) == 1 { swap(&w, &h) }
-        let angle = StraightenRules.clamp(adjustments.straighten) * .pi / 180
-        if angle != 0 {
-            let factor = min(w / (w * abs(cos(angle)) + h * abs(sin(angle))), h / (w * abs(sin(angle)) + h * abs(cos(angle))))
-            w = max(1, floor(w * factor)); h = max(1, floor(h * factor))
-        }
-        return CGSize(width: w, height: h)
+        let (w, h) = (5...8).contains(orientation) ? (height, width) : (width, height)
+        return PhotoGeometry(width: w, height: h, adjustments: adjustments).straightenedSize
     }
     public static func export(_ photo: Photo, repository: LibraryRepository, to destination: URL, options: ExportOptions = ExportOptions()) throws {
         let original = try repository.availableOriginalURL(photo)
