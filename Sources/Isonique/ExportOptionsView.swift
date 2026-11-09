@@ -11,8 +11,8 @@ struct ExportOptionsView: View {
     var presets: [ExportPreset] { (try? JSONDecoder().decode([ExportPreset].self, from: savedPresets)) ?? [] }
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Export Photo").font(.title2.bold())
-            Text(model.selected?.originalName ?? "").foregroundStyle(.secondary)
+            Text(model.batchMode ? "Export Selected Photos" : "Export Photo").font(.title2.bold())
+            Text(model.batchMode ? "\(model.batchPhotos.count) selected photos" : (model.selected?.originalName ?? "")).foregroundStyle(.secondary)
             HStack {
                 Menu("Load preset") {
                     ForEach(presets) { preset in Button(preset.name) { options = preset.options } }
