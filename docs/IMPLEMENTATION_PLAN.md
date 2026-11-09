@@ -45,8 +45,10 @@ The File menu reconnects missing referenced originals from a folder using known 
 
 Missing managed originals can be recovered from a backup or folder. Verified copies are installed independently at their existing paths without a catalogue write. Recovery can resume after interruption and skips completed installs. A forced quit can leave a hidden staging file.
 
+The folder picker can target selected Browser photos, the current project or the entire library for both original search commands. A scoped match still applies to every version of the original.
+
 ## Next implementation slice
 
-1. Add a scope choice for selected photos, the current project and the entire library to the folder search for missing originals.
+1. Consolidate selected referenced originals into managed storage in one batch. Verify copies, preserve the external files, update shared versions and test cancellation, catalogue write failure and safe retry.
 
 Other open core work includes Finder Trash handoff, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

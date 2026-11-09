@@ -53,11 +53,13 @@ public extension LibraryRepository {
     }
 
     /// Reconnect missing references by known filenames and verified fingerprints.
-    func reconnectMissingReferences(in folder: URL, library: inout Library) throws -> OriginalReconnectReport {
+    func reconnectMissingReferences(in folder: URL, library: inout Library,
+                                    originalIDs: Set<UUID>? = nil) throws -> OriginalReconnectReport {
         try Task.checkCancellation()
         let activeOriginalIDs = Set(library.activePhotos.map(\.originalID))
         let missing = try library.uniqueOriginals().filter { photo in
             photo.referencedPath != nil && activeOriginalIDs.contains(photo.originalID) &&
+                originalIDs?.contains(photo.originalID) != false &&
                 (try? availableOriginalURL(photo)) == nil
         }
         var report = OriginalReconnectReport()
@@ -91,11 +93,13 @@ public extension LibraryRepository {
     }
 
     /// Restore exact copies at the existing managed paths. Each file is installed independently.
-    func recoverMissingManagedOriginals(in folder: URL, library: Library) throws -> ManagedOriginalRecoveryReport {
+    func recoverMissingManagedOriginals(in folder: URL, library: Library,
+                                        originalIDs: Set<UUID>? = nil) throws -> ManagedOriginalRecoveryReport {
         try Task.checkCancellation()
         var report = ManagedOriginalRecoveryReport()
         var missing: [Photo] = []
         for photo in try library.uniqueOriginals() where photo.referencedPath == nil {
+            guard originalIDs?.contains(photo.originalID) != false else { continue }
             try Task.checkCancellation()
             guard (try? availableOriginalURL(photo)) == nil else { continue }
             if let target = try? managedOriginalURL(photo.filename), !FileManager.default.fileExists(atPath: target.path) {

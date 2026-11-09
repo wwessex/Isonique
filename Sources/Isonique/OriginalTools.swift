@@ -46,12 +46,25 @@ extension Workspace {
     }
 
     func canFindOriginals(_ operation: OriginalFolderOperation) -> Bool {
-        !busy && repository != nil && library.photos.contains { photo in
-            switch operation {
-            case .reconnect: return photo.trashedAt == nil && photo.referencedPath != nil
-            case .recoverManaged: return photo.referencedPath == nil
+        !busy && repository != nil && library.photos.contains(where: operation.includes)
+    }
+
+    func originalFolderScopes(for operation: OriginalFolderOperation) -> [OriginalFolderScope] {
+        var choices = [OriginalFolderScope(title: "Entire Library", originalIDs: nil)]
+        let selectionIDs = batchMode ? batchSelection : Set(selection.map { [$0] } ?? [])
+        if !selectionIDs.isEmpty {
+            let selectedOriginals = Set(photos.filter { selectionIDs.contains($0.id) && operation.includes($0) }.map(\.originalID))
+            if !selectedOriginals.isEmpty {
+                choices.append(OriginalFolderScope(title: "Selected Photos", originalIDs: selectedOriginals))
             }
         }
+        if let project = library.projects.first(where: { scope == "project:\($0.id)" }) {
+            let projectOriginals = Set(library.activePhotos.filter { $0.projectID == project.id && operation.includes($0) }.map(\.originalID))
+            if !projectOriginals.isEmpty {
+                choices.append(OriginalFolderScope(title: "Current Project", originalIDs: projectOriginals))
+            }
+        }
+        return choices
     }
 
     func findOriginalsPanel(_ operation: OriginalFolderOperation) {
@@ -62,11 +75,23 @@ extension Workspace {
         panel.prompt = "Search Folder"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
+        let choices = originalFolderScopes(for: operation)
+        let picker = NSPopUpButton()
+        picker.addItems(withTitles: choices.map(\.title))
+        picker.setAccessibilityLabel("Apply to")
+        if choices.count > 1 {
+            let accessory = NSStackView(views: [NSTextField(labelWithString: "Apply to"), picker])
+            accessory.spacing = 8
+            accessory.frame.size = accessory.fittingSize
+            panel.accessoryView = accessory
+            panel.isAccessoryViewDisclosed = true
+        }
         guard panel.runModal() == .OK, let folder = panel.url else { return }
-        Task { await findOriginals(in: folder, operation: operation) }
+        let originalIDs = choices[picker.indexOfSelectedItem].originalIDs
+        Task { await findOriginals(in: folder, operation: operation, originalIDs: originalIDs) }
     }
 
-    func findOriginals(in folder: URL, operation: OriginalFolderOperation) async {
+    func findOriginals(in folder: URL, operation: OriginalFolderOperation, originalIDs: Set<UUID>? = nil) async {
         guard canFindOriginals(operation), let repository else { return }
         let current = library
         busy = true
@@ -75,7 +100,7 @@ extension Workspace {
             switch operation {
             case .reconnect:
                 var draft = current
-                let report = try repository.reconnectMissingReferences(in: folder, library: &draft)
+                let report = try repository.reconnectMissingReferences(in: folder, library: &draft, originalIDs: originalIDs)
                 let summary = report.reconnected.isEmpty && report.unmatched.isEmpty && report.ambiguous.isEmpty
                     ? "No missing referenced originals"
                     : "\(report.reconnected.count) reconnected · \(report.unmatched.count) unmatched · \(report.ambiguous.count) ambiguous"
@@ -83,7 +108,7 @@ extension Workspace {
                     title: operation.title, summary: summary, unmatched: report.unmatched, ambiguous: report.ambiguous,
                     scanErrors: report.scanErrors))
             case .recoverManaged:
-                let report = try repository.recoverMissingManagedOriginals(in: folder, library: current)
+                let report = try repository.recoverMissingManagedOriginals(in: folder, library: current, originalIDs: originalIDs)
                 let summary = report.restored.isEmpty && report.unmatched.isEmpty && report.ambiguous.isEmpty &&
                     report.occupied.isEmpty && report.failed.isEmpty && !report.cancelled
                     ? "No missing managed originals"
@@ -146,6 +171,13 @@ extension Workspace {
 enum OriginalFolderOperation: Sendable {
     case reconnect, recoverManaged
 
+    func includes(_ photo: Photo) -> Bool {
+        switch self {
+        case .reconnect: return photo.trashedAt == nil && photo.referencedPath != nil
+        case .recoverManaged: return photo.referencedPath == nil
+        }
+    }
+
     var title: String {
         switch self {
         case .reconnect: return "Reconnect Referenced Originals"
@@ -156,11 +188,16 @@ enum OriginalFolderOperation: Sendable {
     var prompt: String {
         switch self {
         case .reconnect:
-            return "Choose a folder to search for missing referenced originals in this library. Isonique checks known filenames and verifies each match against the original fingerprint."
+            return "Choose a folder to search for missing referenced originals. Isonique checks known filenames and verifies each match against the original fingerprint."
         case .recoverManaged:
             return "Choose a backup or folder containing the missing originals. Isonique checks known filenames and copies verified matches into the library."
         }
     }
+}
+
+struct OriginalFolderScope {
+    let title: String
+    let originalIDs: Set<UUID>?
 }
 
 struct OriginalFolderResult: Sendable {

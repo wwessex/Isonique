@@ -177,3 +177,9 @@
 
 - Repository and workspace tests covered camera filenames and backup storage filenames, shared versions and Trash, wrong bytes, multiple matches, an occupied directory, existing regular files, cancellation, competing installs and retry after a simulated interrupted stage. Reopening preserved edits and recovered files. The operation left catalogue and source bytes intact.
 - On the signed arm64 app, File → Recover Missing Managed Originals restored two files and made their shared version available. The result reported a duplicate match and an occupied destination. All five source hashes and the recovered hashes were checked on disk.
+
+## Scoped folder searches
+
+- Workspace tests covered selection with a shared version, an offscreen batch selection, project membership, and saved paths for originals outside the scope. Managed recovery tests confirmed that only requested files were installed.
+- The signed app exposed Entire Library, Selected Photos and Current Project in the native folder chooser. Current Project reconnected two originals, including a shared version in another project. The other project's unrelated original remained offline. The saved catalogue confirmed the same paths.
+- The managed recovery suite executed 115 tests with the four camera RAW fixtures and zero failures or skips. The scoped release passed strict signature verification.
