@@ -1,0 +1,66 @@
+import SwiftUI
+import IsoniqueCore
+
+extension Workspace {
+    func setChannelLevels(_ levels: LevelValues, for channel: LevelsChannel, photoID: UUID) {
+        guard !busy, !batchMode, !isViewingTrash, let photo = selected, photo.id == photoID else { return }
+        var adjusted = photo.adjustments
+        adjusted.setLevels(levels, for: channel)
+        guard adjusted != photo.adjustments else { return }
+        compareOriginal = false
+        edit { $0.adjustments = adjusted }
+    }
+}
+
+struct ChannelLevelsEditor: View {
+    @EnvironmentObject private var model: Workspace
+    let photo: Photo
+    @State private var channel: LevelsChannel = .red
+    @State private var draft: LevelValues?
+
+    private var saved: LevelValues { photo.adjustments.levels(for: channel) }
+    private var levels: LevelValues { draft ?? saved }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Picker("Levels channel", selection: $channel) {
+                ForEach(LevelsChannel.allCases) { Text($0.rawValue).tag($0) }
+            }.pickerStyle(.segmented)
+            slider("Channel black point", \.blackPoint, in: 0...max(0, levels.whitePoint - 0.01))
+            slider("Channel white point", \.whitePoint, in: min(1, levels.blackPoint + 0.01)...1)
+            slider("Channel gamma", \.gamma, in: 0.1...4)
+            Button("Reset Channel Levels") { commit(LevelValues()) }
+                .disabled(saved == LevelValues())
+        }.onChange(of: channel) { _, _ in draft = nil }
+    }
+
+    private func slider(_ title: String, _ path: WritableKeyPath<LevelValues, Double>,
+                        in range: ClosedRange<Double>) -> some View {
+        let canMove = range.lowerBound < range.upperBound
+        let value = Binding {
+            levels[keyPath: path]
+        } set: { updated in
+            var values = levels
+            values[keyPath: path] = updated
+            if draft != nil { draft = values } else { commit(values) }
+        }
+        return VStack(alignment: .leading, spacing: 3) {
+            HStack {
+                Text(title)
+                Spacer()
+                Text(value.wrappedValue, format: .number.precision(.fractionLength(2))).monospacedDigit()
+            }.font(.caption).accessibilityHidden(true)
+            Slider(value: value, in: canMove ? range : 0...1, step: 0.01) { Text(title) } onEditingChanged: { editing in
+                if editing {
+                    draft = saved
+                } else if let draft {
+                    self.draft = nil
+                    commit(draft)
+                }
+            }.disabled(!canMove).labelsHidden()
+                .accessibilityValue(Text(value.wrappedValue, format: .number.precision(.fractionLength(2))))
+        }
+    }
+
+    private func commit(_ values: LevelValues) { model.setChannelLevels(values, for: channel, photoID: photo.id) }
+}

@@ -102,3 +102,9 @@
 
 - All 83 XCTest cases and the signed arm64 build passed on the native Apple Silicon macOS app. Synthetic fixtures verified bin counts, alpha handling, and that a red curve moves the expected red bin while leaving green and blue unchanged.
 - Native QA confirmed all five choices in the Inspector and switched between luminance, combined RGB and blue. Switching modes left edit history empty. All four distributions are counted from the same edited 384-pixel preview, so toggling the presentation does not decode the photo again.
+
+## Independent RGB Levels
+
+- All 85 XCTest cases passed on the native Apple Silicon macOS app. The arm64 release archive passed strict signature verification. Tests covered black and white clipping, gamma remapping, channel isolation, the order of Levels and curves, recipe reset, persistent Undo/Redo and neutral combined controls.
+- A combined Levels and curves recipe survived catalogue reopening in format 6. Its full-size PNG export matched the shared preview pixel for pixel. The input and managed original retained their hashes. Formats 1–5 remain readable.
+- Native QA opened Channel Levels, set Red black point to 0.20, switched to a neutral Blue channel, then set Blue gamma to 1.50. The catalogue saved both independently in format 6, and both test originals retained their hashes. Auto Levels, quarter-tones and adjustment-input histograms are tracked in the next checkpoint.

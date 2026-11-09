@@ -444,6 +444,39 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(reopened.selected?.adjustments.curve(for: .blue), curve)
     }
 
+    @MainActor
+    func testChannelLevelsResetUndoAndPersistSeparatelyFromCombinedLevels() throws {
+        let root = try temporaryLibrary()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let suite = "IsoniqueLevelTests.\(UUID().uuidString)"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { preferences.removePersistentDomain(forName: suite) }
+        preferences.set(true, forKey: "history.persist")
+        let workspace = Workspace(libraryRoot: root, preferences: preferences)
+        var photo = Photo(filename: "levels.png", originalName: "levels.png", projectID: nil,
+                          width: 8, height: 8, camera: "", captureDate: "", sha256: "fixture")
+        photo.adjustments.blackPoint = 0.15
+        var draft = workspace.library
+        draft.photos = [photo]
+        XCTAssertTrue(workspace.commit(draft))
+        workspace.selection = photo.id
+        var levels = LevelValues()
+        levels.gamma = 1.5
+        workspace.setChannelLevels(levels, for: .green, photoID: photo.id)
+        XCTAssertEqual(workspace.library.version, 6)
+        XCTAssertEqual(workspace.selected?.adjustments.levels(for: .green), levels)
+        XCTAssertEqual(workspace.selected?.adjustments.levels(for: .blue), LevelValues())
+        XCTAssertEqual(workspace.selected?.adjustments.blackPoint, 0.15)
+        workspace.setChannelLevels(LevelValues(), for: .green, photoID: photo.id)
+        XCTAssertNil(workspace.selected?.adjustments.channelLevels)
+        let reopened = Workspace(libraryRoot: root, preferences: preferences)
+        reopened.undoEdit()
+        XCTAssertEqual(reopened.selected?.adjustments.levels(for: .green), levels)
+        reopened.redoEdit()
+        XCTAssertNil(reopened.selected?.adjustments.channelLevels)
+        XCTAssertEqual(reopened.selected?.adjustments.blackPoint, 0.15)
+    }
+
     private func temporaryLibrary() throws -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueUI-\(UUID().uuidString)")
         return try LibraryRepository.createEmpty(at: root).root
