@@ -42,12 +42,14 @@ final class WholeLibraryMergeTests: XCTestCase {
         source.photos[0].albumIDs.removeAll()
         try fixture.source.save(source)
 
-        let preview = try fixture.destination.previewLibraryMerge(from: fixture.source.root)
+        let preview = try fixture.destination.previewLibraryMerge(from: fixture.source.root, photoPolicy: .preferIncoming)
 
         XCTAssertEqual(preview.reusableOriginals, 0)
         XCTAssertEqual(preview.conflicts.count, 2)
         XCTAssertTrue(preview.conflicts.contains { $0.hasPrefix("Album identity —") })
         XCTAssertTrue(preview.conflicts.contains { $0.hasPrefix("Original fingerprint —") })
+        XCTAssertTrue(preview.photoDifferences.isEmpty)
+        XCTAssertEqual(preview.photosToUpdate, 0)
     }
 
     func testPreflightRejectsTheCurrentLibraryEvenThroughASymlink() throws {
@@ -113,6 +115,140 @@ final class WholeLibraryMergeTests: XCTestCase {
         })
         XCTAssertFalse(retry.preview.hasAdditions)
         XCTAssertEqual(try snapshot(repository), savedBeforeRetry)
+    }
+
+    func testOptInReviewsMatchingFieldsAndAppliesOnlyTheChosenPolicy() async throws {
+        let fixture = try fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        var current = try fixture.destination.load()
+        var localTrash = fixture.sharedPhoto
+        localTrash.id = UUID()
+        localTrash.sharedOriginalID = fixture.sharedPhoto.id
+        localTrash.trashedAt = Date()
+        var incomingTrash = localTrash
+        incomingTrash.id = UUID()
+        incomingTrash.trashedAt = nil
+        current.photos += [localTrash, incomingTrash]
+        current.version = 3
+        try fixture.destination.save(current)
+
+        var source = try fixture.source.load()
+        var edited = try XCTUnwrap(source.photos.first { $0.id == fixture.sharedPhoto.id })
+        edited.adjustments.exposure = 0.85
+        edited.adjustments.crop = PhotoCrop(x: 0.1, y: 0.1, width: 0.7, height: 0.7)
+        edited.rating = 5
+        edited.flagged = true
+        edited.colorLabel = .blue
+        edited.keywords = "delivery, landscape"
+        edited.captureDate = "2026:06:11 12:00:00"
+        edited.versions = [PhotoVersion(name: "Delivery recipe", adjustments: edited.adjustments)]
+        edited.albumIDs = []
+        edited.projectID = nil
+        edited.stackID = UUID()
+        edited.pairID = UUID()
+        var activeOnSource = localTrash
+        activeOnSource.trashedAt = nil
+        activeOnSource.caption = "Keep in destination Trash"
+        var trashOnSource = incomingTrash
+        trashOnSource.trashedAt = Date()
+        trashOnSource.caption = "Keep active in the destination"
+        source.photos = [edited, activeOnSource, trashOnSource]
+        source.projects = [current.projects[0]]
+        source.albums = current.albums
+        source.stackBrowser = nil
+        try fixture.source.save(source)
+
+        let destinationBefore = try snapshot(fixture.destination)
+        let sourceBefore = try snapshot(fixture.source)
+        let defaultPreview = try fixture.destination.previewLibraryMerge(from: fixture.source.root)
+        XCTAssertEqual(defaultPreview.photoPolicy, .addOnly)
+        XCTAssertTrue(defaultPreview.photoDifferences.isEmpty)
+        XCTAssertFalse(defaultPreview.hasChanges)
+
+        let fields = ["Exposure", AdjustmentGroup.geometry.rawValue, "Saved recipes", "Rating", "Flag",
+                      "Color label", "Caption", "Keywords", "Capture date"]
+        let kept = try await fixture.destination.mergeLibrary(from: fixture.source.root, photoPolicy: .preferCurrent, review: {
+            XCTAssertEqual($0.photoDifferences.map(\.fields), [fields])
+            XCTAssertEqual($0.photoDifferences.first?.projectName, "Shared Project")
+            XCTAssertEqual($0.photoDifferences.first?.photoName, "Shared.png")
+            XCTAssertEqual($0.photosToUpdate, 0)
+            XCTAssertFalse($0.hasChanges)
+            return true
+        })
+        XCTAssertEqual(kept.library.photos, current.photos)
+        XCTAssertEqual(try snapshot(fixture.destination), destinationBefore)
+
+        do {
+            _ = try await fixture.destination.mergeLibrary(from: fixture.source.root, photoPolicy: .preferIncoming, review: {
+                XCTAssertEqual($0.photoDifferences.map(\.fields), [fields])
+                XCTAssertEqual($0.photosToUpdate, 1)
+                XCTAssertFalse($0.hasAdditions)
+                XCTAssertTrue($0.hasChanges)
+                return false
+            })
+            XCTFail("Expected declined matching-photo updates to cancel")
+        } catch is CancellationError {}
+        XCTAssertEqual(try snapshot(fixture.destination), destinationBefore)
+
+        let applied = try await fixture.destination.mergeLibrary(from: fixture.source.root, photoPolicy: .preferIncoming, review: { _ in true })
+        let (repository, saved) = try LibraryBackup.openVerified(fixture.destination.root)
+        var expected = current.photos
+        expected[0].adjustments = edited.adjustments
+        expected[0].versions = edited.versions
+        expected[0].rating = edited.rating
+        expected[0].flagged = edited.flagged
+        expected[0].colorLabel = edited.colorLabel
+        expected[0].caption = edited.caption
+        expected[0].keywords = edited.keywords
+        expected[0].captureDate = edited.captureDate
+        XCTAssertEqual(applied.preview.photosToUpdate, 1)
+        XCTAssertEqual(applied.preview.originalsToCopy, 0)
+        XCTAssertEqual(saved.photos, expected)
+        XCTAssertEqual(try LibraryBackup.verify(repository), 2)
+        XCTAssertEqual(try snapshot(repository).originals, destinationBefore.originals)
+        XCTAssertEqual(try snapshot(fixture.source), sourceBefore)
+    }
+
+    func testMatchingPhotoUpdatesRollBackWithFailedAdditionsAndRequireVerifiedOriginal() async throws {
+        let fixture = try fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let before = try snapshot(fixture.destination)
+        let externalBytes = try Data(contentsOf: fixture.externalOriginal)
+        try Data([42]).write(to: fixture.externalOriginal)
+        do {
+            _ = try await fixture.destination.mergeLibrary(from: fixture.source.root, photoPolicy: .preferIncoming, review: {
+                XCTAssertEqual($0.photosToUpdate, 1)
+                XCTAssertEqual($0.photosToAdd, 4)
+                return true
+            })
+            XCTFail("Expected corrupt addition to block the entire merge")
+        } catch LibraryError.integrity(let name) {
+            XCTAssertEqual(name, fixture.unassigned.originalName)
+        }
+        XCTAssertEqual(try snapshot(fixture.destination), before)
+        try externalBytes.write(to: fixture.externalOriginal)
+
+        var incoming = try fixture.source.load()
+        incoming.photos = incoming.photos.filter { $0.id == fixture.sharedPhoto.id }
+        incoming.stackBrowser = nil
+        let current = try fixture.destination.load()
+        incoming.projects = [current.projects[0]]
+        incoming.albums = current.albums
+        try fixture.source.save(incoming)
+        let original = try fixture.destination.availableOriginalURL(fixture.sharedPhoto)
+        try Data([41]).write(to: original)
+        let corrupt = try snapshot(fixture.destination)
+        do {
+            _ = try await fixture.destination.mergeLibrary(from: fixture.source.root, photoPolicy: .preferIncoming, review: {
+                XCTAssertEqual($0.photosToUpdate, 1)
+                XCTAssertFalse($0.hasAdditions)
+                return true
+            })
+            XCTFail("Expected edit-only merge to verify its original")
+        } catch LibraryError.integrity(let name) {
+            XCTAssertEqual(name, fixture.sharedPhoto.originalName)
+        }
+        XCTAssertEqual(try snapshot(fixture.destination), corrupt)
     }
 
     func testDecliningAndCancellingThenFailedSaveLeaveNoAdditions() async throws {

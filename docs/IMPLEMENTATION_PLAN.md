@@ -73,8 +73,10 @@ Project exports record eligible album definitions. Merge compares names independ
 
 File → Merge Libraries compares two full catalogues without opening the source or reading original files during review. It shows additions per project, versions that can reuse originals and identity conflicts. On approval it verifies reused destination originals, copies new managed and referenced originals into managed storage, and publishes the additions with one catalogue write. It retains existing records, preserves complete new stacks and pairs, and excludes source Trash.
 
+The default is Add new items only. The two review options list differing adjustment and metadata fields on active photos with matching photo IDs, original IDs and fingerprints. Whole-library review compares the two current catalogues without an export baseline. It can keep current values or apply imported values to the listed fields in the same transaction as additions. It verifies the affected destination originals and preserves photo identities, storage and memberships.
+
 ## Next implementation slice
 
-1. Add an opt-in policy for reconciling edits and metadata on matching photos across whole libraries. Preview changed fields before any writes, keep the current additive policy as the default, and keep deletion propagation separate.
+1. Add an opt-in whole-library Trash review for explicit source Trash records with matching photo and original identities. Preserve the default merge policy and retain destination-only photos.
 
 Other open core work includes Finder Trash handoff for Library Trash, relocation naming and subfolders, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

@@ -266,3 +266,10 @@
 - Declining the review, cancelling during staging, forcing a catalogue save failure, and modifying the source catalogue during staging left the destination catalogue and originals unchanged. Corrupt referenced originals and stack or edit-history identity conflicts blocked publication.
 - The signed app previewed additions across two source projects, then kept the destination unchanged when the review was cancelled. Approval added one project, one album, one photo and one version. The existing photo retained its caption, the new version reused its original, and original hashes matched both catalogues. A separate review named an incompatible original fingerprint and offered only Done.
 - The optimized suite passed all 156 tests without skips, including four camera RAW fixtures. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
+
+## Whole-library matching-photo edits and metadata
+
+- Repository tests verified the add-only default, both review preferences, an edit-only merge, cancellation before publication, and preservation of photo identities, album and project membership, and source and destination Trash state. A reopened catalogue contained the selected exposure, crop, saved recipe, rating, flag, color label, caption, keywords and capture date.
+- A corrupt source original blocked a combined merge of additions and edits. A corrupt destination original also blocked an edit-only merge. Both tests checked that the catalogue and original-file inventory stayed as they were before the operation.
+- The signed app listed Exposure, Rating, Caption and Keywords for one matching photo. Keep Current retained exposure 0.40. Use Imported changed it to 1.15 and saved the listed metadata with zero copies. Both original-file hashes and the source catalogue hash matched.
+- The optimized suite passed all 158 tests without skips, including four camera RAW fixtures. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
