@@ -61,6 +61,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     }
     @Published var history = EditHistory()
     let viewerRenderCache = ViewerRenderCache()
+    let thumbnailCache = ThumbnailCache()
     let preferences: UserDefaults
     var keepHistory: Bool { preferences.bool(forKey: "history.persist") }
     var canUndo: Bool { !history.undo.isEmpty }
@@ -863,7 +864,11 @@ struct ContentView: View {
             } label: {
                 VStack(alignment: .leading, spacing: 6) {
                     Group {
-                        if let url { Thumbnail(url: url, adjustments: photo.adjustments, maximum: compact ? 220 : 360) }
+                        if let url {
+                            Thumbnail(request: .init(photoID: photo.id, url: url, adjustments: photo.adjustments,
+                                                     maximum: compact ? 220 : 360, revision: model.originalStatusRevision),
+                                      cache: model.thumbnailCache)
+                        }
                         else { Label("Original unavailable", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.secondary) }
                     }.frame(height: compact ? 76 : 140).frame(maxWidth: .infinity).background(Color.black.opacity(0.3)).clipped()
                     HStack {
@@ -944,36 +949,6 @@ struct EditBar: View {
     }
     func tool(_ title: String, icon: String, mode: EditTool) -> some View {
         Button { model.chooseTool(mode) } label: { Label(title, systemImage: icon).foregroundStyle(model.tool == mode ? Color.accentColor : .primary) }.help(title)
-    }
-}
-struct Thumbnail: View {
-    let url: URL
-    let adjustments: Adjustments
-    let maximum: Int
-    @State private var image: NSImage?
-
-    private struct Request: Equatable {
-        let url: URL
-        let adjustments: Adjustments
-        let maximum: Int
-    }
-
-    var body: some View {
-        let request = Request(url: url, adjustments: adjustments, maximum: maximum)
-        Group {
-            if let image { Image(nsImage: image).resizable().scaledToFit() }
-            else { Image(systemName: "photo").foregroundStyle(.secondary) }
-        }.task(id: request) {
-            let render = Task.detached(priority: .utility) {
-                try? Renderer.thumbnail(request.url, adjustments: request.adjustments, maxDimension: request.maximum)
-            }
-            let thumbnail = await withTaskCancellationHandler {
-                await render.value
-            } onCancel: { render.cancel() }
-            if !Task.isCancelled {
-                image = thumbnail.map { NSImage(cgImage: $0, size: .zero) }
-            }
-        }
     }
 }
 struct PhotoViewer: View {

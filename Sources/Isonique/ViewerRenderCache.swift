@@ -9,31 +9,9 @@ actor ViewerRenderCache {
         let geometry: PhotoGeometry
     }
 
-    private struct FileStamp: Equatable {
-        let volume: UInt64
-        let inode: UInt64
-        let size: UInt64
-        let modified: Date
-        let created: Date
-
-        init?(_ url: URL) {
-            guard let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
-                  let volume = attrs[.systemNumber] as? NSNumber,
-                  let inode = attrs[.systemFileNumber] as? NSNumber,
-                  let size = attrs[.size] as? NSNumber,
-                  let modified = attrs[.modificationDate] as? Date,
-                  let created = attrs[.creationDate] as? Date else { return nil }
-            self.volume = volume.uint64Value
-            self.inode = inode.uint64Value
-            self.size = size.uint64Value
-            self.modified = modified
-            self.created = created
-        }
-    }
-
     private struct Key: Equatable {
         let url: URL
-        let stamp: FileStamp
+        let stamp: OriginalFileStamp
         let adjustments: Adjustments
         let maximum: CGFloat?
         let revision: Int
@@ -56,7 +34,7 @@ actor ViewerRenderCache {
 
     func frame(url: URL, adjustments: Adjustments, maximum: CGFloat?, revision: Int) async throws -> Frame {
         try Task.checkCancellation()
-        let key = FileStamp(url).map {
+        let key = OriginalFileStamp(url).map {
             Key(url: url, stamp: $0, adjustments: adjustments, maximum: maximum, revision: revision)
         }
         if let key, let index = entries.firstIndex(where: { $0.key == key }) {
@@ -73,7 +51,7 @@ actor ViewerRenderCache {
         } onCancel: { render.cancel() }
         try Task.checkCancellation()
         let frame = try result.get()
-        if let key, FileStamp(url) == key.stamp {
+        if let key, OriginalFileStamp(url) == key.stamp {
             insert(frame, for: key)
         }
         return frame
