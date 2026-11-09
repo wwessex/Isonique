@@ -172,3 +172,8 @@
 - Four new XCTest cases covered nested matches, known names, matching and mismatching fingerprints, duplicate matches, symlink exclusion, shared versions including Trash, reopening, filter refresh, cancellation and a failed catalogue write. Originals and non-destructive edits were preserved.
 - Native QA on the signed build reconnected two originals and their shared version through the File menu and folder chooser. The report showed one unmatched original with different bytes and one ambiguous original with two matching copies. The Browser updated its offline badges, the saved catalogue contained the new paths, and all five candidate-file hashes were unchanged.
 - The isolated optimized release executed 110 XCTest cases with zero failures or skips, including four camera RAW fixtures. The arm64 app and release archive passed strict signature verification on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
+
+## Folder-based recovery for managed originals
+
+- Repository and workspace tests covered camera filenames and backup storage filenames, shared versions and Trash, wrong bytes, multiple matches, an occupied directory, existing regular files, cancellation, competing installs and retry after a simulated interrupted stage. Reopening preserved edits and recovered files. The operation left catalogue and source bytes intact.
+- On the signed arm64 app, File → Recover Missing Managed Originals restored two files and made their shared version available. The result reported a duplicate match and an occupied destination. All five source hashes and the recovered hashes were checked on disk.
