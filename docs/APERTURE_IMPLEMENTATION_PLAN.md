@@ -27,9 +27,11 @@ Channel Levels provides independent black point, white point and gamma for each 
 
 Levels and Curves have input histograms sampled at the corresponding renderer stages. The Inspector uses one cancellable sample for all open adjustment panels. The channel luminance histogram matches the curve axis.
 
+Combined and per-channel Levels have dark and light quarter controls. Format 7 protects the new recipes. Auto Levels uses the corresponding input histogram and adjustable percentiles for combined and individual RGB endpoints.
+
 ## Next implementation slice
 
-1. Extend Levels with quarter-tone controls and percentile-based automatic black/white points. Verify that existing combined and channel recipes still render identically when the new controls are neutral.
-2. Qualify higher-resolution tone workflows with real RAW samples and profile full-resolution render and cache performance.
+1. Qualify higher-resolution tone workflows with real RAW samples and profile full-resolution render and cache performance.
+2. Add Auto Curves and image-sampled curve points using the staged histograms and Viewer Loupe.
 
 Other open core work includes Finder Trash handoff, batch relinking, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
