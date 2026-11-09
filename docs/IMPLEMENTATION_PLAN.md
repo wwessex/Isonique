@@ -63,8 +63,10 @@ File → Merge Project Library reconciles a self-contained export with its match
 
 New exports record the project photo IDs and original fingerprints at export time. Merge can use that record to identify previously exported photos that were removed. Destination-only additions stay in place, and older exports apply only explicit Trash changes. The review shows proposed additions, updates, copies and Trash moves before staging.
 
+New exports record the starting editable values for each photo. Merge combines changes made on only one side and uses the conflict preference when both sides changed a field differently. The review identifies conflicting fields and matching photos without an edit baseline. Membership-only exports retain the previous merge behavior.
+
 ## Next implementation slice
 
-1. Extend the project export baseline to track edits and metadata so merge can distinguish one-sided edits from conflicts. Keep compatibility with exports that have only membership provenance. Exercise conflicts, destination-only edits, imported-only edits, cancellation and rollback.
+1. Resolve independent adjustment controls separately while keeping crop geometry and other dependent values together.
 
 Other open core work includes Finder Trash handoff for Library Trash, relocation naming and subfolders, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

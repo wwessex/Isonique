@@ -160,10 +160,10 @@ extension Workspace {
         panel.canChooseFiles = false
         panel.canChooseDirectories = true
         let preference = NSPopUpButton()
-        preference.addItems(withTitles: ["Keep current edits and memberships", "Use imported edits and memberships"])
-        preference.setAccessibilityLabel("Matching photos")
+        preference.addItems(withTitles: ["Prefer current values", "Prefer imported values"])
+        preference.setAccessibilityLabel("Conflict preference")
         let applyTrash = NSButton(checkboxWithTitle: "Apply export deletions to Library Trash", target: nil, action: nil)
-        let choice = NSStackView(views: [NSTextField(labelWithString: "Matching photos"), preference])
+        let choice = NSStackView(views: [NSTextField(labelWithString: "Conflict preference"), preference])
         choice.spacing = 8
         let accessory = NSStackView(views: [choice, applyTrash])
         accessory.orientation = .vertical
@@ -184,7 +184,7 @@ extension Workspace {
         status = "Checking project library for merge…"
         let task = Task.detached(priority: .utility) {
             try await repository.mergeProjectLibrary(from: source, prefer: preference, applyTrash: applyTrash, review: { preview in
-                await self.reviewProjectMerge(preview)
+                await self.reviewProjectMerge(preview, preference: preference)
             }) { progress in
                 await self.reportProjectImportProgress(progress)
             }
@@ -198,7 +198,7 @@ extension Workspace {
                 task.cancel()
             }
             showProjectTransfer(result.library, project: result.project)
-            status = "Merged \(result.project.name) · \(result.added) added · \(result.updated) updated · \(result.trashed) trashed · \(result.skipped) skipped"
+            status = "Merged \(result.project.name) · \(result.added) added · \(result.updated) updated · \(result.trashed) trashed · \(result.skipped) skipped · \(result.conflicts) conflicts"
         } catch is CancellationError {
             status = "Project merge cancelled"
         } catch {
@@ -207,7 +207,7 @@ extension Workspace {
         }
     }
 
-    private func reviewProjectMerge(_ preview: ProjectLibraryMergePreview) -> Bool {
+    private func reviewProjectMerge(_ preview: ProjectLibraryMergePreview, preference: ProjectMergePreference) -> Bool {
         guard projectMergeTask?.isCancelled == false else { return false }
         let alert = NSAlert()
         alert.messageText = "Review Merge into \(preview.projectName)"
@@ -215,6 +215,14 @@ extension Workspace {
             "\(preview.added) photos to add, \(preview.updated) to update, \(preview.trashed) to move to Library Trash.",
             "\(preview.addedAlbums) albums to add, \(preview.copiedOriginals) originals to copy, \(preview.skipped) photos to skip."
         ]
+        let preferred = preference == .current ? "Current values" : "Imported values"
+        if !preview.conflicts.isEmpty {
+            details.append("\(preferred) will resolve conflicts on \(preview.conflicts.count) photos.")
+            details += preview.conflicts.prefix(5).map { "\($0.photoName) — \($0.fields.joined(separator: ", "))" }
+        }
+        if preview.legacyMatches > 0 {
+            details.append("\(preferred) apply to \(preview.legacyMatches) matching photos without an edit baseline.")
+        }
         if !preview.trashNames.isEmpty {
             let names = preview.trashNames.prefix(8).joined(separator: ", ")
             let remaining = preview.trashNames.count - min(8, preview.trashNames.count)
