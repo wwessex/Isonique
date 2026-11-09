@@ -5,31 +5,78 @@ import IsoniqueCore
 struct HistogramView: View {
     @EnvironmentObject var model: Workspace
     let photo: Photo
-    @State private var bins = [Int]()
+    @AppStorage("histogram.mode") private var mode = HistogramMode.luminance
+    @State private var histogram: ToneHistogram?
     @State private var failure: String?
+
+    private enum HistogramMode: String, CaseIterable, Identifiable {
+        case luminance = "Luminance", rgb = "RGB", red = "Red", green = "Green", blue = "Blue"
+        var id: Self { self }
+
+        func series(from histogram: ToneHistogram) -> [([Int], Color)] {
+            switch self {
+            case .luminance: [(histogram.luminance, .white)]
+            case .rgb: [(histogram.red, .red), (histogram.green, .green), (histogram.blue, .blue)]
+            case .red: [(histogram.red, .red)]
+            case .green: [(histogram.green, .green)]
+            case .blue: [(histogram.blue, .blue)]
+            }
+        }
+    }
+
+    private struct Request: Equatable {
+        let root: URL?
+        let photoID: UUID
+        let filename: String
+        let referencedPath: String?
+        let originalStatus: Int
+        let adjustments: Adjustments
+    }
+
     var body: some View {
+        let request = Request(root: model.repository?.root, photoID: photo.id, filename: photo.filename,
+                              referencedPath: photo.referencedPath, originalStatus: model.originalStatusRevision,
+                              adjustments: photo.adjustments)
         VStack(alignment: .leading) {
-            Text("LUMINANCE HISTOGRAM").font(.caption).foregroundStyle(.secondary)
+            HStack {
+                Text("HISTOGRAM").font(.caption).foregroundStyle(.secondary)
+                Spacer()
+                Picker("Histogram display", selection: $mode) {
+                    ForEach(HistogramMode.allCases) { Text($0.rawValue).tag($0) }
+                }.labelsHidden().fixedSize()
+            }
             Canvas { context, size in
-                let maximum = Double(bins.max() ?? 1)
+                guard let histogram else { return }
+                let series = mode.series(from: histogram)
+                let maximum = Double(series.compactMap { $0.0.max() }.max() ?? 0)
                 guard maximum > 0 else { return }
-                var path = Path()
-                for (index, count) in bins.enumerated() {
-                    let x = Double(index) * size.width / 256
-                    path.addRect(CGRect(x: x, y: size.height * (1 - Double(count) / maximum), width: max(1, size.width / 256), height: size.height * Double(count) / maximum))
+                var canvas = context
+                if mode == .rgb { canvas.blendMode = .plusLighter }
+                for (bins, color) in series {
+                    let width = size.width / CGFloat(bins.count)
+                    var path = Path()
+                    for (index, count) in bins.enumerated() where count > 0 {
+                        let height = size.height * Double(count) / maximum
+                        path.addRect(CGRect(x: CGFloat(index) * width, y: size.height - height, width: width, height: height))
+                    }
+                    canvas.fill(path, with: .color(color.opacity(0.8)))
                 }
-                context.fill(path, with: .color(.white.opacity(0.8)))
-            }.frame(height: 64).background(.black.opacity(0.25)).accessibilityLabel("Luminance distribution of the edited preview")
+            }.frame(height: 64).background(.black.opacity(0.25))
+                .accessibilityLabel("\(mode.rawValue) distribution of the edited preview")
             Text(failure ?? "Edited preview · black to white").font(.caption2).foregroundStyle(.secondary)
-        }.task(id: "\(photo.id)-\(model.originalStatusRevision)-\(photo.adjustments)") {
-            bins = []; failure = nil
+        }.task(id: request) {
+            histogram = nil; failure = nil
             guard let repository = model.repository else { return }
             let photo = self.photo
-            let result = await Task.detached { () -> Result<[Int], Error> in
-                Result { try TonalTools.histogram(Renderer.render(repository.availableOriginalURL(photo), adjustments: photo.adjustments, maxDimension: 384)) }
-            }.value
+            let render = Task.detached(priority: .userInitiated) {
+                let preview = try Renderer.render(repository.availableOriginalURL(photo), adjustments: photo.adjustments, maxDimension: 384)
+                return try TonalTools.histogramChannels(preview)
+            }
+            let result = await withTaskCancellationHandler {
+                await render.result
+            } onCancel: { render.cancel() }
             guard !Task.isCancelled else { return }
-            switch result { case .success(let values): bins = values; case .failure(let error): failure = error.localizedDescription }
+            switch result { case .success(let values): histogram = values; case .failure(let error): failure = error.localizedDescription }
         }
     }
 }

@@ -6,7 +6,7 @@ Isonique is an independent, native SwiftUI photo workspace for Apple Silicon Mac
 
 The current build supports managed and referenced originals, cancellable imports, multiple libraries, photo Trash, verified backups, compound Smart Albums, keyboard culling and non-destructive editing with local Dodge and Burn masks. Browsable versions share originals and can be compared side by side. Stacks support library-wide and album-specific picks, plus persistent collapse.
 
-The 9 November 2026 validation run passed 82 XCTest cases and the signed arm64 release build on Apple M5 Pro with macOS 27.3. Native QA exercised the Viewer Loupe and channel curve editor on disposable libraries. Older macOS runtimes and physical camera workflows remain unverified. [Feature parity audit](docs/APERTURE_FEATURE_PARITY.md) · [Implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
+The 9 November 2026 validation run passed 83 XCTest cases and the signed arm64 release build on Apple M5 Pro with macOS 27.3. Native QA exercised the Viewer Loupe, channel curve editor and histogram controls on disposable libraries. Older macOS runtimes and physical camera workflows remain unverified. [Feature parity audit](docs/APERTURE_FEATURE_PARITY.md) · [Implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
 
 ## Build and run
 
@@ -83,7 +83,7 @@ Use **Photos → New Version from Original** (Option-G) for neutral adjustments 
 
 ### Review and tonal tools
 
-Inspector → Adjustments shows a live **luminance histogram** of a 384-pixel edited preview, **Levels** (black/white input points and gamma), and a **Master Tone Curve** (three output controls at 25%, 50%, 75% input). Open **Channel Curves** to edit red, green, blue or luminance independently. Click to add a point, drag to move it, or use the point picker and numeric controls. A completed drag is one Undo step. The new curves run after Levels and the master curve and before lens and geometry, in both preview and export. Reset, presets, persistent history, versions and the tone Stamp group include these settings.
+Inspector → Adjustments shows a live **histogram** of a 384-pixel edited preview with Luminance, combined RGB, or separate Red, Green and Blue views. The Inspector remembers the selected view. **Levels** provides black and white input points and gamma, and the **Master Tone Curve** provides three output controls at 25%, 50% and 75% input. Open **Channel Curves** to edit red, green, blue or luminance independently. Click to add a point, drag to move it, or use the point picker and numeric controls. A completed drag is one Undo step. Channel curves run after Levels and the master curve and before lens and geometry, in both preview and export. Reset, presets, persistent history, versions and the tone Stamp group include these settings.
 
 Choose **View → Highlight Hot & Cold Areas** or press **Option-Shift-H** to toggle both Viewer warnings. The View menu also has independent highlight and shadow switches. Red marks pixels where any rendered sRGB channel reaches the highlight threshold, blue marks pixels at or below the shadow threshold, and magenta marks pixels that meet both conditions. **Settings → Clipping Warnings** changes the default 100% highlight and 0% shadow thresholds. The warnings use the current preview before RGB proofing. They appear in the Viewer and side-by-side comparison and are excluded from exports.
 

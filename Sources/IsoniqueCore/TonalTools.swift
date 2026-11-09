@@ -6,6 +6,13 @@ public enum SlideshowRules {
     public static let defaultDisplayTime = 3.0
 }
 
+public struct ToneHistogram {
+    public internal(set) var luminance = [Int](repeating: 0, count: 256)
+    public internal(set) var red = [Int](repeating: 0, count: 256)
+    public internal(set) var green = [Int](repeating: 0, count: 256)
+    public internal(set) var blue = [Int](repeating: 0, count: 256)
+}
+
 /// Independent 8-bit sRGB levels and piecewise-linear master curve.
 public enum TonalTools {
     public static func map(_ input: Double, adjustments a: Adjustments) -> Double {
@@ -83,15 +90,25 @@ public enum TonalTools {
         }
     }
     public static func histogram(_ image: CGImage) throws -> [Int] {
+        try histogramChannels(image).luminance
+    }
+
+    public static func histogramChannels(_ image: CGImage) throws -> ToneHistogram {
         let context = try bitmap(image)
         guard let data = context.data else { throw LibraryError.unsupportedImage("histogram") }
         let bytes = data.bindMemory(to: UInt8.self, capacity: image.width * image.height * 4)
-        var bins = [Int](repeating: 0, count: 256)
+        var bins = ToneHistogram()
+        func bucket(_ value: Double) -> Int { min(255, max(0, Int(value.rounded()))) }
         for offset in stride(from: 0, to: image.width * image.height * 4, by: 4) {
+            if offset.isMultiple(of: 65_536) { try Task.checkCancellation() }
             let alpha = Double(bytes[offset + 3]) / 255
             guard alpha > 0 else { continue }
-            let value = (0.2126 * Double(bytes[offset]) + 0.7152 * Double(bytes[offset + 1]) + 0.0722 * Double(bytes[offset + 2])) / alpha
-            bins[min(255, max(0, Int(value.rounded())))] += 1
+            let red = Double(bytes[offset]), green = Double(bytes[offset + 1]), blue = Double(bytes[offset + 2])
+            let luminance = (0.2126 * red + 0.7152 * green + 0.0722 * blue) / alpha
+            bins.luminance[bucket(luminance)] += 1
+            bins.red[bucket(red / alpha)] += 1
+            bins.green[bucket(green / alpha)] += 1
+            bins.blue[bucket(blue / alpha)] += 1
         }
         return bins
     }

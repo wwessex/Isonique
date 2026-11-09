@@ -36,6 +36,39 @@ final class TonalToolsTests: XCTestCase {
         let edited = try TonalTools.histogram(output)
         XCTAssertEqual(edited[0], 2); XCTAssertEqual(edited[255], 1)
     }
+    func testHistogramChannelsCountStraightRGBAndReflectCurveEdits() throws {
+        let space = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
+        let info = CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+        let context = try XCTUnwrap(CGContext(data: nil, width: 3, height: 1, bitsPerComponent: 8,
+                                             bytesPerRow: 12, space: space, bitmapInfo: info))
+        let bytes = try XCTUnwrap(context.data).assumingMemoryBound(to: UInt8.self)
+        let samples: [UInt8] = [200, 100, 0, 255, 0, 64, 128, 128, 0, 0, 0, 0]
+        for (index, value) in samples.enumerated() { bytes[index] = value }
+        let image = try XCTUnwrap(context.makeImage())
+        let histogram = try TonalTools.histogramChannels(image)
+        for bins in [histogram.luminance, histogram.red, histogram.green, histogram.blue] {
+            XCTAssertEqual(bins.count, 256)
+            XCTAssertEqual(bins.reduce(0, +), 2)
+        }
+        XCTAssertEqual(histogram.red[200], 1)
+        XCTAssertEqual(histogram.red[0], 1)
+        XCTAssertEqual(histogram.green[100], 1)
+        XCTAssertEqual(histogram.green[128], 1)
+        XCTAssertEqual(histogram.blue[255], 1)
+        XCTAssertEqual(histogram.luminance[114], 1)
+        XCTAssertEqual(histogram.luminance[110], 1)
+        var settings = Adjustments()
+        var curve = ChannelCurve.identity
+        curve.insertPoint(input: 200, output: 180)
+        settings.setCurve(curve, for: .red)
+        let adjusted = try TonalTools.applying(image, table: (0...255).map { Double($0) / 255 },
+                                              curves: settings.channelCurves)
+        let edited = try TonalTools.histogramChannels(adjusted)
+        XCTAssertEqual(edited.red[180], 1)
+        XCTAssertEqual(edited.red[200], 0)
+        XCTAssertEqual(edited.green, histogram.green)
+        XCTAssertEqual(edited.blue, histogram.blue)
+    }
     func testAutoStackGapsInvalidDatesAndExistingStacks() {
         func photo(_ date: String) -> Photo { Photo(filename: "a", originalName: "a", projectID: nil, width: 1, height: 1, camera: "", captureDate: date, sha256: "hash") }
         let a = photo("2026:11:09 12:00:00"), b = photo("2026:11:09 12:00:02"), c = photo("2026:11:09 12:00:04"), d = photo("2026:11:09 12:01:00")
