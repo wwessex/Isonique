@@ -25,6 +25,8 @@ enum EditTool: String { case select, crop, straighten }
     @Published var sortDescending = false
     @Published var stampGroups = Set(AdjustmentGroup.allCases)
     @Published var ratingFilter = RatingFilter.all
+    @Published var originalFilter = OriginalFilter.all
+    @Published var originalStatusRevision = 0
     @Published var busy = false
     @Published private(set) var importInProgress = false
     @Published var status = "Ready · originals are preserved"
@@ -83,7 +85,7 @@ enum EditTool: String { case select, crop, straighten }
             }
             else if scope.hasPrefix("stack:"), let id = UUID(uuidString: String(scope.dropFirst(6))) { inScope = photo.stackID == id }
             else { inScope = true }
-            return inScope && BrowserFilterRules.includes(rating: photo.rating, flagged: photo.flagged, ratingFilter: ratingFilter, flaggedOnly: scope == "flagged") && (search.isEmpty || [photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(search))
+            return inScope && originalFilter.includes(photo, repository: repository) && BrowserFilterRules.includes(rating: photo.rating, flagged: photo.flagged, ratingFilter: ratingFilter, flaggedOnly: scope == "flagged") && (search.isEmpty || [photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(search))
         }.sorted { lhs, rhs in sortDescending ? orderedBefore(rhs, lhs) : orderedBefore(lhs, rhs) }
     }
     private func orderedBefore(_ lhs: Photo, _ rhs: Photo) -> Bool {
@@ -130,10 +132,11 @@ enum EditTool: String { case select, crop, straighten }
         if redo { nextHistory.undo.append(current) } else { nextHistory.redo.append(current) }
         var draft = library
         draft.photos[index] = photo
+        draft.photos[index].referencedPath = current.referencedPath
         guard commit(draft, history: nextHistory) else { return }
         selectAfterChange(preferred: photo.id)
     }
-    private func selectAfterChange(preferred: UUID?) {
+    func selectAfterChange(preferred: UUID?) {
         let visible = photos
         selection = visible.first { $0.id == preferred }?.id ?? visible.first?.id
         compareOriginal = false; tool = .select
@@ -216,7 +219,7 @@ enum EditTool: String { case select, crop, straighten }
     }
     func showBrowser(allPhotos: Bool = false) {
         viewer = false; tool = .select; compareOriginal = false
-        if allPhotos { scope = "all"; search = ""; ratingFilter = .all }
+        if allPhotos { scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all }
     }
     func chooseTool(_ next: EditTool) {
         viewer = true; compareOriginal = false; tool = next
@@ -276,7 +279,7 @@ enum EditTool: String { case select, crop, straighten }
         showSlideshow = !slideshowPhotos.isEmpty
     }
     func importPanel() {
-        let panel = NSOpenPanel(); panel.title = "Import photographs — originals will be copied"
+        let panel = NSOpenPanel(); panel.title = "Import photographs"
         panel.canChooseDirectories = true; panel.canChooseFiles = true; panel.allowsMultipleSelection = true
         guard panel.runModal() == .OK else { return }
         pendingImport = panel.urls; showImportOptions = true
@@ -364,9 +367,10 @@ enum EditTool: String { case select, crop, straighten }
         if batchMode { exportBatch(options); return }
         guard let photo = selected, let repository, !busy else { return }
         let panel = NSSavePanel()
-        let suffix = options.format == .original ? URL(fileURLWithPath: photo.originalName).pathExtension : options.format.suffix
+        let suffix = options.format == .original ? (photo.filename as NSString).pathExtension : options.format.suffix
         panel.allowedContentTypes = options.format == .original ? [UTType(filenameExtension: suffix) ?? .data] : [options.format.type]
-        panel.nameFieldStringValue = (photo.originalName as NSString).deletingPathExtension + (options.format == .original ? "-original." : "-edited.") + suffix
+        let base = (photo.originalName as NSString).deletingPathExtension + (options.format == .original ? "-original" : "-edited")
+        panel.nameFieldStringValue = suffix.isEmpty ? base : base + "." + suffix
         panel.message = options.format == .original ? "Copies the unchanged original, including all embedded metadata. Edits and metadata choices do not apply." : "Exports with adjustments and your selected metadata. Existing files are never overwritten."
         guard panel.runModal() == .OK, let url = panel.url else { return }
         busy = true; status = "Rendering full-resolution export…"
@@ -439,6 +443,13 @@ enum EditTool: String { case select, crop, straighten }
                 Button("Open Isonique Library…", action: workspace.openLibraryPanel).disabled(workspace.busy)
                 Button("Back Up Library…", action: workspace.backupLibraryPanel).disabled(workspace.busy || workspace.repository == nil)
                 Button("Check Library Integrity", action: workspace.verifyLibrary).disabled(workspace.busy || workspace.repository == nil)
+                Button("Relink Original…") {
+                    if let photo = workspace.selected { workspace.relinkOriginalPanel(photo) }
+                }.disabled(workspace.busy || workspace.isViewingTrash || !workspace.canRelinkSelectedOriginal)
+                Button("Consolidate Original") {
+                    if let photo = workspace.selected { workspace.consolidateOriginal(photo) }
+                }.disabled(workspace.busy || workspace.isViewingTrash || workspace.selected?.referencedPath == nil)
+                Button("Refresh Original Status", action: workspace.refreshOriginalStatus).disabled(workspace.busy || workspace.repository == nil)
                 Button("Restore Library Backup…", action: workspace.restoreLibraryPanel).disabled(workspace.busy)
                 Button("Recover Aperture Originals…", action: workspace.recoverPanel).disabled(workspace.busy || workspace.repository == nil)
                 Button("Export Photos…", action: workspace.exportPanel).keyboardShortcut("e", modifiers: [.command, .shift])
@@ -527,7 +538,7 @@ struct ContentView: View {
                     if model.viewer {
                         Button { model.showBrowser() } label: { Label("Back to \(model.title)", systemImage: "chevron.left") }
                             .help("Return to the photo grid; Escape also goes back")
-                        if model.scope != "all" || !model.search.isEmpty || model.ratingFilter != .all {
+                        if model.scope != "all" || !model.search.isEmpty || model.ratingFilter != .all || model.originalFilter != .all {
                             Button("All Photos") { model.showBrowser(allPhotos: true) }
                         }
                     }
@@ -558,8 +569,14 @@ struct ContentView: View {
                                     Button(action: model.importPanel) { Label("Import Photographs…", systemImage: "square.and.arrow.down") }.buttonStyle(.borderedProminent)
                                 }
                             }.frame(maxWidth: .infinity, maxHeight: .infinity)
-                        } else if model.viewer, let photo = model.selected, let repo = model.repository, let url = try? repo.originalURL(photo) {
-                            PhotoViewer(photo: photo, url: url, original: model.compareOriginal).frame(maxWidth: .infinity, maxHeight: .infinity)
+                        } else if model.viewer, let photo = model.selected, let repo = model.repository {
+                            Group {
+                                if let url = try? repo.availableOriginalURL(photo) {
+                                    PhotoViewer(photo: photo, url: url, original: model.compareOriginal)
+                                } else {
+                                    MissingOriginalView(photo: photo)
+                                }
+                            }.frame(maxWidth: .infinity, maxHeight: .infinity)
                             ScrollView(.horizontal) { LazyHStack(spacing: 10) { ForEach(model.photos) { photo in photoCell(photo, compact: true) } }.padding(12) }
                                 .scrollIndicators(.hidden).frame(height: 128).workspaceGlass(radius: 18).padding(.horizontal, 16).padding(.bottom, 14)
                         } else {
@@ -591,7 +608,11 @@ struct ContentView: View {
                 Menu {
                     Picker("Sort by", selection: $model.sort) { ForEach(PhotoSort.allCases) { Text($0.rawValue).tag($0) } }
                     Toggle("Descending", isOn: $model.sortDescending)
-                } label: { Label("Sort", systemImage: "arrow.up.arrow.down") }
+                    Divider()
+                    Picker("Originals", selection: $model.originalFilter) {
+                        ForEach(OriginalFilter.allCases) { filter in Text(filter.rawValue).tag(filter) }
+                    }
+                } label: { Label("Sort & Filter", systemImage: "arrow.up.arrow.down") }
             }
             ToolbarItem {
                 Menu {
@@ -620,7 +641,7 @@ struct ContentView: View {
         }
         .alert("Isonique", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button("OK") { model.error = nil } } message: { Text(model.error ?? "") }
         .onChange(of: model.scope) { _, _ in
-            if model.isViewingTrash { model.search = ""; model.ratingFilter = .all }
+            if model.isViewingTrash { model.search = ""; model.ratingFilter = .all; model.originalFilter = .all }
             model.selection = model.photos.first?.id
             model.batchSelection = []
             model.showBrowser()
@@ -629,11 +650,15 @@ struct ContentView: View {
         .onChange(of: model.viewer) { _, viewing in if !viewing { model.tool = .select; model.compareOriginal = false } }
         .onChange(of: model.search) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onChange(of: model.ratingFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
+        .onChange(of: model.originalFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didMountNotification)) { _ in model.refreshOriginalStatus() }
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didUnmountNotification)) { _ in model.refreshOriginalStatus() }
         .onChange(of: model.selection) { _, _ in model.tool = .select; model.compareOriginal = false }
     }
     func createCollection() { model.addCollection(collectionName, project: creatingProject); collectionName = ""; showCollection = false }
     @ViewBuilder func photoCell(_ photo: Photo, compact: Bool) -> some View {
-        if let repo = model.repository, let url = try? repo.originalURL(photo) {
+        if let repo = model.repository {
+            let url = try? repo.availableOriginalURL(photo)
             Button {
                 if model.batchMode {
                     if !model.batchSelection.insert(photo.id).inserted { model.batchSelection.remove(photo.id) }
@@ -641,11 +666,15 @@ struct ContentView: View {
                 } else { model.selection = photo.id; model.viewer = true }
             } label: {
                 VStack(alignment: .leading, spacing: 6) {
-                    Thumbnail(url: url).frame(height: compact ? 76 : 140).frame(maxWidth: .infinity).background(Color.black.opacity(0.3)).clipped()
+                    Group {
+                        if let url { Thumbnail(url: url) }
+                        else { Label("Original unavailable", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.secondary) }
+                    }.frame(height: compact ? 76 : 140).frame(maxWidth: .infinity).background(Color.black.opacity(0.3)).clipped()
                     HStack {
                         if model.batchMode { Image(systemName: model.batchSelection.contains(photo.id) ? "checkmark.circle.fill" : "circle") }
                         Text(photo.originalName).lineLimit(1)
                         if photo.stackID != nil { Image(systemName: "square.3.layers.3d") }
+                        if photo.referencedPath != nil { Image(systemName: "link").accessibilityLabel("Referenced original") }
                     }.font(.caption)
                     if !compact { HStack { Text(photo.rating == RatingRules.rejected ? "Rejected" : RatingRules.stars(photo.rating)).foregroundStyle(.orange); Spacer(); if photo.flagged { Image(systemName: "flag.fill").foregroundStyle(.orange) } }.font(.caption).frame(height: 14) }
                 }.padding(7).frame(width: compact ? 110 : nil)
@@ -655,6 +684,15 @@ struct ContentView: View {
             .contextMenu {
                 Button(model.isViewingTrash ? "Put Back" : "Move to Trash") {
                     model.setPhotosTrashed([photo.id], trashed: !model.isViewingTrash)
+                }
+                if !model.isViewingTrash {
+                    if let url { Button("Reveal Original in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) } }
+                    if photo.referencedPath != nil || url == nil {
+                        Button("Relink Original…") { model.relinkOriginalPanel(photo) }
+                    }
+                    if photo.referencedPath != nil, url != nil {
+                        Button("Consolidate Original") { model.consolidateOriginal(photo) }
+                    }
                 }
             }
         }
@@ -776,7 +814,7 @@ struct PhotoViewer: View {
             }
         }.padding(.top, 8)
         .onChange(of: model.tool) { _, tool in if tool == .crop { draft = photo.adjustments.crop ?? PhotoCrop(x: 0, y: 0, width: 1, height: 1) } }
-        .task(id: "\(photo.id)-\(photo.adjustments)-\(original)-\(zoom)-\(model.tool)-\(model.proofEnabled)-\(model.proofProfile?.hashValue ?? 0)") {
+        .task(id: "\(photo.id)-\(url.path)-\(model.originalStatusRevision)-\(photo.adjustments)-\(original)-\(zoom)-\(model.tool)-\(model.proofEnabled)-\(model.proofProfile?.hashValue ?? 0)") {
             var settings = original ? Adjustments() : photo.adjustments
             if model.tool == .crop { settings.crop = nil }
             if model.tool == .crop, let size = try? Renderer.dimensions(url, adjustments: settings) { cropSize = size }
@@ -855,11 +893,7 @@ struct Inspector: View {
             TextField("Caption", text: model.binding(\.caption, fallback: ""), axis: .vertical)
             Text("Keywords").font(.caption).foregroundStyle(.secondary)
             TextField("Keywords, separated by commas", text: model.binding(\.keywords, fallback: ""))
-            Button("Reveal Managed Original") {
-                if let repository = model.repository, let url = try? repository.originalURL(photo) {
-                    NSWorkspace.shared.activateFileViewerSelecting([url])
-                }
-            }
+            OriginalInfoView(photo: photo)
         }.font(.caption)
     }
     func adjustments(_ photo: Photo) -> some View {

@@ -17,6 +17,101 @@ final class LibraryTests: XCTestCase {
         XCTAssertNil(CropRules.aspectRatio(width: 2, height: .infinity))
         XCTAssertNil(CropRules.aspectRatio(width: .nan, height: 2))
     }
+    func testReferencedOriginalRelinkExportAndConsolidation() throws {
+        let source = try fixture()
+        let fm = FileManager.default
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        var options = ImportOptions()
+        options.storage = .referenced
+        XCTAssertNil(try JSONDecoder().decode(ImportOptions.self, from: JSONEncoder().encode(ImportOptions())).storage)
+        XCTAssertTrue(try repo.importPhoto(source, projectID: nil, into: &library, options: options))
+        XCTAssertEqual(library.version, 2)
+        let photo = try XCTUnwrap(repo.load().photos.first)
+        XCTAssertEqual(try repo.availableOriginalURL(photo), source.resolvingSymlinksInPath())
+        let originals = repo.root.appendingPathComponent("Originals")
+        XCTAssertTrue(try fm.contentsOfDirectory(atPath: originals.path).isEmpty)
+
+        let moved = temporary.appendingPathComponent("moved.dat")
+        try fm.moveItem(at: source, to: moved)
+        let wrong = temporary.appendingPathComponent("wrong.png")
+        try Data("wrong".utf8).write(to: wrong)
+        XCTAssertThrowsError(try repo.availableOriginalURL(photo))
+        XCTAssertThrowsError(try LibraryBackup.verify(repo))
+        XCTAssertThrowsError(try repo.relinkOriginal(photo.id, to: wrong, in: &library))
+        XCTAssertEqual(try repo.load().photos, [photo])
+        try repo.relinkOriginal(photo.id, to: moved, in: &library)
+        let relinked = try XCTUnwrap(repo.load().photos.first)
+        XCTAssertEqual(relinked.id, photo.id)
+        XCTAssertEqual(relinked.referencedPath, moved.resolvingSymlinksInPath().path)
+        XCTAssertEqual(try LibraryBackup.verify(repo), 1)
+        let originalExport = temporary.appendingPathComponent("export.png")
+        var export = ExportOptions()
+        export.format = .original
+        try Renderer.export(relinked, repository: repo, to: originalExport, options: export)
+        XCTAssertEqual(try LibraryRepository.digest(originalExport), photo.sha256)
+        try Renderer.export(relinked, repository: repo, to: temporary.appendingPathComponent("edited.jpg"))
+
+        let catalogue = repo.root.appendingPathComponent("catalog.json")
+        let saved = try Data(contentsOf: catalogue)
+        try fm.removeItem(at: catalogue)
+        try fm.createDirectory(at: catalogue, withIntermediateDirectories: false)
+        XCTAssertThrowsError(try repo.consolidateOriginal(photo.id, in: &library))
+        XCTAssertEqual(library.photos, [relinked])
+        XCTAssertTrue(try fm.contentsOfDirectory(atPath: originals.path).isEmpty)
+        try fm.removeItem(at: catalogue)
+        try saved.write(to: catalogue)
+
+        try repo.consolidateOriginal(photo.id, in: &library)
+        let managed = try XCTUnwrap(repo.load().photos.first)
+        XCTAssertEqual(managed.id, photo.id)
+        XCTAssertEqual(managed.sha256, photo.sha256)
+        XCTAssertNil(managed.referencedPath)
+        XCTAssertEqual(try LibraryRepository.digest(moved), photo.sha256)
+        XCTAssertEqual(try LibraryRepository.digest(repo.availableOriginalURL(managed)), photo.sha256)
+    }
+
+    func testBackupRetainsOfflineReferenceAndMissingManagedOriginalCanBeRestored() throws {
+        let fm = FileManager.default
+        let source = try fixture()
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        var options = ImportOptions()
+        options.storage = .referenced
+        XCTAssertTrue(try repo.importPhoto(source, projectID: nil, into: &library, options: options))
+        let photo = try XCTUnwrap(library.photos.first)
+        let moved = temporary.appendingPathComponent("moved.png")
+        try fm.moveItem(at: source, to: moved)
+
+        let backup = temporary.appendingPathComponent("Backup")
+        let restored = temporary.appendingPathComponent("Restored")
+        try LibraryBackup.create(from: repo, to: backup)
+        XCTAssertEqual(try LibraryBackup.validateBackup(backup), 1)
+        XCTAssertTrue(try fm.contentsOfDirectory(atPath: backup.appendingPathComponent("Originals").path).isEmpty)
+        try LibraryBackup.restore(from: backup, to: restored, excluding: repo.root)
+        let (restoredRepo, snapshot) = try LibraryBackup.openVerified(restored)
+        XCTAssertEqual(snapshot.photos, [photo])
+        XCTAssertThrowsError(try restoredRepo.availableOriginalURL(photo))
+
+        var repaired = snapshot
+        try restoredRepo.relinkOriginal(photo.id, to: moved, in: &repaired)
+        try restoredRepo.consolidateOriginal(photo.id, in: &repaired)
+        let managed = try XCTUnwrap(repaired.photos.first)
+        let copy = try restoredRepo.availableOriginalURL(managed)
+        try fm.removeItem(at: copy)
+        XCTAssertEqual(try LibraryBackup.openVerified(restored).1.photos, [managed])
+        XCTAssertThrowsError(try LibraryBackup.verify(restoredRepo))
+        try restoredRepo.relinkOriginal(managed.id, to: moved, in: &repaired)
+        XCTAssertEqual(try LibraryBackup.verify(restoredRepo), 1)
+        XCTAssertThrowsError(try restoredRepo.relinkOriginal(managed.id, to: moved, in: &repaired))
+        XCTAssertEqual(try LibraryRepository.digest(copy), photo.sha256)
+
+        var downgraded = snapshot
+        downgraded.version = 1
+        XCTAssertThrowsError(try restoredRepo.save(downgraded))
+        XCTAssertThrowsError(try repo.relinkOriginal(photo.id, to: repo.root.appendingPathComponent("Originals/invalid.png"), in: &library))
+    }
+
     func testNewLibraryDoesNotReuseExistingOrNestedLocations() throws {
         let fm = FileManager.default
         let root = temporary.appendingPathComponent("Client Library")

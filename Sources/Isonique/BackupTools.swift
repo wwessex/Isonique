@@ -6,7 +6,7 @@ extension Workspace {
     private func activateLibrary(_ repo: LibraryRepository, library restored: Library) {
         repository = repo; library = restored
         history = keepHistory ? (library.history ?? EditHistory()) : EditHistory()
-        scope = "all"; search = ""; ratingFilter = .all
+        scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all
         batchMode = false; batchSelection = []; selection = nil
         viewer = false; tool = .select; compareOriginal = false; liftedAdjustments = nil
         if !ProcessInfo.processInfo.arguments.contains("--library") {
@@ -32,14 +32,14 @@ extension Workspace {
         guard !busy else { return }
         let panel = NSOpenPanel(); panel.title = "Open Isonique Library"
         panel.canChooseFiles = false; panel.canChooseDirectories = true
-        panel.message = "Choose an existing Isonique library folder. Its catalogue and originals are checked before opening."
+        panel.message = "Choose an existing Isonique library folder. Its catalogue and available managed originals are checked. Missing originals can be relinked."
         guard panel.runModal() == .OK, let source = panel.url else { return }
         busy = true; status = "Checking library before opening…"
         Task {
             do {
                 let opened = try await Task.detached { try LibraryBackup.openVerified(source) }.value
                 activateLibrary(opened.0, library: opened.1)
-                status = "Opened verified library · \(source.path)"
+                status = "Opened library · \(source.path)"
             } catch { self.error = error.localizedDescription; status = "Could not open library · current library unchanged" }
             busy = false
         }
@@ -61,7 +61,7 @@ extension Workspace {
         guard let repository, !busy else { return }
         let panel = NSSavePanel(); panel.title = "Back Up Isonique Library"
         panel.nameFieldStringValue = "Isonique Backup \(Date().formatted(.iso8601.year().month().day()))"
-        panel.message = "Choose a new folder, preferably on another drive. Includes the catalogue, saved edits and all catalogued originals. Existing folders are never replaced."
+        panel.message = "Choose a new folder, preferably on another drive. Includes the catalogue, edits and managed originals. Referenced originals stay in their external locations and need their own backup."
         guard panel.runModal() == .OK, let destination = panel.url else { return }
         busy = true; status = "Copying and verifying library backup…"
         Task {

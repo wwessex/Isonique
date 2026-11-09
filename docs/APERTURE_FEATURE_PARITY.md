@@ -16,8 +16,8 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 | --- | --- | --- |
 | Create and switch independent Isonique libraries | Fully implemented and tested | File → New Isonique Library (⇧⌘N) creates a new folder. File → Open Isonique Library verifies and switches libraries. Both commands exercised in the native app. Normal launch remembers the selected path. |
 | Library recents and relocation | Partially implemented | Existing verified libraries can be opened from a new location. No recents or Finder document handler. |
-| Managed originals and byte-exact original export | Implemented but needs improvement | SHA-256-verified copies and original export have automated coverage. Missing or moved files have no recovery UI. |
-| Referenced originals, offline badges, reconnect, relocate, consolidate | Missing | Managed copies only. |
+| Managed originals and byte-exact original export | Implemented but needs improvement | SHA-256-verified copies and original export have automated coverage. A missing managed original can be restored from matching bytes. |
+| Referenced originals, offline badges, reconnect, relocate, consolidate | Partially implemented | Optional referenced import, offline browser filter, verified single-file relink and copy consolidation. No bulk reconnect, managed-to-referenced relocation or offline preview cache. |
 | Projects, albums, sidebar navigation and project overview/skimming | Partially implemented | Flat projects and albums; membership, filters and sidebar navigation. No project covers or skimming. |
 | Nested folders and albums under projects; drag/drop and manual ordering | Missing | Sidebar groups are display sections only. |
 | Smart Albums and compound search | Partially implemented | Live rating, flag and text conjunction. No user-built All/Any rule set, date, lens, label, person, location, format or original status rules. |
@@ -31,7 +31,7 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 | Photo Trash and Put Back | Fully implemented and tested | Sidebar, photo context menu, File command (⌘Delete), batch actions and edit history. Restores project, albums, stack, edits and original identity. Tested with restart, backup, and native controls. |
 | Version and container Trash, empty to Finder Trash | Missing | Trash is photo-only and retains original files on disk. |
 | Library export/merge, original relocation and consolidation | Missing | Existing backup/restore can make a separate copy. No reconciliation or project-level export. |
-| Vaults, backup, verification and restoration | Implemented but needs improvement | Independent verified full snapshots and restore to new folder, with automated coverage. No incremental vault updates or backup scheduling. |
+| Vaults, backup, verification and restoration | Implemented but needs improvement | Independent verified snapshots and restore to a new folder. Copies managed originals and preserves external paths without copying their files, as with historical Aperture vaults. No incremental vault updates or scheduling. |
 | Library First Aid, permissions and catalogue repair | Partially implemented | Read-only verification of catalogue and original hashes. No repair or rebuild. |
 | Aperture/iPhoto interchange | Partially implemented | Read-only staged extraction of embedded originals plus some embedded metadata. No import of proprietary database relationships, referenced originals, historical adjustment recipes or vault format. |
 

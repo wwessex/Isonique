@@ -21,12 +21,12 @@ struct HistogramView: View {
                 context.fill(path, with: .color(.white.opacity(0.8)))
             }.frame(height: 64).background(.black.opacity(0.25)).accessibilityLabel("Luminance distribution of the edited preview")
             Text(failure ?? "Edited preview · black to white").font(.caption2).foregroundStyle(.secondary)
-        }.task(id: "\(photo.id)-\(photo.adjustments)") {
+        }.task(id: "\(photo.id)-\(model.originalStatusRevision)-\(photo.adjustments)") {
             bins = []; failure = nil
             guard let repository = model.repository else { return }
             let photo = self.photo
             let result = await Task.detached { () -> Result<[Int], Error> in
-                Result { try TonalTools.histogram(Renderer.render(repository.originalURL(photo), adjustments: photo.adjustments, maxDimension: 384)) }
+                Result { try TonalTools.histogram(Renderer.render(repository.availableOriginalURL(photo), adjustments: photo.adjustments, maxDimension: 384)) }
             }.value
             guard !Task.isCancelled else { return }
             switch result { case .success(let values): bins = values; case .failure(let error): failure = error.localizedDescription }
@@ -96,7 +96,7 @@ struct SlideshowView: View {
             let photo = photos[index]
             let repository = self.repository
             let result = await Task.detached { () -> Result<CGImage, Error> in
-                Result { try Renderer.render(repository.originalURL(photo), adjustments: photo.adjustments, maxDimension: 2400) }
+                Result { try Renderer.render(repository.availableOriginalURL(photo), adjustments: photo.adjustments, maxDimension: 2400) }
             }.value
             guard !Task.isCancelled else { return }
             switch result { case .success(let cg): image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height)); case .failure(let error): failure = error.localizedDescription }
