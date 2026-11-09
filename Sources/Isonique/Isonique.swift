@@ -58,6 +58,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         didSet { clipping.save(to: preferences) }
     }
     @Published var history = EditHistory()
+    let viewerRenderCache = ViewerRenderCache()
     let preferences: UserDefaults
     var keepHistory: Bool { preferences.bool(forKey: "history.persist") }
     var canUndo: Bool { !history.undo.isEmpty }
@@ -1079,22 +1080,17 @@ struct PhotoViewer: View {
         .onChange(of: model.brushAdjustment) { _, _ in erasingBrush = false }
         .task(id: request) {
             if request.isCropping, let size = try? Renderer.dimensions(url, adjustments: request.adjustments) { cropSize = size }
-            let render = Task.detached(priority: .userInitiated) {
-                let result = try Renderer.renderWithGeometry(request.url, adjustments: request.adjustments,
-                                                            maxDimension: request.maximum)
-                return (try ViewerImage(result.image, proofProfile: request.profile), result.geometry)
-            }
-            let result = await withTaskCancellationHandler {
-                await render.result
-            } onCancel: { render.cancel() }
-            guard !Task.isCancelled else { return }
-            switch result {
-            case .success(let (preview, layout)):
+            do {
+                let frame = try await model.viewerRenderCache.frame(url: request.url, adjustments: request.adjustments,
+                                                                   maximum: request.maximum, revision: request.originalStatus)
+                let preview = try await ViewerImage.prepare(frame.image, proofProfile: request.profile)
+                guard !Task.isCancelled else { return }
                 image = preview
-                geometry = layout
+                geometry = frame.geometry
                 completedRequest = request
                 failure = nil
-            case .failure(let error):
+            } catch {
+                guard !Task.isCancelled else { return }
                 image = nil
                 geometry = nil
                 completedRequest = nil

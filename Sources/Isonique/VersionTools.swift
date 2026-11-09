@@ -140,7 +140,20 @@ private struct ComparisonPane: View {
     @State private var image: ViewerImage?
     @State private var failure: String?
 
+    private struct Request: Equatable {
+        let root: URL
+        let photoID: UUID
+        let filename: String
+        let referencedPath: String?
+        let adjustments: Adjustments
+        let revision: Int
+        let profile: Data?
+    }
+
     var body: some View {
+        let request = Request(root: repository.root, photoID: photo.id, filename: photo.filename,
+                              referencedPath: photo.referencedPath, adjustments: photo.adjustments,
+                              revision: model.originalStatusRevision, profile: model.proofEnabled ? model.proofProfile : nil)
         VStack(spacing: 8) {
             VStack(spacing: 2) {
                 Text(title).font(.caption).foregroundStyle(.secondary)
@@ -156,25 +169,19 @@ private struct ComparisonPane: View {
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
         }.padding(8).frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
-            .task(id: "\(photo.id)-\(photo.referencedPath ?? "")-\(photo.adjustments)-\(model.originalStatusRevision)-\(model.proofEnabled ? model.proofProfile?.hashValue ?? 0 : 0)") {
+            .task(id: request) {
+                guard !Task.isCancelled else { return }
                 image = nil
                 failure = nil
-                let profile = model.proofEnabled ? model.proofProfile : nil
-                let repository = self.repository
-                let photo = self.photo
-                let render = Task.detached(priority: .userInitiated) {
-                    try Task.checkCancellation()
-                    let rendered = try Renderer.render(repository.availableOriginalURL(photo), adjustments: photo.adjustments, maxDimension: 1800)
-                    return try ViewerImage(rendered, proofProfile: profile)
-                }
-                let result = await withTaskCancellationHandler {
-                    await render.result
-                } onCancel: { render.cancel() }
-                guard !Task.isCancelled else { return }
-                switch result {
-                case .success(let rendered):
-                    image = rendered
-                case .failure(let error): failure = error.localizedDescription
+                do {
+                    let url = try repository.availableOriginalURL(photo)
+                    let frame = try await model.viewerRenderCache.frame(url: url, adjustments: request.adjustments,
+                                                                       maximum: 1800, revision: request.revision)
+                    let preview = try await ViewerImage.prepare(frame.image, proofProfile: request.profile)
+                    guard !Task.isCancelled else { return }
+                    image = preview
+                } catch {
+                    if !Task.isCancelled { failure = error.localizedDescription }
                 }
             }
     }

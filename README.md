@@ -6,7 +6,7 @@ Isonique is an independent, native SwiftUI photo workspace for Apple Silicon Mac
 
 The current build supports managed and referenced originals, cancellable imports, multiple libraries, photo Trash, verified backups, compound Smart Albums, keyboard culling and non-destructive editing with local Dodge and Burn masks. Browsable versions share originals and can be compared side by side. Stacks support library-wide and album-specific picks, plus persistent collapse.
 
-The 9 November 2026 validation run passed 91 XCTest cases and the signed arm64 release build on Apple M5 Pro with macOS 27.3. Native QA exercised input histograms, Auto Levels and quarter-tones on disposable libraries. Older macOS runtimes and physical camera workflows remain unverified. [Feature parity audit](docs/APERTURE_FEATURE_PARITY.md) · [Implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
+The 9 November 2026 validation run passed 96 XCTest cases with the external RAW fixtures enabled, along with the signed arm64 release build on Apple M5 Pro with macOS 27.3. Native QA exercised the new adjustment controls and the RAW Viewer on disposable libraries. Older macOS runtimes and physical camera workflows remain unverified. [Feature parity audit](docs/APERTURE_FEATURE_PARITY.md) · [Implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
 
 ## Build and run
 
@@ -92,6 +92,8 @@ Levels and Channel Levels offer dark and light quarter controls. They adjust the
 Choose **View → Highlight Hot & Cold Areas** or press **Option-Shift-H** to toggle both Viewer warnings. The View menu also has independent highlight and shadow switches. Red marks pixels where any rendered sRGB channel reaches the highlight threshold, blue marks pixels at or below the shadow threshold, and magenta marks pixels that meet both conditions. **Settings → Clipping Warnings** changes the default 100% highlight and 0% shadow thresholds. The warnings use the current preview before RGB proofing. They appear in the Viewer and side-by-side comparison and are excluded from exports.
 
 Choose **View → Show Loupe**, click the Viewer’s magnifier, or press the grave accent key to inspect the full-resolution rendered photo. Move the pointer over the image at Fit or 100% to sample its pixels. The Loupe offers 200%, 400% and 800% magnification, a grid at 400% and above, and zero-based coordinates with 8-bit sRGB readings before proofing.
+
+The Viewer and comparison panes reuse recent unproofed renders in a per-workspace memory cache. The cache retains up to eight frames with a 128 MiB budget. Resolution, edit recipe and original file information determine reuse. Exports use the shared renderer independently.
 
 Choose **Dodge Brush** or **Burn Brush** from Photos, the editing strip’s Brush menu, or Inspector → Adjustments → Local Brush Masks. Click or drag on the fit-to-window photo to lighten or darken it. The stroke guide follows the pointer and the adjusted preview updates on release. Size, Softness and Strength are remembered across launches. **Erase** and **Reset Mask** affect the selected mask, and each stroke or reset has its own Undo step. Masks follow the original photo through crop, rotation, flip, straightening and lens correction. Built-in presets preserve them. To copy masks with Lift & Stamp, enable **Local brush masks** in the Inspector before stamping.
 
