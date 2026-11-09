@@ -205,3 +205,10 @@
 - Workspace tests covered verified switching, same-name library labels, bounded and deduplicated preferences, failed opening of a missing library, and persistence of the list and startup library. Clearing recents preserved the startup library.
 - In the signed app, opening an alternate library populated File → Open Recent Library. The submenu switched back to the original library and cleared the saved list. The active library preference still pointed to the original library.
 - The optimized suite executed 126 tests with zero failures or skips, including four camera RAW fixtures. The signed arm64 app and release archive passed strict verification on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
+
+## Export a project as an independent library
+
+- Repository tests reopened the export after disconnecting the old external original. They checked shared originals, a version whose imported record belonged to another project, named recipes, pixel-for-pixel rendering, regular and Smart Album membership, stack picks, RAW+JPEG pair links and exclusion of unrelated or trashed records.
+- The tests also covered cancellation, simultaneous export to the same destination, occupied and dangling-link destinations, missing originals and failed fingerprint checks. The source catalogue and originals were verified unchanged.
+- Native QA selected a project, exported it through the File menu, and reopened the destination through Open Isonique Library. The new library showed the project, album, shared version and saved exposure. Its three photo records referenced two local files whose hashes matched.
+- The signed Apple Silicon build passed strict verification on macOS 27.3. The optimized test suite executed 129 tests with zero failures or skips, including four camera RAW fixtures.

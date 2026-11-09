@@ -34,6 +34,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var labelNames: [String: String]
     @Published var originalStatusRevision = 0
     @Published var originalJobResult: OriginalJobResult?
+    @Published var projectExportTask: Task<Int, Error>?
     @Published var originalJobTask: Task<(Library?, OriginalJobResult), Error>?
     @Published var busy = false
     @Published private(set) var importInProgress = false
@@ -681,6 +682,12 @@ enum EditTool: String { case select, crop, straighten, brush }
                     Divider()
                     Button("Clear Recent Libraries") { workspace.recentLibraryPaths = [] }
                 }.disabled(workspace.busy || workspace.recentLibraryPaths.isEmpty)
+                Button("Export Project as Library…") {
+                    if let project = workspace.selectedProjectForExport { workspace.exportProjectPanel(project) }
+                }.disabled(workspace.busy || workspace.repository == nil || workspace.selectedProjectForExport == nil)
+                if let task = workspace.projectExportTask {
+                    Button("Cancel Project Export") { task.cancel() }
+                }
                 Button("Back Up Library…", action: workspace.backupLibraryPanel).disabled(workspace.busy || workspace.repository == nil)
                 Button("Check Library Integrity", action: workspace.verifyLibrary).disabled(workspace.busy || workspace.repository == nil)
                 Button("Relink Original…") {
@@ -773,7 +780,14 @@ struct ContentView: View {
                         Label("Trash", systemImage: "trash").tag("trash")
                     }
                     Section("Projects") {
-                        ForEach(model.library.projects) { project in Label(project.name, systemImage: "folder").tag("project:\(project.id)") }
+                        ForEach(model.library.projects) { project in
+                            Label(project.name, systemImage: "folder")
+                                .tag("project:\(project.id)")
+                                .contextMenu {
+                                    Button("Export Project as Library…") { model.exportProjectPanel(project) }
+                                        .disabled(model.busy || model.repository == nil)
+                                }
+                        }
                     }
                     Section("Stacks") {
                         ForEach(stacks.keys.sorted { $0.uuidString < $1.uuidString }, id: \.self) { id in

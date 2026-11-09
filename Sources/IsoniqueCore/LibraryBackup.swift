@@ -27,6 +27,7 @@ public enum LibraryBackup {
         guard originals.resolvingSymlinksInPath() == originals else { throw LibraryError.unsafePath }
         var hashes: [String: String] = [:]
         for photo in try library.uniqueOriginals() {
+            try Task.checkCancellation()
             guard !photo.filename.isEmpty, photo.filename != ".", photo.filename != "..",
                   photo.filename == (photo.filename as NSString).lastPathComponent else { throw LibraryError.unsafePath }
             if let path = photo.referencedPath {
@@ -72,6 +73,28 @@ public enum LibraryBackup {
         try copy(snapshot, from: repository.root, to: destination, excluding: repository.root)
     }
 
+    /// Export active project photos as a new library with a local copy of every original.
+    @discardableResult
+    public static func exportProject(_ projectID: UUID, from repository: LibraryRepository, to destination: URL) throws -> Int {
+        try Task.checkCancellation()
+        let source = try repository.load()
+        let library = try source.catalogueForProjectExport(projectID)
+        let selectedIDs = Set(library.photos.map(\.originalID))
+        var locations: [String: URL] = [:]
+        for original in try source.uniqueOriginals() where selectedIDs.contains(original.originalID) {
+            try Task.checkCancellation()
+            locations[original.filename] = try repository.availableOriginalURL(original)
+        }
+        let originals = try library.uniqueOriginals()
+        let hashes = Dictionary(uniqueKeysWithValues: originals.map { ($0.filename, $0.sha256) })
+        let snapshot = Snapshot(data: try JSONEncoder().encode(library), library: library, originals: hashes)
+        try publish(snapshot, to: destination, excluding: [repository.root], writeManifest: false) { name in
+            guard let location = locations[name] else { throw LibraryError.integrity(name) }
+            return location
+        }
+        return library.photos.count
+    }
+
     /// Always restores to a new folder, leaving both the source and current library intact.
     public static func restore(from source: URL, to destination: URL, excluding current: URL?) throws {
         let source = source.standardizedFileURL.resolvingSymlinksInPath()
@@ -98,34 +121,54 @@ public enum LibraryBackup {
     }
 
     private static func copy(_ snapshot: Snapshot, from source: URL, to destination: URL, excluding current: URL?) throws {
-        let fm = FileManager.default
-        let target = destination.standardizedFileURL.resolvingSymlinksInPath()
-        for protected in [source, current].compactMap({ $0 }) {
-            let protected = protected.standardizedFileURL.resolvingSymlinksInPath()
-            guard target != protected, !target.path.hasPrefix(protected.path + "/") else { throw LibraryError.unsafePath }
+        try publish(snapshot, to: destination, excluding: [source, current].compactMap { $0 }, writeManifest: true) { name in
+            source.appendingPathComponent("Originals").appendingPathComponent(name)
         }
+    }
+
+    private static func publish(_ snapshot: Snapshot, to destination: URL, excluding protectedRoots: [URL],
+                                writeManifest: Bool, originalURL: (String) throws -> URL) throws {
+        try Task.checkCancellation()
+        guard destination.isFileURL else { throw LibraryError.unsafePath }
+        let fm = FileManager.default
+        let proposed = destination.standardizedFileURL
+        let parent = proposed.deletingLastPathComponent().resolvingSymlinksInPath()
+        let target = parent.appendingPathComponent(proposed.lastPathComponent, isDirectory: true)
+        let path = target.path.precomposedStringWithCanonicalMapping.lowercased()
+        for protected in protectedRoots {
+            let root = protected.resolvingSymlinksInPath().path.precomposedStringWithCanonicalMapping.lowercased()
+            guard path != root, !path.hasPrefix(root + "/") else { throw LibraryError.unsafePath }
+        }
+        try LibraryRepository.validateRoot(target)
         guard !fm.fileExists(atPath: target.path),
-              !target.pathComponents.contains(where: { ["aplibrary", "aperturelibrary", "photolibrary", "photoslibrary", "app"].contains(URL(fileURLWithPath: $0).pathExtension.lowercased()) }) else { throw LibraryError.unsafePath }
-        let parent = target.deletingLastPathComponent()
+              (try? target.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else {
+            throw LibraryError.unsafePath
+        }
         var isDirectory: ObjCBool = false
         guard fm.fileExists(atPath: parent.path, isDirectory: &isDirectory), isDirectory.boolValue else {
             throw CocoaError(.fileWriteInvalidFileName)
         }
         guard fm.isWritableFile(atPath: parent.path) else { throw CocoaError(.fileWriteNoPermission) }
-        let staging = target.deletingLastPathComponent().appendingPathComponent(".isonique-backup-\(UUID().uuidString)")
+        let staging = parent.appendingPathComponent(".isonique-library-\(UUID().uuidString)")
         try fm.createDirectory(at: staging, withIntermediateDirectories: false)
         defer { try? fm.removeItem(at: staging) }
-        try fm.createDirectory(at: staging.appendingPathComponent("Originals"), withIntermediateDirectories: false)
+        let originals = staging.appendingPathComponent("Originals", isDirectory: true)
+        try fm.createDirectory(at: originals, withIntermediateDirectories: false)
         try snapshot.data.write(to: staging.appendingPathComponent("catalog.json"), options: .withoutOverwriting)
         for name in snapshot.originals.keys {
-            try fm.copyItem(at: source.appendingPathComponent("Originals").appendingPathComponent(name),
-                            to: staging.appendingPathComponent("Originals").appendingPathComponent(name))
+            try Task.checkCancellation()
+            let source = try originalURL(name)
+            try regularFile(source)
+            try fm.copyItem(at: source, to: originals.appendingPathComponent(name))
         }
-        // Verify copied bytes before publishing the destination folder.
         let copied = try read(staging)
         guard copied.data == snapshot.data, copied.originals == snapshot.originals else { throw LibraryError.integrity("copied library") }
-        let manifest = Manifest(catalogSHA256: try LibraryRepository.digest(staging.appendingPathComponent("catalog.json")), originals: snapshot.originals)
-        try JSONEncoder().encode(manifest).write(to: staging.appendingPathComponent("backup-manifest.json"), options: .withoutOverwriting)
-        try fm.moveItem(at: staging, to: target)
+        if writeManifest {
+            let manifest = Manifest(catalogSHA256: try LibraryRepository.digest(staging.appendingPathComponent("catalog.json")),
+                                    originals: snapshot.originals)
+            try JSONEncoder().encode(manifest).write(to: staging.appendingPathComponent("backup-manifest.json"), options: .withoutOverwriting)
+        }
+        try Task.checkCancellation()
+        try LibraryRepository.publishStagedItem(staging, at: target)
     }
 }
