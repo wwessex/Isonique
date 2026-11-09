@@ -329,3 +329,12 @@
 - The optimized suite passed all 182 tests without skips, including four camera RAW fixtures and the native Finder Trash handoff.
 - In two independently launched copies of the signed macOS app, the second copy rejected a stale three-star edit and displayed the reload instructions. File → Reload Library showed the first copy's five-star rating. A fresh flag edit then saved alongside that rating. Both values persisted, and the original SHA-256 matched.
 - The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2. Isonique has one maintained native macOS application in this repository.
+
+## Relocate Originals filename and subfolder preview
+
+- The preview left the catalogue, source bytes and destination folders unchanged. Tests checked catalogue filenames, safe project folder names, numbered filenames with their extensions, capture year/month folders and the fallback for invalid or missing capture dates.
+- Two versions of a shared original produced one preview path and one copy. The saved catalogue pointed both versions to that path before source cleanup, and the version in Library Trash kept its edits.
+- Tests covered case-equivalent names in the same batch, occupied filenames, storage-name fallback, verified file reuse without replacement, a collision and a symlink introduced after review, and a stale catalogue. Apply never chose an alternate path that the user had not reviewed.
+- The optimized suite passed all 186 tests without skips, including four camera RAW fixtures and the native Finder Trash handoff.
+- In the signed macOS app, choosing Numbered sequence and Capture year / month previewed one shared original at `2025/03/Original-0001.png` and listed both versions. The catalogue and destination were unchanged at review. After approval, both references used the previewed path, the previous referenced file stayed in place, and both file fingerprints matched.
+- The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2. This repository maintains one native macOS app.
