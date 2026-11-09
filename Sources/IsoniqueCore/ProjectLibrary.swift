@@ -19,9 +19,14 @@ struct ProjectExportMembership: Codable {
     let originalsByPhoto: [UUID: Original]
     // An empty state is still an export baseline. Older exports omit it.
     let stackPresentation: StackBrowserState?
+    let albumDefinitions: [Collection]?
 }
 
 extension Library {
+    func albumIDsOutsideProject(_ projectID: UUID) -> Set<UUID> {
+        Set(photos.lazy.filter { $0.projectID != projectID }.flatMap(\.albumIDs))
+    }
+
     func catalogueForProjectExport(_ projectID: UUID) throws -> Library {
         guard let project = projects.first(where: { $0.id == projectID }) else {
             throw LibraryError.integrity("selected project is missing")
@@ -37,11 +42,16 @@ extension Library {
         }
 
         let manualMemberships = Set(members.flatMap(\.albumIDs))
+        let sharedAlbumIDs = albumIDsOutsideProject(projectID)
+        var albumDefinitions: [Collection] = []
         var fixedMemberships: [UUID: Set<UUID>] = [:]
         for album in albums {
             try Task.checkCancellation()
             guard let rule = album.rule else {
-                if manualMemberships.contains(album.id) { exported.albums.append(album) }
+                if manualMemberships.contains(album.id) {
+                    exported.albums.append(album)
+                    if !sharedAlbumIDs.contains(album.id) { albumDefinitions.append(album) }
+                }
                 continue
             }
             guard rule.projectID == nil || rule.projectID == projectID else { continue }
@@ -57,6 +67,7 @@ extension Library {
                 }
             }
             exported.albums.append(copy)
+            if copy.rule?.projectID == projectID { albumDefinitions.append(copy) }
         }
         let manualAlbumIDs = Set(exported.albums.filter { $0.rule == nil }.map(\.id))
         for index in exported.photos.indices {
@@ -108,7 +119,8 @@ extension Library {
             projectID: projectID,
             originalsByPhoto: Dictionary(exported.photos.map { ($0.id, ProjectExportMembership.Original($0)) },
                                         uniquingKeysWith: { first, _ in first }),
-            stackPresentation: exported.stackBrowser ?? StackBrowserState())
+            stackPresentation: exported.stackBrowser ?? StackBrowserState(),
+            albumDefinitions: albumDefinitions)
         try exported.validateSchema()
         return exported
     }

@@ -131,6 +131,40 @@ private extension Adjustments {
 }
 
 extension Library {
+    mutating func mergeAlbumDefinitions(from source: [Collection], baseline: [Collection],
+                                        projectID: UUID, prefer preference: ProjectMergePreference) throws
+        -> (updated: Int, conflicts: [ProjectAlbumMergeConflict]) {
+        guard !baseline.isEmpty else { return (0, []) }
+        let baselineByID = Dictionary(baseline.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        let sourceByID = Dictionary(uniqueKeysWithValues: source.map { ($0.id, $0) })
+        let sharedAlbumIDs = albumIDsOutsideProject(projectID)
+        var updated = 0
+        var conflicts: [ProjectAlbumMergeConflict] = []
+        for index in albums.indices {
+            try Task.checkCancellation()
+            let current = albums[index]
+            guard let base = baselineByID[current.id], let incoming = sourceByID[current.id],
+                  !sharedAlbumIDs.contains(current.id) else { continue }
+            // A rule that changed scope or became a fixed membership list is a different definition.
+            let regular = base.rule == nil && current.rule == nil && incoming.rule == nil
+            let scopedSmart = base.rule?.projectID == projectID && current.rule?.projectID == projectID
+                && incoming.rule?.projectID == projectID
+            guard regular || scopedSmart else { continue }
+            let name = resolveProjectValue(current.name, incoming.name, baseline: base.name, prefer: preference)
+            let rule = resolveProjectValue(current.rule, incoming.rule, baseline: base.rule, prefer: preference)
+            var fields: [String] = []
+            if name.conflict { fields.append("Name") }
+            if rule.conflict { fields.append("Smart Album Rules") }
+            if !fields.isEmpty { conflicts.append(ProjectAlbumMergeConflict(albumName: current.name, fields: fields)) }
+            if name.value != current.name || rule.value != current.rule {
+                albums[index].name = name.value
+                albums[index].rule = rule.value
+                updated += 1
+            }
+        }
+        return (updated, conflicts)
+    }
+
     mutating func mergeStackPresentation(from source: Library, baseline: StackBrowserState,
                                          prefer preference: ProjectMergePreference, appliedPhotos: Set<UUID>,
                                          excludedStacks: Set<UUID>, regularAlbums: Set<UUID>)

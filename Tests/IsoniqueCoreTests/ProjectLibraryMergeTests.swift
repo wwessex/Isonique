@@ -342,6 +342,7 @@ final class ProjectLibraryMergeTests: XCTestCase {
             return record
         }
         membership.removeValue(forKey: "stackPresentation")
+        membership.removeValue(forKey: "albumDefinitions")
         object["projectExportMembership"] = membership
         try JSONSerialization.data(withJSONObject: object).write(to: url)
 

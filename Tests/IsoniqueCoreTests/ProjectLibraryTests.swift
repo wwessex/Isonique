@@ -21,6 +21,7 @@ final class ProjectLibraryTests: XCTestCase {
         var query = PhotoQuery()
         query.criteria = [PhotoQueryCriterion(field: .storage, comparison: .equals, value: "true")]
         storage.rule = SmartAlbumRule()
+        storage.rule?.projectID = project.id
         storage.rule?.query = query
 
         let managedURL = try repository.managedOriginalURL("managed.png")
@@ -82,6 +83,7 @@ final class ProjectLibraryTests: XCTestCase {
         XCTAssertEqual(library.albums[1].rule, smart.rule)
         XCTAssertEqual(library.albums[2].rule, scoped.rule)
         XCTAssertNil(library.albums[3].rule)
+        XCTAssertEqual(library.projectExportMembership?.albumDefinitions, [scoped])
         XCTAssertEqual(library.photos[0].albumIDs, [album.id])
         XCTAssertEqual(library.photos[1].albumIDs, [album.id])
         XCTAssertEqual(library.photos[2].albumIDs, [album.id, storage.id])
