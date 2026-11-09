@@ -71,10 +71,10 @@ Project exports also record the starting collapsed state, global stack picks and
 
 Project exports record eligible album definitions. Merge compares names independently from complete Smart Album rules, and the review identifies conflicting fields. Right-click a regular album to rename it. Regular albums shared across projects at export or merge are protected, including memberships in Library Trash. Smart Albums must stay scoped to the matching project on both sides. Rules exported as fixed memberships, album type or scope changes, and matching definitions in older exports keep their destination values. Album deletion reconciliation remains open.
 
-File → Preview Library Merge compares two full catalogues without opening the source or reading original files. The review shows project and album additions, photo and version counts, originals that can be reused by stable ID and recorded fingerprint, and identity conflicts.
+File → Merge Libraries compares two full catalogues without opening the source or reading original files during review. It shows additions per project, versions that can reuse originals and identity conflicts. On approval it verifies reused destination originals, copies new managed and referenced originals into managed storage, and publishes the additions with one catalogue write. It retains existing records, preserves complete new stacks and pairs, and excludes source Trash.
 
 ## Next implementation slice
 
-1. Publish compatible whole-library additions after review. Preserve matching records, verify and stage originals, retain shared-original links, and test cancellation and rollback.
+1. Add an opt-in policy for reconciling edits and metadata on matching photos across whole libraries. Preview changed fields before any writes, keep the current additive policy as the default, and keep deletion propagation separate.
 
 Other open core work includes Finder Trash handoff for Library Trash, relocation naming and subfolders, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

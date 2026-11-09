@@ -17,8 +17,8 @@ public extension LibraryRepository {
         let plan = try ProjectLibraryImportPlan(source: source, originals: originals, project: project,
                                                 destination: destination, history: history)
         let transfers = try originals.map { (original: $0, filename: try plan.filename(for: $0) as String?) }
-        try await commitProjectLibrary(plan.result.library, catalogue: catalogue, sourceRoot: sourceRoot,
-                                       transfers: transfers, progress: progress)
+        try await commitLibraryTransfer(plan.result.library, catalogue: catalogue, sourceRoot: sourceRoot,
+                                        transfers: transfers, progress: progress)
         return plan.result
     }
 
@@ -48,24 +48,19 @@ public extension LibraryRepository {
         return sourceRoot
     }
 
-    internal func commitProjectLibrary(_ library: Library, catalogue: Data, sourceRoot: URL,
-                                       transfers: [(original: Photo, filename: String?)],
-                                       progress: (ImportProgress) async -> Void) async throws {
+    internal func commitLibraryTransfer(_ library: Library, catalogue: Data, sourceRoot: URL,
+                                        sourceCatalogue: Data? = nil, transfers: [(original: Photo, filename: String?)],
+                                        progress: (ImportProgress) async -> Void) async throws {
         let files = FileManager.default
         let staging = root.appendingPathComponent(".isonique-project-import-\(UUID().uuidString)", isDirectory: true)
         try files.createDirectory(at: staging, withIntermediateDirectories: false)
-        var installed: [URL] = []
-        var committed = false
-        defer {
-            if !committed {
-                for url in installed { try? files.removeItem(at: url) }
-            }
-            try? files.removeItem(at: staging)
-        }
+        defer { try? files.removeItem(at: staging) }
         for (index, transfer) in transfers.enumerated() {
             try Task.checkCancellation()
             let original = transfer.original
-            let input = try Self.managedOriginalURL(original.filename, in: sourceRoot)
+            let input: URL
+            if let path = original.referencedPath { input = try Self.referenceURL(path, libraryRoot: sourceRoot) }
+            else { input = try Self.managedOriginalURL(original.filename, in: sourceRoot) }
             if let filename = transfer.filename {
                 try LibraryBackup.regularFile(input)
                 let copy = staging.appendingPathComponent(filename)
@@ -78,20 +73,37 @@ public extension LibraryRepository {
         }
 
         try Task.checkCancellation()
-        // Serialize publication with other project imports, including imports from another process.
+        // Serialize publication with library transfers from this or another process.
         let descriptor = open(root.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
         guard descriptor >= 0 else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno)) }
         defer { close(descriptor) }
         guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else {
             if errno == EWOULDBLOCK {
-                throw LibraryError.integrity("another project import is finishing; try again")
+                throw LibraryError.integrity("another library transfer is finishing; try again")
             }
             throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno))
         }
-        let catalogueURL = root.appendingPathComponent("catalog.json")
-        guard try Data(contentsOf: catalogueURL) == catalogue else {
-            throw LibraryError.integrity("destination catalogue changed during import; try again")
+        var installed: [URL] = []
+        var committed = false
+        defer {
+            if !committed {
+                for url in installed { try? files.removeItem(at: url) }
+            }
         }
+        let catalogueURL = root.appendingPathComponent("catalog.json")
+        func verifyCatalogues() throws {
+            guard try Data(contentsOf: catalogueURL) == catalogue else {
+                throw LibraryError.integrity("destination catalogue changed during transfer; try again")
+            }
+            if let sourceCatalogue {
+                let sourceURL = sourceRoot.appendingPathComponent("catalog.json")
+                try LibraryBackup.regularFile(sourceURL)
+                guard try Data(contentsOf: sourceURL) == sourceCatalogue else {
+                    throw LibraryError.integrity("source catalogue changed during transfer; try again")
+                }
+            }
+        }
+        try verifyCatalogues()
         for filename in transfers.compactMap(\.filename) {
             try Task.checkCancellation()
             let target = try managedOriginalURL(filename)
@@ -99,9 +111,7 @@ public extension LibraryRepository {
             installed.append(target)
         }
         try Task.checkCancellation()
-        guard try Data(contentsOf: catalogueURL) == catalogue else {
-            throw LibraryError.integrity("destination catalogue changed during import; try again")
-        }
+        try verifyCatalogues()
         try Task.checkCancellation()
         try save(library)
         committed = true

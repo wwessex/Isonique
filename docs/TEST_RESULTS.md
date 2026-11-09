@@ -259,3 +259,10 @@
 
 - Tests compared multiple projects, an empty project, unassigned photos, shared versions and source Trash. Preflight completed with a missing source Originals directory and left both catalogues byte-for-byte intact. Separate cases reported incompatible fingerprints and album types and rejected a symlink to the current library.
 - The debug suite ran 152 tests with zero failures and one optional RAW fixture skip. The signed arm64 build passed on macOS 27.3.
+
+## Additive whole-library merge
+
+- Tests reopened a merged catalogue with multiple projects, a scoped Smart Album, a cross-project version sharing a new managed original, a version reusing an existing original, a complete stack and pair, and a referenced source original copied into managed storage. Existing records and source hashes were preserved. Retrying found zero additions and left the destination catalogue byte-for-byte intact.
+- Declining the review, cancelling during staging, forcing a catalogue save failure, and modifying the source catalogue during staging left the destination catalogue and originals unchanged. Corrupt referenced originals and stack or edit-history identity conflicts blocked publication.
+- The signed app previewed additions across two source projects, then kept the destination unchanged when the review was cancelled. Approval added one project, one album, one photo and one version. The existing photo retained its caption, the new version reused its original, and original hashes matched both catalogues. A separate review named an incompatible original fingerprint and offered only Done.
+- The optimized suite passed all 156 tests without skips, including four camera RAW fixtures. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.

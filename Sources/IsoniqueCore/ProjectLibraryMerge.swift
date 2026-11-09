@@ -235,8 +235,8 @@ public extension LibraryRepository {
         guard await review(preview) else { throw CancellationError() }
         try Task.checkCancellation()
         let transfers = incomingOriginals.map { (original: $0, filename: copiedNames[$0.originalID]) }
-        try await commitProjectLibrary(draft, catalogue: catalogue, sourceRoot: sourceRoot,
-                                       transfers: transfers, progress: progress)
+        try await commitLibraryTransfer(draft, catalogue: catalogue, sourceRoot: sourceRoot,
+                                        transfers: transfers, progress: progress)
         return ProjectLibraryMergeResult(library: draft, project: current, added: result.added,
                                          updated: result.updated, trashed: result.trashed, skipped: result.skipped,
                                          conflicts: conflicts.count + stackConflicts.count + albumConflicts.count,
