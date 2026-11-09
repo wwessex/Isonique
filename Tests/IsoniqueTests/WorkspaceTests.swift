@@ -65,7 +65,7 @@ final class WorkspaceTests: XCTestCase {
         workspace.setPhotosTrashed([photo.id], trashed: true)
         XCTAssertEqual(workspace.selected?.caption, "Saved")
         XCTAssertNil(workspace.selected?.trashedAt)
-        XCTAssertEqual(workspace.history.undo, [photo])
+        XCTAssertEqual(workspace.history.undo, [.edit(photo)])
         XCTAssertFalse(workspace.canRedo)
         XCTAssertNotNil(workspace.error)
 
@@ -208,6 +208,59 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(reopened.library.photos[1].colorLabel, .green)
         reopened.rename(.green, to: "")
         XCTAssertEqual(reopened.name(for: .green), "Green")
+    }
+
+    @MainActor
+    func testVersionCommandsComparisonAndPersistentUndoRedo() async throws {
+        let root = try temporaryLibrary()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let suite = "IsoniqueVersionsTests.\(UUID().uuidString)"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { preferences.removePersistentDomain(forName: suite) }
+        preferences.set(true, forKey: "history.persist")
+        let workspace = Workspace(libraryRoot: root, preferences: preferences)
+        var photo = Photo(filename: "a.png", originalName: "a.png", projectID: nil,
+                          width: 32, height: 24, camera: "", captureDate: "", sha256: "fixture")
+        photo.adjustments.exposure = 1
+        var draft = workspace.library
+        draft.photos = [photo]
+        XCTAssertTrue(workspace.commit(draft))
+        workspace.selection = photo.id
+        workspace.createVersion(from: .original)
+        let neutral = try XCTUnwrap(workspace.selected)
+        XCTAssertEqual(neutral.adjustments, Adjustments())
+        workspace.startComparison()
+        XCTAssertEqual(workspace.comparisonPhoto?.id, neutral.id)
+        XCTAssertEqual(workspace.selected?.id, photo.id)
+        workspace.selectBrowserPhoto(neutral.id)
+        XCTAssertEqual(workspace.comparisonPhoto?.id, photo.id)
+        workspace.chooseTool(.crop)
+        XCTAssertNil(workspace.comparisonID)
+        workspace.renameVersion(neutral.id, to: "Deliverable")
+        XCTAssertEqual(workspace.selected?.displayName, "Deliverable")
+        workspace.setPhotosTrashed([neutral.id], trashed: true)
+        XCTAssertEqual(workspace.photos, [photo])
+        workspace.undoEdit()
+        XCTAssertEqual(workspace.selected?.displayName, "Deliverable")
+        workspace.undoEdit()
+        workspace.undoEdit()
+        XCTAssertEqual(workspace.photos, [photo])
+
+        let reopened = Workspace(libraryRoot: root, preferences: preferences)
+        XCTAssertTrue(reopened.canRedo)
+        reopened.redoEdit()
+        XCTAssertEqual(reopened.selected?.id, neutral.id)
+        reopened.redoEdit()
+        XCTAssertEqual(reopened.selected?.displayName, "Deliverable")
+        reopened.search = "Deliverable"
+        XCTAssertEqual(reopened.photos.map(\.id), [neutral.id])
+        reopened.startComparison()
+        XCTAssertEqual(reopened.comparisonPhoto?.id, photo.id)
+        XCTAssertEqual(reopened.selected?.id, neutral.id)
+        var rule = SmartAlbumRule()
+        rule.projectID = UUID()
+        XCTAssertTrue(reopened.saveSmartAlbum(name: "Still compatible", rule: rule))
+        XCTAssertEqual(reopened.library.version, 3)
     }
 
     private func temporaryLibrary() throws -> URL {

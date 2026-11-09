@@ -41,6 +41,7 @@ enum EditTool: String { case select, crop, straighten }
     @Published var viewer = false
     @Published var showInspector = true
     @Published var compareOriginal = false
+    @Published var comparisonID: UUID?
     @Published var tool = EditTool.select
     @Published var liftedAdjustments: LiftedSettings?
     @Published var stampMetadata = Set<StampMetadata>()
@@ -102,7 +103,7 @@ enum EditTool: String { case select, crop, straighten }
                 originalFilter.includes(photo, repository: repository) &&
                 colorFilter.includes(photo) &&
                 BrowserFilterRules.includes(rating: photo.rating, flagged: photo.flagged, ratingFilter: ratingFilter, flaggedOnly: scope == "flagged") &&
-                (search.isEmpty || [photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(search)) &&
+                (search.isEmpty || [photo.displayName, photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(search)) &&
                 (advancedQuery?.includes(photo, originalAvailable: { self.isOriginalAvailable(photo) }) ?? true)
         }.sorted { lhs, rhs in sortDescending ? orderedBefore(rhs, lhs) : orderedBefore(lhs, rhs) }
     }
@@ -125,7 +126,7 @@ enum EditTool: String { case select, crop, straighten }
         } else {
             draft.albums.append(album)
         }
-        if rule.query != nil || rule.projectID != nil { draft.version = 2 }
+        if rule.query != nil || rule.projectID != nil { draft.version = max(draft.version, 2) }
         guard commit(draft) else { return false }
         showBrowser(allPhotos: true)
         scope = "album:\(album.id)"
@@ -134,7 +135,7 @@ enum EditTool: String { case select, crop, straighten }
     private func orderedBefore(_ lhs: Photo, _ rhs: Photo) -> Bool {
         switch sort {
         case .imported: return lhs.importedAt == rhs.importedAt ? lhs.id.uuidString < rhs.id.uuidString : lhs.importedAt < rhs.importedAt
-        case .name: return lhs.originalName == rhs.originalName ? lhs.id.uuidString < rhs.id.uuidString : lhs.originalName.localizedStandardCompare(rhs.originalName) == .orderedAscending
+        case .name: return lhs.displayName == rhs.displayName ? lhs.id.uuidString < rhs.id.uuidString : lhs.displayName.localizedStandardCompare(rhs.displayName) == .orderedAscending
         case .rating: return lhs.rating == rhs.rating ? lhs.importedAt < rhs.importedAt : lhs.rating < rhs.rating
         case .captured: return lhs.captureDate == rhs.captureDate ? lhs.importedAt < rhs.importedAt : lhs.captureDate < rhs.captureDate
         }
@@ -169,20 +170,16 @@ enum EditTool: String { case select, crop, straighten }
     func redoEdit() { stepHistory(redo: true) }
     private func stepHistory(redo: Bool) {
         var nextHistory = history
-        let photo = redo ? nextHistory.redo.popLast() : nextHistory.undo.popLast()
-        guard let photo, let index = library.photos.firstIndex(where: { $0.id == photo.id }) else { return }
-        let current = library.photos[index]
-        if redo { nextHistory.undo.append(current) } else { nextHistory.redo.append(current) }
         var draft = library
-        draft.photos[index] = photo
-        draft.photos[index].referencedPath = current.referencedPath
-        guard commit(draft, history: nextHistory) else { return }
-        selectAfterChange(preferred: photo.id)
+        guard let entry = nextHistory.step(in: &draft, redoing: redo),
+              commit(draft, history: nextHistory) else { return }
+        selectAfterChange(preferred: entry.photo.id)
     }
     func selectAfterChange(preferred: UUID?) {
         let visible = photos
         selection = visible.first { $0.id == preferred }?.id ?? visible.first?.id
         compareOriginal = false; tool = .select
+        if comparisonPhoto == nil { stopComparison() }
         if visible.isEmpty { viewer = false }
     }
     var selectedTrashActionIDs: Set<UUID> {
@@ -214,14 +211,13 @@ enum EditTool: String { case select, crop, straighten }
             let records = try MetadataXML.read(url)
             var changes: [(Int, Photo)] = []
             for record in records {
-                let matches = library.photos.indices.filter { index in
-                    let photo = library.photos[index]
-                    guard photo.trashedAt == nil else { return false }
-                    if let name = record.filename { return (photo.sourceName ?? photo.originalName) == name }
-                    return photo.id == selection
+                let id: UUID?
+                if let name = record.filename { id = library.metadataTarget(named: name) }
+                else { id = selection }
+                guard let index = library.photos.firstIndex(where: { $0.id == id && $0.trashedAt == nil }) else {
+                    throw CocoaError(.fileReadCorruptFile)
                 }
-                guard matches.count == 1 else { throw CocoaError(.fileReadCorruptFile) }
-                changes.append((matches[0], record.applying(to: library.photos[matches[0]])))
+                changes.append((index, record.applying(to: library.photos[index])))
             }
             var draft = library
             var previous: [Photo] = []
@@ -265,12 +261,13 @@ enum EditTool: String { case select, crop, straighten }
         edit { $0.adjustments.toggleFlip(axis) }
     }
     func showBrowser(allPhotos: Bool = false) {
-        viewer = false; tool = .select; compareOriginal = false
+        viewer = false; tool = .select; compareOriginal = false; stopComparison()
         if allPhotos {
             scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all; colorFilter = .all; advancedSearch = nil
         }
     }
     func chooseTool(_ next: EditTool) {
+        if next != .select { stopComparison() }
         viewer = true; compareOriginal = false; tool = next
     }
     func nudgeStraighten(_ delta: Double) {
@@ -401,7 +398,7 @@ enum EditTool: String { case select, crop, straighten }
         let panel = NSSavePanel()
         let suffix = options.format == .original ? (photo.filename as NSString).pathExtension : options.format.suffix
         panel.allowedContentTypes = options.format == .original ? [UTType(filenameExtension: suffix) ?? .data] : [options.format.type]
-        let base = (photo.originalName as NSString).deletingPathExtension + (options.format == .original ? "-original" : "-edited")
+        let base = photo.exportBaseName + (options.format == .original ? "-original" : "-edited")
         panel.nameFieldStringValue = suffix.isEmpty ? base : base + "." + suffix
         panel.message = options.format == .original ? "Copies the unchanged original, including all embedded metadata. Edits and metadata choices do not apply." : "Exports with adjustments and your selected metadata. Existing files are never overwritten."
         guard panel.runModal() == .OK, let url = panel.url else { return }
@@ -447,6 +444,11 @@ enum EditTool: String { case select, crop, straighten }
                     .disabled(workspace.busy || workspace.repository == nil)
                 Button("Clear Advanced Search") { workspace.advancedSearch = nil }
                     .disabled(workspace.advancedSearch == nil || workspace.busy)
+                Divider()
+                Button("Compare Photos", action: workspace.startComparison)
+                    .keyboardShortcut("o", modifiers: [.option]).disabled(!workspace.canStartComparison)
+                Button("End Comparison", action: workspace.stopComparison)
+                    .keyboardShortcut(.return, modifiers: [.command]).disabled(workspace.comparisonID == nil)
             }
             CommandMenu("Review") {
                 Button("Auto Stack by Capture Time…") { workspace.showAutoStack = true }.disabled(workspace.busy || workspace.isViewingTrash || workspace.photos.isEmpty)
@@ -455,6 +457,11 @@ enum EditTool: String { case select, crop, straighten }
                 }.disabled(workspace.busy || workspace.isViewingTrash || workspace.photos.isEmpty || workspace.repository == nil)
             }
             CommandMenu("Photos") {
+                Button("New Version from Original") { workspace.createVersion(from: .original) }
+                    .keyboardShortcut("g", modifiers: [.option]).disabled(!workspace.canCreateVersion)
+                Button("Duplicate Version") { workspace.createVersion(from: .current) }
+                    .keyboardShortcut("v", modifiers: [.option]).disabled(!workspace.canCreateVersion)
+                Divider()
                 ForEach(FlipAxis.allCases) { axis in
                     Button(axis.rawValue) { workspace.flip(axis) }
                         .disabled(workspace.busy || workspace.isViewingTrash || workspace.selected == nil)
@@ -642,7 +649,9 @@ struct ContentView: View {
                             }.frame(maxWidth: .infinity, maxHeight: .infinity)
                         } else if model.viewer, let photo = model.selected, let repo = model.repository {
                             Group {
-                                if let url = try? repo.availableOriginalURL(photo) {
+                                if let comparison = model.comparisonPhoto {
+                                    PhotoComparisonView(reference: comparison, selected: photo, repository: repo)
+                                } else if let url = try? repo.availableOriginalURL(photo) {
                                     PhotoViewer(photo: photo, url: url, original: model.compareOriginal)
                                 } else {
                                     MissingOriginalView(photo: photo)
@@ -696,6 +705,7 @@ struct ContentView: View {
             }
             ToolbarItem {
                 Menu {
+                    Button("Compare Photos", action: model.startComparison).disabled(!model.canStartComparison)
                     Button("Auto Stack by Capture Time…") { model.showAutoStack = true }
                     Button("Start Slideshow…") {
                         model.startSlideshow()
@@ -735,8 +745,13 @@ struct ContentView: View {
             model.batchSelection = []
             model.showBrowser()
         }
-        .onExitCommand { model.showBrowser() }
-        .onChange(of: model.viewer) { _, viewing in if !viewing { model.tool = .select; model.compareOriginal = false } }
+        .onExitCommand {
+            if model.comparisonID != nil { model.stopComparison() } else { model.showBrowser() }
+        }
+        .onChange(of: model.viewer) { _, viewing in
+            if !viewing { model.tool = .select; model.compareOriginal = false; model.stopComparison() }
+        }
+        .onChange(of: model.compareOriginal) { _, original in if original { model.stopComparison() } }
         .onChange(of: model.search) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onChange(of: model.ratingFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onChange(of: model.originalFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
@@ -754,7 +769,7 @@ struct ContentView: View {
                 if model.batchMode {
                     if !model.batchSelection.insert(photo.id).inserted { model.batchSelection.remove(photo.id) }
                     model.selection = photo.id
-                } else { model.selection = photo.id; model.viewer = true }
+                } else { model.selectBrowserPhoto(photo.id); model.viewer = true }
                 browserFocused = true
             } label: {
                 VStack(alignment: .leading, spacing: 6) {
@@ -764,7 +779,8 @@ struct ContentView: View {
                     }.frame(height: compact ? 76 : 140).frame(maxWidth: .infinity).background(Color.black.opacity(0.3)).clipped()
                     HStack {
                         if model.batchMode { Image(systemName: model.batchSelection.contains(photo.id) ? "checkmark.circle.fill" : "circle") }
-                        Text(photo.originalName).lineLimit(1)
+                        Text(photo.displayName).lineLimit(1)
+                        if photo.id == model.comparisonID { Image(systemName: "pin.fill").accessibilityLabel("Comparison reference") }
                         if photo.stackID != nil { Image(systemName: "square.3.layers.3d") }
                         if photo.referencedPath != nil { Image(systemName: "link").accessibilityLabel("Referenced original") }
                         if let label = photo.colorLabel {
@@ -781,6 +797,12 @@ struct ContentView: View {
                     model.setPhotosTrashed([photo.id], trashed: !model.isViewingTrash)
                 }
                 if !model.isViewingTrash {
+                    Button("New Version from Original") { model.createVersion(from: .original, of: photo.id) }.disabled(model.batchMode)
+                    Button("Duplicate Version") { model.createVersion(from: .current, of: photo.id) }.disabled(model.batchMode)
+                    if model.selection != photo.id {
+                        Button("Compare with Selected") { model.showComparison(reference: photo.id) }.disabled(!model.canCreateVersion)
+                    }
+                    Divider()
                     if let url { Button("Reveal Original in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) } }
                     if photo.referencedPath != nil || url == nil {
                         Button("Relink Original…") { model.relinkOriginalPanel(photo) }
@@ -898,7 +920,7 @@ struct PhotoViewer: View {
         }.overlay(alignment: .top) {
             HStack(spacing: 14) {
                 Image(systemName: original ? "photo" : "slider.horizontal.3").foregroundStyle(.secondary)
-                Text(photo.originalName).font(.caption.weight(.medium)).lineLimit(1)
+                Text(photo.displayName).font(.caption.weight(.medium)).lineLimit(1)
                 if original { Text("Original").font(.caption).foregroundStyle(.secondary) }
                 if model.proofEnabled { Text("RGB Proof").font(.caption).foregroundStyle(.yellow) }
                 Divider().frame(height: 16)
@@ -939,14 +961,18 @@ struct Inspector: View {
                 Label("Inspector", systemImage: "slider.horizontal.3").font(.headline)
                 if model.batchMode { Text("This inspector edits one photo. Use the selection bar above for batch actions.").font(.caption).foregroundStyle(.secondary) }
                 if let photo = model.selected {
-                    Text(photo.originalName).font(.headline).textSelection(.enabled)
+                    Text(photo.displayName).font(.headline).textSelection(.enabled)
                     Picker("Inspector section", selection: $tab) {
                         Text("Info").tag("Info")
                         Text("Adjustments").tag("Adjustments")
                         Text("Library").tag("Library")
                     }.pickerStyle(.segmented).labelsHidden()
                     if tab == "Info" { info(photo) }
-                    if tab == "Adjustments" { adjustments(photo); VersionsView(photo: photo) }
+                    if tab == "Adjustments" {
+                        VersionFamilyView(photo: photo).id(photo.id)
+                        adjustments(photo)
+                        VersionsView(photo: photo)
+                    }
                     if tab == "Library" { organisation() }
                 } else {
                     Text("Select a photograph to view metadata and adjustments.").foregroundStyle(.secondary)
@@ -983,8 +1009,12 @@ struct Inspector: View {
             }
             if let pair = photo.pairID {
                 Text("Linked RAW + JPEG").foregroundStyle(.secondary)
-                ForEach(model.library.activePhotos.filter { $0.pairID == pair && $0.id != photo.id }) { companion in
-                    Button("View " + companion.originalName) { model.selection = companion.id }
+                let companions = model.library.activePhotos.filter { $0.pairID == pair && $0.originalID != photo.originalID }
+                ForEach(companions.filter { candidate in
+                    candidate.id == (companions.first { $0.originalID == candidate.originalID && $0.id == $0.originalID }
+                                     ?? companions.first { $0.originalID == candidate.originalID })?.id
+                }) { companion in
+                    Button("View " + companion.displayName) { model.revealVersion(companion.id) }
                 }
             }
             Picker("Color label", selection: model.binding(\.colorLabel, fallback: nil)) {

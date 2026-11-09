@@ -38,7 +38,7 @@ public struct SmartAlbumRule: Codable, Equatable {
             matchesRatingAndFlag = photo.rating >= minimumRating && (!flaggedOnly || photo.flagged)
         }
         return matchesRatingAndFlag &&
-            (text.isEmpty || [photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(text)) &&
+            (text.isEmpty || [photo.displayName, photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(text)) &&
             (query?.includes(photo, originalAvailable: originalAvailable) ?? true)
     }
     public var selectedRatingFilter: RatingFilter {

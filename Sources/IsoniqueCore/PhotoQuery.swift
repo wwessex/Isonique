@@ -74,7 +74,7 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
     func includes(_ photo: Photo, originalAvailable: () -> Bool?) -> Bool {
         guard field.operators.contains(comparison), !term.isEmpty else { return false }
         switch field {
-        case .filename: return matchesText([photo.originalName, photo.sourceName ?? photo.originalName])
+        case .filename: return matchesText([photo.displayName, photo.originalName, photo.sourceName ?? photo.originalName])
         case .caption: return matchesText([photo.caption])
         case .keyword:
             let keywords = photo.keywords.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }

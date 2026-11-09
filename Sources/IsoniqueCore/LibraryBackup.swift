@@ -25,9 +25,8 @@ public enum LibraryBackup {
         try library.validateSchema()
         let originals = folder.appendingPathComponent("Originals")
         guard originals.resolvingSymlinksInPath() == originals else { throw LibraryError.unsafePath }
-        guard Set(library.photos.map(\.id)).count == library.photos.count else { throw LibraryError.integrity("duplicate photo identities") }
         var hashes: [String: String] = [:]
-        for photo in library.photos {
+        for photo in try library.uniqueOriginals() {
             guard !photo.filename.isEmpty, photo.filename != ".", photo.filename != "..",
                   photo.filename == (photo.filename as NSString).lastPathComponent else { throw LibraryError.unsafePath }
             if let path = photo.referencedPath {
@@ -52,11 +51,12 @@ public enum LibraryBackup {
     /// Reads every catalogue-referenced original without modifying any library files.
     public static func verify(_ repository: LibraryRepository) throws -> Int {
         let library = try read(repository.root).library
-        for photo in library.photos where photo.referencedPath != nil {
+        let originals = try library.uniqueOriginals()
+        for photo in originals where photo.referencedPath != nil {
             let url = try repository.availableOriginalURL(photo)
             guard try LibraryRepository.digest(url) == photo.sha256 else { throw LibraryError.integrity(photo.originalName) }
         }
-        return library.photos.count
+        return originals.count
     }
 
     /// Check every present managed original and allow a missing file to be relinked in the workspace.

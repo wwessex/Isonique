@@ -52,12 +52,6 @@ public struct ImportPreset: Codable, Identifiable {
     public var options: ImportOptions
     public init(name: String, options: ImportOptions) { self.name = name; self.options = options }
 }
-public struct EditHistory: Codable {
-    public var undo: [Photo] = []
-    public var redo: [Photo] = []
-    public init() {}
-    public mutating func record(_ photo: Photo) { undo.append(photo); undo = Array(undo.suffix(100)); redo.removeAll() }
-}
 public struct MetadataRecord {
     public var filename: String?
     public var caption: String?
