@@ -272,61 +272,105 @@ extension Workspace {
         status = "Cancelling project merge…"
     }
 
-    func previewLibraryMergePanel() {
+    func mergeLibrariesPanel() {
         guard repository != nil, !busy else { return }
         let panel = NSOpenPanel()
-        panel.title = "Preview Library Merge"
-        panel.prompt = "Preview"
-        panel.message = "Choose another Isonique library to review additions and identity conflicts in the current library."
+        panel.title = "Merge Libraries"
+        panel.prompt = "Review"
+        panel.message = "Choose another Isonique library. Review its additions before merging them into the current library."
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         guard panel.runModal() == .OK, let source = panel.url else { return }
-        Task { await previewLibraryMerge(from: source) }
+        Task { await mergeLibraries(from: source) }
     }
 
-    private func previewLibraryMerge(from source: URL) async {
+    func mergeLibraries(from source: URL) async {
         guard let repository, !busy else { return }
         busy = true
         status = "Comparing library catalogues…"
-        let task = Task.detached(priority: .utility) { try repository.previewLibraryMerge(from: source) }
-        libraryMergePreviewTask = task
-        defer { libraryMergePreviewTask = nil; busy = false }
+        let reservedHistory = history
+        let task = Task.detached(priority: .utility) {
+            try await repository.mergeLibrary(from: source, reserving: reservedHistory, review: { preview in
+                await self.reviewLibraryMerge(preview, sourceName: source.lastPathComponent)
+            }) { progress in
+                await self.reportLibraryMergeProgress(progress)
+            }
+        }
+        libraryMergeTask = task
+        defer { libraryMergeTask = nil; busy = false }
         do {
-            let preview = try await task.value
-            guard !task.isCancelled else { throw CancellationError() }
-            showLibraryMergePreview(preview, sourceName: source.lastPathComponent)
-            status = "Library merge preview complete"
+            let result = try await withTaskCancellationHandler {
+                try await task.value
+            } onCancel: {
+                task.cancel()
+            }
+            if result.preview.hasAdditions {
+                library = result.library
+                let photos = mergeCount(result.preview.photosToAdd, "photo or version", "photos or versions")
+                let originals = mergeCount(result.preview.originalsToCopy, "original", "originals")
+                status = "Merged library · \(photos) added · \(originals) copied"
+            } else {
+                status = "Library merge found no additions"
+            }
+        } catch LibraryMergeError.identityConflicts {
+            status = "Library merge blocked by identity conflicts"
         } catch is CancellationError {
-            status = "Library merge preview cancelled"
+            status = "Library merge cancelled"
         } catch {
             self.error = error.localizedDescription
-            status = "Library merge preview failed"
+            status = "Library merge failed"
         }
     }
 
-    private func showLibraryMergePreview(_ preview: LibraryMergePreview, sourceName: String) {
+    private func reportLibraryMergeProgress(_ progress: ImportProgress) {
+        guard libraryMergeTask?.isCancelled == false else { return }
+        status = "Verified \(progress.processed) of \(progress.total) originals for library merge…"
+    }
+
+    private func reviewLibraryMerge(_ preview: LibraryMergePreview, sourceName: String) -> Bool {
+        guard libraryMergeTask?.isCancelled == false else { return false }
         let alert = NSAlert()
-        alert.messageText = "Library Merge Preview for \(sourceName)"
-        let newProjects = preview.projects.filter(\.isNew).count
-        var details = [
-            "\(newProjects) new projects, \(preview.albumsToAdd) new albums, \(preview.photosToAdd) new photos or versions.",
-            "\(preview.originalsToCopy) originals to copy, \(preview.reusableOriginals) reusable by ID and fingerprint, \(preview.sharedOriginalsInSource) shared by source versions.",
-            "Matching photos stay in the current library. \(preview.trashedPhotosExcluded) photos in source Library Trash are excluded."
+        alert.messageText = "Review Library Merge from \(sourceName)"
+        let projects = mergeCount(preview.projects.filter(\.isNew).count, "new project", "new projects")
+        let albums = mergeCount(preview.albumsToAdd, "new album", "new albums")
+        let photos = mergeCount(preview.photosToAdd, "new photo or version", "new photos or versions")
+        let originals = mergeCount(preview.originalsToCopy, "original", "originals")
+        let trashed = mergeCount(preview.trashedPhotosExcluded, "photo", "photos")
+        var summary = [
+            "\(projects), \(albums), \(photos).",
+            "\(originals) to copy, \(preview.reusableOriginals) reusable by ID and fingerprint, \(preview.sharedOriginalsInSource) shared by source versions.",
+            "Existing records are kept. Source Library Trash is excluded (\(trashed))."
         ]
-        details += preview.projects.prefix(8).map {
+        let projectRows = preview.projects.map {
             "\($0.name)\($0.isNew ? " (new project)" : "") — \($0.photosToAdd) to add, \($0.matchingPhotos) matching"
         }
-        if preview.projects.count > 8 { details.append("And \(preview.projects.count - 8) more project rows.") }
         if !preview.conflicts.isEmpty {
             alert.alertStyle = .warning
-            details.append("\(preview.conflicts.count) identity conflicts")
-            details += preview.conflicts.prefix(5)
-            if preview.conflicts.count > 5 { details.append("And \(preview.conflicts.count - 5) more conflicts.") }
+            summary.append("Identity conflicts prevent the merge.")
         }
-        details.append("This read-only review compares recorded fingerprints.")
-        alert.informativeText = details.joined(separator: "\n\n")
-        alert.addButton(withTitle: "Done")
-        alert.runModal()
+        alert.informativeText = summary.joined(separator: "\n\n")
+        let report = preview.conflicts + projectRows
+        if !report.isEmpty {
+            let scroll = NSTextView.scrollableTextView()
+            scroll.frame.size = NSSize(width: 400, height: min(180, max(65, report.count * 24)))
+            if let text = scroll.documentView as? NSTextView {
+                text.string = report.joined(separator: "\n")
+                text.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+                text.isEditable = false
+                text.setAccessibilityLabel("Project breakdown and identity conflicts")
+            }
+            alert.accessoryView = scroll
+        }
+        let canMerge = preview.hasAdditions && preview.conflicts.isEmpty
+        alert.addButton(withTitle: canMerge ? "Merge Libraries" : "Done")
+        if canMerge { alert.addButton(withTitle: "Cancel") }
+        let accepted = alert.runModal() == .alertFirstButtonReturn
+        if accepted && canMerge { status = "Verifying originals for library merge…" }
+        return accepted
+    }
+
+    private func mergeCount(_ count: Int, _ singular: String, _ plural: String) -> String {
+        "\(count) \(count == 1 ? singular : plural)"
     }
 
     func verifyLibrary() {

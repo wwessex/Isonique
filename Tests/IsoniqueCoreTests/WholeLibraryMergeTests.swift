@@ -62,16 +62,174 @@ final class WholeLibraryMergeTests: XCTestCase {
         }
     }
 
+    func testMergePreservesMatchingRecordsAndReopensSharedOriginalsAndMemberships() async throws {
+        let fixture = try fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let destinationBefore = try fixture.destination.load()
+        let sourceBefore = try snapshot(fixture.source)
+        let referenceHash = try LibraryRepository.digest(fixture.externalOriginal)
+
+        let result = try await fixture.destination.mergeLibrary(from: fixture.source.root, review: {
+            XCTAssertEqual($0.photosToAdd, 4)
+            XCTAssertTrue($0.conflicts.isEmpty)
+            return true
+        })
+
+        let (repository, saved) = try LibraryBackup.openVerified(fixture.destination.root)
+        let byID = Dictionary(uniqueKeysWithValues: saved.photos.map { ($0.id, $0) })
+        let reused = try XCTUnwrap(byID[fixture.reusedVersion.id])
+        let added = try XCTUnwrap(byID[fixture.incomingPhoto.id])
+        let version = try XCTUnwrap(byID[fixture.incomingVersion.id])
+        let unassigned = try XCTUnwrap(byID[fixture.unassigned.id])
+        XCTAssertEqual(result.preview.originalsToCopy, 2)
+        XCTAssertEqual(saved.projects.map(\.name), ["Shared Project", "Local Project", "Imported Project", "Empty Project"])
+        XCTAssertEqual(saved.albums.map(\.name), ["Shared Selects", "Imported Selects", "Imported Flagged"])
+        XCTAssertEqual(saved.albums.last?.rule?.projectID, version.projectID)
+        XCTAssertEqual(Array(saved.photos.prefix(2)), destinationBefore.photos)
+        XCTAssertEqual(reused.filename, fixture.sharedPhoto.filename)
+        XCTAssertEqual(reused.originalID, fixture.sharedPhoto.id)
+        XCTAssertEqual(version.filename, added.filename)
+        XCTAssertEqual(version.originalID, added.id)
+        XCTAssertEqual(added.adjustments.exposure, 0.4)
+        XCTAssertEqual(added.albumIDs, version.albumIDs)
+        XCTAssertEqual(added.albumIDs, [saved.albums[1].id])
+        XCTAssertNotEqual(added.projectID, version.projectID)
+        XCTAssertEqual(reused.pairID, fixture.pairID)
+        XCTAssertEqual(added.pairID, fixture.pairID)
+        XCTAssertEqual(saved.stackBrowser?.picks[fixture.stackID], version.id)
+        XCTAssertEqual(saved.stackBrowser?.albumPicks[saved.albums[1].id]?[fixture.stackID], added.id)
+        XCTAssertEqual(saved.stackBrowser?.collapsed, [fixture.stackID])
+        XCTAssertNil(unassigned.projectID)
+        XCTAssertNil(unassigned.referencedPath)
+        XCTAssertEqual(try LibraryRepository.digest(repository.availableOriginalURL(unassigned)), referenceHash)
+        XCTAssertEqual(try LibraryBackup.verify(repository), 4)
+        XCTAssertEqual(try snapshot(fixture.source), sourceBefore)
+        XCTAssertEqual(try LibraryRepository.digest(fixture.externalOriginal), referenceHash)
+
+        let savedBeforeRetry = try snapshot(repository)
+        let retry = try await repository.mergeLibrary(from: fixture.source.root, review: {
+            XCTAssertFalse($0.hasAdditions)
+            return true
+        })
+        XCTAssertFalse(retry.preview.hasAdditions)
+        XCTAssertEqual(try snapshot(repository), savedBeforeRetry)
+    }
+
+    func testDecliningAndCancellingThenFailedSaveLeaveNoAdditions() async throws {
+        let fixture = try fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let before = try snapshot(fixture.destination)
+        let sourceBefore = try snapshot(fixture.source)
+        do {
+            _ = try await fixture.destination.mergeLibrary(from: fixture.source.root, review: { _ in false }, progress: { _ in
+                XCTFail("A declined review should skip staging")
+            })
+            XCTFail("Expected a declined review to cancel")
+        } catch is CancellationError {}
+        XCTAssertEqual(try snapshot(fixture.destination), before)
+
+        let job = Task.detached {
+            try await fixture.destination.mergeLibrary(from: fixture.source.root, review: { _ in true }, progress: {
+                if $0.processed == 1 { withUnsafeCurrentTask { $0?.cancel() } }
+            })
+        }
+        do {
+            _ = try await job.value
+            XCTFail("Expected cancellation during staging")
+        } catch is CancellationError {}
+        XCTAssertEqual(try snapshot(fixture.destination), before)
+
+        let catalogue = fixture.destination.root.appendingPathComponent("catalog.json")
+        try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: catalogue.path)
+        defer { try? FileManager.default.setAttributes([.immutable: false], ofItemAtPath: catalogue.path) }
+        do {
+            _ = try await fixture.destination.mergeLibrary(from: fixture.source.root, review: { _ in true })
+            XCTFail("Expected catalogue save failure")
+        } catch is CocoaError {}
+        XCTAssertEqual(try snapshot(fixture.destination), before)
+        XCTAssertEqual(try snapshot(fixture.source), sourceBefore)
+    }
+
+    func testRechecksCatalogueAndOriginalsAfterReview() async throws {
+        let fixture = try fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let before = try snapshot(fixture.destination)
+        do {
+            _ = try await fixture.destination.mergeLibrary(from: fixture.source.root, review: { _ in true }, progress: {
+                guard $0.processed == 1 else { return }
+                do {
+                    var edited = try fixture.source.load()
+                    edited.projects[0].name = "Changed during staging"
+                    try fixture.source.save(edited)
+                } catch { XCTFail("Fixture could not modify the source: \(error)") }
+            })
+            XCTFail("Expected a source catalogue change to block publication")
+        } catch LibraryError.integrity(let message) {
+            XCTAssertTrue(message.contains("source catalogue changed"))
+        }
+        XCTAssertEqual(try snapshot(fixture.destination), before)
+
+        try Data([42]).write(to: fixture.externalOriginal)
+        do {
+            _ = try await fixture.destination.mergeLibrary(from: fixture.source.root, review: { _ in true })
+            XCTFail("Expected an external original fingerprint mismatch")
+        } catch LibraryError.integrity(let name) {
+            XCTAssertEqual(name, fixture.unassigned.originalName)
+        }
+        XCTAssertEqual(try snapshot(fixture.destination), before)
+    }
+
+    func testCannotApproveStackAndUndoIdentityConflicts() async throws {
+        let fixture = try fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        var library = try fixture.destination.load()
+        library.setStackCollapsed(true, stackID: fixture.stackID)
+        try fixture.destination.save(library)
+        let before = try snapshot(fixture.destination)
+        var history = EditHistory()
+        history.record(.restoreVersion(fixture.reusedVersion))
+        do {
+            _ = try await fixture.destination.mergeLibrary(from: fixture.source.root, reserving: history, review: {
+                XCTAssertEqual($0.conflicts.count, 2)
+                XCTAssertTrue($0.conflicts.contains { $0.hasPrefix("Stack identity —") })
+                XCTAssertTrue($0.conflicts.contains { $0.contains("reserved by destination edit history") })
+                return true
+            })
+            XCTFail("Expected identity conflicts to block publication")
+        } catch LibraryMergeError.identityConflicts {}
+        XCTAssertEqual(try snapshot(fixture.destination), before)
+    }
+
+    private struct Snapshot: Equatable {
+        let catalogue: Data
+        let entries: Set<String>
+        let originals: [String: String]
+    }
+
+    private func snapshot(_ repository: LibraryRepository) throws -> Snapshot {
+        let files = FileManager.default
+        let root = repository.root
+        let originals = root.appendingPathComponent("Originals")
+        let hashes = try files.contentsOfDirectory(atPath: originals.path).map { name in
+            (name, try LibraryRepository.digest(originals.appendingPathComponent(name)))
+        }
+        return Snapshot(catalogue: try Data(contentsOf: root.appendingPathComponent("catalog.json")),
+                        entries: Set(try files.contentsOfDirectory(atPath: root.path)),
+                        originals: Dictionary(uniqueKeysWithValues: hashes))
+    }
+
     private struct Fixture {
         let root: URL
         let destination: LibraryRepository
         let source: LibraryRepository
         let sharedPhoto: Photo
-        let localOnly: Photo
         let reusedVersion: Photo
         let incomingPhoto: Photo
         let incomingVersion: Photo
         let unassigned: Photo
+        let externalOriginal: URL
+        let stackID: UUID
+        let pairID: UUID
     }
 
     private func fixture() throws -> Fixture {
@@ -108,7 +266,10 @@ final class WholeLibraryMergeTests: XCTestCase {
         var incomingPhoto = try photo("Local.png", byte: 3, project: shared.id, in: source)
         incomingPhoto.albumIDs = [album.id]
         incomingPhoto.adjustments.exposure = 0.4
-        let unassigned = try photo("Unassigned.png", byte: 4, project: nil, in: source)
+        var unassigned = try photo("Unassigned.png", byte: 4, project: nil, in: source)
+        let externalOriginal = root.appendingPathComponent("Referenced.png")
+        try FileManager.default.moveItem(at: source.managedOriginalURL(unassigned.filename), to: externalOriginal)
+        unassigned.referencedPath = externalOriginal.path
         var trashed = try photo("Trashed.png", byte: 5, project: imported.id, in: source)
         trashed.trashedAt = Date()
         var incoming = Library()
@@ -120,9 +281,20 @@ final class WholeLibraryMergeTests: XCTestCase {
         incoming.photos[4].projectID = imported.id
         incoming.photos[4].albumIDs = []
         incoming.photos[5].projectID = imported.id
+        let stackID = UUID()
+        let pairID = UUID()
+        incoming.photos[1].stackID = stackID
+        incoming.photos[5].stackID = stackID
+        incoming.photos[1].pairID = pairID
+        incoming.photos[4].pairID = pairID
+        incoming.setStackCollapsed(true, stackID: stackID)
+        incoming.applyStackPick(StackPickChange(stackID: stackID, photoID: version.id, selectionID: version.id))
+        incoming.applyStackPick(StackPickChange(stackID: stackID, albumID: album.id, photoID: incomingPhoto.id,
+                                               selectionID: incomingPhoto.id))
         try source.save(incoming)
-        return Fixture(root: root, destination: destination, source: source, sharedPhoto: sharedPhoto, localOnly: localOnly,
-                       reusedVersion: reused, incomingPhoto: incomingPhoto, incomingVersion: version, unassigned: unassigned)
+        return Fixture(root: root, destination: destination, source: source, sharedPhoto: sharedPhoto,
+                       reusedVersion: reused, incomingPhoto: incomingPhoto, incomingVersion: version, unassigned: unassigned,
+                       externalOriginal: externalOriginal, stackID: stackID, pairID: pairID)
     }
 
     private func photo(_ name: String, byte: UInt8, project: UUID?, in repository: LibraryRepository) throws -> Photo {

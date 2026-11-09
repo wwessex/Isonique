@@ -35,7 +35,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var originalStatusRevision = 0
     @Published var originalJobResult: OriginalJobResult?
     @Published var projectMergeTask: Task<ProjectLibraryMergeResult, Error>?
-    @Published var libraryMergePreviewTask: Task<LibraryMergePreview, Error>?
+    @Published var libraryMergeTask: Task<LibraryMergeResult, Error>?
     @Published var projectImportTask: Task<ProjectLibraryImportResult, Error>?
     @Published var projectExportTask: Task<Int, Error>?
     @Published var originalJobTask: Task<(Library?, OriginalJobResult), Error>?
@@ -692,10 +692,10 @@ enum EditTool: String { case select, crop, straighten, brush }
                     Button("Cancel Project Merge", action: workspace.cancelProjectMerge)
                         .disabled(task.isCancelled)
                 }
-                Button("Preview Library Merge…", action: workspace.previewLibraryMergePanel)
+                Button("Merge Libraries…", action: workspace.mergeLibrariesPanel)
                     .disabled(workspace.busy || workspace.repository == nil)
-                if let task = workspace.libraryMergePreviewTask {
-                    Button("Cancel Library Merge Preview") { task.cancel() }.disabled(task.isCancelled)
+                if let task = workspace.libraryMergeTask {
+                    Button("Cancel Library Merge") { task.cancel() }.disabled(task.isCancelled)
                 }
                 Button("Import XML / XMP Metadata…", action: workspace.importMetadataPanel)
                     .disabled(workspace.busy || workspace.isViewingTrash || workspace.library.activePhotos.isEmpty)
