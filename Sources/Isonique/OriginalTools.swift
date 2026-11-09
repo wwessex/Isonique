@@ -49,14 +49,17 @@ extension Workspace {
         !busy && repository != nil && library.photos.contains(where: operation.includes)
     }
 
+    private func selectedOriginalIDs(for operation: OriginalFolderOperation) -> Set<UUID> {
+        let selectionIDs = batchMode ? batchSelection : Set(selection.map { [$0] } ?? [])
+        guard !selectionIDs.isEmpty else { return [] }
+        return Set(photos.filter { selectionIDs.contains($0.id) && operation.includes($0) }.map(\.originalID))
+    }
+
     func originalFolderScopes(for operation: OriginalFolderOperation) -> [OriginalFolderScope] {
         var choices = [OriginalFolderScope(title: "Entire Library", originalIDs: nil)]
-        let selectionIDs = batchMode ? batchSelection : Set(selection.map { [$0] } ?? [])
-        if !selectionIDs.isEmpty {
-            let selectedOriginals = Set(photos.filter { selectionIDs.contains($0.id) && operation.includes($0) }.map(\.originalID))
-            if !selectedOriginals.isEmpty {
-                choices.append(OriginalFolderScope(title: "Selected Photos", originalIDs: selectedOriginals))
-            }
+        let selectedOriginals = selectedOriginalIDs(for: operation)
+        if !selectedOriginals.isEmpty {
+            choices.append(OriginalFolderScope(title: "Selected Photos", originalIDs: selectedOriginals))
         }
         if let project = library.projects.first(where: { scope == "project:\($0.id)" }) {
             let projectOriginals = Set(library.activePhotos.filter { $0.projectID == project.id && operation.includes($0) }.map(\.originalID))
@@ -92,11 +95,8 @@ extension Workspace {
     }
 
     func findOriginals(in folder: URL, operation: OriginalFolderOperation, originalIDs: Set<UUID>? = nil) async {
-        guard canFindOriginals(operation), let repository else { return }
-        let current = library
-        busy = true
-        status = "Searching for missing originals…"
-        let task = Task.detached(priority: .utility) { () throws -> (Library?, OriginalFolderResult) in
+        guard canFindOriginals(operation) else { return }
+        await runOriginalJob(status: "Searching for missing originals…") { repository, current in
             switch operation {
             case .reconnect:
                 var draft = current
@@ -104,7 +104,7 @@ extension Workspace {
                 let summary = report.reconnected.isEmpty && report.unmatched.isEmpty && report.ambiguous.isEmpty
                     ? "No missing referenced originals"
                     : "\(report.reconnected.count) reconnected · \(report.unmatched.count) unmatched · \(report.ambiguous.count) ambiguous"
-                return (report.reconnected.isEmpty ? nil : draft, OriginalFolderResult(
+                return (report.reconnected.isEmpty ? nil : draft, OriginalJobResult(
                     title: operation.title, summary: summary, unmatched: report.unmatched, ambiguous: report.ambiguous,
                     scanErrors: report.scanErrors))
             case .recoverManaged:
@@ -113,27 +113,53 @@ extension Workspace {
                     report.occupied.isEmpty && report.failed.isEmpty && !report.cancelled
                     ? "No missing managed originals"
                     : "\(report.restored.count) restored · \(report.unmatched.count) unmatched · \(report.ambiguous.count) ambiguous"
-                return (nil, OriginalFolderResult(
+                return (nil, OriginalJobResult(
                     title: operation.title, summary: summary, unmatched: report.unmatched, ambiguous: report.ambiguous,
                     occupied: report.occupied, failed: report.failed, scanErrors: report.scanErrors,
                     cancelled: report.cancelled))
             }
         }
-        originalFolderTask = task
-        defer { originalFolderTask = nil; busy = false }
+    }
+
+    var canConsolidateSelectedOriginals: Bool {
+        !busy && repository != nil && batchMode && !isViewingTrash && !selectedOriginalIDs(for: .reconnect).isEmpty
+    }
+
+    func consolidateSelectedOriginals() async {
+        guard canConsolidateSelectedOriginals else { return }
+        let ids = selectedOriginalIDs(for: .reconnect)
+        await runOriginalJob(status: "Copying and verifying selected originals…") { repository, current in
+            var draft = current
+            let report = try repository.consolidateOriginals(ids, in: &draft)
+            let summary = "\(report.consolidated.count) consolidated · \(report.unavailable.count) unavailable"
+            return (report.consolidated.isEmpty ? nil : draft, OriginalJobResult(
+                title: "Consolidate Selected Originals", summary: summary, unavailable: report.unavailable,
+                occupied: report.occupied, failed: report.failed, cancelled: report.cancelled))
+        }
+    }
+
+    private func runOriginalJob(status pending: String,
+                                operation: @escaping @Sendable (LibraryRepository, Library) throws -> (Library?, OriginalJobResult)) async {
+        guard !busy, let repository else { return }
+        let current = library
+        busy = true
+        status = pending
+        let task = Task.detached(priority: .utility) { try operation(repository, current) }
+        originalJobTask = task
+        defer { originalJobTask = nil; busy = false }
         do {
             let (draft, result) = try await task.value
             if let draft { library = draft }
             let preferred = selection
             refreshOriginalStatus()
             if selected == nil { selectAfterChange(preferred: preferred) }
-            originalFolderResult = result
+            originalJobResult = result
             status = result.summary
         } catch is CancellationError {
-            status = "Original search cancelled"
+            status = "Original operation cancelled"
         } catch {
             self.error = error.localizedDescription
-            status = "Original search failed"
+            status = "Original operation failed"
         }
     }
 
@@ -200,26 +226,27 @@ struct OriginalFolderScope {
     let originalIDs: Set<UUID>?
 }
 
-struct OriginalFolderResult: Sendable {
+struct OriginalJobResult: Sendable {
     let title: String
     let summary: String
-    let unmatched: [String]
-    let ambiguous: [String]
+    var unmatched: [String] = []
+    var ambiguous: [String] = []
+    var unavailable: [String] = []
     var occupied: [String] = []
     var failed: [String] = []
-    let scanErrors: Int
+    var scanErrors = 0
     var cancelled = false
 
     var details: String {
         var lines = [summary]
         let groups = [("Unmatched", unmatched), ("Multiple verified copies", ambiguous),
-                      ("Destination unavailable", occupied), ("Could not restore", failed)]
+                      ("Original unavailable", unavailable), ("Destination unavailable", occupied), ("Could not restore", failed)]
         for (label, names) in groups where !names.isEmpty {
             let first = names.prefix(4).joined(separator: ", ")
             lines.append("\(label) — \(first)" + (names.count > 4 ? " and \(names.count - 4) more" : ""))
         }
         if scanErrors > 0 { lines.append("Skipped \(scanErrors) locations or files after a read error.") }
-        if cancelled { lines.append("Recovery cancelled. Completed copies remain in the library.") }
+        if cancelled { lines.append("Operation cancelled. Completed copies remain in the library.") }
         return lines.joined(separator: "\n")
     }
 }

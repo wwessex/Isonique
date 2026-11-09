@@ -33,8 +33,8 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var colorFilter = ColorLabelFilter.all
     @Published var labelNames: [String: String]
     @Published var originalStatusRevision = 0
-    @Published var originalFolderResult: OriginalFolderResult?
-    @Published var originalFolderTask: Task<(Library?, OriginalFolderResult), Error>?
+    @Published var originalJobResult: OriginalJobResult?
+    @Published var originalJobTask: Task<(Library?, OriginalJobResult), Error>?
     @Published var busy = false
     @Published private(set) var importInProgress = false
     @Published private(set) var importProgress: ImportProgress?
@@ -672,12 +672,15 @@ enum EditTool: String { case select, crop, straighten, brush }
                     .disabled(!workspace.canFindOriginals(.reconnect))
                 Button("Recover Missing Managed Originals…") { workspace.findOriginalsPanel(.recoverManaged) }
                     .disabled(!workspace.canFindOriginals(.recoverManaged))
-                if let task = workspace.originalFolderTask {
-                    Button("Cancel Original Search") { task.cancel() }
+                if let task = workspace.originalJobTask {
+                    Button("Cancel Original Operation") { task.cancel() }
                 }
                 Button("Consolidate Original") {
                     if let photo = workspace.selected { workspace.consolidateOriginal(photo) }
                 }.disabled(workspace.busy || workspace.isViewingTrash || workspace.selected?.referencedPath == nil)
+                Button("Consolidate Selected Originals") {
+                    Task { await workspace.consolidateSelectedOriginals() }
+                }.disabled(!workspace.canConsolidateSelectedOriginals)
                 Button("Refresh Original Status", action: workspace.refreshOriginalStatus).disabled(workspace.busy || workspace.repository == nil)
                 Button("Restore Library Backup…", action: workspace.restoreLibraryPanel).disabled(workspace.busy)
                 Button("Recover Aperture Originals…", action: workspace.recoverPanel).disabled(workspace.busy || workspace.repository == nil)
@@ -920,12 +923,12 @@ struct ContentView: View {
             }.padding(28)
         }
         .alert("Isonique", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button("OK") { model.error = nil } } message: { Text(model.error ?? "") }
-        .alert(model.originalFolderResult?.title ?? "Original Search",
-               isPresented: Binding(get: { model.originalFolderResult != nil },
-                                    set: { if !$0 { model.originalFolderResult = nil } })) {
-            Button("OK") { model.originalFolderResult = nil }
+        .alert(model.originalJobResult?.title ?? "Original Search",
+               isPresented: Binding(get: { model.originalJobResult != nil },
+                                    set: { if !$0 { model.originalJobResult = nil } })) {
+            Button("OK") { model.originalJobResult = nil }
         } message: {
-            Text(model.originalFolderResult?.details ?? "")
+            Text(model.originalJobResult?.details ?? "")
         }
         .onChange(of: model.scope) { _, _ in
             if model.isViewingTrash {

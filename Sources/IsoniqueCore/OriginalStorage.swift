@@ -24,6 +24,14 @@ public struct ManagedOriginalRecoveryReport: Sendable {
     public fileprivate(set) var cancelled = false
 }
 
+public struct OriginalConsolidationReport: Sendable {
+    public fileprivate(set) var consolidated: [String] = []
+    public fileprivate(set) var unavailable: [String] = []
+    public fileprivate(set) var occupied: [String] = []
+    public fileprivate(set) var failed: [String] = []
+    public fileprivate(set) var cancelled = false
+}
+
 public extension LibraryRepository {
     func availableOriginalURL(_ photo: Photo) throws -> URL {
         let url = try originalURL(photo)
@@ -203,6 +211,60 @@ public extension LibraryRepository {
             throw error
         }
         library = updated
+    }
+
+    /// Copy selected originals and publish their managed paths together.
+    func consolidateOriginals(_ originalIDs: Set<UUID>, in library: inout Library) throws -> OriginalConsolidationReport {
+        let catalogue = root.appendingPathComponent("catalog.json")
+        let before = try Data(contentsOf: catalogue)
+        let originals = try library.uniqueOriginals().filter { $0.referencedPath != nil && originalIDs.contains($0.originalID) }
+        var report = OriginalConsolidationReport()
+        var completed: Set<UUID> = []
+        for photo in originals {
+            if Task.isCancelled {
+                report.cancelled = true
+                break
+            }
+            guard let input = try? availableOriginalURL(photo) else {
+                report.unavailable.append(photo.originalName)
+                continue
+            }
+            guard let target = try? managedOriginalURL(photo.filename) else {
+                report.occupied.append(photo.originalName)
+                continue
+            }
+            do {
+                if FileManager.default.fileExists(atPath: target.path) {
+                    // A previous run may have copied the bytes before saving the catalogue.
+                    try Self.verifyOriginal(input, photo: photo)
+                    guard (try? Self.verifyOriginal(target, photo: photo)) != nil else {
+                        report.occupied.append(photo.originalName)
+                        continue
+                    }
+                    try Task.checkCancellation()
+                } else {
+                    try installManagedOriginal(from: input, photo: photo)
+                }
+                completed.insert(photo.originalID)
+                report.consolidated.append(photo.originalName)
+            } catch is CancellationError {
+                report.cancelled = true
+                break
+            } catch {
+                report.failed.append(photo.originalName)
+            }
+        }
+        guard !completed.isEmpty else { return report }
+
+        var updated = library
+        for index in updated.photos.indices where completed.contains(updated.photos[index].originalID) {
+            updated.photos[index].referencedPath = nil
+        }
+        // Keep exact copies if saving fails. A retry can verify and reuse them.
+        guard try Data(contentsOf: catalogue) == before else { throw LibraryError.integrity("catalogue changed during consolidation") }
+        try save(updated)
+        library = updated
+        return report
     }
 
     internal static func referenceURL(_ path: String, libraryRoot: URL) throws -> URL {

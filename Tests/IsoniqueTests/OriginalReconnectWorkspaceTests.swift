@@ -29,9 +29,9 @@ final class OriginalReconnectWorkspaceTests: XCTestCase {
         await workspace.findOriginals(in: folder, operation: .reconnect)
 
         XCTAssertFalse(workspace.busy)
-        XCTAssertNil(workspace.originalFolderTask)
+        XCTAssertNil(workspace.originalJobTask)
         XCTAssertNil(workspace.error)
-        XCTAssertEqual(workspace.originalFolderResult?.summary, "1 reconnected · 0 unmatched · 0 ambiguous")
+        XCTAssertEqual(workspace.originalJobResult?.summary, "1 reconnected · 0 unmatched · 0 ambiguous")
         XCTAssertEqual(workspace.originalStatusRevision, revision + 1)
         XCTAssertTrue(workspace.photos.isEmpty)
         workspace.originalFilter = .all
@@ -63,9 +63,9 @@ final class OriginalReconnectWorkspaceTests: XCTestCase {
         await workspace.findOriginals(in: folder, operation: .recoverManaged)
 
         XCTAssertFalse(workspace.busy)
-        XCTAssertNil(workspace.originalFolderTask)
+        XCTAssertNil(workspace.originalJobTask)
         XCTAssertNil(workspace.error)
-        XCTAssertEqual(workspace.originalFolderResult?.summary, "1 restored · 0 unmatched · 0 ambiguous")
+        XCTAssertEqual(workspace.originalJobResult?.summary, "1 restored · 0 unmatched · 0 ambiguous")
         XCTAssertEqual(workspace.originalStatusRevision, revision + 1)
         XCTAssertTrue(workspace.photos.isEmpty)
         let reopened = Workspace(libraryRoot: repo.root)
