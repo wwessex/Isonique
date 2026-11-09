@@ -99,6 +99,6 @@ File → Import from Camera or Card discovers local cameras through [Image Captu
 
 ## Next implementation slice
 
-1. Exercise camera thumbnails, selection, cancellation and reconnect on physical PTP hardware. Evaluate tethered capture separately.
+1. Run the [physical PTP camera checklist](../VALIDATION.md#physical-ptp-camera-import) when a camera is available. Record hardware results for thumbnails, selection, active transfer cancellation and reconnect. Evaluate tethered capture separately.
 
 Other open core work includes library merging and repair, and tethered capture. Build and interaction evidence should stay in the test record.

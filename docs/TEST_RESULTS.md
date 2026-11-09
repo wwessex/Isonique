@@ -360,3 +360,9 @@
 - Simulated camera tests verified that selecting a JPEG excludes its unselected RAW companion and an identically named photo in another folder. The importer requested the selected JPEG and its matching sidecar. A separate test verified that disconnect stops the transfer, keeps the completed photo, and lets a fresh catalogue import a newly selected file.
 - In the signed app, a read-only mounted disk image displayed two thumbnails. Select All, Deselect All and individual checkboxes updated the count. Cancelling the browser left the catalogue empty. Ejecting the volume cleared an active selection, and remounting allowed a fresh selection. Import copied only the selected PNG, applied its XMP caption and preserved the disk image and source file hashes.
 - All 198 optimized tests passed without skips, including four camera RAW fixtures and the Finder Trash handoff. Branding and the signed arm64 build passed on macOS 27.3 with Xcode 27.2. The native macOS app is the sole maintained version. Physical PTP camera thumbnail and reconnect behavior remain unverified.
+
+## Physical PTP checkpoint preflight
+
+- The Mac’s USB device inventory listed controllers only, and no physical camera was available. Hardware checks for thumbnails, selected import, active transfer cancellation and reconnect remain pending. [Physical PTP camera checklist](../VALIDATION.md#physical-ptp-camera-import)
+- On macOS 27.3, the signed arm64 app showed the empty device browser and disabled Import Options. Refresh preserved the empty state, and Cancel returned to the disposable library with zero photos in its catalogue.
+- All seven focused camera and card release tests passed. Those tests cover simulated transfers and file-based media.
