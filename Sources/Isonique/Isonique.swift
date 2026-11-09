@@ -53,6 +53,9 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var proofProfile: Data?
     @Published var proofName = ""
     @Published var proofEnabled = false
+    @Published var clipping: ClippingSettings {
+        didSet { clipping.save(to: preferences) }
+    }
     @Published var history = EditHistory()
     let preferences: UserDefaults
     var keepHistory: Bool { preferences.bool(forKey: "history.persist") }
@@ -61,6 +64,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     var repository: LibraryRepository?
     init(libraryRoot: URL? = nil, preferences: UserDefaults = .standard) {
         self.preferences = preferences
+        clipping = ClippingSettings(preferences: preferences)
         let layout = preferences.string(forKey: "browser.layout").flatMap(BrowserPresentation.init(rawValue:))
         browserLayout = layout == .list ? .list : .grid
         labelNames = preferences.dictionary(forKey: "photo.labelNames") as? [String: String] ?? [:]
@@ -483,6 +487,11 @@ enum EditTool: String { case select, crop, straighten, brush }
                     .keyboardShortcut("o", modifiers: [.option]).disabled(!workspace.canStartComparison)
                 Button("End Comparison", action: workspace.stopComparison)
                     .keyboardShortcut(.return, modifiers: [.command]).disabled(workspace.comparisonID == nil)
+                Divider()
+                Toggle("Highlight Hot & Cold Areas", isOn: $workspace.clipping.both)
+                    .keyboardShortcut("h", modifiers: [.option, .shift])
+                Toggle("Highlight Clipping Warning", isOn: $workspace.clipping.highlights)
+                Toggle("Shadow Clipping Warning", isOn: $workspace.clipping.shadows)
             }
             CommandMenu("Review") {
                 Button("Auto Stack by Capture Time…") { workspace.showAutoStack = true }.disabled(workspace.busy || workspace.isViewingTrash || workspace.photos.isEmpty)
@@ -957,7 +966,7 @@ struct PhotoViewer: View {
     let photo: Photo
     let url: URL
     let original: Bool
-    @State private var image: NSImage?
+    @State private var image: ViewerImage?
     @State private var geometry: PhotoGeometry?
     @State private var erasingBrush = false
     @AppStorage("brush.size") private var brushSize = 12.0
@@ -990,9 +999,13 @@ struct PhotoViewer: View {
                                 strength: brushStrength / 100) { model.applyBrushStroke($0, to: photo.id) }
                         .padding(16)
                 }
-                else if zoom && model.tool == .select { ScrollView([.horizontal, .vertical]) { Image(nsImage: image) } }
+                else if zoom && model.tool == .select {
+                    ScrollView([.horizontal, .vertical]) {
+                        ClippingPreview(image: image).frame(width: image.size.width, height: image.size.height)
+                    }
+                }
                 else {
-                    Image(nsImage: image).resizable().scaledToFit()
+                    ClippingPreview(image: image).aspectRatio(image.size, contentMode: .fit)
                         .overlay {
                             if model.tool == .straighten {
                                 GeometryReader { geometry in
@@ -1015,6 +1028,7 @@ struct PhotoViewer: View {
                 Text(photo.displayName).font(.caption.weight(.medium)).lineLimit(1)
                 if original { Text("Original").font(.caption).foregroundStyle(.secondary) }
                 if model.proofEnabled { Text("RGB Proof").font(.caption).foregroundStyle(.yellow) }
+                if image != nil && model.clipping.enabled { ClippingLegend(settings: model.clipping) }
                 Divider().frame(height: 16)
                 Button(zoom ? "Fit" : "100%") { zoom.toggle() }.buttonStyle(.plain).font(.caption.monospacedDigit()).help("Toggle actual pixels").disabled(model.tool != .select)
             }.padding(.horizontal, 16).padding(.vertical, 11).workspaceGlass(radius: 24).padding(16)
@@ -1042,16 +1056,15 @@ struct PhotoViewer: View {
             let render = Task.detached(priority: .userInitiated) {
                 let result = try Renderer.renderWithGeometry(request.url, adjustments: request.adjustments,
                                                             maxDimension: request.maximum)
-                let image = try request.profile.map { try Renderer.proof(result.image, profile: $0) } ?? result.image
-                return (image, result.geometry)
+                return (try ViewerImage(result.image, proofProfile: request.profile), result.geometry)
             }
             let result = await withTaskCancellationHandler {
                 await render.result
             } onCancel: { render.cancel() }
             guard !Task.isCancelled else { return }
             switch result {
-            case .success(let (cg, layout)):
-                image = NSImage(cgImage: cg, size: NSSize(width: cg.width, height: cg.height))
+            case .success(let (preview, layout)):
+                image = preview
                 geometry = layout
                 failure = nil
             case .failure(let error):

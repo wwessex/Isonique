@@ -15,10 +15,11 @@ Baseline audited at `0ebda9a`. Per-file import transaction, photo Trash/Put Back
 
 Dodge and Burn are integrated with the Viewer and shared renderer. Format 4 stores strokes with the edit recipe, snapshots and optional persistent Undo/Redo. Coverage, edge falloff, geometry mapping, persistence, Undo and preview/export consistency have automated tests.
 
+The Viewer and comparison panes have highlight and shadow warnings with persistent thresholds and View menu controls. The separate display overlay uses rendered pixels before proofing. Automated tests cover threshold boundaries and export isolation, and native QA covered the menu switches, shortcut, threshold sliders and comparison panes.
+
 ## Next implementation slice
 
-1. Add Viewer highlight and shadow clipping warnings. Derive the overlays from rendered pixels, keep them out of exports, and verify thresholds and menu toggles.
-2. Add a Loupe and pixel inspection using the Viewer’s image coordinate mapping.
-3. Extend curves with independent RGB and luminance editing through the shared renderer. Measure large-image rendering while adding these tools.
+1. Add a Loupe and pixel inspection using the Viewer’s image coordinate mapping.
+2. Extend curves with independent RGB and luminance editing through the shared renderer. Measure large-image rendering while adding these tools.
 
 Other open core work includes Finder Trash handoff, batch relinking, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

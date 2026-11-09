@@ -69,7 +69,7 @@ struct CropOptionsView: View {
     }
 }
 struct CropCanvas: View {
-    let image: NSImage
+    let image: ViewerImage
     @Binding var crop: PhotoCrop
     let pixelSize: CGSize
     let aspect: Double?
@@ -80,7 +80,7 @@ struct CropCanvas: View {
             let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
             let rect = CGRect(x: crop.x * size.width, y: crop.y * size.height, width: crop.width * size.width, height: crop.height * size.height)
             ZStack(alignment: .topLeading) {
-                Image(nsImage: image).resizable().frame(width: size.width, height: size.height)
+                ClippingPreview(image: image).frame(width: size.width, height: size.height)
                 Path { path in path.addRect(CGRect(origin: .zero, size: size)); path.addRect(rect) }.fill(.black.opacity(0.5), style: FillStyle(eoFill: true)).allowsHitTesting(false)
                 Path { path in
                     path.addRect(rect)
