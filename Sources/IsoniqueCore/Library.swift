@@ -1,4 +1,5 @@
 import Foundation
+import Darwin
 import ImageIO
 import CoreGraphics
 import CryptoKit
@@ -249,6 +250,7 @@ public struct Photo: Codable, Identifiable, Equatable {
 }
 public struct Library: Codable {
     var projectExportMembership: ProjectExportMembership?
+    var pendingFinderTrash: [PendingFinderTrash]?
     public var history: EditHistory?
     public var stackBrowser: StackBrowserState?
     public var version = 1
@@ -378,6 +380,25 @@ public final class LibraryRepository {
         return library
     }
     public func save(_ library: Library) throws {
+        try withCatalogueWriteLock { try writeCatalogue(library) }
+    }
+
+    func withCatalogueWriteLock<Result>(_ body: () throws -> Result) throws -> Result {
+        let descriptor = open(root.path, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC)
+        guard descriptor >= 0 else { throw NSError(domain: NSPOSIXErrorDomain, code: Int(errno)) }
+        defer { close(descriptor) }
+        guard flock(descriptor, LOCK_EX | LOCK_NB) == 0 else {
+            let code = errno
+            if code == EWOULDBLOCK {
+                throw LibraryError.integrity("another catalogue write is finishing; try again")
+            }
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(code))
+        }
+        return try body()
+    }
+
+    // The caller holds the catalogue write lock through this atomic replacement.
+    func writeCatalogue(_ library: Library) throws {
         try library.validateSchema()
         _ = try library.uniqueOriginals()
         var normalized = library

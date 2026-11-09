@@ -50,6 +50,15 @@ public struct StackBrowserState: Codable, Equatable {
         else { collapsed.remove(stackID) }
     }
 
+    mutating func discardEmptiedTrash(photoIDs: Set<UUID>, stackIDs: Set<UUID>) {
+        collapsed.subtract(stackIDs)
+        picks = picks.filter { !stackIDs.contains($0.key) && !photoIDs.contains($0.value) }
+        albumPicks = albumPicks.compactMapValues { album in
+            let surviving = album.filter { !stackIDs.contains($0.key) && !photoIDs.contains($0.value) }
+            return surviving.isEmpty ? nil : surviving
+        }
+    }
+
     mutating func apply(_ change: StackPickChange) -> StackPickChange {
         let previous: UUID?
         if let albumID = change.albumID {

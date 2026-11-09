@@ -286,3 +286,10 @@
 - Repository tests covered an empty Trash, an original kept for an active version, one managed candidate shared by two trashed versions, and a referenced original kept in place. Missing files, symlinks and ambiguous names were excluded from the candidate list. Catalogue bytes, managed hashes and referenced contents matched before and after review.
 - In the signed app, both the File command and the Trash browser opened the same read-only report. It listed three photo records, one managed candidate, one original kept for the active version, and one referenced original kept in place. All three Trash records and every original file remained in place after closing the review.
 - The optimized suite passed all 164 tests without skips, including four camera RAW fixtures. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
+
+## Empty Library Trash and Finder handoff
+
+- Tests reopened the library after a successful move followed by a failed move. Retry moved only the pending original. Another test forced the progress write to fail after a successful move and verified that retry cleared the absent file. A replaced file and a path claimed by a new catalogue record were protected.
+- Tests checked that stale reviews and failed catalogue publication never reached Finder. Changed or unavailable originals kept their Trash records. Referenced originals and originals used by active versions retained their hashes after publication, and surviving edit history remained usable.
+- In the signed app, the review listed one Finder candidate, one original kept for an active version, and one referenced original. Cancel preserved the three Trash records. An opt-in native test used the system Trash API on a disposable original, checked its hash in Finder Trash, and restored it to the test fixture.
+- The optimized suite passed all 169 tests without skips, including the native Finder handoff and four camera RAW fixtures. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
