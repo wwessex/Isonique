@@ -4,6 +4,26 @@ import IsoniqueCore
 
 final class WorkspaceTests: XCTestCase {
     @MainActor
+    func testDefaultLibraryRootPreservesEarlierIsoniqueCatalogue() throws {
+        let support = try temporaryLibrary()
+        let files = FileManager.default
+        defer { try? files.removeItem(at: support) }
+        let branded = support.appendingPathComponent("Isonique/Library", isDirectory: true)
+        let legacy = support.appendingPathComponent("ApertureNative/Library", isDirectory: true)
+
+        XCTAssertEqual(Workspace.defaultLibraryRoot(in: support), branded)
+        try files.createDirectory(at: branded, withIntermediateDirectories: true)
+        let legacyRepository = try LibraryRepository(root: legacy)
+        try legacyRepository.save(Library())
+        XCTAssertEqual(Workspace.defaultLibraryRoot(in: support), legacy)
+
+        let brandedRepository = try LibraryRepository(root: branded)
+        try brandedRepository.save(Library())
+        XCTAssertEqual(Workspace.defaultLibraryRoot(in: support), branded)
+        XCTAssertTrue(files.fileExists(atPath: legacy.appendingPathComponent("catalog.json").path))
+    }
+
+    @MainActor
     func testTrashFiltersSelectionUndoRedoAndRestart() async throws {
         let root = try temporaryLibrary()
         defer { try? FileManager.default.removeItem(at: root) }

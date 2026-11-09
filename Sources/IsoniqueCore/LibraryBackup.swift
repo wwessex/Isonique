@@ -79,6 +79,7 @@ public enum LibraryBackup {
         try copy(snapshot, from: source, to: destination, excluding: current)
     }
 
+    /// Validate the selected source before asking where to restore it. Restore rechecks it.
     public static func validateBackup(_ source: URL) throws -> Int {
         try readBackup(source.standardizedFileURL.resolvingSymlinksInPath()).library.photos.count
     }

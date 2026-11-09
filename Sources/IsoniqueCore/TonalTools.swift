@@ -2,6 +2,7 @@ import Foundation
 import CoreGraphics
 
 public enum SlideshowRules {
+    /// Default time to display a rendered slide, in seconds.
     public static let defaultDisplayTime = 3.0
 }
 

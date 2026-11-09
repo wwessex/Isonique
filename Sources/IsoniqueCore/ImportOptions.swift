@@ -4,7 +4,14 @@ public enum PairingMode: String, Codable, CaseIterable, Identifiable {
     case separate = "Keep separate", linked = "Link RAW + JPEG", raw = "Prefer RAW", jpeg = "Prefer JPEG"
     case linkedRAW = "Both (Use RAW as Original)", onlyJPEG = "JPEG files only", onlyRAW = "RAW files only"
     public var id: String { rawValue }
-    public var title: String { self == .linked ? "Both (Use JPEG as Original)" : rawValue }
+    // Display the pairing choices separately from their serialized preset values.
+    public var title: String {
+        switch self {
+        case .linked: return "Link pair, JPEG primary"
+        case .linkedRAW: return "Link pair, RAW primary"
+        default: return rawValue
+        }
+    }
     public var linksCompanions: Bool { self == .linked || self == .linkedRAW }
 }
 public struct ImportOptions: Codable, Equatable {

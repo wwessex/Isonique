@@ -113,8 +113,8 @@ enum EditTool: String { case select, crop, straighten, brush }
                     throw LibraryError.integrity("saved library is unavailable; use File → Open Isonique Library or Restore Library Backup")
                 }
             } else {
-                // Retain the existing storage path so rebranding never hides an existing catalogue.
-                root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("ApertureNative/Library", isDirectory: true)
+                let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+                root = Self.defaultLibraryRoot(in: support)
             }
             let repo = try LibraryRepository(root: root)
             library = try repo.load()
@@ -123,6 +123,18 @@ enum EditTool: String { case select, crop, straighten, brush }
             history = keepHistory ? (library.history ?? EditHistory()) : EditHistory()
             selection = photos.first?.id
         } catch { self.error = error.localizedDescription; status = "Library unavailable" }
+    }
+    static func defaultLibraryRoot(in support: URL) -> URL {
+        let branded = support.appendingPathComponent("Isonique/Library", isDirectory: true)
+        // Earlier Isonique builds stored their own catalogues here. Open them in place.
+        let legacy = support.appendingPathComponent(
+            "ApertureNative/Library", isDirectory: true
+        )
+        let files = FileManager.default
+        if files.fileExists(atPath: branded.appendingPathComponent("catalog.json").path) {
+            return branded
+        }
+        return files.fileExists(atPath: legacy.path) ? legacy : branded
     }
     var isViewingTrash: Bool { scope == "trash" }
     var photos: [Photo] {
@@ -325,6 +337,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         let previous = draft.updatePhotos([photo.id], change: change)
         commitPhotoChanges(draft, previous: previous)
     }
+    // Menu and inspector actions share the same rating rules and edit history.
     func adjustRating(by delta: Int) {
         edit { $0.rating = RatingRules.adjusting($0.rating, by: delta) }
     }
@@ -530,6 +543,20 @@ enum EditTool: String { case select, crop, straighten, brush }
         }
         .defaultSize(width: 1440, height: 900)
         .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About Isonique") {
+                    let credits = """
+                        Independent, open-source photo management and editing.
+
+                        Isonique is developed independently and is not affiliated with, \
+                        endorsed by, or maintained by Apple Inc.
+                        """
+                    NSApplication.shared.orderFrontStandardAboutPanel(options: [
+                        .applicationName: "Isonique",
+                        .credits: NSAttributedString(string: credits),
+                    ])
+                }
+            }
             CommandGroup(after: .toolbar) {
                 ForEach(BrowserPresentation.allCases) { presentation in
                     Button(presentation.rawValue) { workspace.choosePresentation(presentation) }
@@ -705,7 +732,12 @@ struct ContentView: View {
         NavigationSplitView {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 10) {
-                    Image(systemName: "camera.aperture").font(.system(size: 29, weight: .light)).foregroundStyle(.white).frame(width: 46, height: 46).workspaceGlass(radius: 14)
+                    Text("I")
+                        .font(.system(size: 27, weight: .semibold, design: .serif))
+                        .foregroundStyle(.white)
+                        .frame(width: 46, height: 46)
+                        .workspaceGlass(radius: 14)
+                        .accessibilityHidden(true)
                     VStack(alignment: .leading) { Text("Isonique").font(.system(size: 22, weight: .semibold, design: .rounded)); Text("PHOTO WORKSPACE").font(.system(size: 9, weight: .medium)).tracking(1.6).foregroundStyle(.secondary) }
                 }.padding(20)
                 let stacks = model.activeStacks
