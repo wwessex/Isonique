@@ -155,42 +155,29 @@ extension Workspace {
         !busy && repository != nil && !isViewingTrash && !selectedOriginalIDs { $0.trashedAt == nil }.isEmpty
     }
 
+    var relocationHasReferencedOriginals: Bool {
+        !selectedOriginalIDs(matching: OriginalFolderOperation.reconnect.includes).isEmpty
+    }
+
     func relocateSelectedOriginalsPanel() {
         guard canRelocateSelectedOriginals else { return }
+        pendingRelocationOptions = nil
+        showRelocationOptions = true
+    }
+
+    func chooseRelocationDestination() {
+        let pending = pendingRelocationOptions
+        pendingRelocationOptions = nil
+        guard let options = pending, canRelocateSelectedOriginals else { return }
         let ids = selectedOriginalIDs { $0.trashedAt == nil }
         let panel = NSOpenPanel()
         panel.title = "Relocate Originals"
-        panel.message = "Choose a folder outside this library and how to name and organise the files."
+        panel.message = "Choose a folder outside this library to preview the relocation."
         panel.prompt = "Preview"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         panel.canCreateDirectories = true
-
-        let filenames = NSPopUpButton()
-        filenames.addItems(withTitles: OriginalRelocationFilename.allCases.map(\.rawValue))
-        filenames.setAccessibilityLabel("Filename preset")
-        let subfolders = NSPopUpButton()
-        subfolders.addItems(withTitles: OriginalRelocationSubfolders.allCases.map(\.rawValue))
-        subfolders.setAccessibilityLabel("Subfolder preset")
-        let keepReferences = NSButton(checkboxWithTitle: "Keep copies at previous referenced locations", target: nil, action: nil)
-        keepReferences.state = .on
-        let accessories: [NSView] = [NSTextField(labelWithString: "Filenames"), filenames,
-                                     NSTextField(labelWithString: "Subfolders"), subfolders]
-        let hasReferences = !selectedOriginalIDs(matching: OriginalFolderOperation.reconnect.includes).isEmpty
-        let stack = NSStackView(views: accessories + (hasReferences ? [keepReferences] : []))
-        stack.orientation = .vertical
-        stack.alignment = .leading
-        stack.spacing = 5
-        stack.edgeInsets = NSEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
-        stack.frame.size = stack.fittingSize
-        panel.accessoryView = stack
-        panel.isAccessoryViewDisclosed = true
-
-        guard panel.runModal() == .OK, let folder = panel.url,
-              let filename = filenames.titleOfSelectedItem.flatMap(OriginalRelocationFilename.init(rawValue:)),
-              let subfolder = subfolders.titleOfSelectedItem.flatMap(OriginalRelocationSubfolders.init(rawValue:)) else { return }
-        let options = OriginalRelocationOptions(filename: filename, subfolders: subfolder,
-                                                keepReferencedSources: keepReferences.state == .on)
+        guard panel.runModal() == .OK, let folder = panel.url else { return }
         Task { await reviewRelocation(ids, to: folder, options: options) }
     }
 
@@ -224,7 +211,8 @@ extension Workspace {
         let skipped = items.count - ready
         let action = options.keepReferencedSources ? "Previous referenced copies will be kept."
             : "Previous referenced copies still used by the catalogue will be kept."
-        alert.informativeText = "\(ready) to relocate · \(skipped) skipped\n\(preview.destination.path)\n\n"
+        let preset = options.customPreset.map { "Preset: \($0.name)\n" } ?? ""
+        alert.informativeText = "\(ready) to relocate · \(skipped) skipped\n\(preview.destination.path)\n" + preset + "\n"
             + "Isonique verifies the destination copies and saves their paths before sending eligible old files to Finder Trash. " + action
         let scroll = NSTextView.scrollableTextView()
         scroll.frame.size = NSSize(width: 480, height: min(265, max(70, items.count * 43)))

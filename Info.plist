@@ -5,6 +5,7 @@
 <key>CFBundleIdentifier</key><string>io.github.wwessex.isonique</string>
 <key>CFBundleName</key><string>Isonique</string>
 <key>CFBundleDisplayName</key><string>Isonique</string>
+<key>CFBundleIconFile</key><string>Isonique.icns</string>
 <key>CFBundlePackageType</key><string>APPL</string>
 <key>CFBundleShortVersionString</key><string>0.1.0</string>
 <key>CFBundleVersion</key><string>1</string>

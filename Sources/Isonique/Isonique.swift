@@ -61,6 +61,8 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var brushAdjustment = LocalBrushAdjustment.dodge
     @Published var liftedAdjustments: LiftedSettings?
     @Published var stampMetadata = Set<StampMetadata>()
+    @Published var showRelocationOptions = false
+    var pendingRelocationOptions: OriginalRelocationOptions?
     @Published var showExportOptions = false
     @Published var showImportOptions = false
     @Published var pendingImport: [URL] = []
@@ -1055,6 +1057,9 @@ struct ContentView: View {
         .sheet(isPresented: $model.showSmartAlbum) { SmartAlbumView().environmentObject(model) }
         .sheet(isPresented: $model.showAdvancedSearch) { AdvancedSearchView().environmentObject(model) }
         .sheet(isPresented: $model.showImportOptions) { ImportOptionsView().environmentObject(model) }
+        .sheet(isPresented: $model.showRelocationOptions, onDismiss: model.chooseRelocationDestination) {
+            RelocationOptionsView().environmentObject(model)
+        }
         .sheet(isPresented: $model.showExportOptions) { ExportOptionsView().environmentObject(model) }
         .sheet(item: $collectionEditor) { CollectionNameSheet($0).environmentObject(model) }
         .alert("Isonique", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button("OK") { model.error = nil } } message: { Text(model.error ?? "") }

@@ -338,3 +338,11 @@
 - The optimized suite passed all 186 tests without skips, including four camera RAW fixtures and the native Finder Trash handoff.
 - In the signed macOS app, choosing Numbered sequence and Capture year / month previewed one shared original at `2025/03/Original-0001.png` and listed both versions. The catalogue and destination were unchanged at review. After approval, both references used the previewed path, the previous referenced file stayed in place, and both file fingerprints matched.
 - The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2. This repository maintains one native macOS app.
+
+## Reusable relocation presets and application icon
+
+- Tests saved, reopened, edited and deleted named presets through separate preference instances. They also rejected a duplicate name and ignored an invalid saved template.
+- Template validation covered absolute paths, traversal, empty components, package folders, malformed tokens, control characters and excessive expanded lengths. Invalid previews left both the catalogue and destination unchanged.
+- Tests checked project and capture tokens, sequence order, stable original names, file extensions and missing metadata. A custom path with an occupied filename previewed a storage-name fallback; apply wrote exactly that path, reused one original for both versions and preserved their edits.
+- In a fresh signed app process, the saved preset reappeared after restart. The editor rejected `../escape`. Applying the valid preview copied one file to `Export Session/2025/03/Delivery-Shared-0001.png` and saved that path for both versions. The old referenced file stayed in place and the fingerprints matched.
+- The optimized suite passed all 191 tests without skips, including four camera RAW fixtures and the native Finder Trash handoff. Branding and the signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2. The only maintained version is the native macOS app. The signed archive included a readable `.icns` with ten standard and Retina representations from 16 to 1024 pixels.

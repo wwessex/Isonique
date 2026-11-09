@@ -17,12 +17,14 @@ public struct OriginalRelocationOptions: Sendable {
     public var filename: OriginalRelocationFilename
     public var subfolders: OriginalRelocationSubfolders
     public var keepReferencedSources: Bool
+    public var customPreset: OriginalRelocationPreset?
 
     public init(filename: OriginalRelocationFilename = .original, subfolders: OriginalRelocationSubfolders = .none,
-                keepReferencedSources: Bool = true) {
+                keepReferencedSources: Bool = true, customPreset: OriginalRelocationPreset? = nil) {
         self.filename = filename
         self.subfolders = subfolders
         self.keepReferencedSources = keepReferencedSources
+        self.customPreset = customPreset
     }
 }
 
@@ -75,6 +77,7 @@ public extension LibraryRepository {
 
         let catalogue = try relocationCatalogue()
         try checkRelocationBase(library, catalogue: catalogue)
+        let template = try options.customPreset?.compile()
         let allOriginals = try library.uniqueOriginals()
         let originals = allOriginals.filter { originalIDs.contains($0.originalID) }
         let referencedPaths = Set(allOriginals.compactMap { $0.referencedPath.map(relocationPathKey) })
@@ -86,8 +89,15 @@ public extension LibraryRepository {
             try Task.checkCancellation()
             let source = try? availableOriginalURL(photo)
             let originalName = relocationName(for: photo, source: source)
-            let folders = relocationFolders(for: photo, preset: options.subfolders, projects: projects)
-            let name = relocationFilename(for: photo, originalName: originalName, index: index, preset: options.filename)
+            let folders: [String]
+            let name: String
+            if let template {
+                (name, folders) = try template.paths(photo: photo,
+                    project: photo.projectID.flatMap { projects[$0] }, index: index, destination: directory)
+            } else {
+                folders = relocationFolders(for: photo, preset: options.subfolders, projects: projects)
+                name = relocationFilename(for: photo, originalName: originalName, index: index, preset: options.filename)
+            }
             let preferred = (folders + [name]).joined(separator: "/")
             func entry(_ disposition: OriginalRelocationItem.Disposition, destination: String? = nil) -> OriginalRelocationEntry {
                 OriginalRelocationEntry(item: OriginalRelocationItem(

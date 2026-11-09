@@ -55,6 +55,8 @@ Relocation also works for already-referenced originals. The chooser defaults to 
 
 The chooser offers original, catalogue or numbered filenames, with no subfolders or folders by project or capture year and month. The read-only preview shows the exact paths per original, how many versions share each one, and whether a collision will use the storage name, reuse a verified copy or skip a blocked path. Apply uses the approved paths, refuses a stale catalogue, and skips paths that become occupied or unsafe. A fresh preview is needed to approve a different path.
 
+New Preset in Relocate Originals saves a named filename and subfolder template to application preferences. Edit and Delete manage saved presets. Templates use literal text and tokens for original name, catalogue name, project, capture date and sequence; the original extension is added automatically. Blank subfolders keep the output flat. Validation rejects unsafe syntax and expansions before the preview can be approved. The signed macOS app also includes an original vector icon rendered into standard and Retina icon sizes at build time.
+
 File → Open Recent Library remembers up to ten successfully opened libraries. It uses verified opening and shows parent folders for duplicate names. Clearing the list preserves the startup library.
 
 File → Export Project as Library packages the active photos in one project as a verified, independent library. It copies each shared original once and includes referenced originals as managed copies. Relevant albums, stack picks and surviving pairs stay with the photos. Smart Albums whose results would change because originals become managed are saved as regular albums with their existing matches. Trash and undo history are outside the export scope.
@@ -95,6 +97,6 @@ Catalogue writes from independently opened workspaces compare the revision they 
 
 ## Next implementation slice
 
-1. Add reusable custom filename and subfolder presets for Relocate Originals, with path validation and the existing review before moving files.
+1. Add a camera and memory card import source with native discovery, a read-only device workflow, and the existing import presets and progress.
 
-Other open core work includes library merging and repair, and import from camera devices. Build and interaction evidence should stay in the test record.
+Other open core work includes library merging and repair. Build and interaction evidence should stay in the test record.

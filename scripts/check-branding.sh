@@ -10,6 +10,11 @@ for key in CFBundleName CFBundleDisplayName CFBundleExecutable; do
         exit 1
     fi
 done
+icon=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIconFile' Info.plist)
+if [ "$icon" != Isonique.icns ] || [ ! -s Resources/IsoniqueIcon.svg ]; then
+    printf 'Missing Isonique application icon source or bundle entry.\n' >&2
+    exit 1
+fi
 identifier=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' Info.plist)
 if [ "$identifier" != io.github.wwessex.isonique ]; then
     printf 'Unexpected bundle identifier: %s\n' "$identifier" >&2

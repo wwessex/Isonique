@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="tile" x2="1" y2="1">
+      <stop stop-color="#23304d"/>
+      <stop offset="1" stop-color="#101224"/>
+    </linearGradient>
+    <linearGradient id="sky" x2="0" y2="1">
+      <stop stop-color="#30347b"/>
+      <stop offset="1" stop-color="#793a90"/>
+    </linearGradient>
+    <linearGradient id="mountain" x2="1" y2="1">
+      <stop stop-color="#a892fc"/>
+      <stop offset="1" stop-color="#6448c6"/>
+    </linearGradient>
+    <linearGradient id="frame" x2="1" y2="1">
+      <stop stop-color="#e6e7ff"/>
+      <stop offset="1" stop-color="#a7a2e1"/>
+    </linearGradient>
+    <clipPath id="picture">
+      <rect x="213" y="238" width="598" height="548" rx="48"/>
+    </clipPath>
+  </defs>
+  <rect x="64" y="74" width="896" height="896" rx="212" fill="#070916" opacity=".56"/>
+  <rect x="64" y="60" width="896" height="896" rx="212" fill="url(#tile)"/>
+  <rect x="70" y="66" width="884" height="884" rx="206" fill="none" stroke="#b9c6ff" stroke-opacity=".22" stroke-width="4"/>
+  <rect x="243" y="278" width="583" height="523" rx="69" fill="#080b1d" opacity=".8" transform="rotate(9 512 512)"/>
+  <rect x="224" y="251" width="599" height="543" rx="64" fill="#4b58a0" transform="rotate(9 512 512)"/>
+  <rect x="187" y="212" width="650" height="600" rx="71" fill="url(#frame)"/>
+  <g clip-path="url(#picture)">
+    <rect x="213" y="238" width="598" height="548" fill="url(#sky)"/>
+    <circle cx="644" cy="391" r="84" fill="#99f4eb" opacity=".15"/>
+    <circle cx="644" cy="391" r="61" fill="#c0fff2"/>
+    <path d="M170 724 411 408Q430 383 450 408l265 336v73H170Z" fill="url(#mountain)"/>
+    <path d="m430 392 23 17 276 352H484l-103-179Z" fill="#6a55c2"/>
+    <path d="M322 625 411 408Q431 384 450 408l85 107-79-42-44 31-30-12Z" fill="#f0e2ff"/>
+    <path d="m508 734 160-198q17-22 35-1l160 183v98H508Z" fill="#443887"/>
+    <path d="M174 790v-73l154-58q61-24 123 8l122 64q60 31 129 11l153-43v94Z" fill="#24244f"/>
+  </g>
+</svg>

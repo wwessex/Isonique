@@ -324,6 +324,113 @@ final class OriginalRelocationTests: XCTestCase {
         XCTAssertEqual(try repo.load().photos.first?.caption, "Edited after preview")
     }
 
+    func testCustomTemplatePathsMatchAppliedPathsForSharedOriginalAndCollision() throws {
+        let fixture = try fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.folder) }
+        let repo = fixture.repo
+        let project = Collection(name: "../Campaign: Spring/Art")
+        var photo = try managed("Client Image.NEF", filename: "storage.nef", bytes: [34], in: repo)
+        photo.sourceName = "DSC_0070.NEF"
+        photo.captureDate = "2026:04:09 12:00:00"
+        photo.projectID = project.id
+        var library = try repo.load()
+        library.projects = [project]
+        library.photos = [photo]
+        let version = try XCTUnwrap(library.createVersion(of: photo.id, from: .current))
+        library.photos[1].adjustments.exposure = 0.55
+        library = try repo.save(library)
+        let preset = try OriginalRelocationPreset(name: "Delivery",
+            filenamePattern: "{catalogue}-{original}-{day}-{sequence}", subfolderPattern: "Shoots/{project}/{year}/{month}")
+        let folder = "Shoots/-Campaign- Spring-Art/2026/04"
+        let relative = folder + "/Client Image-DSC_0070-09-0001.nef"
+
+        let first = try repo.previewRelocatingOriginals([version.originalID], to: fixture.target, in: library,
+                                                        options: .init(customPreset: preset))
+        XCTAssertEqual(first.items.first?.destinationPath, relative)
+        XCTAssertEqual(first.items.first?.versionCount, 2)
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: fixture.target.path).isEmpty)
+        let primary = fixture.target.appendingPathComponent(relative)
+        try FileManager.default.createDirectory(at: primary.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try Data([99]).write(to: primary)
+        let review = try repo.previewRelocatingOriginals([photo.id], to: fixture.target, in: library,
+                                                         options: .init(customPreset: preset))
+        let fallback = folder + "/storage.nef"
+        XCTAssertEqual(review.items.first?.preferredPath, relative)
+        XCTAssertEqual(review.items.first?.destinationPath, fallback)
+        XCTAssertEqual(review.relocationCount, 1)
+
+        var releases = 0
+        let result = try repo.relocateOriginals(after: review, in: &library) { source in
+            let saved = try repo.load()
+            XCTAssertEqual(saved.photos.compactMap(\.referencedPath), Array(repeating: fixture.target.appendingPathComponent(fallback).path, count: 2))
+            try FileManager.default.moveItem(at: source, to: fixture.trash.appendingPathComponent(source.lastPathComponent))
+            releases += 1
+        }
+        XCTAssertEqual(result.relocated, ["Client Image.NEF"])
+        XCTAssertEqual(releases, 1)
+        XCTAssertEqual(try repo.load().photos[1].adjustments.exposure, 0.55)
+        XCTAssertEqual(try Data(contentsOf: primary), Data([99]))
+        XCTAssertEqual(try Data(contentsOf: fixture.target.appendingPathComponent(fallback)), Data([34]))
+    }
+
+    func testCustomTemplatesRejectUnsafeSyntaxAndExpandedPaths() throws {
+        let unsafeNames = ["", ".", "..", "~name", "/absolute", "nested/name", "a:b", "a\\b", "a\nname",
+                           "name{unclosed", "{unknown}", "{original}}", " name ", String(repeating: "é", count: 130)]
+        for filename in unsafeNames {
+            XCTAssertThrowsError(try OriginalRelocationPreset(name: "Test", filenamePattern: filename, subfolderPattern: ""), filename)
+        }
+        let unsafeFolders = ["/absolute", "~user/photos", "safe/../escape", "safe//empty", "safe/", "safe/./same",
+                             "safe/bundle.app", "safe/volume:photos", "safe/back\\slash", "safe/\u{0000}name",
+                             Array(repeating: "x", count: 9).joined(separator: "/")]
+        for folders in unsafeFolders {
+            XCTAssertThrowsError(try OriginalRelocationPreset(name: "Test", filenamePattern: "{original}", subfolderPattern: folders), folders)
+        }
+
+        let fixture = try fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.folder) }
+        let repo = fixture.repo
+        let project = Collection(name: "Photos.app")
+        var photo = try managed(String(repeating: "a", count: 116) + ".png", filename: "storage.png", bytes: [1], in: repo)
+        photo.projectID = project.id
+        var library = try repo.load()
+        library.projects = [project]
+        library.photos = [photo]
+        library = try repo.save(library)
+        let catalogue = repo.root.appendingPathComponent("catalog.json")
+        let before = try Data(contentsOf: catalogue)
+        let templates = [
+            try OriginalRelocationPreset(name: "Package path", filenamePattern: "{original}", subfolderPattern: "{project}"),
+            try OriginalRelocationPreset(name: "Long name", filenamePattern: "{original}-{original}-{original}", subfolderPattern: ""),
+            try OriginalRelocationPreset(name: "Long path", filenamePattern: "{original}",
+                subfolderPattern: Array(repeating: "{original}", count: 8).joined(separator: "/"))
+        ]
+        for preset in templates {
+            XCTAssertThrowsError(try repo.previewRelocatingOriginals([photo.id], to: fixture.target, in: library,
+                                                                    options: .init(customPreset: preset)), preset.name) { error in
+                guard case OriginalRelocationTemplateError.unsafeExpansion = error else { return XCTFail("Unexpected error: \(error)") }
+            }
+        }
+        XCTAssertTrue(try FileManager.default.contentsOfDirectory(atPath: fixture.target.path).isEmpty)
+        XCTAssertEqual(try Data(contentsOf: catalogue), before)
+    }
+
+    func testCustomPresetHandlesMissingDateAndCanStayFlat() throws {
+        let fixture = try fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.folder) }
+        let repo = fixture.repo
+        let photo = try managed("DSC.png", filename: "storage.png", bytes: [34], in: repo)
+        var library = try repo.load()
+        library.photos = [photo]
+        library = try repo.save(library)
+        let preset = try OriginalRelocationPreset(name: "Flat", filenamePattern: "{original}-{project}-{year}-{month}-{day}-{sequence}", subfolderPattern: "")
+        let review = try repo.previewRelocatingOriginals([photo.id], to: fixture.target, in: library, options: .init(customPreset: preset))
+        XCTAssertEqual(review.items.first?.destinationPath, "DSC-Unassigned-Unknown-Unknown-Unknown-0001.png")
+        _ = try repo.relocateOriginals(after: review, in: &library) { _ in }
+        let retry = try repo.previewRelocatingOriginals([photo.id], to: fixture.target, in: library, options: .init(customPreset: preset))
+        XCTAssertEqual(retry.items.first?.destinationPath, review.items.first?.destinationPath)
+        XCTAssertEqual(retry.items.first?.disposition, .alreadyThere)
+    }
+
     private func reference(_ name: String, filename: String, source: URL) throws -> Photo {
         var photo = Photo(filename: filename, originalName: name, projectID: nil, width: 8, height: 8,
                           camera: "", captureDate: "", sha256: try LibraryRepository.digest(source))
