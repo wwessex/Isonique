@@ -133,7 +133,7 @@ extension Workspace {
                 do {
                     try BatchExport.prepareDirectory(folder, repository: repository)
                     for (index, photo) in snapshot.enumerated() {
-                        let suffix = options.format == .original ? (photo.originalName as NSString).pathExtension : options.format.suffix
+                        let suffix = options.format == .original ? (photo.filename as NSString).pathExtension : options.format.suffix
                         let base = ((photo.originalName as NSString).lastPathComponent as NSString).deletingPathExtension
                         let url = folder.appendingPathComponent("\(index + 1)-\(base).\(suffix)")
                         try Renderer.export(photo, repository: repository, to: url, options: options)

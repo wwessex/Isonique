@@ -14,6 +14,12 @@ struct ImportOptionsView: View {
         VStack(alignment: .leading, spacing: 16) {
             Text(model.pendingImport.isEmpty ? "Import & History Options" : "Import Options").font(.title2.bold())
             Form {
+                Picker("Original storage", selection: Binding(get: { options.storage ?? .managed }, set: { options.storage = $0 })) {
+                    ForEach(OriginalStorage.allCases) { storage in Text(storage.rawValue).tag(storage) }
+                }
+                if options.storage == .referenced {
+                    Text("Isonique stores a link. Keep these files and back them up separately.").font(.caption).foregroundStyle(.secondary)
+                }
                 Picker("RAW + JPEG", selection: $options.pairing) { ForEach(PairingMode.allCases) { Text($0.title).tag($0) } }
                 Text("Both links matching files and opens the chosen original; switch in Info. Edits stay separate. Only filters all input files. Prefer keeps unpaired files of either format.").font(.caption).foregroundStyle(.secondary)
                 TextField("Name prefix", text: $options.prefix)

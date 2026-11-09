@@ -20,7 +20,6 @@ struct FeatureGuide: View {
         Group(title: "Remaining missing features", symbol: "circle.dashed", features: [
             Feature(title: "1. Full Aperture library migration", detail: "Original recovery exists, but old edits, database-only metadata, project hierarchy and album relationships are not migrated."),
             Feature(title: "3. Retouching and local edits", detail: "Clone, heal, red-eye removal and adjustment brushes are missing."),
-            Feature(title: "6. Referenced-original management", detail: "Discovery, relinking, relocation and consolidation of external originals are missing; imported originals are managed copies."),
             Feature(title: "8. Camera capture and import", detail: "Tethered capture and camera/device import controls are missing; file and folder import are available."),
             Feature(title: "9. Publishing and extensions", detail: "Books, printing tools, plug-ins, slideshow export and video workflows are missing. Review → Start Slideshow plays edited photos on this Mac."),
             Feature(title: "10. Cloud sync and other devices", detail: "Cloud sync and web, Windows, iPhone, iPad and Android apps are not included.")
@@ -33,6 +32,7 @@ struct FeatureGuide: View {
             Feature(title: "10. Persistent edit history", detail: "Enable Keep Undo/Redo history in Import & History Options to retain the latest 100 edits per library across launches. Turning it off removes saved history.")
         ]),
         Group(title: "Available with limits", symbol: "exclamationmark.circle", features: [
+            Feature(title: "6. Referenced-original management", detail: "Leave originals where they are from Import Options. Filter referenced and unavailable files using Sort & Filter. Info and File can relink by fingerprint or copy a reference into the managed library. Isonique backups retain links; back up external originals separately. Bulk relink and relocation are pending."),
             Feature(title: "Photo Trash", detail: "Move a photo to Trash from its context menu or press Command-Delete. Select Trash in the sidebar and use Put Back to restore its edits and memberships. Photos in Trash remain in verified backups. Empty Trash and container deletion are unavailable."),
             Feature(title: "7. Library backup and repair", detail: "File → Back Up Library, Restore Library Backup and Check Library Integrity now verify catalogue copies and original hashes. Restores open a separate new library. Legacy vaults, library merging and automatic catalogue repair remain missing."),
             Feature(title: "4. Histogram, Levels and master curve", detail: "Inspector shows a live luminance histogram of the edited preview, black/white input points, gamma and a master curve with three adjustable output points. Levels and curve settings apply to preview/export and the tone Stamp group. Independent 8-bit sRGB processing; per-channel curves and masks remain unavailable."),

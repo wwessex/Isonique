@@ -76,6 +76,36 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(try workspace.repository?.load().photos, [photo])
     }
 
+    @MainActor
+    func testOriginalStorageFiltersAndHistoryPreserveRelinkedPath() async throws {
+        let root = try temporaryLibrary()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let workspace = Workspace(libraryRoot: root)
+        var photo = Photo(filename: "a.png", originalName: "a.png", projectID: nil,
+                          width: 32, height: 24, camera: "", captureDate: "", sha256: "fixture")
+        photo.referencedPath = "/private/tmp/Isonique-offline-\(UUID().uuidString).png"
+        var draft = workspace.library
+        draft.version = 2
+        draft.photos = [photo]
+        XCTAssertTrue(workspace.commit(draft))
+        workspace.selection = photo.id
+        workspace.originalFilter = .managed
+        XCTAssertTrue(workspace.photos.isEmpty)
+        workspace.originalFilter = .referenced
+        XCTAssertEqual(workspace.photos, [photo])
+        workspace.originalFilter = .unavailable
+        XCTAssertEqual(workspace.photos, [photo])
+        workspace.edit { $0.caption = "Retain Undo" }
+
+        draft = workspace.library
+        let relinked = "/private/tmp/Isonique-relinked-\(UUID().uuidString).png"
+        draft.photos[0].referencedPath = relinked
+        XCTAssertTrue(workspace.commit(draft))
+        workspace.undoEdit()
+        XCTAssertEqual(workspace.selected?.caption, "")
+        XCTAssertEqual(workspace.selected?.referencedPath, relinked)
+    }
+
     private func temporaryLibrary() throws -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueUI-\(UUID().uuidString)")
         return try LibraryRepository.createEmpty(at: root).root

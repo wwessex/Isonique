@@ -155,6 +155,7 @@ public struct Collection: Codable, Identifiable, Equatable {
 public struct Photo: Codable, Identifiable, Equatable {
     public var id = UUID()
     public var trashedAt: Date?
+    public var referencedPath: String?
     public var stackID: UUID?
     public var versions: [PhotoVersion]?
     public var pairID: UUID?
@@ -186,9 +187,16 @@ public struct Library: Codable {
     public var projects: [Collection] = []
     public var albums: [Collection] = []
     public init() {}
+
+    func validateSchema() throws {
+        guard version == 2 || (version == 1 && !photos.contains { $0.referencedPath != nil }) else {
+            throw LibraryError.unsupportedVersion
+        }
+    }
 }
 public enum LibraryError: LocalizedError {
     case unsafePath, unsupportedImage(String), integrity(String), unsupportedVersion, invalidLibrary
+    case originalUnavailable(String)
     public var errorDescription: String? {
         switch self {
         case .unsafePath: return "This location is unsafe. Choose a separate Isonique library folder."
@@ -196,6 +204,7 @@ public enum LibraryError: LocalizedError {
         case .integrity(let name): return "Integrity verification failed: \(name). The source was not modified."
         case .unsupportedVersion: return "This library was created by an unsupported newer version."
         case .invalidLibrary: return "The selected folder is not an Aperture library with a Masters or Originals folder."
+        case .originalUnavailable(let name): return "Original unavailable: \(name). Reconnect its drive or relink the file."
         }
     }
 }
@@ -233,7 +242,7 @@ public final class LibraryRepository {
         }
     }
 
-    private static func validateRoot(_ root: URL) throws {
+    static func validateRoot(_ root: URL) throws {
         // Never create our catalogue inside a legacy library or application bundle.
         guard !root.pathComponents.contains(where: {
             ["aplibrary", "aperturelibrary", "photolibrary", "photoslibrary", "app"].contains(URL(fileURLWithPath: $0).pathExtension.lowercased())
@@ -254,12 +263,13 @@ public final class LibraryRepository {
         let url = root.appendingPathComponent("catalog.json")
         guard fm.fileExists(atPath: url.path) else { return Library() }
         var library = try JSONDecoder().decode(Library.self, from: Data(contentsOf: url))
-        guard library.version == 1 else { throw LibraryError.unsupportedVersion }
+        try library.validateSchema()
         for index in library.photos.indices { library.photos[index].rating = RatingRules.clamp(library.photos[index].rating) }
         for photo in library.photos { _ = try originalURL(photo) }
         return library
     }
     public func save(_ library: Library) throws {
+        try library.validateSchema()
         var normalized = library
         for index in normalized.photos.indices {
             normalized.photos[index].rating = RatingRules.clamp(normalized.photos[index].rating)
@@ -269,13 +279,17 @@ public final class LibraryRepository {
         try data.write(to: root.appendingPathComponent("catalog.json"), options: .atomic)
     }
     public func originalURL(_ photo: Photo) throws -> URL {
-        try managedOriginalURL(photo.filename)
+        let managed = try managedOriginalURL(photo.filename)
+        if let path = photo.referencedPath { return try Self.referenceURL(path, libraryRoot: root) }
+        return managed
     }
-    private func managedOriginalURL(_ filename: String) throws -> URL {
+    func managedOriginalURL(_ filename: String) throws -> URL {
         guard filename == (filename as NSString).lastPathComponent, !filename.isEmpty, filename != ".", filename != ".." else { throw LibraryError.unsafePath }
         let base = root.appendingPathComponent("Originals").resolvingSymlinksInPath()
-        let url = base.appendingPathComponent(filename).resolvingSymlinksInPath()
-        guard base.path == root.appendingPathComponent("Originals").path, url.deletingLastPathComponent() == base else { throw LibraryError.unsafePath }
+        let url = base.appendingPathComponent(filename)
+        guard base.path == root.appendingPathComponent("Originals").path,
+              url.resolvingSymlinksInPath() == url,
+              (try? url.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) != true else { throw LibraryError.unsafePath }
         return url
     }
     public static func digest(_ url: URL) throws -> String {
@@ -299,15 +313,21 @@ public final class LibraryRepository {
             ? try MetadataXML.read(sidecar) : []
         let suffix = input.pathExtension.lowercased()
         let filename = UUID().uuidString + (suffix.isEmpty ? "" : "." + suffix)
-        let destination = try managedOriginalURL(filename)
-        var committed = false
-        defer { if !committed { try? fm.removeItem(at: destination) } }
-        // Copy the resolved regular file, so a selected Finder symlink never becomes a managed link.
-        try fm.copyItem(at: input, to: destination)
-        guard try Self.digest(destination) == hash, try Self.digest(input) == hash else {
-            throw LibraryError.integrity(source.lastPathComponent)
+        let referenced = options?.storage == .referenced
+        let imageURL: URL
+        if referenced {
+            imageURL = try Self.referenceURL(input.path, libraryRoot: root)
+        } else {
+            imageURL = try managedOriginalURL(filename)
         }
-        guard let imageSource = CGImageSourceCreateWithURL(destination as CFURL, nil),
+        var committed = false
+        defer { if !referenced && !committed { try? fm.removeItem(at: imageURL) } }
+        if !referenced {
+            // Copy the resolved regular file, so a selected Finder symlink never becomes a managed link.
+            try fm.copyItem(at: input, to: imageURL)
+            guard try Self.digest(imageURL) == hash else { throw LibraryError.integrity(source.lastPathComponent) }
+        }
+        guard let imageSource = CGImageSourceCreateWithURL(imageURL as CFURL, nil),
               CGImageSourceGetCount(imageSource) > 0,
               let properties = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [String: Any],
               let width = properties[kCGImagePropertyPixelWidth as String] as? Int,
@@ -337,8 +357,16 @@ public final class LibraryRepository {
         for record in metadata { photo = record.applying(to: photo) }
         if let albumID { photo.albumIDs.insert(albumID) }
 
+        guard try Self.digest(input) == hash else { throw LibraryError.integrity(source.lastPathComponent) }
+        if referenced { photo.referencedPath = imageURL.path }
+        let oldVersion = library.version
+        if referenced { library.version = 2 }
         library.photos.append(photo)
-        do { try save(library) } catch { library.photos.removeLast(); throw error }
+        do { try save(library) } catch {
+            library.photos.removeLast()
+            library.version = oldVersion
+            throw error
+        }
         committed = true
         return true
     }
@@ -526,9 +554,9 @@ public enum Renderer {
         return CGSize(width: w, height: h)
     }
     public static func export(_ photo: Photo, repository: LibraryRepository, to destination: URL, options: ExportOptions = ExportOptions()) throws {
-        let original = try repository.originalURL(photo)
+        let original = try repository.availableOriginalURL(photo)
         let target = destination.standardizedFileURL.resolvingSymlinksInPath()
-        let extensions: [String] = options.format == .original ? [original.pathExtension.lowercased()] : (options.format == .jpeg ? ["jpg", "jpeg"] : (options.format == .tiff ? ["tif", "tiff"] : ["png"]))
+        let extensions: [String] = options.format == .original ? [(photo.filename as NSString).pathExtension.lowercased()] : (options.format == .jpeg ? ["jpg", "jpeg"] : (options.format == .tiff ? ["tif", "tiff"] : ["png"]))
         guard extensions.contains(target.pathExtension.lowercased()),
               !target.path.hasPrefix(repository.root.path + "/"), !FileManager.default.fileExists(atPath: target.path),
               !target.pathComponents.contains(where: { ["aplibrary", "aperturelibrary", "photoslibrary", "photolibrary", "app"].contains(URL(fileURLWithPath: $0).pathExtension.lowercased()) }) else { throw LibraryError.unsafePath }
