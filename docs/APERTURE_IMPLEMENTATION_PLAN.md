@@ -41,8 +41,10 @@ The Browser reuses its last metadata-only filter and sort result and a photo sel
 
 Grid thumbnail size is now a persistent application preference in View and Settings. Three sizes use their own cache resolution and leave the List and filmstrip unchanged.
 
+The File menu reconnects missing referenced originals from a folder using known names and verified fingerprints. It reports unmatched and ambiguous files and applies all verified paths in a single catalogue write. Single-file relink remains available for fully renamed files.
+
 ## Next implementation slice
 
-1. Add folder-based batch reconnect for unavailable referenced originals. Reuse fingerprint verification, update shared versions together in a single catalogue write, and report unmatched or ambiguous files. Cover reopen, failed verification and originals preservation before expanding to missing managed copies.
+1. Add batch recovery for missing managed originals. Reuse verified staging and destination checks from single-file relink. Exercise occupied targets, cancellation, interrupted installs, reopen and preservation of the source bytes.
 
-Other open core work includes Finder Trash handoff, batch relinking, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
+Other open core work includes Finder Trash handoff, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
