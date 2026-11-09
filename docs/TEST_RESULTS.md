@@ -366,3 +366,10 @@
 - The Mac’s USB device inventory listed controllers only, and no physical camera was available. Hardware checks for thumbnails, selected import, active transfer cancellation and reconnect remain pending. [Physical PTP camera checklist](../VALIDATION.md#physical-ptp-camera-import)
 - On macOS 27.3, the signed arm64 app showed the empty device browser and disabled Import Options. Refresh preserved the empty state, and Cancel returned to the disposable library with zero photos in its catalogue.
 - All seven focused camera and card release tests passed. Those tests cover simulated transfers and file-based media.
+
+## Tethered capture evaluation
+
+- The ImageCaptureCore probe type-checked the remote and on-camera shutter capability checks, the remote shutter call, and the new-item callback against the macOS 14 arm64 target using Xcode 27.2. This checked API availability. Physical shutter execution and native callback delivery remain pending. [Tethered capture evaluation](IMPLEMENTATION_PLAN.md#tethered-capture-evaluation)
+- Simulated arrivals passed selected new files through the production camera importer. The initial catalogue photo was excluded, the new photo and XMP caption were saved, and replaying the event downloaded the files again but created no duplicate catalogue record. Both runs removed their staging directories.
+- Two simulated arrival batches for a JPEG and its RAW companion saved both files as independent originals. A separate existing test confirmed pairing when both arrive in a single batch. The simulation used synthetic image bytes and logical camera filenames to exercise pairing.
+- All 200 optimized XCTest cases passed without skips on native macOS arm64, including the four external RAW fixtures and Finder Trash handoff.
