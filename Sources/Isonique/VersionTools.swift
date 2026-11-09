@@ -121,6 +121,7 @@ struct PhotoComparisonView: View {
             HStack {
                 Label("Compare Photos", systemImage: "rectangle.split.2x1")
                 Spacer()
+                if model.clipping.enabled { ClippingLegend(settings: model.clipping) }
                 Button("Done", action: model.stopComparison)
             }.font(.caption).padding(.horizontal, 14).padding(.top, 10)
             HStack(spacing: 10) {
@@ -136,7 +137,7 @@ private struct ComparisonPane: View {
     let photo: Photo
     let title: String
     let repository: LibraryRepository
-    @State private var image: NSImage?
+    @State private var image: ViewerImage?
     @State private var failure: String?
 
     var body: some View {
@@ -146,7 +147,10 @@ private struct ComparisonPane: View {
                 Text(photo.displayName).lineLimit(1).font(.caption.weight(.semibold))
             }
             Group {
-                if let image { Image(nsImage: image).resizable().scaledToFit().accessibilityLabel(photo.displayName) }
+                if let image {
+                    ClippingPreview(image: image).aspectRatio(image.size, contentMode: .fit)
+                        .accessibilityLabel(photo.displayName)
+                }
                 else if let failure { ContentUnavailableView("Image unavailable", systemImage: "exclamationmark.triangle", description: Text(failure)) }
                 else { ProgressView() }
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -161,7 +165,7 @@ private struct ComparisonPane: View {
                 let render = Task.detached(priority: .userInitiated) {
                     try Task.checkCancellation()
                     let rendered = try Renderer.render(repository.availableOriginalURL(photo), adjustments: photo.adjustments, maxDimension: 1800)
-                    return try profile.map { try Renderer.proof(rendered, profile: $0) } ?? rendered
+                    return try ViewerImage(rendered, proofProfile: profile)
                 }
                 let result = await withTaskCancellationHandler {
                     await render.result
@@ -169,7 +173,7 @@ private struct ComparisonPane: View {
                 guard !Task.isCancelled else { return }
                 switch result {
                 case .success(let rendered):
-                    image = NSImage(cgImage: rendered, size: NSSize(width: rendered.width, height: rendered.height))
+                    image = rendered
                 case .failure(let error): failure = error.localizedDescription
                 }
             }

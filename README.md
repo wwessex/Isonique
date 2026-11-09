@@ -6,7 +6,7 @@ Isonique is an independent, native SwiftUI photo workspace for Apple Silicon Mac
 
 The current build supports managed and referenced originals, cancellable imports, multiple libraries, photo Trash, verified backups, compound Smart Albums, keyboard culling and non-destructive editing with local Dodge and Burn masks. Browsable versions share originals and can be compared side by side. Stacks support library-wide and album-specific picks, plus persistent collapse.
 
-The 9 November 2026 validation run passed 72 XCTest cases and the signed arm64 release build on Apple M5 Pro with macOS 27.3. Native QA exercised brush painting and erasing on a disposable library. Older macOS runtimes and physical camera workflows remain unverified. [Feature parity audit](docs/APERTURE_FEATURE_PARITY.md) · [Implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
+The 9 November 2026 validation run passed 76 XCTest cases and the signed arm64 release build on Apple M5 Pro with macOS 27.3. Native QA exercised the Viewer clipping controls and side-by-side comparison on a disposable library. Older macOS runtimes and physical camera workflows remain unverified. [Feature parity audit](docs/APERTURE_FEATURE_PARITY.md) · [Implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
 
 ## Build and run
 
@@ -80,6 +80,8 @@ Use **Photos → New Version from Original** (Option-G) for neutral adjustments 
 ### Review and tonal tools
 
 Inspector → Adjustments shows a live **luminance histogram** of a 384-pixel edited preview, **Levels** (black/white input points and gamma), and a **Master Tone Curve** (three output controls at 25%, 50%, 75% input). Levels and the piecewise-linear curve run after the other tone controls and before lens and geometry in the shared preview/export renderer. Reset buttons, presets, Undo/Redo, persistent history, named versions and the tone Stamp group include these settings. The tools use an independent 8-bit sRGB implementation. RGB channel curves remain pending.
+
+Choose **View → Highlight Hot & Cold Areas** or press **Option-Shift-H** to toggle both Viewer warnings. The View menu also has independent highlight and shadow switches. Red marks pixels where any rendered sRGB channel reaches the highlight threshold, blue marks pixels at or below the shadow threshold, and magenta marks pixels that meet both conditions. **Settings → Clipping Warnings** changes the default 100% highlight and 0% shadow thresholds. The warnings use the current preview before RGB proofing. They appear in the Viewer and side-by-side comparison and are excluded from exports.
 
 Choose **Dodge Brush** or **Burn Brush** from Photos, the editing strip’s Brush menu, or Inspector → Adjustments → Local Brush Masks. Click or drag on the fit-to-window photo to lighten or darken it. The stroke guide follows the pointer and the adjusted preview updates on release. Size, Softness and Strength are remembered across launches. **Erase** and **Reset Mask** affect the selected mask, and each stroke or reset has its own Undo step. Masks follow the original photo through crop, rotation, flip, straightening and lens correction. Built-in presets preserve them. To copy masks with Lift & Stamp, enable **Local brush masks** in the Inspector before stamping.
 

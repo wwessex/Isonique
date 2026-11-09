@@ -129,6 +129,7 @@ struct ReviewSettingsView: View {
 
     var body: some View {
         Form {
+            ClippingSettingsSection()
             Section("Color Labels") {
                 ForEach(PhotoColorLabel.allCases) { label in
                     TextField(label.title, text: Binding(get: { model.customName(for: label) }, set: { model.rename(label, to: $0) }),

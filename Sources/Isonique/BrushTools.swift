@@ -72,7 +72,7 @@ struct BrushControls: View {
 }
 
 struct BrushCanvas: View {
-    let image: NSImage
+    let image: ViewerImage
     let geometry: PhotoGeometry
     let adjustment: LocalBrushAdjustment
     let erasing: Bool
@@ -99,7 +99,7 @@ struct BrushCanvas: View {
             let sourceEdge = min(geometry.sourceSize.width, geometry.sourceSize.height)
             let diameter = max(2, 2 * (draft?.radius ?? radius) * sourceEdge * scale)
             ZStack(alignment: .topLeading) {
-                Image(nsImage: image).resizable().frame(width: size.width, height: size.height)
+                ClippingPreview(image: image).frame(width: size.width, height: size.height)
                 if let draft, let first = draft.points.first {
                     let color: Color = draft.erasing ? .white : (draft.adjustment == .dodge ? .yellow : .blue)
                     Path { path in
