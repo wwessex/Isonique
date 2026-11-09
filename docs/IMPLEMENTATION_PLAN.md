@@ -85,8 +85,10 @@ File → Library First Aid reports missing managed originals, offline references
 
 First Aid can recover reviewed missing managed originals or reconnect reviewed offline references from a selected folder. The search matches known names and verifies the saved fingerprints. Before copying or changing references, Isonique checks the report's catalogue snapshot under the catalogue write lock. Reconnected originals update every version, including Library Trash records.
 
+Inspect Untracked Files hashes the files in the reviewed report. It compares them with saved catalogue fingerprints, including offline originals, and can inspect selected Isonique backups. It checks each backup's catalogue and manifest and reads the matching managed files to verify their bytes. The inspection is read-only.
+
 ## Next implementation slice
 
-1. Add an inspection step for untracked managed files that compares their fingerprints with catalogue originals and backup records.
+1. Add a review for reclaiming untracked managed files, with a reversible quarantine path and a fresh check of catalogue ownership before any move.
 
 Other open core work includes relocation naming and subfolders, library merging and repair, import from camera devices, and detection of stale edits from independently opened workspaces. Build and interaction evidence should stay in the test record.

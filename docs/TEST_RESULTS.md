@@ -306,3 +306,10 @@
 - Both entry points rejected a stale report. The publication guard also rejected a stale snapshot after searching for matching originals. Catalogue bytes matched the newer save and no managed copy was published.
 - In the signed app, First Aid restored one managed original and reconnected one offline reference. The restored file matched its saved fingerprint, the new reference persisted, and the pre-existing file hashes matched.
 - The optimized suite passed all 175 tests without skips, including four camera RAW fixtures and the native Finder Trash handoff. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
+
+## Untracked file fingerprint inspection
+
+- Tests found renamed files by fingerprint in catalogue records and selected backups. They covered an offline catalogue reference, shared versions, a backup-only match, a same-name mismatch and a file that disappeared after review. An unrelated backup file was outside the inspection scope.
+- A corrupt matching backup file failed verification, and a changed catalogue invalidated the reviewed report. Catalogue and file contents matched before and after inspection.
+- In the signed app, First Aid displayed one catalogue match and one verified backup file for the same untracked file. The library catalogue, backup catalogue, backup manifest and tested file hashes matched after dismissal.
+- The optimized suite passed all 177 tests without skips, including four camera RAW fixtures and the native Finder Trash handoff. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.

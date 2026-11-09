@@ -190,6 +190,89 @@ final class LibraryFirstAidTests: XCTestCase {
         XCTAssertThrowsError(try repository.availableOriginalURL(managed))
     }
 
+    func testInspectionMatchesFingerprintsAcrossCatalogueAndBackupWithoutWriting() throws {
+        let (folder, repository) = try fixture()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let originals = repository.root.appendingPathComponent("Originals")
+        let cataloguePhoto = try recoveryPhoto("Catalogue.png", byte: 1, in: originals)
+        var offline = try recoveryPhoto("Offline.png", byte: 2, in: folder)
+        offline.referencedPath = folder.appendingPathComponent("Disconnected/Offline.png").path
+        var library = Library()
+        library.photos = [cataloguePhoto, offline]
+        XCTAssertNotNil(library.createVersion(of: cataloguePhoto.id, from: .current))
+        try repository.save(library)
+
+        let backupSource = try LibraryRepository.createEmpty(at: folder.appendingPathComponent("Backup Source"))
+        let backupOriginals = backupSource.root.appendingPathComponent("Originals")
+        let common = try recoveryPhoto("Backup copy.png", byte: 1, in: backupOriginals)
+        let backupOnly = try recoveryPhoto("Backup only.png", byte: 3, in: backupOriginals)
+        let unrelated = try recoveryPhoto("Unrelated backup file.png", byte: 5, in: backupOriginals)
+        var backupLibrary = Library()
+        backupLibrary.photos = [common, backupOnly, unrelated]
+        try backupSource.save(backupLibrary)
+        let backup = folder.appendingPathComponent("Backup", isDirectory: true)
+        try LibraryBackup.create(from: backupSource, to: backup)
+        let backupFile = backup.appendingPathComponent("Originals").appendingPathComponent(unrelated.filename)
+        try Data([9]).write(to: backupFile)
+
+        let untracked = [("Renamed duplicate.png", UInt8(1)), ("Offline copy.png", 2), ("Backup file.png", 3),
+                         ("Offline.png", 4), ("Vanished.png", 6)]
+        for (name, byte) in untracked { try Data([byte]).write(to: originals.appendingPathComponent(name)) }
+        let review = try repository.libraryFirstAidReport()
+        try FileManager.default.removeItem(at: originals.appendingPathComponent("Vanished.png"))
+        try Data([1]).write(to: originals.appendingPathComponent("Added after review.png"))
+        let paths = untracked.dropLast().map { originals.appendingPathComponent($0.0) } + [
+            repository.root.appendingPathComponent("catalog.json"), backup.appendingPathComponent("catalog.json"),
+            backup.appendingPathComponent("backup-manifest.json"), backupFile
+        ]
+        let contents = try paths.map { try Data(contentsOf: $0) }
+
+        let report = try repository.inspectUntrackedManagedFiles(after: review, backups: [backup, backup])
+        let byName = Dictionary(uniqueKeysWithValues: report.files.map { ($0.filename, $0) })
+        let commonFile = try XCTUnwrap(byName["Renamed duplicate.png"])
+        XCTAssertEqual(commonFile.sha256, cataloguePhoto.sha256)
+        XCTAssertEqual(commonFile.catalogueMatches.map(\.id), [cataloguePhoto.id])
+        XCTAssertEqual(commonFile.backupMatches.map(\.original.id), [common.id])
+        XCTAssertEqual(commonFile.backupMatches.first?.backup, backup)
+        XCTAssertEqual(byName["Offline copy.png"]?.catalogueMatches.map(\.id), [offline.id])
+        XCTAssertEqual(byName["Offline copy.png"]?.catalogueMatches.first?.location, offline.referencedPath)
+        XCTAssertEqual(byName["Backup file.png"]?.catalogueMatches.count, 0)
+        XCTAssertEqual(byName["Backup file.png"]?.backupMatches.map(\.original.id), [backupOnly.id])
+        XCTAssertEqual(byName["Offline.png"]?.catalogueMatches.count, 0)
+        XCTAssertEqual(byName["Offline.png"]?.backupMatches.count, 0)
+        XCTAssertEqual(report.unavailableFiles, ["Vanished.png"])
+        XCTAssertNil(byName["Added after review.png"])
+        XCTAssertEqual(try paths.map { try Data(contentsOf: $0) }, contents)
+    }
+
+    func testInspectionRejectsCorruptMatchingBackupAndStaleCatalogue() throws {
+        let (folder, repository) = try fixture()
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let originals = repository.root.appendingPathComponent("Originals")
+        let managed = try recoveryPhoto("Managed.png", byte: 1, in: originals)
+        var library = Library()
+        library.photos = [managed]
+        try repository.save(library)
+        let backup = folder.appendingPathComponent("Backup")
+        try LibraryBackup.create(from: repository, to: backup)
+        try Data([1]).write(to: originals.appendingPathComponent("Copy.png"))
+        let review = try repository.libraryFirstAidReport()
+
+        let matchingFile = backup.appendingPathComponent("Originals").appendingPathComponent(managed.filename)
+        try Data([2]).write(to: matchingFile)
+        XCTAssertThrowsError(try repository.inspectUntrackedManagedFiles(after: review, backups: [backup])) {
+            guard case LibraryError.integrity(let message) = $0 else { return XCTFail("Unexpected error: \($0)") }
+            XCTAssertEqual(message, managed.originalName)
+        }
+        let catalogueOnly = try repository.inspectUntrackedManagedFiles(after: review)
+        XCTAssertEqual(catalogueOnly.files.first?.catalogueMatches.map(\.id), [managed.id])
+        XCTAssertTrue(catalogueOnly.files.first?.backupMatches.isEmpty == true)
+
+        library.photos[0].caption = "Changed after review"
+        try repository.save(library)
+        XCTAssertThrowsError(try repository.inspectUntrackedManagedFiles(after: review)) { verifyStale($0) }
+    }
+
     private func verifyStale(_ error: Error) {
         guard case LibraryError.integrity(let message) = error else { return XCTFail("Unexpected error: \(error)") }
         XCTAssertTrue(message.contains("catalogue changed"))
