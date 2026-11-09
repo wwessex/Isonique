@@ -5,11 +5,37 @@ import IsoniqueCore
 private enum LibraryFirstAidAction {
     case recover(OriginalFolderOperation)
     case inspect
+    case restoreQuarantine
 
     var title: String {
         switch self {
         case .recover(let operation): return operation.title + "…"
         case .inspect: return "Inspect Untracked Files…"
+        case .restoreQuarantine: return "Restore Quarantined Files…"
+        }
+    }
+}
+
+private enum FirstAidFileMove: Sendable {
+    case quarantine(LibraryFirstAidInspection)
+    case restore(LibraryFirstAidRestoreReview)
+
+    var restoring: Bool {
+        if case .restore = self { return true }
+        return false
+    }
+
+    var filenames: [String] {
+        switch self {
+        case .quarantine(let review): return review.files.map(\.filename)
+        case .restore(let review): return review.files.map(\.filename)
+        }
+    }
+
+    func apply(to repository: LibraryRepository) throws -> LibraryFirstAidMoveResult {
+        switch self {
+        case .quarantine(let review): return try repository.quarantineUntrackedManagedFiles(after: review)
+        case .restore(let review): return try repository.restoreQuarantinedManagedFiles(after: review)
         }
     }
 }
@@ -475,6 +501,7 @@ extension Workspace {
             switch action {
             case .recover(let operation): findOriginalsPanel(operation, firstAid: report)
             case .inspect: inspectFirstAidFiles(after: report)
+            case .restoreQuarantine: restoreFirstAidFiles()
             case nil: break
             }
         }
@@ -489,7 +516,8 @@ extension Workspace {
             ("Offline references", originalRows(report.offlineReferences)),
             ("Untracked managed files", report.untrackedManagedFiles),
             ("Original paths requiring inspection", originalRows(report.originalsRequiringInspection)),
-            ("Originals awaiting Finder Trash", report.pendingFinderTrash)
+            ("Originals awaiting Finder Trash", report.pendingFinderTrash),
+            ("Files in First Aid Quarantine", report.quarantinedFiles)
         ]
         let alert = NSAlert()
         alert.messageText = "Library First Aid"
@@ -504,6 +532,7 @@ extension Workspace {
         if !report.missingManagedOriginals.isEmpty { actions.append(.recover(.recoverManaged)) }
         if !report.offlineReferences.isEmpty { actions.append(.recover(.reconnect)) }
         if !report.untrackedManagedFiles.isEmpty { actions.append(.inspect) }
+        if !report.quarantinedFiles.isEmpty { actions.append(.restoreQuarantine) }
         for action in actions { alert.addButton(withTitle: action.title) }
         let index = alert.runModal().rawValue - NSApplication.ModalResponse.alertSecondButtonReturn.rawValue
         return actions.indices.contains(index) ? actions[index] : nil
@@ -539,8 +568,10 @@ extension Workspace {
                 let inspection = try await Task.detached(priority: .utility) {
                     try repository.inspectUntrackedManagedFiles(after: report, backups: backups)
                 }.value
-                presentFirstAidInspection(inspection)
                 status = "Untracked file inspection complete"
+                if presentFirstAidInspection(inspection) {
+                    try await reviewFirstAidMove(.quarantine(inspection), repository: repository)
+                }
             } catch {
                 self.error = error.localizedDescription
                 status = "Untracked file inspection failed"
@@ -548,7 +579,7 @@ extension Workspace {
         }
     }
 
-    private func presentFirstAidInspection(_ inspection: LibraryFirstAidInspection) {
+    private func presentFirstAidInspection(_ inspection: LibraryFirstAidInspection) -> Bool {
         let alert = NSAlert()
         alert.messageText = "Untracked File Inspection"
         alert.informativeText = "Files inspected (\(inspection.files.count)). Files unavailable (\(inspection.unavailableFiles.count))."
@@ -562,7 +593,56 @@ extension Workspace {
         if !inspection.unavailableFiles.isEmpty { sections.append(["Unavailable for inspection"] + inspection.unavailableFiles) }
         if !sections.isEmpty { alert.accessoryView = firstAidDetails(sections, label: "Untracked file fingerprint matches") }
         alert.addButton(withTitle: "Done")
-        alert.runModal()
+        if !inspection.files.isEmpty { alert.addButton(withTitle: "Review Quarantine…") }
+        return alert.runModal() == .alertSecondButtonReturn && !inspection.files.isEmpty
+    }
+
+    private func restoreFirstAidFiles() {
+        guard let repository, !busy else { return }
+        busy = true
+        status = "Checking quarantined files…"
+        Task {
+            defer { busy = false }
+            do {
+                let review = try await Task.detached(priority: .utility) { try repository.reviewQuarantinedManagedFiles() }.value
+                try await reviewFirstAidMove(.restore(review), repository: repository, unavailable: review.unavailableFiles)
+            } catch {
+                self.error = error.localizedDescription
+                status = "Quarantine restore failed"
+            }
+        }
+    }
+
+    private func reviewFirstAidMove(_ move: FirstAidFileMove, repository: LibraryRepository, unavailable: [String] = []) async throws {
+        let alert = NSAlert()
+        alert.messageText = move.restoring ? "Review Quarantine Restore" : "Review First Aid Quarantine"
+        alert.informativeText = move.restoring
+            ? "Return the reviewed files to their original names in Originals. Occupied and catalogue-owned paths are skipped."
+            : "Move the reviewed files to First Aid Quarantine inside this library. Use Restore Quarantined Files to put them back."
+        var sections = [["Files to move"] + move.filenames]
+        if !unavailable.isEmpty { sections.append(["Unavailable for review"] + unavailable) }
+        alert.accessoryView = firstAidDetails(sections, label: "Reviewed files")
+        alert.addButton(withTitle: move.filenames.isEmpty ? "Done" : "Cancel")
+        if !move.filenames.isEmpty { alert.addButton(withTitle: move.restoring ? "Restore Files" : "Quarantine Files") }
+        guard alert.runModal() == .alertSecondButtonReturn, !move.filenames.isEmpty else {
+            status = "First Aid move review complete"
+            return
+        }
+        status = move.restoring ? "Restoring quarantined files…" : "Quarantining untracked files…"
+        let result = try await Task.detached(priority: .utility) { try move.apply(to: repository) }.value
+        refreshOriginalStatus()
+        let summary = move.restoring ? "Files restored (\(result.moved.count))." : "Files quarantined (\(result.moved.count))."
+        status = summary
+        let results = NSAlert()
+        results.messageText = move.restoring ? "Quarantine Restore Results" : "First Aid Quarantine Results"
+        results.informativeText = result.cancelled ? summary + " Operation cancelled." : summary
+        let groups = [("Moved", result.moved), ("Claimed by the catalogue", result.claimed),
+                      ("Changed or unavailable", result.changedOrUnavailable), ("Destination occupied", result.occupied),
+                      ("Move failed", result.failures)]
+        let details = groups.filter { !$0.1.isEmpty }.map { [$0.0] + $0.1 }
+        if !details.isEmpty { results.accessoryView = firstAidDetails(details, label: "First Aid move results") }
+        results.addButton(withTitle: "Done")
+        results.runModal()
     }
 
     private func firstAidDetails(_ sections: [[String]], label: String) -> NSScrollView {

@@ -12,6 +12,7 @@ public struct LibraryFirstAidReport: Sendable {
     public fileprivate(set) var untrackedManagedFiles: [String] = []
     public fileprivate(set) var originalsRequiringInspection: [LibraryFirstAidOriginal] = []
     public fileprivate(set) var pendingFinderTrash: [String] = []
+    public fileprivate(set) var quarantinedFiles: [String] = []
     let root: URL
     let catalogue: Data
 }
@@ -31,6 +32,7 @@ public struct LibraryFirstAidInspectedFile: Sendable {
 public struct LibraryFirstAidInspection: Sendable {
     public let files: [LibraryFirstAidInspectedFile]
     public let unavailableFiles: [String]
+    let root: URL
 }
 
 public extension LibraryRepository {
@@ -39,7 +41,7 @@ public extension LibraryRepository {
         let (catalogue, library) = try LibraryBackup.readCatalogue(root)
         let originals = try library.uniqueOriginals()
         let directory = root.appendingPathComponent("Originals", isDirectory: true)
-        let managedFiles = try firstAidManagedFiles(in: directory)
+        let managedFiles = try firstAidFiles(in: directory)
         let caseSensitive = (try? directory.resourceValues(forKeys: [.volumeSupportsCaseSensitiveNamesKey])
             .volumeSupportsCaseSensitiveNames) == true
         func filenameKey(_ filename: String) -> String {
@@ -47,6 +49,7 @@ public extension LibraryRepository {
         }
         var report = LibraryFirstAidReport(root: root, catalogue: catalogue)
         report.pendingFinderTrash = (library.pendingFinderTrash ?? []).map(\.filename)
+        report.quarantinedFiles = try quarantinedFileNames()
         let knownNames = Set((originals.filter { $0.referencedPath == nil }.map(\.filename) + report.pendingFinderTrash)
             .map(filenameKey))
 
@@ -135,7 +138,7 @@ public extension LibraryRepository {
                                          backupMatches: matchedBackups[file.sha256] ?? [])
         }
         try checkFirstAidCatalogue(report.catalogue)
-        return LibraryFirstAidInspection(files: inspected, unavailableFiles: unavailable)
+        return LibraryFirstAidInspection(files: inspected, unavailableFiles: unavailable, root: root)
     }
 
     private func firstAidOriginal(_ photo: Photo, in library: URL) -> LibraryFirstAidOriginal {
@@ -161,7 +164,7 @@ public extension LibraryRepository {
         }
     }
 
-    private func firstAidManagedFiles(in directory: URL) throws -> [URL] {
+    internal func firstAidFiles(in directory: URL) throws -> [URL] {
         do {
             let values = try directory.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
             guard values.isDirectory == true, values.isSymbolicLink != true else { throw LibraryError.unsafePath }
