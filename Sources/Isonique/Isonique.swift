@@ -34,6 +34,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var labelNames: [String: String]
     @Published var originalStatusRevision = 0
     @Published var originalJobResult: OriginalJobResult?
+    @Published var projectImportTask: Task<ProjectLibraryImportResult, Error>?
     @Published var projectExportTask: Task<Int, Error>?
     @Published var originalJobTask: Task<(Library?, OriginalJobResult), Error>?
     @Published var busy = false
@@ -666,6 +667,12 @@ enum EditTool: String { case select, crop, straighten, brush }
                 Button("Import Photos…", action: workspace.importPanel).keyboardShortcut("i").disabled(workspace.busy || workspace.repository == nil)
                 if workspace.importInProgress {
                     Button("Cancel Import", action: workspace.cancelImport).disabled(workspace.cancellingImport)
+                }
+                Button("Import Project Library…", action: workspace.importProjectLibraryPanel)
+                    .disabled(workspace.busy || workspace.repository == nil)
+                if let task = workspace.projectImportTask {
+                    Button("Cancel Project Import", action: workspace.cancelProjectImport)
+                        .disabled(task.isCancelled)
                 }
                 Button("Import XML / XMP Metadata…", action: workspace.importMetadataPanel)
                     .disabled(workspace.busy || workspace.isViewingTrash || workspace.library.activePhotos.isEmpty)

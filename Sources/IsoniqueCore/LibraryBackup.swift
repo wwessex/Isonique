@@ -13,16 +13,21 @@ public enum LibraryBackup {
         var originals: [String: String]
     }
 
-    private static func regularFile(_ url: URL) throws {
+    static func regularFile(_ url: URL) throws {
         let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
         guard values.isRegularFile == true, values.isSymbolicLink != true else { throw LibraryError.unsafePath }
     }
-    private static func read(_ folder: URL, allowMissingManaged: Bool = false) throws -> Snapshot {
+    static func readCatalogue(_ folder: URL) throws -> (Data, Library) {
         let catalog = folder.appendingPathComponent("catalog.json")
         try regularFile(catalog)
         let data = try Data(contentsOf: catalog)
         let library = try JSONDecoder().decode(Library.self, from: data)
         try library.validateSchema()
+        return (data, library)
+    }
+
+    private static func read(_ folder: URL, allowMissingManaged: Bool = false) throws -> Snapshot {
+        let (data, library) = try readCatalogue(folder)
         let originals = folder.appendingPathComponent("Originals")
         guard originals.resolvingSymlinksInPath() == originals else { throw LibraryError.unsafePath }
         var hashes: [String: String] = [:]

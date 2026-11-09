@@ -57,8 +57,10 @@ File → Open Recent Library remembers up to ten successfully opened libraries. 
 
 File → Export Project as Library packages the active photos in one project as a verified, independent library. It copies each shared original once and includes referenced originals as managed copies. Relevant albums, stack picks and surviving pairs stay with the photos. Smart Albums whose results would change because originals become managed are saved as regular albums with their existing matches. Trash and undo history are outside the export scope.
 
+File → Import Project Library adds a verified, self-contained export as a separate project. Copies are independent even when their bytes match originals in the destination. The importer remaps colliding identities, scopes Smart Albums to the imported project and saves the whole project together. Cancellation and save failures clean up the copies. Crash recovery for forcibly interrupted catalogue writes remains open.
+
 ## Next implementation slice
 
-1. Import an exported Isonique project library as a separate project. Validate the source, copy originals and remap project, photo, album, version and stack identities where they collide. Test duplicates, shared originals, cancellation and rollback before adding conflict resolution for merges.
+1. Reconcile an exported project with its source project using stable IDs. Define conflict choices for edits, metadata, memberships and deletions. Preserve both libraries through validation, verified copying and a failed save before adding the merge command.
 
 Other open core work includes Finder Trash handoff for Library Trash, relocation naming and subfolders, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

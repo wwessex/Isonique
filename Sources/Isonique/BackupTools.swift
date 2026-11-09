@@ -100,6 +100,62 @@ extension Workspace {
         }
     }
 
+    func importProjectLibraryPanel() {
+        guard repository != nil, !busy else { return }
+        let panel = NSOpenPanel()
+        panel.title = "Import Project Library"
+        panel.prompt = "Import Project"
+        panel.message = "Choose a folder created by Export Project as Library. Its photos and originals will be copied into a separate project in the current library."
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        guard panel.runModal() == .OK, let source = panel.url else { return }
+        Task { await importProjectLibrary(from: source) }
+    }
+
+    func importProjectLibrary(from source: URL) async {
+        guard let repository, !busy else { return }
+        busy = true
+        status = "Checking project library…"
+        let reservedHistory = history
+        let task = Task.detached(priority: .utility) {
+            try await repository.importProjectLibrary(from: source, reserving: reservedHistory) { progress in
+                await self.reportProjectImportProgress(progress)
+            }
+        }
+        projectImportTask = task
+        defer { projectImportTask = nil; busy = false }
+        do {
+            let result = try await withTaskCancellationHandler {
+                try await task.value
+            } onCancel: {
+                task.cancel()
+            }
+            library = result.library
+            batchMode = false
+            batchSelection = []
+            showBrowser(allPhotos: true)
+            scope = "project:\(result.project.id)"
+            selection = photos.first?.id
+            status = "Imported project · \(result.project.name) · \(result.photoCount) photos"
+        } catch is CancellationError {
+            status = "Project import cancelled"
+        } catch {
+            self.error = error.localizedDescription
+            status = "Project import failed"
+        }
+    }
+
+    private func reportProjectImportProgress(_ progress: ImportProgress) {
+        guard projectImportTask?.isCancelled == false else { return }
+        status = "Verified \(progress.processed) of \(progress.total) project originals…"
+    }
+
+    func cancelProjectImport() {
+        guard let task = projectImportTask, !task.isCancelled else { return }
+        task.cancel()
+        status = "Cancelling project import…"
+    }
+
     func verifyLibrary() {
         guard let repository, !busy else { return }
         busy = true; status = "Checking catalogue and original hashes…"

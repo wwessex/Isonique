@@ -212,3 +212,10 @@
 - The tests also covered cancellation, simultaneous export to the same destination, occupied and dangling-link destinations, missing originals and failed fingerprint checks. The source catalogue and originals were verified unchanged.
 - Native QA selected a project, exported it through the File menu, and reopened the destination through Open Isonique Library. The new library showed the project, album, shared version and saved exposure. Its three photo records referenced two local files whose hashes matched.
 - The signed Apple Silicon build passed strict verification on macOS 27.3. The optimized test suite executed 129 tests with zero failures or skips, including four camera RAW fixtures.
+
+## Import a project library as a separate project
+
+- Repository tests exported a project and imported it back into the original library twice. They verified remapping for colliding project, photo, original, album, stack, pair and named-recipe IDs, preservation of noncolliding IDs and undo-reserved identities, retained edits and shared originals, scoped Smart Albums and verified reopen.
+- Cancellation after the first verified copy left no staged files or catalogue changes. An immutable catalogue forced a save failure after copies had been published, and rollback removed those copies. A retry succeeded. The tests also covered a destination catalogue change during import and corrupt source bytes.
+- Native QA imported a library with matching IDs using File → Import Project Library. The separate project and album appeared with distinct names. The saved catalogue had six photo records and four verified originals, with the imported edits and shared-original links intact. Source hashes matched before and after.
+- The signed Apple Silicon build passed strict verification on macOS 27.3. The optimized suite executed 135 tests with zero failures or skips, including four camera RAW fixtures.

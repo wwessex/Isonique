@@ -393,6 +393,10 @@ public final class LibraryRepository {
         return managed
     }
     func managedOriginalURL(_ filename: String) throws -> URL {
+        try Self.managedOriginalURL(filename, in: root)
+    }
+
+    static func managedOriginalURL(_ filename: String, in root: URL) throws -> URL {
         guard filename == (filename as NSString).lastPathComponent, !filename.isEmpty, filename != ".", filename != ".." else { throw LibraryError.unsafePath }
         let base = root.appendingPathComponent("Originals").resolvingSymlinksInPath()
         let url = base.appendingPathComponent(filename)
