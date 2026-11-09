@@ -95,8 +95,10 @@ After inspection, Review Quarantine lists the files before moving them to First 
 
 Catalogue writes from independently opened workspaces compare the revision they loaded with the catalogue on disk under the write lock. Successful saves advance the workspace's revision. File → Reload Library reads the latest catalogue without rewriting it and retains valid browser navigation. It replaces stale Undo/Redo history with saved history when enabled, and keeps session history when the catalogue is unchanged.
 
+File → Import from Camera or Card discovers local cameras through [Image Capture Core](https://developer.apple.com/documentation/imagecapturecore/) and local removable or ejectable volumes with a DCIM folder. The source picker updates when mounted media changes. It imports supported photos from one chosen source into managed storage and reuses import presets, RAW/JPEG pairing, XMP sidecars, duplicate detection and progress. Cameras download one photo at a time to private temporary storage. The import verifies the expected length when the camera reports it, clears temporary copies and retains successfully saved photos after cancellation. It sends no deletion, rename or eject commands.
+
 ## Next implementation slice
 
-1. Add a camera and memory card import source with native discovery, a read-only device workflow, and the existing import presets and progress.
+1. Add a per-photo selection and thumbnail browser to camera and card import, with cancellation and reconnect coverage. Exercise a physical camera when one is available.
 
-Other open core work includes library merging and repair. Build and interaction evidence should stay in the test record.
+Other open core work includes library merging and repair, and tethered capture. Build and interaction evidence should stay in the test record.

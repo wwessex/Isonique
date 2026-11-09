@@ -26,6 +26,7 @@ public struct ImportOptions: Codable, Equatable {
     public var readSidecars = false
     public init() {}
     public static let rawExtensions: Set<String> = ["dng", "raw", "cr2", "cr3", "crw", "nef", "nrw", "arw", "srf", "sr2", "orf", "raf", "rw2", "pef", "ptx", "rwl", "3fr", "fff", "iiq", "mos", "mrw", "x3f", "erf", "kdc", "dcr", "srw"]
+    static let imageExtensions = rawExtensions.union(["jpg", "jpeg", "png", "heic", "heif", "tif", "tiff", "gif", "bmp", "webp", "avif"])
     public static func key(_ url: URL) -> String { url.deletingPathExtension().standardizedFileURL.path.lowercased() }
     public static func isRAW(_ url: URL) -> Bool { rawExtensions.contains(url.pathExtension.lowercased()) }
     public static func isJPEG(_ url: URL) -> Bool { ["jpg", "jpeg"].contains(url.pathExtension.lowercased()) }

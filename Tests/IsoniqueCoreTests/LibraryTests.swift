@@ -71,6 +71,140 @@ final class LibraryTests: XCTestCase {
         XCTAssertTrue(try repo.load().projects.isEmpty)
     }
 
+    func testMemoryCardImportReadsOnlyDCIMAndKeepsSourceBytes() async throws {
+        let fm = FileManager.default
+        let cardRoot = temporary.appendingPathComponent("Card")
+        let dcim = cardRoot.appendingPathComponent("dcim/100CAM")
+        try fm.createDirectory(at: dcim, withIntermediateDirectories: true)
+        let source = try fixture("P100.png", directory: dcim, red: 0.2)
+        let unrelated = try fixture("outside.png", directory: cardRoot, red: 0.8)
+        let link = dcim.appendingPathComponent("link.png")
+        try fm.createSymbolicLink(at: link, withDestinationURL: unrelated)
+        let sidecar = dcim.appendingPathComponent("P100.xmp")
+        let xmp = Data(#"<photos><photo><caption>Card sidecar</caption><rating>4</rating></photo></photos>"#.utf8)
+        try xmp.write(to: sidecar)
+        let card = try XCTUnwrap(MemoryCardSource(volume: cardRoot))
+        XCTAssertEqual(card.folder.lastPathComponent, "dcim")
+        XCTAssertNil(MemoryCardSource(volume: dcim))
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        var options = ImportOptions()
+        options.storage = .referenced
+        options.prefix = "Shoot"
+        options.applyMetadata = true
+        options.caption = "Preset caption"
+        options.readSidecars = true
+        var progress: [ImportProgress] = []
+        let result = await ImportJob.run(memoryCard: card, options: options, repository: repo,
+                                        projectID: nil, albumID: nil, newProjectName: "Card shoot", into: &library) {
+            progress.append($0)
+        }
+        XCTAssertEqual(result.imported, 1, result.errors.joined(separator: "; "))
+        XCTAssertTrue(result.errors.isEmpty)
+        XCTAssertEqual(progress.map(\.processed), [0, 1])
+        let photo = try XCTUnwrap(repo.load().photos.first)
+        XCTAssertEqual(photo.originalName, "Shoot-P100.png")
+        XCTAssertEqual(photo.caption, "Card sidecar")
+        XCTAssertEqual(photo.rating, 4)
+        XCTAssertNil(photo.referencedPath)
+        XCTAssertEqual(try Data(contentsOf: repo.availableOriginalURL(photo)), try Data(contentsOf: source))
+        XCTAssertEqual(try Data(contentsOf: sidecar), xmp)
+        XCTAssertEqual(Set(try fm.contentsOfDirectory(atPath: dcim.path)), ["P100.png", "P100.xmp", "link.png"])
+        XCTAssertEqual(try repo.load().projects.map(\.name), ["Card shoot"])
+
+        let retry = await ImportJob.run(memoryCard: card, options: options, repository: repo,
+                                        projectID: nil, albumID: nil, into: &library)
+        XCTAssertEqual(retry.duplicates, 1)
+        try fm.moveItem(at: cardRoot, to: temporary.appendingPathComponent("Unplugged"))
+        let unplugged = await ImportJob.run(memoryCard: card, options: options, repository: repo,
+                                            projectID: nil, albumID: nil, into: &library)
+        XCTAssertEqual(unplugged.errors, [DeviceImportError.disconnected.localizedDescription])
+        XCTAssertEqual(try repo.load().photos, [photo])
+    }
+
+    func testMemoryCardAndCameraRejectUnsafeSourcePaths() throws {
+        let fm = FileManager.default
+        let volume = temporary.appendingPathComponent("BadCard")
+        try fm.createDirectory(at: volume, withIntermediateDirectories: false)
+        try fm.createSymbolicLink(at: volume.appendingPathComponent("DCIM"), withDestinationURL: temporary)
+        XCTAssertNil(MemoryCardSource(volume: volume))
+        for components in [[], ["../outside.jpg"], ["DCIM", "..", "a.jpg"], ["DCIM", "a:b.jpg"], ["DCIM", "a\\b.jpg"]] {
+            XCTAssertNil(CameraImportFile(components: components))
+        }
+    }
+
+    func testCameraImportUsesPresetsPairingAndProgressThenRemovesStaging() async throws {
+        let jpeg = try Data(contentsOf: fixture("jpeg.png", red: 0.3))
+        let raw = try Data(contentsOf: fixture("raw.png", red: 0.4))
+        let other = try Data(contentsOf: fixture("other.png", red: 0.5))
+        let xmp = Data(#"<photos><photo><caption>Camera sidecar</caption><rating>5</rating></photo></photos>"#.utf8)
+        let inputs: [([String], Data)] = [(["100CAM", "P100.JPG"], jpeg), (["100CAM", "P100.NEF"], raw),
+            (["100CAM", "P100.XMP"], xmp), (["101CAM", "P100.JPG"], other)]
+        let files = try inputs.map { try XCTUnwrap(CameraImportFile(components: $0.0, byteCount: Int64($0.1.count))) }
+        let payloads = Dictionary(uniqueKeysWithValues: zip(files, inputs.map(\.1)))
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        var options = ImportOptions()
+        options.storage = .referenced
+        options.pairing = .linkedRAW
+        options.prefix = "Event"
+        options.readSidecars = true
+        var stages: Set<URL> = []
+        var progress: [ImportProgress] = []
+        let report = await ImportJob.run(cameraFiles: files, options: options, repository: repo,
+            projectID: nil, albumID: nil, newProjectName: "Camera shoot", into: &library, download: { item, destination in
+                stages.insert(destination.deletingLastPathComponent())
+                try XCTUnwrap(payloads[item]).write(to: destination)
+            }, progress: { progress.append($0) })
+        XCTAssertEqual(report.imported, 3, report.errors.joined(separator: "; "))
+        XCTAssertTrue(report.errors.isEmpty)
+        XCTAssertEqual(progress.map(\.processed), [0, 1, 2, 3])
+        XCTAssertTrue(progress.allSatisfy { $0.total == 3 })
+        let saved = try repo.load()
+        XCTAssertEqual(saved.photos.map(\.originalName), ["Event-P100.JPG", "Event-P100.NEF", "Event-P100.JPG"])
+        XCTAssertTrue(saved.photos.allSatisfy { $0.referencedPath == nil && $0.projectID == report.createdProject })
+        guard saved.photos.count == 3 else { return XCTFail("Expected three saved files") }
+        XCTAssertNotNil(saved.photos[0].pairID)
+        XCTAssertEqual(saved.photos[0].pairID, saved.photos[1].pairID)
+        XCTAssertNil(saved.photos[2].pairID)
+        XCTAssertEqual(saved.photos.map(\.caption), ["Camera sidecar", "Camera sidecar", ""])
+        XCTAssertEqual(try saved.photos.map { try Data(contentsOf: repo.availableOriginalURL($0)) }, [jpeg, raw, other])
+        XCTAssertEqual(stages.count, 3)
+        XCTAssertTrue(stages.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
+    }
+
+    func testCameraIncompleteDownloadAndCancellationKeepCommittedPhoto() async throws {
+        let bytes = try Data(contentsOf: fixture())
+        let files = try ["A.png", "B.png", "C.png", "D.png"].map {
+            try XCTUnwrap(CameraImportFile(components: ["DCIM", $0], byteCount: Int64(bytes.count)))
+        }
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        let (report, attempted, stages) = await Task.detached {
+            var library = Library()
+            var attempted: [String] = []
+            var stages: [URL] = []
+            let report = await ImportJob.run(cameraFiles: files, options: ImportOptions(), repository: repo,
+                projectID: nil, albumID: nil, newProjectName: "Camera", into: &library, download: { item, destination in
+                    attempted.append(item.filename)
+                    stages.append(destination.deletingLastPathComponent())
+                    if item.filename == "B.png" {
+                        try bytes.prefix(10).write(to: destination)
+                    } else {
+                        try bytes.write(to: destination)
+                        if item.filename == "C.png" { withUnsafeCurrentTask { $0?.cancel() } }
+                    }
+                })
+            return (report, attempted, stages)
+        }.value
+        XCTAssertTrue(report.cancelled)
+        XCTAssertEqual(report.imported, 1)
+        XCTAssertEqual(report.errors.count, 1)
+        XCTAssertTrue(report.errors[0].contains("complete copy"))
+        XCTAssertEqual(attempted, ["A.png", "B.png", "C.png"])
+        XCTAssertTrue(stages.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
+        XCTAssertEqual(try repo.load().photos.map(\.originalName), ["A.png"])
+    }
+
     func testReferencedOriginalRelinkExportAndConsolidation() throws {
         let source = try fixture()
         let fm = FileManager.default
