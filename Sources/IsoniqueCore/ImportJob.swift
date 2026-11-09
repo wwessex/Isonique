@@ -44,21 +44,29 @@ public enum ImportJob {
         }
     }
 
-    public static func run(memoryCard card: MemoryCardSource, options: ImportOptions, repository: LibraryRepository,
+    public static func run(memoryCard card: MemoryCardSource, selectedFiles: [URL]? = nil, options: ImportOptions, repository: LibraryRepository,
                            projectID: UUID?, albumID: UUID?, newProjectName: String? = nil, into library: inout Library,
                            progress: (ImportProgress) async -> Void = { _ in }) async -> ImportReport {
-        do { try card.checkAvailable() }
-        catch { return ImportReport(sourceError: error) }
-        let candidates = card.photoFiles()
-        if candidates.isEmpty, !Task.isCancelled {
-            do { try card.checkAvailable() }
-            catch { return ImportReport(sourceError: error) }
-            return ImportReport(sourceError: DeviceImportError.noPhotos)
+        let candidates: [URL]
+        do {
+            try Task.checkCancellation()
+            if let selectedFiles {
+                try card.checkAvailable()
+                candidates = selectedFiles
+            } else {
+                candidates = try card.photoFiles()
+            }
+        } catch {
+            return ImportReport(sourceError: error)
         }
+        guard !candidates.isEmpty else { return ImportReport(sourceError: DeviceImportError.noPhotos) }
         var managed = options
         managed.storage = .managed
         return await runFiles(candidates, options: managed, repository: repository, projectID: projectID, albumID: albumID,
                               newProjectName: newProjectName, into: &library, progress: progress) { file in
+            guard ImportOptions.imageExtensions.contains(file.pathExtension.lowercased()) else {
+                throw LibraryError.unsupportedImage(file.lastPathComponent)
+            }
             try card.validateFile(file)
             if options.readSidecars {
                 let sidecar = file.deletingPathExtension().appendingPathExtension("xmp")
@@ -68,17 +76,21 @@ public enum ImportJob {
         }
     }
 
-    public static func run(cameraFiles: [CameraImportFile], options: ImportOptions, repository: LibraryRepository,
+    public static func run(cameraFiles: [CameraImportFile], selectedPhotos: Set<CameraImportFile>? = nil, options: ImportOptions, repository: LibraryRepository,
                            projectID: UUID?, albumID: UUID?, newProjectName: String? = nil, into library: inout Library,
                            download: (CameraImportFile, URL) async throws -> Void,
                            progress: (ImportProgress) async -> Void = { _ in }) async -> ImportReport {
         if Task.isCancelled { return ImportReport(sourceError: CancellationError()) }
         let photos = Dictionary(grouping: cameraFiles.filter(\.isPhoto), by: \.logicalURL)
         let sidecars = Dictionary(grouping: cameraFiles.filter(\.isSidecar)) { ImportOptions.key($0.logicalURL) }
-        guard !photos.isEmpty else { return ImportReport(sourceError: DeviceImportError.noPhotos) }
+        let candidates = photos.filter { _, matches in
+            guard let selectedPhotos else { return true }
+            return matches.contains { selectedPhotos.contains($0) }
+        }
+        guard !candidates.isEmpty else { return ImportReport(sourceError: DeviceImportError.noPhotos) }
         var managed = options
         managed.storage = .managed
-        return await runFiles(Array(photos.keys), options: managed, repository: repository, projectID: projectID, albumID: albumID,
+        return await runFiles(Array(candidates.keys), options: managed, repository: repository, projectID: projectID, albumID: albumID,
                               newProjectName: newProjectName, into: &library, progress: progress) { url in
             guard let matches = photos[url], matches.count == 1, let item = matches.first else {
                 throw DeviceImportError.ambiguous(url.lastPathComponent)

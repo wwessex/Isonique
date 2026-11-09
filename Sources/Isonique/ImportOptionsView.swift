@@ -17,6 +17,9 @@ struct ImportOptionsView: View {
             Form {
                 if let device = model.pendingDeviceImport {
                     LabeledContent("Source", value: device.name)
+                    LabeledContent("Selected photos", value: String(device.count))
+                    Text("RAW + JPEG preferences apply to the selected photos.")
+                        .font(.caption).foregroundStyle(.secondary)
                     Text("Originals are copied into the library. The camera or card is never changed.")
                         .font(.caption).foregroundStyle(.secondary)
                 } else {
@@ -74,6 +77,13 @@ struct ImportOptionsView: View {
                 }.keyboardShortcut(.defaultAction)
             }
         }.padding(24).frame(width: 580)
+        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didUnmountNotification)) { notification in
+            guard case .memoryCard(let card, _) = model.pendingDeviceImport,
+                  let url = notification.userInfo?[NSWorkspace.volumeURLUserInfoKey] as? URL,
+                  url.path == card.volume.path else { return }
+            model.error = DeviceImportError.disconnected.localizedDescription
+            dismiss()
+        }
         .onAppear { options = (try? JSONDecoder().decode(ImportOptions.self, from: savedOptions)) ?? ImportOptions() }
     }
     private var defaultProjectName: String {

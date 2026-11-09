@@ -1,3 +1,4 @@
+import CoreGraphics
 import Darwin
 import Foundation
 
@@ -42,10 +43,15 @@ public struct MemoryCardSource: Identifiable, Hashable, Sendable {
               volumeUUID == nil || current.volumeUUID == volumeUUID else { throw DeviceImportError.disconnected }
     }
 
-    func photoFiles() -> [URL] {
+    public func photoFiles() throws -> [URL] {
+        try Task.checkCancellation()
+        try checkAvailable()
         let keys: [URLResourceKey] = [.isRegularFileKey, .isSymbolicLinkKey]
         guard let entries = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: keys,
-            options: [.skipsHiddenFiles, .skipsPackageDescendants]) else { return [] }
+            options: [.skipsHiddenFiles, .skipsPackageDescendants]) else {
+            try checkAvailable()
+            return []
+        }
         var photos: [URL] = []
         for case let url as URL in entries {
             if Task.isCancelled { break }
@@ -55,10 +61,18 @@ public struct MemoryCardSource: Identifiable, Hashable, Sendable {
                 photos.append(url)
             }
         }
-        return photos
+        try Task.checkCancellation()
+        try checkAvailable()
+        return photos.sorted { $0.path < $1.path }
+    }
+
+    public func thumbnail(for file: URL, maximum: Int) throws -> CGImage {
+        try validateFile(file)
+        return try Renderer.thumbnail(file, adjustments: Adjustments(), maxDimension: maximum)
     }
 
     func validateFile(_ url: URL) throws {
+        guard url.isFileURL else { throw LibraryError.unsafePath }
         do {
             guard let path = Self.canonicalPath(url) else { throw CocoaError(.fileReadNoSuchFile) }
             guard path == url.path, path.hasPrefix(folder.path + "/") else { throw LibraryError.unsafePath }

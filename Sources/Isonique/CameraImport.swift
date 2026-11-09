@@ -1,17 +1,28 @@
 import AppKit
-import SwiftUI
+import ImageIO
 @preconcurrency import ImageCaptureCore
 import IsoniqueCore
 
-enum DeviceImportSource {
-    case memoryCard(MemoryCardSource)
-    case camera(ICCameraDevice)
+enum DeviceImportSelection {
+    case memoryCard(MemoryCardSource, [URL])
+    case camera(CameraImportSession, catalogue: [CameraImportFile], selected: Set<CameraImportFile>)
 
-    var name: String {
+    @MainActor var name: String {
         switch self {
-        case .memoryCard(let card): return card.name
-        case .camera(let device): return device.name ?? "Camera"
+        case .memoryCard(let card, _): return card.name
+        case .camera(let session, _, _): return session.camera.name ?? "Camera"
         }
+    }
+
+    var count: Int {
+        switch self {
+        case .memoryCard(_, let files): return files.count
+        case .camera(_, _, let selected): return selected.count
+        }
+    }
+
+    @MainActor func close() {
+        if case .camera(let session, _, _) = self { session.close() }
     }
 }
 
@@ -95,8 +106,10 @@ private final class CameraRequest {
 }
 
 @MainActor final class CameraImportSession: NSObject, ICCameraDeviceDelegate {
-    private let camera: ICCameraDevice
+    let camera: ICCameraDevice
     private var opening: CameraRequest?
+    private var thumbnails: [UUID: CameraRequest] = [:]
+    private var previewing = true
     private var transfer: CameraRequest?
     private var downloadProgress: Progress?
     private var files: [CameraImportFile: ICCameraFile] = [:]
@@ -116,7 +129,9 @@ private final class CameraRequest {
             self.camera.requestOpenSession(options: nil) { error in
                 Task { @MainActor in
                     if let error { request.finish(error) }
-                    else if self.closed { self.closeSession() }
+                    else if self.closed, self.camera.delegate == nil {
+                        self.closeSession()
+                    }
                 }
             }
         }
@@ -144,6 +159,41 @@ private final class CameraRequest {
         return records
     }
 
+    func thumbnail(for item: CameraImportFile) async throws -> CGImage {
+        guard previewing, !removed, !closed, let file = files[item] else {
+            throw DeviceImportError.disconnected
+        }
+        let id = UUID()
+        let request = CameraRequest()
+        thumbnails[id] = request
+        defer { thumbnails[id] = nil }
+        var data: Data?
+        try await request.wait(seconds: 12, interrupt: {}) {
+            file.requestThumbnailData(options: nil) { bytes, error in
+                Task { @MainActor in
+                    data = bytes
+                    request.finish(error)
+                }
+            }
+        }
+        try Task.checkCancellation()
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 256
+        ]
+        guard let data, let source = CGImageSourceCreateWithData(data as CFData, nil),
+              let image = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            throw LibraryError.unsupportedImage(item.filename)
+        }
+        return image
+    }
+
+    func endPreview() {
+        previewing = false
+        for request in thumbnails.values { request.finish(CancellationError()) }
+    }
+
     func download(_ item: CameraImportFile, to destination: URL) async throws {
         guard !removed, !closed, let file = files[item] else { throw DeviceImportError.disconnected }
         let request = CameraRequest()
@@ -169,8 +219,11 @@ private final class CameraRequest {
     func close() {
         guard !closed else { return }
         closed = true
-        if requestedSession { closeSession() }
-        camera.delegate = nil
+        endPreview()
+        if camera.delegate === self {
+            if requestedSession { closeSession() }
+            camera.delegate = nil
+        }
         files = [:]
     }
 
@@ -180,6 +233,7 @@ private final class CameraRequest {
 
     private func disconnect() {
         removed = true
+        endPreview()
         opening?.finish(DeviceImportError.disconnected)
         transfer?.finish(DeviceImportError.disconnected)
     }
@@ -214,54 +268,4 @@ private final class CameraRequest {
     }
     nonisolated func cameraDevice(_ camera: ICCameraDevice, didReceiveThumbnail thumbnail: CGImage?, for item: ICCameraItem, error: Error?) {}
     nonisolated func cameraDevice(_ camera: ICCameraDevice, didReceiveMetadata metadata: [AnyHashable: Any]?, for item: ICCameraItem, error: Error?) {}
-}
-
-struct DeviceImportView: View {
-    @EnvironmentObject private var model: Workspace
-    @Environment(\.dismiss) private var dismiss
-    @ObservedObject var discovery: CameraDiscovery
-    @State private var selected: Choice?
-    private enum Choice: Hashable { case camera(ObjectIdentifier), card(URL) }
-    private var source: DeviceImportSource? {
-        switch selected {
-        case .camera(let id): return discovery.cameras.first { ObjectIdentifier($0) == id }.map(DeviceImportSource.camera)
-        case .card(let id): return discovery.cards.first { $0.id == id }.map(DeviceImportSource.memoryCard)
-        case nil: return nil
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Import from Camera or Card").font(.title2.bold())
-            Text("Choose a connected camera or a mounted card with a DCIM folder. Isonique copies supported photographs into the library and leaves the device unchanged.")
-                .foregroundStyle(.secondary)
-            if discovery.cameras.isEmpty && discovery.cards.isEmpty {
-                Text("No cameras or memory cards found. Connect and unlock the camera in photo transfer mode, or insert a card.")
-                    .padding(.vertical, 8)
-            } else {
-                Picker("Device", selection: $selected) {
-                    Text("Choose a device").tag(nil as Choice?)
-                    ForEach(discovery.cameras, id: \.self) { device in
-                        Label(device.name ?? "Camera", systemImage: "camera").tag(Optional(Choice.camera(ObjectIdentifier(device))))
-                    }
-                    ForEach(discovery.cards) { card in
-                        Label(card.name + " — mounted media", systemImage: "sdcard").tag(Optional(Choice.card(card.id)))
-                    }
-                }
-            }
-            HStack {
-                Button("Refresh", action: discovery.refreshCards)
-                Spacer()
-                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
-                Button("Import Options…") {
-                    guard let source else { return }
-                    model.pendingDeviceImport = source
-                    dismiss()
-                }.keyboardShortcut(.defaultAction).disabled(source == nil)
-            }
-        }
-        .padding(24).frame(width: 530)
-        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didMountNotification)) { _ in discovery.refreshCards() }
-        .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didUnmountNotification)) { _ in discovery.refreshCards() }
-    }
 }
