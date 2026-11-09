@@ -45,47 +45,70 @@ extension Workspace {
         }
     }
 
-    var canReconnectOriginals: Bool {
-        !busy && repository != nil && library.photos.contains { $0.trashedAt == nil && $0.referencedPath != nil }
+    func canFindOriginals(_ operation: OriginalFolderOperation) -> Bool {
+        !busy && repository != nil && library.photos.contains { photo in
+            switch operation {
+            case .reconnect: return photo.trashedAt == nil && photo.referencedPath != nil
+            case .recoverManaged: return photo.referencedPath == nil
+            }
+        }
     }
 
-    func reconnectOriginalsPanel() {
-        guard canReconnectOriginals else { return }
+    func findOriginalsPanel(_ operation: OriginalFolderOperation) {
+        guard canFindOriginals(operation) else { return }
         let panel = NSOpenPanel()
-        panel.title = "Reconnect Referenced Originals"
-        panel.message = "Choose a folder to search for missing referenced originals in this library. Isonique checks known filenames and verifies each match against the original fingerprint."
+        panel.title = operation.title
+        panel.message = operation.prompt
         panel.prompt = "Search Folder"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
         guard panel.runModal() == .OK, let folder = panel.url else { return }
-        Task { await reconnectOriginals(in: folder) }
+        Task { await findOriginals(in: folder, operation: operation) }
     }
 
-    func reconnectOriginals(in folder: URL) async {
-        guard canReconnectOriginals, let repository else { return }
+    func findOriginals(in folder: URL, operation: OriginalFolderOperation) async {
+        guard canFindOriginals(operation), let repository else { return }
         let current = library
         busy = true
-        status = "Searching for missing referenced originals…"
-        let task = Task.detached(priority: .utility) {
-            var draft = current
-            let report = try repository.reconnectMissingReferences(in: folder, library: &draft)
-            return (draft, report)
+        status = "Searching for missing originals…"
+        let task = Task.detached(priority: .utility) { () throws -> (Library?, OriginalFolderResult) in
+            switch operation {
+            case .reconnect:
+                var draft = current
+                let report = try repository.reconnectMissingReferences(in: folder, library: &draft)
+                let summary = report.reconnected.isEmpty && report.unmatched.isEmpty && report.ambiguous.isEmpty
+                    ? "No missing referenced originals"
+                    : "\(report.reconnected.count) reconnected · \(report.unmatched.count) unmatched · \(report.ambiguous.count) ambiguous"
+                return (report.reconnected.isEmpty ? nil : draft, OriginalFolderResult(
+                    title: operation.title, summary: summary, unmatched: report.unmatched, ambiguous: report.ambiguous,
+                    scanErrors: report.scanErrors))
+            case .recoverManaged:
+                let report = try repository.recoverMissingManagedOriginals(in: folder, library: current)
+                let summary = report.restored.isEmpty && report.unmatched.isEmpty && report.ambiguous.isEmpty &&
+                    report.occupied.isEmpty && report.failed.isEmpty && !report.cancelled
+                    ? "No missing managed originals"
+                    : "\(report.restored.count) restored · \(report.unmatched.count) unmatched · \(report.ambiguous.count) ambiguous"
+                return (nil, OriginalFolderResult(
+                    title: operation.title, summary: summary, unmatched: report.unmatched, ambiguous: report.ambiguous,
+                    occupied: report.occupied, failed: report.failed, scanErrors: report.scanErrors,
+                    cancelled: report.cancelled))
+            }
         }
-        originalReconnectTask = task
-        defer { originalReconnectTask = nil; busy = false }
+        originalFolderTask = task
+        defer { originalFolderTask = nil; busy = false }
         do {
-            let (draft, report) = try await task.value
-            if !report.reconnected.isEmpty { library = draft }
+            let (draft, result) = try await task.value
+            if let draft { library = draft }
             let preferred = selection
             refreshOriginalStatus()
             if selected == nil { selectAfterChange(preferred: preferred) }
-            originalReconnectReport = report
-            status = report.summary
+            originalFolderResult = result
+            status = result.summary
         } catch is CancellationError {
-            status = "Reconnect cancelled"
+            status = "Original search cancelled"
         } catch {
             self.error = error.localizedDescription
-            status = "Reconnect failed"
+            status = "Original search failed"
         }
     }
 
@@ -120,19 +143,46 @@ extension Workspace {
     }
 }
 
-extension OriginalReconnectReport {
-    var summary: String {
-        if reconnected.isEmpty && unmatched.isEmpty && ambiguous.isEmpty { return "No missing referenced originals" }
-        return "\(reconnected.count) reconnected · \(unmatched.count) unmatched · \(ambiguous.count) ambiguous"
+enum OriginalFolderOperation: Sendable {
+    case reconnect, recoverManaged
+
+    var title: String {
+        switch self {
+        case .reconnect: return "Reconnect Referenced Originals"
+        case .recoverManaged: return "Recover Missing Managed Originals"
+        }
     }
+
+    var prompt: String {
+        switch self {
+        case .reconnect:
+            return "Choose a folder to search for missing referenced originals in this library. Isonique checks known filenames and verifies each match against the original fingerprint."
+        case .recoverManaged:
+            return "Choose a backup or folder containing the missing originals. Isonique checks known filenames and copies verified matches into the library."
+        }
+    }
+}
+
+struct OriginalFolderResult: Sendable {
+    let title: String
+    let summary: String
+    let unmatched: [String]
+    let ambiguous: [String]
+    var occupied: [String] = []
+    var failed: [String] = []
+    let scanErrors: Int
+    var cancelled = false
 
     var details: String {
         var lines = [summary]
-        for (label, names) in [("Unmatched", unmatched), ("Multiple verified copies", ambiguous)] where !names.isEmpty {
+        let groups = [("Unmatched", unmatched), ("Multiple verified copies", ambiguous),
+                      ("Destination unavailable", occupied), ("Could not restore", failed)]
+        for (label, names) in groups where !names.isEmpty {
             let first = names.prefix(4).joined(separator: ", ")
-            lines.append("\(label): \(first)" + (names.count > 4 ? " and \(names.count - 4) more" : ""))
+            lines.append("\(label) — \(first)" + (names.count > 4 ? " and \(names.count - 4) more" : ""))
         }
-        if scanErrors > 0 { lines.append("Locations or files skipped after a read error: \(scanErrors)") }
+        if scanErrors > 0 { lines.append("Skipped \(scanErrors) locations or files after a read error.") }
+        if cancelled { lines.append("Recovery cancelled. Completed copies remain in the library.") }
         return lines.joined(separator: "\n")
     }
 }

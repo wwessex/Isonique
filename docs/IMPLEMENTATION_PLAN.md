@@ -43,8 +43,10 @@ Grid thumbnail size is now a persistent application preference in View and Setti
 
 The File menu reconnects missing referenced originals from a folder using known names and verified fingerprints. It reports unmatched and ambiguous files and applies all verified paths in a single catalogue write. Single-file relink remains available for fully renamed files.
 
+Missing managed originals can be recovered from a backup or folder. Verified copies are installed independently at their existing paths without a catalogue write. Recovery can resume after interruption and skips completed installs. A forced quit can leave a hidden staging file.
+
 ## Next implementation slice
 
-1. Add batch recovery for missing managed originals. Reuse verified staging and destination checks from single-file relink. Exercise occupied targets, cancellation, interrupted installs, reopen and preservation of the source bytes.
+1. Add a scope choice for selected photos, the current project and the entire library to the folder search for missing originals.
 
 Other open core work includes Finder Trash handoff, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
