@@ -1,5 +1,142 @@
 # Original behavior findings and implementation trace
 
+## 9 November 2026: backup and restore main-program trace
+
+Opened `/Users/williamwessex/Downloads/Aperture.app/Contents/MacOS/Aperture` with `core_target_open` in Deep mode, SHA-256 `ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4`. Searched names, settings and messages with `native_strings_find`, followed references, and completed **nine sequential `native_function_pseudocode` calls**, reading each result before the next call. All nine reported `deep_engine_unavailable`: Ghidra gave no result; the tool supplied built-in fallback pseudo-C. This is completed fallback analysis, not successful Ghidra decompilation. Full results: [backup-restore-main-trace.json](evidence/backup-restore-main-trace.json).
+
+### Strings and references
+
+`validateVaultAtPath:` (`0x1005ee259`) → method metadata `0x1007fd258` → implementation pointer `0x1007fd268` = `0x10038c3f3`; selector `0x10087f0b8` → restore callback instruction `0x10038caff`. `restoreLibraryWithVaultAtPath:` (`0x1005ee118`) → selector `0x10087f058` → callback dispatch at `0x10038ccf2`; function search resolves manager `0x10049d53b` and dialog `0x10038c9c1`.
+
+Settings/messages `restoreLibraryFolderRestricted`, `restoreLibraryPathUnsupported`, `restoreLibraryPathNotWritable`, `restoreLibraryPathNotFolder` (`0x100566d5a`, `0x100566d79`, `0x100566da6`, `0x100566dc4`) reference CFString text pointers. Following object bases 16 bytes before those pointers resolves chooser instructions `0x1001d34c5`, `0x1001d36f5`, `0x1001d3799`/`0x1001d38f5`, `0x1001d38c1`. String evidence `ev_e719064622d5053f99fefb35d8dd5d02d5cce80dcbbe1ea162eb74e5419846fd`; individual xref records are retained in the evidence file.
+
+### Recovered values and rules used by the build
+
+| Rule / formula | Original address and evidence | Application |
+|---|---|---|
+| Accept source schema when `sourceVersion == currentVersion`; equality returns **1**, mismatch **0**. | `RKRestoreDialog validateVaultAtPath:` `0x10038c3f3`; `mov bl,1` at `0x10038c41b`, compare `0x10038c424`, equality jump `0x10038c427`; mismatch clears bl. Selector `0x10087f078` resolves to `dataModelVersionForVaultAtPath:`. Pseudocode `ev_54e5d7de16f176cbde1ca0f52a527928b0378923cadfc3b8dd24c1a4eb117c3e`; assembly `ev_577478aaaed404b126289b7f6c6e87aac0fd9bbfffe60f3ce11a266fa44d9905`. | Existing Isonique manifest/catalogue version equality guards now run through new read-only `LibraryBackup.validateBackup` before destination selection. Isonique version **1** is an independent format number; Apple's imported `_RKDataModelVersion` / `_RKDataModelVersion_200` numeric values were not recovered here. Older mismatches may offer an external upgrade route; no legacy upgrader is implemented. |
+| Validate source before subsequent restore prompt and manager dispatch; failure returns immediately. | `RKRestoreDialog restoreLibraryPanelDidEnd:returnCode:contextInfo:` `0x10038ca63`; validation call `0x10038cb0c`, test/jump `0x10038cb0f` / `0x10038cb11`. Assembly `ev_7c72c21f2cc171a0daf41d4f0d5ae51f0c6fe8db0270d9af044fe3a12f25ccdd`; pseudocode `ev_d5510da3ca44defc1cc519324f275064b9a2c6076504d00f1b1797308dbe12fe`. | Native Restore now checks the chosen backup off the UI thread before showing its destination panel. Restore rechecks the source before copying. This adapts the ordering to Isonique's new-folder workflow; original replacement-dialog behavior is not replicated. |
+| Require writable directory; check parent for a nonexistent child. | `RKLibraryChooser _panel:isValidFilename:` `0x1001d346b`; parent load `0x1001d37d3`, writability selector `0x1001d37e0`, call `0x1001d37ed`, test/failure branch `0x1001d37f0` / `0x1001d37f6` leads to not-writable message. Selector `0x100874350` = `isWritableFileAtPath:`. Assembly `ev_abfd906847449643359903c75a9502b8ee009b7d4d6f6a05f835e3469cf57455`; typed selector `ev_38a7c7fc90fea80cd7dffb4cbe1cbb4458098f69c598cdf451a0f11263e32747`. | Shared backup/restore copy explicitly checks parent existence, directory type and writability before staging. Actual filesystem operations still handle permission changes/errors. Full legacy volume policy remains unresolved. |
+| `canRestoreLibrary = (selectedItem.representedObject != nil)` → **0 or 1**. | `RKRestoreDialog canRestoreLibrary` `0x10038c648`; test/setne `0x10038c675` / `0x10038c678`; selectedItem and representedObject selectors resolved. Assembly `ev_6fa3c799e746e0c7cb2db6523246d58a4c9f4c29145b64d9aa4de26fcb4091a6`. | Existing accepted-panel + nonnil source URL guard retained. Selection presence alone does not establish integrity. |
+
+### Every completed pseudocode read
+
+| Function | Entry | What was read / limits |
+|---|---|---|
+| RKRestoreDialog validateVaultAtPath: | `0x10038c3f3` | Schema equality/mismatch; imported version numbers unresolved. |
+| RKLibraryChooser _panel:isValidFilename: | `0x1001d346b` | Directory/writability/message routing; 14 fallback gotos prevent complete path-policy recovery. |
+| RKRestoreDialog restoreLibraryWithVaultAtPath: | `0x10038c9c1` | Selection guard and dialog setup. |
+| RKRestoreDialog restoreLibraryPanelDidEnd:returnCode:contextInfo: | `0x10038ca63` | Accepted panel return code 1, validation before prompt, guarded dispatch; computed tail jump. |
+| RKRestoreDialog canRestoreLibrary | `0x10038c648` | Selected object nonnil → boolean. |
+| RKVaultManager initialize | `0x10049e6d7` | Mount/unmount notification registration; no hash formula. |
+| RKRestoreLibraryManager restoreLibraryWithVaultAtPath: | `0x10049d53b` | File/background/database setup; unstructured fallback does not establish complete legacy restore algorithm. |
+| RKVaultManager updateVault:calculateDiskSpace: | `0x10049fb20` | Database/sync routing and imported status/error symbols; sync internals unresolved. |
+| DebugWindowController verifyVaults: | `0x1001cce6a` | Delegates verification through a vault table; no hash algorithm recovered. |
+
+Isonique's SHA-256 manifest, exact catalogue copy, staged publication, no-overwrite/new-folder restore, symlink restrictions and integrity scope remain independent choices. No legacy vault decoding, incremental sync or repair was recovered or added. Earlier proprietary pixel/grouping unknowns remain unchanged.
+
+Inspected variants: sole maintained native SwiftUI macOS app (macOS 14+, arm64). No web/PWA, Windows, iOS or Android implementation exists here. Legacy original execution, Intel and older macOS runtime validation are unavailable. This pass's checks are recorded in `VALIDATION.md`.
+
+## 9 November 2026: fresh review and tonal main-program trace
+
+Reopened the original main executable at `/Users/williamwessex/Downloads/Aperture.app/Contents/MacOS/Aperture` with `core_target_open`; confirmed Deep mode. Binary SHA-256: `ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4`. Completed **12 sequential native_function_pseudocode calls**, awaiting and reading each result before the next. Every call reported Ghidra `deep_engine_unavailable`; fallback pseudo-C was returned. This is completed fallback analysis, not successful Ghidra decompilation. Full returned records, assembly and typed constants: [review-tonal-main-trace.json](evidence/review-tonal-main-trace.json).
+
+### Names, settings and messages followed
+
+String searches found Auto Stack actions, undo messages, histogram channel names, slideshow import-block messages, and display/fade selectors (`ev_c958fa2fea995c3793aa1df9059fc3dc8398628a373df8978ae14ec931a8e38d`, `ev_b50e0144c0a28328f8876369dd2e800345ef6e071b7587157538291ebd422e83`).
+- `_autoStackList:withThreshold:previousValue:` string `0x100599541` → method metadata `0x10074bd70` and selector `0x10086ac68` → selected/all callers `0x1000440f7` / `0x10004413f`; named implementation `0x1000317b6`.
+- `setDisplayTime:` string `0x1005a6f82` → selector `0x10086e230` → initializer instruction `0x10009f165`, corroborated by assembly `ev_e0a00156366c2d6af0d8472b04ecad14469e043991436e4663e833aa91002ead`.
+- `_setDefaultsForChannel:` string `0x1005cb342` → selector `0x100877140` → five calls in `-[RKHistogramView setDefaults]` (`ev_b8fea888172a887d0e248671edfb08c23ccd4ec17e1b892dfe6097c33cd344fb`). Levels callback string `0x1005cb2f4` → selector `0x100877130` → histogram drag/parameter update callers (`ev_fcd2a941719db38f7e7f5238bf9022e077585ab0e83ecf8bb6af58e75a1f98ef`).
+- Import-block message CFStrings have their text pointers at `0x1008a8a18` / `0x1008a8a38`; static xrefs at those interior addresses were empty. Full assembly instead establishes CFString object bases `0x1008a8a08` / `0x1008a8a28` in the import-block branch. `isImportInProgress` selector `0x10086af58` is referenced at `0x100049620`; typed pointer evidence `ev_263d1a12e1700fdd9bcf507552618a4a8b82bac4301d4cabd25d4da978ef9d2e`.
+
+### Recovered values and rules
+
+All addresses below are unslid addresses in the main executable.
+
+| Rule/value | Function and instructions/data | Application |
+|---|---|---|
+| Initial display time = **3.0 seconds** | `-[RKSlideshowPreset init]` `0x10009ef9f`; `movsd` at `0x10009f15d` loads f64 `0x10054fe40=3.0`; selector at `0x10009f165` is `setDisplayTime:`. Pseudocode `ev_897e46652a86dc9ed27f1a31c2c3d64037089da91d6ae85bcfb541af706af27d`, typed data `ev_54e75c2bc3b4a5ada25a458781a16d3b32c5e2b2cfe4bb8d559614bb1aa4cb41`. | `SlideshowRules.defaultDisplayTime` replaces the previous 5-second initial choice in the native slideshow. This is the original preset initializer value, not proof that every factory theme uses it. |
+| Import in progress → alert and return before slideshow setup | `-[RKSelectionMgr _runSlideshowPromptForSettings:]` `0x1000495f1`; call at `0x10004962a`, `test al,al` at `0x10004962d`, zero branch at `0x10004962f`; nonzero path loads import-block messages. Pseudocode `ev_e31cb97211b5f25778bc85868b4b98798b1e04800110e1e556ca6590a1ee8869`; assembly `ev_175ef8797c08ef8a812afe159abe1bead2c066b9278dd5676d6a30c871704347`. | Both native menu and toolbar now call guarded `startSlideshow()`, using explicit import state. Toolbar also disables during busy operations; export/recovery exclusion is an independent concurrency policy. Alert wording is independent. |
+| Preset fade time = **2.0 seconds**; screen fade out/in = **1.0/1.0**; slideshow fade out/in = **1.5/1.0** | Same initializer: `0x10054fdd0=2.0` → `setFadeTime:`; `0x100554fa8=1.0`, `0x100554fb0=1.0`, `0x100554fc0=1.5`, `0x100554fb8=1.0` → four resolved fade selectors. Assembly and typed reads retained. | Documented only. Current slideshow has no fade pipeline; these are not substituted for display time or falsely presented as implemented transitions. |
+
+### Every completed pseudocode read and its limits
+
+| Original function | Address | What the read establishes |
+|---|---|---|
+| RKAutostackController windowDidLoad | `0x10015f4f6` | Control/notification setup; no recovered initial threshold. |
+| RKAutostackController setSliderValue: | `0x10015eefd` | Updates controls and stored previous value; fallback omits floating argument semantics. |
+| RKAutostackController a_doAutoStack: | `0x10015ee59` | Routes changed value to selection manager; computed tail jump limits reconstruction. |
+| RKSelectionMgr _autoStackList:withThreshold:previousValue: | `0x1000317b6` | EXIF date/file-name sorting inputs and delegation to `autoStackItems:withThreshold:previousValue:`; malformed fallback loop does not establish grouping formula or boundary equality. |
+| RKAutostackController awakeFromNib | `0x10015ee3a` | Sends zero argument to a control selector; no threshold claim. |
+| RKHistogramView _setDefaultsForChannel: | `0x100205a31` | Registers per-channel numeric control defaults; no pixel histogram luminance formula. |
+| DGLevelsViewController initialize | `0x1003ff3cd` | Preference registration with integer 3 and boolean 0; unresolved key semantics prevent treating these as gamma/range values. |
+| DGCurvesCustomViewController initialize | `0x1003f324c` | Conditional preference initialization, including floating values; no curve interpolation algorithm established. |
+| RKSlideshowPreset init | `0x10009ef9f` | Defaults verified above against assembly, typed f64 reads and selectors. |
+| RKSelectionMgr a_slideShow: | `0x100049926` | View-type dispatch; type value 8 alone is insufficient to map independent UI modes. |
+| RKSelectionMgr _runSlideshowPromptForSettings: | `0x1000495f1` | Import guard verified above; selection fallback/ordering is more complex than our snapshot policy. |
+| DGLevelsViewController histogram:parameterChangedValue:forChannel: | `0x1003ffa90` | Maps edited histogram parameters to operation keys and guards updates; no image-processing exponent recovered. |
+
+The earlier Levels exponent, quarter-point linear curve, histogram coefficients, Auto Stack consecutive-gap formula, exclusions, 0–60-second range and 2-second initial gap remain **independent implementation choices**. They are not newly claimed as original formulas. Recovering the underlying framework implementations remains outstanding; UI routing and preferences do not establish proprietary pixel or grouping behavior. Existing catalogue fields and neutral defaults are unchanged.
+
+Inspected variants: sole maintained native SwiftUI macOS app (macOS 14+, arm64 release). No web/PWA, Windows, iOS or Android implementation is present. Intel, older macOS, physical mobile devices and execution of the legacy original were not validated.
+
+## 9 November 2026: batch and organization main-program trace
+
+Opened the original main program with `core_target_open`: `/Users/williamwessex/Downloads/Aperture.app/Contents/MacOS/Aperture`, SHA-256 `ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4`. Session confirmed Deep mode. Searched names, settings and messages with `native_strings_find`, followed Objective-C method-name references to implementation pointers, and followed the Lift message and Stamp preference CFStrings to code. **Twelve separate pseudocode calls completed sequentially; each result was awaited and read before the next.** Every call reported `deep_engine_unavailable`: Ghidra returned no result, and the tool supplied fallback pseudo-C. Numeric rules below use assembly/data corroboration; incomplete fallback flow is not treated as a recovered algorithm. Full results: [organization-main-trace.json](evidence/organization-main-trace.json).
+
+| Completed function read | Main-program entry | Pseudocode evidence |
+|---|---|---|
+| `-[RKSourceListController newSmartAlbum:userQuery:showHUD:]` | `0x1002ea087` | `ev_3066c1aaf6d391b51a6f2a1a3746fb6765b2c68cbb2958698dfda218336bb879` |
+| `-[RKSelectionMgr _autoStackList:withThreshold:previousValue:]` | `0x1000317b6` | `ev_a204d60e7cbe569334adeff385e71073a41a0503672c79dea49e2a46ddef20ab` |
+| `-[RKAutostackController a_doAutoStack:]` | `0x10015ee59` | `ev_3918056c3d7151a5e8289ea1ee0ee2cd101c61a3010a3dd310949a87151a2230` |
+| `-[RKFilterFieldController setRatingFilterIndex:]` | `0x100157a19` | `ev_80724a82ed999943771eae99a1526f87df36086a5ab66234bd4a445db0d16aa2` |
+| `-[RKFilterFieldController setFlaggedFilter]` | `0x100157c47` | `ev_13b48217bfad429241772433d90d1f672ae57bfd1b3257c896bfcce60bfd310f` |
+| `-[RKSelectionMgr a_liftAdjustments:]` | `0x100049366` | `ev_c28bfd9591925afb7e0441431abea970f5580f99eb867213e88b0b036fd89341` |
+| `-[RKSelectionMgr a_stack:]` | `0x100044f0a` | `ev_42ee81c115e229ff0f10d6cd1a4c866c5eab0491c06583f8f505a8e0a0d5e34e` |
+| `-[RKSelectionMgr a_newVersion:]` | `0x100046242` | `ev_70f7aea50f78f1a83872973bdc17c7f12909785d6f26f330ba4cefefe5fc989e` |
+| `-[RKSelectionMgr duplicateVersionRef:options:]` | `0x10003d67f` | `ev_9b4b40b00e637b261d771d44b3b28fae46f530165f592bd7591e0b50ab270a20` |
+| `+[RKLiftStampTool initialize]` | `0x1000babff` | `ev_d89100a5bd0d01164e0ee586aea342d8005ed3e1d96807cc93b5185ac437a925` |
+| `-[RKLiftStampTool setReplaceOnStamp:]` | `0x1000bc6a1` | `ev_d3b165e4b7479ccf26cebbf5683083ff76dd271aa515d16cb7dc2b50ca7995c7` |
+| `-[RKLiftStampTool replaceOnStamp]` | `0x1000bc6e2` | `ev_0854dd84ea715f6c6eecff6e653e2e093bd6b6aa3662633f5ead61c0269a1684` |
+
+**Recovered rating formulas.** `setRatingFilterIndex:` at **0x100157a19** uses index **6** to disable its rating predicate. Indices **1–4** mean `rating >= index`; **5** means `rating == 5`; **7** means `rating == 0`; **8** means `rating == -1`; remaining indices mean `rating >= 0`. Assembly `ev_bb58ca1c6433723d4f6d9e201febf431aa309159bf626a1c9ef0e7371d2be2d6` indexes eight-byte tables at **0x100551590** (qualifiers **[8,8,8,8,5,8,5,5]**) and **0x1005515d0** (values **[1,2,3,4,5,0,0,-1]**). All sixteen fresh i64 reads are retained. Qualifier **5 = equals**, **8 = greater-or-equal** comes from the earlier verified original RedRock comparator **0x43759**, with signed jump-table and CFString evidence documented below; those meanings are not guessed from the main-program tables.
+
+**Recovered flagged rule.** `setFlaggedFilter` at **0x100157c47** enables query type **22**, property `RKVersionIsFlagged`, qualifier **5**, integer value **1**. Formula for the replacement is `!flaggedOnly || photo.flagged`. Combining rating, flag and text with AND in a smart album is our supported query policy, not proof of the original's entire smart-album engine.
+
+**Recovered stack prerequisite.** `a_stack:` at **0x100044f0a** compares the item count to **2** at **0x100044f4f** and returns when below it (`jb` at **0x100044f53**). Full assembly evidence: `ev_ea94337245c7a28f9d7b9dafcab24fc9d3ae3d2fc0df54b68989853ff1375bd8`. This is a necessary prerequisite, not the complete original eligibility rule: the function also has an earlier guard and a later property check. Main reference chain: selector **0x10059812c** → method record **0x10074ce08** → implementation pointer **0x10074ce18** → **0x100044f0a**. The app now tests the number of actual selected catalogue photos, so stale selection IDs cannot satisfy the two-item prerequisite.
+
+**Smart albums and versions: observed boundaries.** Smart-album selector **0x1005e063f** → method record **0x1007c4290** → implementation **0x1002ea087**. Its non-null supplied query is reconstructed through `initWithInfoDictionary:` (selector **0x10087bec8**) and `setUserQuery:` (**0x10087bbd0**). This does not recover all query operators or defaults. Version action **0x100046242** calls `_makeNewVersionFromOriginal:addToSelection:actionName:` with **0, 0**; selector **0x10086ad80** confirms its name. The duplicate wrapper **0x10003d67f** delegates with options; fallback register aliasing prevents claiming complete copy semantics. Isonique's named adjustment snapshots remain an independent feature, not a reconstruction of Aperture's version database.
+
+**Settings and messages.** `RKLiftStampToolReplaceOnStamp` string **0x10055f075** → CFString **0x1008af268** → initialization **0x1000bac30**, setter reference **0x1000bc6c5**, getter reference **0x1000bc706**. The initialized value is **0** (previous assembly corroboration below). The setter/getter persist/read this preference; they do not reveal the proprietary adjustment merge formula. `noLiftedAdjustmentsMessage` string **0x10055a0c8** → CFString **0x1008a89e8** → **0x100049441** inside Lift **0x100049366**; the action passes metadata **0**, adjustments **1**, change-tool **0** and conditionally warns if nothing was lifted. Autostack wrappers **0x1000317b6 / 0x10015ee59** delegate through imported machinery; time grouping, threshold units and defaults remain unresolved. No estimated values were added.
+
+**Build integration.** Smart albums now offer all nine recovered rating filters, including exact Unrated and Rejected, using the same `RatingFilter` and `BrowserFilterRules` as the browser. An optional `ratingFilterIndex` persists the original index. Missing/unknown indices retain the saved `minimumRating` behavior; existing catalogue rules keep their membership. Previous executables cannot represent the new exact-only filters and may discard this optional field, reverting to their stored threshold. New smart albums retain the existing unrated-and-above default as our choice. `StackRules` applies the recovered minimum count in both the UI and action. Original stack joining, autostacking, version relationships, pixel/RAW processing and full catalogue fidelity remain unknown.
+
+Only the native Apple Silicon macOS app is maintained in this workspace. No web/PWA, mobile or separate native desktop variant exists. Validation and build results for this pass are in `VALIDATION.md`.
+
+## 9 November 2026: fresh import and proofing decompilation
+
+Reopened the original main executable with `core_target_open` in Deep mode: `/Users/williamwessex/Downloads/Aperture.app/Contents/MacOS/Aperture`, SHA-256 `ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4`. Searched names, settings and messages with `native_strings_find`. **Seven individual `native_function_pseudocode` calls completed sequentially, each awaited and read before proceeding.** Ghidra returned no result for every call; these are completed fallback pseudo-C reads, not successful Ghidra decompilation. Assembly and selector pointers resolve the numeric findings below. Full retained results: `evidence/import-proofing-main-trace.json`.
+
+| Function | Address | Recovered observation |
+|---|---|---|
+| `+[RKImportTypeController initialize]` | `0x100184c73` | Registers import defaults including numeric 1 for `RKImportFolderRAWPlusJPEGFilterType`; fallback argument aliasing is imperfect, so the separate reset below is the basis for the implemented default. |
+| `-[RKImportRAWPlusJPEGPairsTileController resetToDefaults]` | `0x1003f28e9` | Calls superclass reset, then `selectItemWithTag:1`. Immediate at `0x1003f2926`, selector pointer `0x10086f1e8`. |
+| `-[RKImportRAWPlusJPEGPairsTileController awakeFromNib]` | `0x1003f263d` | Reads `preset.RAWPlusJPEGFilterType` and selects its tag, confirming saved preset choice takes priority when opening the UI. |
+| `-[RKImportRAWPlusJPEGFilterTypeIsNotMatchingRAWValueTransformer transformedValue:]` | `0x1002b5bcd` | Exact Boolean formula **integerValue(input) != 6**. Assembly `cmp eax,6` at `0x1002b5be9`, `setne` at `0x1002b5bec`; fallback omits the comparison. Tag 6 is Matching RAW files. This UI transformer is not a file-matching algorithm. |
+| `-[RKImportTypeController addImportTypeOptions:withPolicyOffset:]` | `0x100183804` | Reads folder RAW+JPEG preference into import options. Naming policy offset addition is visible, but no naming-template expansion or filename-pairing formula is established. The requested interior address `0x100183980` resolves to this entry. |
+| `-[RKLoupeView setProofingProfile:]` | `0x1001f4aa9` | Replaces profile on pointer change and conditionally requests view work. Does not reveal ICC rendering intent, color transform or a lens-distortion formula. |
+| `-[RKSelectionMgr a_liftAdjustments:]` | `0x100049366` | Re-read alert reference: Lift uses metadata=0, adjustments=1, changeTool=0. Missing lifted adjustments checks a warning-suppression preference before its message. No stamp-merge formula recovered. |
+
+Reference chains: `RKImportFolderRAWPlusJPEGFilterType` string `0x100564812` → CFString base `0x1008b8d28` → initialization `0x100184d2c` and import options `0x100183b9f`; `RAWPlusJPEGFileFilteringEnabled` string `0x10057c611` → CFString base `0x1008d1b68` → `importPresetVisibilityKey` at `0x1003f287e`; `ProofProfileName` string `0x100558919` → CFString base `0x1008a6ec8` → viewer `drawRect:` reference `0x10001fd80`. A CFString's character pointer lies 16 bytes after its base: following the pointer field alone misses code references. Message string `noLiftedAdjustmentsMessage` at `0x10055a0c8` → CFString base `0x1008a89e8` → Lift code `0x100049441`.
+
+**Interface mapping:** decoded the original `English.lproj/ImportRAWPlusJPEGPairs.nib` using `apple_nib_decode` (`ev_f4285ecc1f2943dcbfe47ecab2eb65b366ef7134fea2261e86bf6d81f017db3c`). Its selectedTag binding targets `preset.RAWPlusJPEGFilterType`. Menu tags: **1 Both (Use JPEG as Original), 2 Both (Use RAW as Original), 3 Both (Separate Originals), 4 JPEG files only, 5 RAW files only, 6 Matching RAW files**. The nib's design-time selection is tag 3; the executable's explicit reset selects tag 1. This does not establish every first-launch preference path. Reset pseudo-C `ev_a1f3be4385ea9cf843d05832a797c919adb63d9a1101beeb658bb0c456425d75`, assembly `ev_7c6878a0328d8f2478ca5de4d6282994be5717829e86638ebfb19ec56c7aec8a`. Transformer pseudo-C `ev_441dcd75a7297647763bd80efcfc2e522ad9f95f6890a2917578e98cb01c8a5b`, assembly `ev_35a1576e57bb62059c66f94365526f9d1025f1b839eea6303a1dd3d815439c83`.
+
+**Build changes:** new import options default to Both/JPEG, using the recovered reset choice as our default policy. Existing saved options/presets retain their selection and serialized values. Added Both/RAW and strict JPEG-only / RAW-only options. Both modes retain and link newly imported companions, selecting the chosen format after import. This uses our existing separate-photo catalogue, not Aperture's master/version model. Extension-based RAW recognition and same-folder/base matching remain independent approximations. Existing Prefer options remain for compatibility; they are independent choices, not original tags 4/5. Matching RAW into existing masters (tag 6) remains unavailable because its database-dependent matching has not been recovered. No original pairing, naming, XML, persistent-history, proofing or lens pixel algorithms are claimed as reconstructed.
+
+The earlier verified formulas remain active: rating `min(5,max(-1,current+delta))` from `0x100032854` / `0x1001c35de`; reject state 1 gives -1, otherwise 0 at `0x1004320d4`; finite straighten `min(45,max(-45,current+delta))` at `0x10042f5e6`; crop aspect `abs(width)/abs(height)`, inverted only at rotation 90/270, at `0x1001e709b`. Their earlier assembly/constants and integration details follow below. Independent lens coefficient 0.35, history limit 100, XML size limit 16 MiB and relative-colorimetric proofing were not recovered from the original and remain independent implementation choices.
+
+Only the native Apple Silicon macOS app is maintained here. No web/PWA, mobile or independent Windows/native variants exist. Validation for this pass is in `VALIDATION.md`.
+
 ## 9 November 2026: main-program reads and Rating menu integration
 
 Opened `/Users/williamwessex/Downloads/Aperture.app/Contents/MacOS/Aperture` with `core_target_open`; session confirmed Deep mode. Original SHA-256: `ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4`. Searched names, settings and messages with `native_strings_find`, followed string/selector references and read method implementation pointers. Six `native_function_pseudocode` calls completed sequentially; every result was awaited and read before the next. Ghidra returned no result for all six; the supplied fallback pseudo-C is imperfect. Conditional moves in assembly were used to correct its rating and rejection output. Full current trace: `evidence/rating-menu-main-trace.json`.
@@ -279,3 +416,7 @@ Evidence ev_7f203079e429d0f320c89a49ca34ca869c12950047fa30f00e033ff2667bcf8f. In
 ## No estimated replacement values
 
 Recovered observations and independent replacement formulas are distinguished above; independent formulas are documented in PROCESSING_ALTERNATIVES.md. Full library migration, plug-in fidelity, RAW rendering and UI behavior remain unverified. The companion JSON contains only the numeric/text observations above, each with a source.
+
+## Independent review and tonal additions — 9 November 2026
+
+These are new independent behaviors, not claims of recovered original mechanics. Levels maps input x to clamp((x-black)/(white-black),0,1)^(1/gamma). Input points are separated by at least .001 and gamma is clamped .1…4. The master curve linearly interpolates (0,0),(.25,shadowOutput),(.5,midtoneOutput),(.75,highlightOutput),(1,1). Both apply per unpremultiplied sRGB channel after existing tone controls, before lens/geometry, via one 256-entry table. Alpha is preserved. Histogram bins are rounded 0…255 luminance using .2126R+.7152G+.0722B on the edited preview, excluding fully transparent pixels. Auto Stack sorts valid unstacked capture times and joins consecutive gaps <= selected seconds; singleton groups are omitted. Slideshow uses a stable ordered photo snapshot and waits for rendering plus the chosen delay before advancing, wrapping after the last photo.

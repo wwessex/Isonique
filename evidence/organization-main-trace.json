@@ -1,0 +1,4498 @@
+[
+  {
+    "step": "open",
+    "result": {
+      "result": {
+        "bytes": 9755984,
+        "description": "A Mac or iPhone program",
+        "kind": "mach-o",
+        "name": "Aperture",
+        "path": "/Users/williamwessex/Downloads/Aperture.app/Contents/MacOS/Aperture",
+        "raw": null,
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4",
+        "target_id": "t_ec5b412048e7"
+      }
+    }
+  },
+  {
+    "step": "names-settings-messages",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "examined": 90,
+        "next_offset": 90,
+        "status": "partial",
+        "total": 101
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_144d02b69001732d0835964ff8a5a86521b9643a56280719fc2bf845fa95808c",
+      "limitations": [
+        {
+          "code": "data_sections_only",
+          "message": "only strings stored in the file are searched (absence is not proof)"
+        }
+      ],
+      "links": [],
+      "locations": [],
+      "operation": "native_strings_find",
+      "params": {
+        "case_sensitive": false,
+        "limit": 90,
+        "mode": "regex",
+        "offset": 0,
+        "pattern": "(stackSelected|stackVersions|autoStack|SmartAlbum|smartAlbum|toggleFlag|stack.*(Message|Interval)|RK.*Stack.*(Default|Time)|versionName)"
+      },
+      "result": {
+        "matches": [
+          {
+            "address": "0x10055b6ef",
+            "references": [
+              {
+                "from": "0x1008aa7b8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "toolbarNewSmartAlbum"
+          },
+          {
+            "address": "0x10055b8f5",
+            "references": [
+              {
+                "from": "0x1008aabb8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "a_newSmartAlbum"
+          },
+          {
+            "address": "0x10055b9d8",
+            "references": [
+              {
+                "from": "0x1008aad98",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "a_autoStack"
+          },
+          {
+            "address": "0x10055bc18",
+            "references": [
+              {
+                "from": "0x1008ab138",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "a_newSmartAlbum_S"
+          },
+          {
+            "address": "0x10055e5f6",
+            "references": [
+              {
+                "from": "0x1008ae318",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "m_exportFailureVersionNames"
+          },
+          {
+            "address": "0x10055f57f",
+            "references": [
+              {
+                "from": "0x1008afc38",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "webVersionNameLabel"
+          },
+          {
+            "address": "0x100563097",
+            "references": [
+              {
+                "from": "0x1008b6978",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "Autostack"
+          },
+          {
+            "address": "0x1005630a1",
+            "references": [
+              {
+                "from": "0x1008b6998",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "undoAutoStack"
+          },
+          {
+            "address": "0x1005630af",
+            "references": [
+              {
+                "from": "0x1008b69b8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "AutostackPanel"
+          },
+          {
+            "address": "0x100564255",
+            "references": [
+              {
+                "from": "0x1008b8498",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "migrateStacksWarningMessage"
+          },
+          {
+            "address": "0x100564ab7",
+            "references": [
+              {
+                "from": "0x1008b9098",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "basicProperties.VersionName.Completions"
+          },
+          {
+            "address": "0x10056ab4e",
+            "references": [
+              {
+                "from": "0x1008bfe58",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "kExportKeyVersionName"
+          },
+          {
+            "address": "0x10056d7d2",
+            "references": [
+              {
+                "from": "0x1008c2778",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "smartAlbumString"
+          },
+          {
+            "address": "0x100572145",
+            "references": [
+              {
+                "from": "0x1008c7538",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "facesSmartAlbumOthersFormat"
+          },
+          {
+            "address": "0x100572161",
+            "references": [
+              {
+                "from": "0x1008c7558",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "facesSmartAlbumOrJoinFormat"
+          },
+          {
+            "address": "0x10057217d",
+            "references": [
+              {
+                "from": "0x1008c7578",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "undoCreateFacesSmartAlbum"
+          },
+          {
+            "address": "0x100572378",
+            "references": [
+              {
+                "from": "0x1008c78b8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "SL-smartAlbum"
+          },
+          {
+            "address": "0x100572386",
+            "references": [
+              {
+                "from": "0x1008c78d8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "SL-smartAlbum_S"
+          },
+          {
+            "address": "0x100572396",
+            "references": [
+              {
+                "from": "0x1008c78f8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "SL-smartAlbum_M"
+          },
+          {
+            "address": "0x100572591",
+            "references": [
+              {
+                "from": "0x1008c7d98",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "cannotEditIPhotoSmartAlbumTitle"
+          },
+          {
+            "address": "0x1005725b1",
+            "references": [
+              {
+                "from": "0x1008c7db8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "cannotEditIPhotoSmartAlbumMessage"
+          },
+          {
+            "address": "0x100572a69",
+            "references": [
+              {
+                "from": "0x1008c8418",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "untitledSmartAlbum"
+          },
+          {
+            "address": "0x100572b45",
+            "references": [
+              {
+                "from": "0x1008c8518",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "undoCreateSmartAlbum"
+          },
+          {
+            "address": "0x100574af0",
+            "references": [
+              {
+                "from": "0x1008cb098",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "SmartAlbum"
+          },
+          {
+            "address": "0x10057c244",
+            "references": [
+              {
+                "from": "0x1008d18b8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "VersionName"
+          },
+          {
+            "address": "0x10057c371",
+            "references": [
+              {
+                "from": "0x100816598",
+                "function": null
+              },
+              {
+                "from": "0x1008d19d8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "adjustsVersionName"
+          },
+          {
+            "address": "0x10057c47b",
+            "references": [
+              {
+                "from": "0x100816578",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "selectionAdjustedVersionName"
+          },
+          {
+            "address": "0x10057c498",
+            "references": [
+              {
+                "from": "0x100816580",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "T@\"NSString\",C,N,V_selectionAdjustedVersionName"
+          },
+          {
+            "address": "0x10057c4f3",
+            "references": [
+              {
+                "from": "0x1008165a0",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "Tc,N,V_adjustsVersionName"
+          },
+          {
+            "address": "0x10057cc50",
+            "references": [
+              {
+                "from": "0x100819d20",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "lastVersionName"
+          },
+          {
+            "address": "0x10057cc60",
+            "references": [
+              {
+                "from": "0x100819d28",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "T@\"NSString\",&,N,V_lastVersionName"
+          },
+          {
+            "address": "0x10057cff3",
+            "references": [
+              {
+                "from": "0x1008d2718",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "isSmartAlbum"
+          },
+          {
+            "address": "0x100581b9d",
+            "references": [
+              {
+                "from": "0x1008d69b8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "zVersionName"
+          },
+          {
+            "address": "0x100581c77",
+            "references": [
+              {
+                "from": "0x1008d6a38",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "select m.z_pk, m.zUuid, m.zName, m.zProjectUuid, m.zImportGroup, m.zGROUP, f.zFileVolumeUuid, m.zOriginalVersionName, f.zName, f.zType, f.zSubtype, f.zFileIsReference, f.zIsExternallyEditable, f.zIsTrulyRaw, f.zIsMissing, f.zImagePath, f.zFileSize, f.zFileCreationDate, f.zFileModificationDate, f.zCreateDate, f.zFileAliasData, f.zUuid, m.zOriginalFileUuid, m.zOriginalJpegFileUuid, f.zIsOriginalFile from zRKFile f join zRKMaster m on f.zMasterUuid=m.zUuid"
+          },
+          {
+            "address": "0x100582129",
+            "references": [
+              {
+                "from": "0x1008d6a98",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "select m.z_pk, m.zUuid, m.zName, m.zProjectUuid, m.zImportGroup, m.zGROUP, f.zFileVolumeUuid, m.zOriginalVersionName, f.zName, f.zType, f.zSubtype, f.zFileIsReference, f.zIsExternallyEditable, f.zIsTrulyRaw, f.zIsMissing, f.zImagePath, f.zFileSize, f.zFileCreationDate, f.zFileModificationDate, f.zCreateDate, f.zFileAliasData, f.zUuid, m.zOriginalFileUuid, m.zOriginalJpegFileUuid, f.zIsOriginalFile from zRKFile f join zRKMaster m on f.zMasterUuid=m.zUuid where m.zUuid in (#?) order by f.zMasterUuid, f.zFileIsReference"
+          },
+          {
+            "address": "0x100583857",
+            "references": [
+              {
+                "from": "0x1008d7258",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "100-selectsQuery.apsmartalbum"
+          },
+          {
+            "address": "0x100583875",
+            "references": [
+              {
+                "from": "0x1008d7278",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "200-oneStarQuery.apsmartalbum"
+          },
+          {
+            "address": "0x100583893",
+            "references": [
+              {
+                "from": "0x1008d7298",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "400-inTheLastWeekQuery.apsmartalbum"
+          },
+          {
+            "address": "0x1005838b7",
+            "references": [
+              {
+                "from": "0x1008d72b8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "500-inTheLastMonthQuery.apsmartalbum"
+          },
+          {
+            "address": "0x100584c34",
+            "references": [
+              {
+                "from": "0x1008d89d8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "IPHPublishVersionNameKey"
+          },
+          {
+            "address": "0x10058fae0",
+            "references": [
+              {
+                "from": "0x100867fd8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "isImplicitSmartAlbum"
+          },
+          {
+            "address": "0x100591701",
+            "references": [
+              {
+                "from": "0x1008689c8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "isBuiltinSmartAlbum"
+          },
+          {
+            "address": "0x100596c65",
+            "references": [
+              {
+                "from": "0x100869dc0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "autoStackItems:withThreshold:previousValue:"
+          },
+          {
+            "address": "0x100596c91",
+            "references": [
+              {
+                "from": "0x100869dc8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "finalizeAutoStackContext"
+          },
+          {
+            "address": "0x100597358",
+            "references": [
+              {
+                "from": "0x10086a058",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "isUserSmartAlbum"
+          },
+          {
+            "address": "0x100597610",
+            "references": [
+              {
+                "from": "0x1007a38b8",
+                "function": null
+              },
+              {
+                "from": "0x10086a128",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "needToPostStackPickChangedMessage"
+          },
+          {
+            "address": "0x10059813e",
+            "references": [
+              {
+                "from": "0x100750b08",
+                "function": null
+              },
+              {
+                "from": "0x1007777b8",
+                "function": null
+              },
+              {
+                "from": "0x10086a510",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_autoStack:"
+          },
+          {
+            "address": "0x100599541",
+            "references": [
+              {
+                "from": "0x10074bd70",
+                "function": null
+              },
+              {
+                "from": "0x10086ac68",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_autoStackList:withThreshold:previousValue:"
+          },
+          {
+            "address": "0x10059a95d",
+            "references": [
+              {
+                "from": "0x10074ccb8",
+                "function": null
+              },
+              {
+                "from": "0x100873740",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "autoStackSelectedWithThreshold:previousValue:"
+          },
+          {
+            "address": "0x10059a98b",
+            "references": [
+              {
+                "from": "0x10074ccd0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "autoStackAllWithThreshold:previousValue:"
+          },
+          {
+            "address": "0x10059c6bb",
+            "references": [
+              {
+                "from": "0x10074f320",
+                "function": null
+              },
+              {
+                "from": "0x10086b9f0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "toggleFlagOnVersions:"
+          },
+          {
+            "address": "0x10059ce42",
+            "references": [
+              {
+                "from": "0x10086bc50",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "ensureBuiltinSmartAlbumsExistForDatabase:"
+          },
+          {
+            "address": "0x10059e162",
+            "references": [
+              {
+                "from": "0x100757860",
+                "function": null
+              },
+              {
+                "from": "0x100776580",
+                "function": null
+              },
+              {
+                "from": "0x1007b5290",
+                "function": null
+              },
+              {
+                "from": "0x1007f6328",
+                "function": null
+              },
+              {
+                "from": "0x100836ae8",
+                "function": null
+              },
+              {
+                "from": "0x10086c370",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_newSmartAlbum:"
+          },
+          {
+            "address": "0x1005a81c0",
+            "references": [
+              {
+                "from": "0x10075f8f8",
+                "function": null
+              },
+              {
+                "from": "0x10075fe90",
+                "function": null
+              },
+              {
+                "from": "0x10086e628",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "displayFailureTableForExporter:dialogTitle:dialogMsg:tableMsg:versionNames:shouldDisplayPublishButton:shouldDisplayRevealInFinderButton:"
+          },
+          {
+            "address": "0x1005a88a9",
+            "references": [
+              {
+                "from": "0x1007605e8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "m_exportFailureVersionNames"
+          },
+          {
+            "address": "0x1005b6065",
+            "references": [
+              {
+                "from": "0x1008723b8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "inBuiltinSmartAlbumFolder"
+          },
+          {
+            "address": "0x1005b616e",
+            "references": [
+              {
+                "from": "0x1007c4278",
+                "function": null
+              },
+              {
+                "from": "0x100872420",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "newSmartAlbumFromAlbum:type:"
+          },
+          {
+            "address": "0x1005b63ee",
+            "references": [
+              {
+                "from": "0x100776828",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "m_smartAlbumButton"
+          },
+          {
+            "address": "0x1005b68e1",
+            "references": [
+              {
+                "from": "0x1007770b0",
+                "function": null
+              },
+              {
+                "from": "0x100872678",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "autoStackOff"
+          },
+          {
+            "address": "0x1005ba992",
+            "references": [
+              {
+                "from": "0x100786f68",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_doAutoStack:"
+          },
+          {
+            "address": "0x1005ba9a1",
+            "references": [
+              {
+                "from": "0x100786fb0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "autostackItems:"
+          },
+          {
+            "address": "0x1005bbc31",
+            "references": [
+              {
+                "from": "0x100873c70",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "fileRelativePathWithVersionName:originalFileName:extension:date:master:"
+          },
+          {
+            "address": "0x1005c0b33",
+            "references": [
+              {
+                "from": "0x100874bf0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "initWithItemList:expandStacks:desiredBatchTime:initialBatchSize:saveBatchSize:progressPanelSize:progressMessage:canCancel:"
+          },
+          {
+            "address": "0x1005c2ee6",
+            "references": [
+              {
+                "from": "0x10079b618",
+                "function": null
+              },
+              {
+                "from": "0x100875438",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_versionNameOffsetForFrame:"
+          },
+          {
+            "address": "0x1005c4336",
+            "references": [
+              {
+                "from": "0x1007c44b8",
+                "function": null
+              },
+              {
+                "from": "0x1008759c8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "selectedSmartAlbum"
+          },
+          {
+            "address": "0x1005c4c78",
+            "references": [
+              {
+                "from": "0x100875be0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "isBuiltinSmartAlbumFolder"
+          },
+          {
+            "address": "0x1005c6ad5",
+            "references": [
+              {
+                "from": "0x1007a3a38",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "m_needToPostStackPickChangedMessage"
+          },
+          {
+            "address": "0x1005d400b",
+            "references": [
+              {
+                "from": "0x100878ed0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "builtinSmartAlbumsFolderForDatabase:createIfMissing:"
+          },
+          {
+            "address": "0x1005d54e8",
+            "references": [
+              {
+                "from": "0x1007c55f8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "albumIsLibrarySmartAlbum:"
+          },
+          {
+            "address": "0x1005d5c1f",
+            "references": [
+              {
+                "from": "0x100879510",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "builtinSmartAlbumUuids"
+          },
+          {
+            "address": "0x1005d69b1",
+            "references": [
+              {
+                "from": "0x100879968",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "isSmartAlbum"
+          },
+          {
+            "address": "0x1005d75db",
+            "references": [
+              {
+                "from": "0x100879bc8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "updateMasterWithImagePath:applyToVersionName:"
+          },
+          {
+            "address": "0x1005dba3f",
+            "references": [
+              {
+                "from": "0x1007d17b0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_builtInSmartAlbums"
+          },
+          {
+            "address": "0x1005de236",
+            "references": [
+              {
+                "from": "0x1007d38d8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_versionNameAtomView"
+          },
+          {
+            "address": "0x1005e063f",
+            "references": [
+              {
+                "from": "0x1007c4290",
+                "function": null
+              },
+              {
+                "from": "0x10087bec0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "newSmartAlbum:userQuery:showHUD:"
+          },
+          {
+            "address": "0x1005e26b1",
+            "references": [
+              {
+                "from": "0x1007df7d0",
+                "function": null
+              },
+              {
+                "from": "0x10087c770",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_synchronizeVersionName"
+          },
+          {
+            "address": "0x1005e82bd",
+            "references": [
+              {
+                "from": "0x100818a28",
+                "function": null
+              },
+              {
+                "from": "0x10087ddb8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "smartAlbumContainsRawOfRawPlusJpeg:"
+          },
+          {
+            "address": "0x1005e82e1",
+            "references": [
+              {
+                "from": "0x100818a40",
+                "function": null
+              },
+              {
+                "from": "0x10087ddc0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "smartAlbumContainsJpegOfRawPlusJpeg:"
+          },
+          {
+            "address": "0x1005e9752",
+            "references": [
+              {
+                "from": "0x1007edac0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_versionNamePopUpManager"
+          },
+          {
+            "address": "0x1005f0321",
+            "references": [
+              {
+                "from": "0x1008015a0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "menuNewSmartAlbum:"
+          },
+          {
+            "address": "0x1005f6856",
+            "references": [
+              {
+                "from": "0x1008162b8",
+                "function": null
+              },
+              {
+                "from": "0x100881278",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "setAdjustsVersionName:"
+          },
+          {
+            "address": "0x1005f69dc",
+            "references": [
+              {
+                "from": "0x100815f40",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_versionNameLabelTextField"
+          },
+          {
+            "address": "0x1005f69f7",
+            "references": [
+              {
+                "from": "0x100815f60",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_versionNameTextField"
+          },
+          {
+            "address": "0x1005f6c0c",
+            "references": [
+              {
+                "from": "0x100816420",
+                "function": null
+              },
+              {
+                "from": "0x100881318",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "setSelectionAdjustedVersionName:"
+          },
+          {
+            "address": "0x1005f6c3d",
+            "references": [
+              {
+                "from": "0x100816348",
+                "function": null
+              },
+              {
+                "from": "0x100881328",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "adjustsVersionName"
+          },
+          {
+            "address": "0x1005f6c98",
+            "references": [
+              {
+                "from": "0x1008161f0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "keyPathsForValuesAffectingSelectionAdjustedVersionName"
+          },
+          {
+            "address": "0x1005f6d18",
+            "references": [
+              {
+                "from": "0x100816408",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "selectionAdjustedVersionName"
+          },
+          {
+            "address": "0x1005f6d63",
+            "references": [
+              {
+                "from": "0x100816498",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_selectionAdjustedVersionName"
+          },
+          {
+            "address": "0x1005f6db2",
+            "references": [
+              {
+                "from": "0x100816518",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_adjustsVersionName"
+          },
+          {
+            "address": "0x1005f7ed6",
+            "references": [
+              {
+                "from": "0x100819958",
+                "function": null
+              },
+              {
+                "from": "0x100881810",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "setLastVersionName:"
+          }
+        ],
+        "total": 101
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "101 strings match \"(stackSelected|stackVersions|autoStack|SmartAlbum|smartAlbum|toggleFlag|stack.*(Message|Interval)|RK.*Stack.*(Default|Time)|versionName)\"."
+    }
+  },
+  {
+    "step": "autostack-panel-refs",
+    "result": {
+      "authority": "original-files",
+      "confidence": "derived",
+      "coverage": {
+        "examined": 0,
+        "status": "complete",
+        "total": 0
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_e76da2006c00c1bb7c85fa65427a937708cea9354fc36d612702987bf7ae2e89",
+      "limitations": [
+        {
+          "code": "static_references",
+          "message": "references made through computed pointers at run time are not seen"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008b69b8"
+        }
+      ],
+      "operation": "native_xrefs_list",
+      "params": {
+        "address": "0x1008b69b8",
+        "limit": 30,
+        "offset": 0
+      },
+      "result": {
+        "address": "0x1008b69b8",
+        "name": null,
+        "references_from": [
+          {
+            "kind": "string",
+            "name": null,
+            "to": "0x1005630af"
+          }
+        ],
+        "references_to": [],
+        "total_to": 0
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008b69b8 is referenced from 0 places and refers to 1."
+    }
+  },
+  {
+    "step": "method-name-pointer",
+    "address": "0x1007c4290",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_e7bdf3bec65463a0f6355b5591ad3d54909e4167c63f6f2a2268542d461078f5",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1007c4290"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1007c4290",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x1007c4290",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x1005e063f",
+            "points_to": "string",
+            "text": "newSmartAlbum:userQuery:showHUD:"
+          },
+          "value": "0x1005e063f"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1007c4290 looks like pointer."
+    }
+  },
+  {
+    "step": "method-name-pointer",
+    "address": "0x10074bd70",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_187c53611d41bc77d8ea7791543a9423ae0021e3a5c2b2899f04ff746161178d",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x10074bd70"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x10074bd70",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x10074bd70",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x100599541",
+            "points_to": "string",
+            "text": "_autoStackList:withThreshold:previousValue:"
+          },
+          "value": "0x100599541"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x10074bd70 looks like pointer."
+    }
+  },
+  {
+    "step": "method-name-pointer",
+    "address": "0x100786f68",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_68a1a40924be551b6c5c964a61c59dc3e5e54cefff7fab5281d539c964e28643",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100786f68"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x100786f68",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x100786f68",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x1005ba992",
+            "points_to": "string",
+            "text": "a_doAutoStack:"
+          },
+          "value": "0x1005ba992"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x100786f68 looks like pointer."
+    }
+  },
+  {
+    "step": "implementation-pointer",
+    "address": "0x1007c42a0",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_279b3990d615af324628414e1fedfc528f8b4075573498b97a7549a96ac50392",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1007c42a0"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1007c42a0",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x1007c42a0",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x1002ea087",
+            "name": "-[RKSourceListController newSmartAlbum:userQuery:showHUD:]",
+            "points_to": "function"
+          },
+          "value": "0x1002ea087"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1007c42a0 looks like pointer."
+    }
+  },
+  {
+    "step": "implementation-pointer",
+    "address": "0x10074bd80",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_bccc5479c7bf283ba16fac258337832851860d07a3683ea599822848a28e8c94",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x10074bd80"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x10074bd80",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x10074bd80",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x1000317b6",
+            "name": "-[RKSelectionMgr _autoStackList:withThreshold:previousValue:]",
+            "points_to": "function"
+          },
+          "value": "0x1000317b6"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x10074bd80 looks like pointer."
+    }
+  },
+  {
+    "step": "implementation-pointer",
+    "address": "0x100786f78",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_2b2652ef06adec5cbf6412440144e99ff8f1f4e6bc298e261647ea5d56811f33",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100786f78"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x100786f78",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x100786f78",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x10015ee59",
+            "name": "-[RKAutostackController a_doAutoStack:]",
+            "points_to": "function"
+          },
+          "value": "0x10015ee59"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x100786f78 looks like pointer."
+    }
+  },
+  {
+    "step": "smart-album-pseudocode",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_3066c1aaf6d391b51a6f2a1a3746fb6765b2c68cbb2958698dfda218336bb879",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1002ea087"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x1002ea087"
+      },
+      "result": {
+        "calls": [
+          "0x100888720",
+          "0x100888750",
+          "0x100888790",
+          "0x1008887f0",
+          "_objc_msgSend",
+          "r14"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x1002ea087",
+        "function": "-[RKSourceListController newSmartAlbum:userQuery:showHUD:]",
+        "gotos": 0,
+        "inline_asm": 0,
+        "pseudo_code": "int64_t -[RKSourceListController newSmartAlbum:userQuery:showHUD:](int64_t rdi, int64_t rdx, int64_t rcx, int64_t r8)\n{\n    var_3c = r8d;\n    var_38 = rcx;\n    ebx = edx;\n    r13 = rdi;\n    r14 = _objc_msgSend@got;\n    rax = (*r14)(rdi, *(uint64_t*)0x10086d0f8);\n    r12d = 1;\n    rax = (*r14)(r13, *(uint64_t*)0x10087be30, ebx, rax, 1);\n    r15 = rax;\n    ebx = r12d;\n    rax = (*r14)(r13, *(uint64_t*)0x10087be48, ebx, 0, 1);\n    rax = (*r14)(*(uint64_t*)0x100888b18, *(uint64_t*)0x10087bbc8, rax, r15, ebx, 2);\n    r12 = rax;\n    var_30 = r12;\n    rax = (*r14)(r13, *(uint64_t*)0x100877970);\n    rbx = rax;\n    rax = (*r14)(r12, *(uint64_t*)0x100878ec8);\n    (*r14)(rbx, *(uint64_t*)0x100879398, rax);\n    rax = (*r14)(r15, *(uint64_t*)0x100876538);\n    rbx = rax;\n    rax = (*r14)(r15, *(uint64_t*)0x100869ff8);\n    (*r14)(r13, *(uint64_t*)0x10087a5e8, r15, rbx, al);\n    rax = &data_1008e9c20;\n    rax = *(uint64_t*)(rax);\n    var_48 = rax;\n    rax = (*r14)(*(uint64_t*)(r13 + rax), *(uint64_t*)0x100877988);\n    (*r14)(r15, *(uint64_t*)0x100868e68, rax);\n    if (r12 != 0) {\n        rax = _NSApp@got;\n        rax = _objc_msgSend(*(uint64_t*)(rax), *(uint64_t*)0x100869928);\n        r12 = rax;\n        if (var_38 != 0) {\n            rax = (*0x100888720)(*(uint64_t*)0x1008899b0, &data_100888720);\n            rbx = rax;\n            rax = (*r14)(var_38, *(uint64_t*)0x10086a908);\n            rax = (*r14)(rbx, *(uint64_t*)0x10087bec8, rax);\n            rax = (*0x1008887f0)(rax, &data_1008887f0);\n            (*r14)(var_30, *(uint64_t*)0x10087bbd0, rax);\n        }\n        rax = _objc_msgSend(r12, *(uint64_t*)0x10086a318);\n        if (al == 0) {\n            rax = _objc_msgSend(r12, *(uint64_t*)0x10086a320);\n            if (al == 0) {\n                rax = (*r14)(*(uint64_t*)0x100888d48, *(uint64_t*)0x100869eb8);\n                rbx = rax;\n                rax = (*r14)(*(uint64_t*)0x10088a4f0, *(uint64_t*)0x10087bbd8, var_30);\n                (*r14)(rbx, *(uint64_t*)0x100869ec8, rax);\n                rax = (*0x100888790)(rbx, &data_100888790);\n                if (rax != 0) {\n                    rax = (*0x100888750)(*(uint64_t*)0x100888d40, &data_100888750);\n                    (*r14)(r12, *(uint64_t*)0x100869ea8, rax, *(uint64_t*)0x100869ea0, rbx);\n                    rax = (*r14)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008c8508);\n                    (*r14)(r12, *(uint64_t*)0x100869eb0, rax);\n                }\n            }\n        }\n        rax = &data_1008e9bf8;\n        r12 = *(uint64_t*)(rax);\n        rbx = *(uint64_t*)0x100888d78;\n        rax = (*r14)(*(uint64_t*)(r13 + r12), *(uint64_t*)0x100867fb0);\n        rax = (*r14)(rbx, *(uint64_t*)0x100878ed0, rax, 0);\n        rax = (*r14)(r15, *(uint64_t*)0x100878668, rax);\n        if (al != 0) {\n            rbx = *(uint64_t*)0x100888d78;\n            rax = (*r14)(*(uint64_t*)(r13 + r12), *(uint64_t*)0x100867fb0);\n            rax = (*r14)(rbx, *(uint64_t*)0x1008723a8, rax);\n            (*r14)(var_30, *(uint64_t*)0x1008722d8, rax);\n        }\n    }\n    rax = var_48;\n    rax = (*r14)(*(uint64_t*)(r13 + rax), *(uint64_t*)0x100877988);\n    (*r14)(r15, *(uint64_t*)0x100868e78, rax);\n    eax = var_3c;\n    if (al != 0) {\n        rax = &data_1008e9c28;\n        rax = *(uint64_t*)(rax);\n        rax = _objc_msgSend(*(uint64_t*)(r13 + rax), *(uint64_t*)0x10086c5a0, r15);\n        rcx = 0x7fffffffffffffff;\n        if (rax != rcx) {\n            (*r14)(r13, *(uint64_t*)0x100879050, r15, 0);\n            (*r14)(var_30, *(uint64_t*)0x1008793d8, r13);\n        } else {\n            rax = &data_1008e9d38;\n            rax = *(uint64_t*)(rax);\n            rcx = var_30;\n            *(uint64_t*)(r13 + rax) = rcx;\n        }\n    }\n    rbx = var_30;\n    rax = (*r14)(*(uint64_t*)0x100888a60, *(uint64_t*)0x100868950, rbx);\n    (*r14)(r13, *(uint64_t*)0x100878fd0, rax, 1, 1);\n    rax = rbx;\n    return rax;\n}\n",
+        "signature": "int64_t -[RKSourceListController newSmartAlbum:userQuery:showHUD:](int64_t rdi, int64_t rdx, int64_t rcx, int64_t r8)",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKSourceListController newSmartAlbum:userQuery:showHUD:] (96 lines)."
+    }
+  },
+  {
+    "step": "stack-pseudocode",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_a204d60e7cbe569334adeff385e71073a41a0503672c79dea49e2a46ddef20ab",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "unstructured_flow",
+          "message": "4 gotos remain where the control flow isn't a simple if/loop"
+        },
+        {
+          "code": "inline_asm",
+          "message": "5 instructions have no C rule and are shown as __asm(...)"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1000317b6"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x1000317b6"
+      },
+      "result": {
+        "calls": [
+          "0x100888750",
+          "0x100888770",
+          "0x100888790",
+          "0x1008887a0",
+          "___stack_chk_fail@stub",
+          "_objc_enumerationMutation@stub",
+          "_objc_msgSend",
+          "r12",
+          "rbx"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x1000317b6",
+        "function": "-[RKSelectionMgr _autoStackList:withThreshold:previousValue:]",
+        "gotos": 4,
+        "inline_asm": 5,
+        "pseudo_code": "int64_t -[RKSelectionMgr _autoStackList:withThreshold:previousValue:](int64_t rdi, int64_t rdx, int64_t rcx, int64_t r8)\n{\n    var_100 = r8;\n    var_108 = rcx;\n    r13 = rdx;\n    r15 = rdi;\n    rax = ___stack_chk_guard@got;\n    rax = *(uint64_t*)(rax);\n    var_30 = rax;\n    rax = _objc_msgSend(rdi, *(uint64_t*)0x100869d88);\n    if (al == 0) {\n        r12 = _objc_msgSend@got;\n        rax = (*r12)(*(uint64_t*)0x100888aa8, *(uint64_t*)0x100868610);\n        rbx = rax;\n        var_138 = rbx;\n        (*r12)(rbx, *(uint64_t*)0x100869d90);\n        (*r12)(rbx, *(uint64_t*)0x100869d98, 0);\n        rax = (*r12)(*(uint64_t*)0x100888d08, *(uint64_t*)0x100869da0, r13);\n        r14 = rax;\n        var_128 = r13;\n        (*r12)(*(uint64_t*)0x100888d08, *(uint64_t*)0x100869da8, r13);\n        rax = (*r12)(r15, *(uint64_t*)0x100869db0, r14);\n        rbx = rax;\n        var_f8 = rbx;\n        rax = (*0x100888790)(rbx, &data_100888790);\n        var_110 = rax;\n        var_130 = r15;\n        (*r12)(r15, *(uint64_t*)0x100868508);\n        __asm(\"xorps xmm0, xmm0\");\n        __asm(\"movaps [rbp-0x40], xmm0\");\n        __asm(\"movaps [rbp-0x50], xmm0\");\n        __asm(\"movaps [rbp-0x60], xmm0\");\n        __asm(\"movaps [rbp-0x70], xmm0\");\n        rax = (*r12)(rbx, *(uint64_t*)0x100867f78, &var_70, &var_f0, 16);\n        rbx = r12;\n        r12 = rax;\n        if (r12 != 0) {\n            rax = _RKPropertyFileName@got;\n            rax = *(uint64_t*)(rax);\n            var_118 = rax;\n            rax = _RKPropertyExifImageDate@got;\n            rax = *(uint64_t*)(rax);\n            var_120 = rax;\n            rax = var_60;\n            r14 = *(uint64_t*)(rax);\n            while (true) {\nlabel_10003191f:\n                r13d = 0;\n            }\n        }\nlabel_1000319e2:\n        (*rbx)(var_130, *(uint64_t*)0x1008685c0);\n        r14 = var_138;\n        (*rbx)(r14, *(uint64_t*)0x100869dd0, 0);\n        (*rbx)(r14, *(uint64_t*)0x100869dd8);\n        r13 = var_128;\n    }\n    rax = (*0x100888790)(r13, &data_100888790);\n    if (rax != 0) {\n        rax = (*0x1008887a0)(r13, &data_1008887a0, 0);\n        rax = _objc_msgSend(rax, *(uint64_t*)0x100868b40);\n        rbx = rax;\n        rax = (*0x100888750)(*(uint64_t*)0x100888d18, &data_100888750);\n        rax = (*0x100888770)(rbx, &data_100888770, rax);\n        if (al != 0) {\n            _objc_msgSend(rbx, *(uint64_t*)0x100869de0);\n        }\n    }\n    rax = ___stack_chk_guard@got;\n    rax = *(uint64_t*)(rax);\n    if (rax != var_30) {\n        ___stack_chk_fail@stub();\n    } else {\n        return rax;\n    }\n    while (true) {\nlabel_100031922:\n        rax = var_60;\n        if (*(uint64_t*)(rax) != r14) {\n            _objc_enumerationMutation@stub(var_f8);\n        }\n    }\nlabel_1000319b1:\n    rax = _objc_msgSend(var_f8, *(uint64_t*)0x100867f78, &var_70, &var_f0, 16);\n    r12 = rax;\n    if (r12 != 0) {\n        goto label_10003191f;\n    }\n    goto label_1000319e2;\n    rax = var_68;\n    r15 = *(uint64_t*)(rax + r13 * 8);\n    (*rbx)(*(uint64_t*)0x100888d10, *(uint64_t*)0x100869db8, r15, var_120, var_118, 1);\n    (*rbx)(*(uint64_t*)0x100888d08, *(uint64_t*)0x100869dc0, r15, var_108, var_100);\n    if (var_110 >= 2 /* unsigned */) {\n        _objc_msgSend(*(uint64_t*)0x100888d08, *(uint64_t*)0x100869dc8);\n    }\n    r13++;\n    if (r13 < r12 /* unsigned */) {\n        goto label_100031922;\n    }\n    goto label_1000319b1;\n}\n",
+        "signature": "int64_t -[RKSelectionMgr _autoStackList:withThreshold:previousValue:](int64_t rdi, int64_t rdx, int64_t rcx, int64_t r8)",
+        "strings": [],
+        "structured": false
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKSelectionMgr _autoStackList:withThreshold:previousValue:] (102 lines, partly unstructured)."
+    }
+  },
+  {
+    "step": "stack-panel-pseudocode",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_3918056c3d7151a5e8289ea1ee0ee2cd101c61a3010a3dd310949a87151a2230",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "indirect_jumps_unresolved",
+          "message": "some indirect jumps were not resolved, so code may be missing"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x10015ee59"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x10015ee59"
+      },
+      "result": {
+        "calls": [
+          "rax",
+          "rbx"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x10015ee59",
+        "function": "-[RKAutostackController a_doAutoStack:]",
+        "gotos": 0,
+        "inline_asm": 0,
+        "pseudo_code": "int64_t -[RKAutostackController a_doAutoStack:](int64_t rdi, int64_t rdx)\n{\n    r12 = rdx;\n    r14 = rdi;\n    rbx = _objc_msgSend@got;\n    rax = (*rbx)(rdi, *(uint64_t*)0x100867f38);\n    r15 = rax;\n    rax = (*rbx)(r12, *(uint64_t*)0x100867f98);\n    r8 = rbx;\n    rbx = rax;\n    r12 = *(uint64_t*)0x1008e6ab0;\n    rcx = *(uint64_t*)(r14 + r12);\n    if (rbx != rcx) {\n        r15 = r8;\n        rax = r15;\n        (*rax)(r15, *(uint64_t*)0x100873740, rbx);\n        *(uint64_t*)(r14 + r12) = rbx;\n        rax = *(uint64_t*)0x1008e6aa8;\n        rax = r15;\n        (*rax)(*(uint64_t*)(r14 + rax), *(uint64_t*)0x100873738, rbx);\n        rax = *(uint64_t*)0x1008e6ab8;\n        rdi = *(uint64_t*)(r14 + rax);\n        rsi = *(uint64_t*)0x100873738;\n        rdx = rbx;\n        rax = r15;\n        goto *rax; /* computed jump */\n    } else {\n        return rax;\n    }\n}\n",
+        "signature": "int64_t -[RKAutostackController a_doAutoStack:](int64_t rdi, int64_t rdx)",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKAutostackController a_doAutoStack:] (30 lines)."
+    }
+  },
+  {
+    "step": "filter-settings-messages",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "examined": 6,
+        "status": "complete",
+        "total": 6
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_25652a795e31cade0215ee0796ffee789f32b712580216bf34469451c23faa63",
+      "limitations": [
+        {
+          "code": "data_sections_only",
+          "message": "only strings stored in the file are searched (absence is not proof)"
+        }
+      ],
+      "links": [],
+      "locations": [],
+      "operation": "native_strings_find",
+      "params": {
+        "case_sensitive": false,
+        "limit": 30,
+        "mode": "regex",
+        "offset": 0,
+        "pattern": "(setRatingFilter|setFlaggedFilter|noLiftedAdjustmentsMessage|RKLiftStampToolReplaceOnStamp)"
+      },
+      "result": {
+        "matches": [
+          {
+            "address": "0x10055a0c8",
+            "references": [
+              {
+                "from": "0x1008a89f8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "noLiftedAdjustmentsMessage"
+          },
+          {
+            "address": "0x10055f075",
+            "references": [
+              {
+                "from": "0x1008af278",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "RKLiftStampToolReplaceOnStamp"
+          },
+          {
+            "address": "0x100590dfe",
+            "references": [
+              {
+                "from": "0x1007856e0",
+                "function": null
+              },
+              {
+                "from": "0x1008686b0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "setRatingFilterIndex:"
+          },
+          {
+            "address": "0x100590e2e",
+            "references": [
+              {
+                "from": "0x100785710",
+                "function": null
+              },
+              {
+                "from": "0x1008686c0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "setFlaggedFilter"
+          },
+          {
+            "address": "0x100591cf9",
+            "references": [
+              {
+                "from": "0x100745968",
+                "function": null
+              },
+              {
+                "from": "0x1007577d0",
+                "function": null
+              },
+              {
+                "from": "0x10075bbe0",
+                "function": null
+              },
+              {
+                "from": "0x10079b998",
+                "function": null
+              },
+              {
+                "from": "0x1007e9a28",
+                "function": null
+              },
+              {
+                "from": "0x1007ef9e8",
+                "function": null
+              },
+              {
+                "from": "0x1007f0148",
+                "function": null
+              },
+              {
+                "from": "0x10086d1a0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_setRatingFilter:"
+          },
+          {
+            "address": "0x100591d0c",
+            "references": [
+              {
+                "from": "0x100745998",
+                "function": null
+              },
+              {
+                "from": "0x100757800",
+                "function": null
+              },
+              {
+                "from": "0x10075bc10",
+                "function": null
+              },
+              {
+                "from": "0x10079b9c8",
+                "function": null
+              },
+              {
+                "from": "0x1007e9a58",
+                "function": null
+              },
+              {
+                "from": "0x1007efa18",
+                "function": null
+              },
+              {
+                "from": "0x1007f0178",
+                "function": null
+              },
+              {
+                "from": "0x10086d1a8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_setFlaggedFilter:"
+          }
+        ],
+        "total": 6
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "6 strings match \"(setRatingFilter|setFlaggedFilter|noLiftedAdjustmentsMessage|RKLiftStampToolReplaceOnStamp)\"."
+    }
+  },
+  {
+    "step": "filter-implementation-pointer",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_9e644f9e6a0fb63b13af41dd69bb7501370667d5f916fa0b23fc7d980180be1d",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1007856f0"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1007856f0",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x1007856f0",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x100157a19",
+            "name": "-[RKFilterFieldController setRatingFilterIndex:]",
+            "points_to": "function"
+          },
+          "value": "0x100157a19"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1007856f0 looks like pointer."
+    }
+  },
+  {
+    "step": "filter-implementation-pointer",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_7d39af145e23f29b646c19014cd157fa5247f4bc28307d777ca6ddf354bcbddb",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100785720"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x100785720",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x100785720",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x100157c47",
+            "name": "-[RKFilterFieldController setFlaggedFilter]",
+            "points_to": "function"
+          },
+          "value": "0x100157c47"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x100785720 looks like pointer."
+    }
+  },
+  {
+    "step": "lift-message-refs",
+    "result": {
+      "authority": "original-files",
+      "confidence": "derived",
+      "coverage": {
+        "examined": 1,
+        "status": "complete",
+        "total": 1
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_a47aab6cc4311875d22718753ad7d94b17b405bb0ed9037899e4f08196d071a3",
+      "limitations": [
+        {
+          "code": "static_references",
+          "message": "references made through computed pointers at run time are not seen"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008a89e8"
+        }
+      ],
+      "operation": "native_xrefs_list",
+      "params": {
+        "address": "0x1008a89e8",
+        "limit": 20,
+        "offset": 0
+      },
+      "result": {
+        "address": "0x1008a89e8",
+        "name": null,
+        "references_from": [],
+        "references_to": [
+          {
+            "from": "0x100049441",
+            "function": "-[RKSelectionMgr a_liftAdjustments:]",
+            "kind": "data"
+          }
+        ],
+        "total_to": 1
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008a89e8 is referenced from 1 places and refers to 0."
+    }
+  },
+  {
+    "step": "rating-filter-pseudocode",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_80724a82ed999943771eae99a1526f87df36086a5ab66234bd4a445db0d16aa2",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "unstructured_flow",
+          "message": "1 gotos remain where the control flow isn't a simple if/loop"
+        },
+        {
+          "code": "indirect_jumps_unresolved",
+          "message": "some indirect jumps were not resolved, so code may be missing"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100157a19"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x100157a19"
+      },
+      "result": {
+        "calls": [
+          "_objc_msgSend",
+          "r14",
+          "rax"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x100157a19",
+        "function": "-[RKFilterFieldController setRatingFilterIndex:]",
+        "gotos": 1,
+        "inline_asm": 0,
+        "pseudo_code": "int64_t -[RKFilterFieldController setRatingFilterIndex:](int64_t rdi, int64_t rdx)\n{\n    r14 = rdx;\n    rbx = rdi;\n    rax = _objc_msgSend(rdi, *(uint64_t*)0x1008735d0, 5, 1);\n    r15 = rax;\n    if (r15 == 0) {\n        rsi = *(uint64_t*)0x1008735b8;\n        rdi = rbx;\n        return _objc_msgSend(); /* tail call */\n    } else {\n        var_30 = rbx;\n        rcx = r14 - 1;\n        if (rcx > 7 /* unsigned */) {\n            r13l = 1;\n            ebx = 8;\n            r12d = 0;\nlabel_100157abc:\n            r14 = _objc_msgSend@got;\n            (*r14)(r15, *(uint64_t*)0x100873540);\n            (*r14)(r15, *(uint64_t*)0x100873548, rbx);\n            rax = (*r14)(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100869190, r12);\n            (*r14)(r15, *(uint64_t*)0x100873530, rax);\n        } else {\n            rcx <<= 3;\n            rax = 0x101000101010101;\n            rax >>= cl;\n            r13l = 0;\n            if (al != 0) {\n                rcx = &data_1005515d0;\n                r12 = *(uint64_t*)(rcx + r14 * 8 - 8);\n                rcx = &data_100551590;\n                rbx = *(uint64_t*)(rcx + r14 * 8 - 8);\n                r13l = al;\n                goto label_100157abc;\n            }\n        }\n        r14 = _objc_msgSend@got;\n        rax = r14;\n        (*rax)(r15, *(uint64_t*)0x10086b040, r13l);\n        rbx = var_30;\n        rax = r14;\n        (*rax)(rbx, *(uint64_t*)0x1008735b8);\n        rax = *(uint64_t*)0x1008e6a08;\n        rdi = *(uint64_t*)(rbx + rax);\n        rsi = *(uint64_t*)0x1008735b0;\n        rax = r14;\n        goto *rax; /* computed jump */\n    }\n}\n",
+        "signature": "int64_t -[RKFilterFieldController setRatingFilterIndex:](int64_t rdi, int64_t rdx)",
+        "strings": [],
+        "structured": false
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKFilterFieldController setRatingFilterIndex:] (50 lines, partly unstructured)."
+    }
+  },
+  {
+    "step": "flag-filter-pseudocode",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_13b48217bfad429241772433d90d1f672ae57bfd1b3257c896bfcce60bfd310f",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "indirect_jumps_unresolved",
+          "message": "some indirect jumps were not resolved, so code may be missing"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100157c47"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x100157c47"
+      },
+      "result": {
+        "calls": [
+          "0x100888720",
+          "0x1008887f0",
+          "_objc_msgSend",
+          "r15",
+          "rax"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x100157c47",
+        "function": "-[RKFilterFieldController setFlaggedFilter]",
+        "gotos": 0,
+        "inline_asm": 0,
+        "pseudo_code": "int64_t -[RKFilterFieldController setFlaggedFilter](int64_t rdi)\n{\n    r14 = rdi;\n    rax = _objc_msgSend(rdi, *(uint64_t*)0x1008735d0, 0x16, 1);\n    rbx = rax;\n    if (rbx == 0) {\n        rax = (*0x100888720)(*(uint64_t*)0x1008899a8, &data_100888720);\n        rbx = rax;\n        r15 = _objc_msgSend@got;\n        (*r15)(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100869190, 1);\n        rcx = _RKVersionIsFlagged@got;\n        stack_0 = 0;\n        rax = (*r15)(rbx, *(uint64_t*)0x1008728d0, 0x16, *(uint64_t*)(rcx), 5, rax);\n        rax = (*0x1008887f0)(rax, &data_1008887f0);\n        rbx = rax;\n        (*r15)(rbx, *(uint64_t*)0x10086b040, 1);\n        rax = *(uint64_t*)0x1008e69f0;\n        rax = (*r15)(*(uint64_t*)(r14 + rax), *(uint64_t*)0x100868a50);\n        (*r15)(rax, *(uint64_t*)0x100872398, rbx);\n    } else {\n        r15 = _objc_msgSend@got;\n        (*r15)(rbx, *(uint64_t*)0x100873540);\n        (*r15)(rbx, *(uint64_t*)0x100873548, 5);\n        rax = (*r15)(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100869190, 1);\n        (*r15)(rbx, *(uint64_t*)0x100873530, rax);\n        (*r15)(rbx, *(uint64_t*)0x10086b040, 1);\n    }\n    rbx = _objc_msgSend@got;\n    rax = rbx;\n    (*rax)(r14, *(uint64_t*)0x1008735b8);\n    rax = *(uint64_t*)0x1008e6a08;\n    rdi = *(uint64_t*)(r14 + rax);\n    rsi = *(uint64_t*)0x1008735b0;\n    rax = rbx;\n    goto *rax; /* computed jump */\n}\n",
+        "signature": "int64_t -[RKFilterFieldController setFlaggedFilter](int64_t rdi)",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKFilterFieldController setFlaggedFilter] (36 lines)."
+    }
+  },
+  {
+    "step": "lift-message-pseudocode",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_c28bfd9591925afb7e0441431abea970f5580f99eb867213e88b0b036fd89341",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100049366"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x100049366"
+      },
+      "result": {
+        "calls": [
+          "r13"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x100049366",
+        "function": "-[RKSelectionMgr a_liftAdjustments:]",
+        "gotos": 0,
+        "inline_asm": 0,
+        "pseudo_code": "int64_t -[RKSelectionMgr a_liftAdjustments:](int64_t rdi)\n{\n    r14 = rdi;\n    r13 = _objc_msgSend@got;\n    rax = (*r13)(*(uint64_t*)0x100888c88, *(uint64_t*)0x1008697b8);\n    rbx = rax;\n    rax = *(uint64_t*)0x1008e3ce8;\n    (*r13)(rbx, *(uint64_t*)0x10086af20, *(uint64_t*)(r14 + rax), 0, 1, 0);\n    rax = (*r13)(rbx, *(uint64_t*)0x10086a650);\n    if (al == 0) {\n        rax = (*r13)(*(uint64_t*)0x100888998, *(uint64_t*)0x100867e18);\n        r14 = &data_1008a89a8;\n        rax = (*r13)(rax, *(uint64_t*)0x100867e20, r14);\n        if (al == 0) {\n            r15 = *(uint64_t*)0x100888bc8;\n            rax = (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a75c8);\n            r12 = rax;\n            rax = (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a89c8);\n            rbx = rax;\n            (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a89e8);\n            stack_0 = r14;\n            (*r13)(r15, *(uint64_t*)0x10086abc8, r12, 0, rbx, rax);\n        }\n    }\n    return rax;\n}\n",
+        "signature": "int64_t -[RKSelectionMgr a_liftAdjustments:](int64_t rdi)",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKSelectionMgr a_liftAdjustments:] (26 lines)."
+    }
+  },
+  {
+    "step": "versions-stack-names",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "examined": 27,
+        "status": "complete",
+        "total": 27
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_011369eee330da98eaecba9e3d2ddd0ad6b2209d3134678619ceadff8a1b39a7",
+      "limitations": [
+        {
+          "code": "data_sections_only",
+          "message": "only strings stored in the file are searched (absence is not proof)"
+        }
+      ],
+      "links": [],
+      "locations": [],
+      "operation": "native_strings_find",
+      "params": {
+        "case_sensitive": false,
+        "limit": 40,
+        "mode": "regex",
+        "offset": 0,
+        "pattern": "(duplicateVersion|newVersionFrom|newVersion:|a_newVersion|a_duplicateVersion|stackSelection|a_stack:)"
+      },
+      "result": {
+        "matches": [
+          {
+            "address": "0x100559ce9",
+            "references": [
+              {
+                "from": "0x1008a8598",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "undoNewVersionFromOriginal"
+          },
+          {
+            "address": "0x10055b96e",
+            "references": [
+              {
+                "from": "0x1008aacb8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "a_newVersion"
+          },
+          {
+            "address": "0x10055b97b",
+            "references": [
+              {
+                "from": "0x1008aacd8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "a_newVersionFromOriginal"
+          },
+          {
+            "address": "0x10055b994",
+            "references": [
+              {
+                "from": "0x1008aacf8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "a_newVersionFromMovieFrame"
+          },
+          {
+            "address": "0x10055cdf7",
+            "references": [
+              {
+                "from": "0x1008abff8",
+                "function": null
+              }
+            ],
+            "section": "__cstring",
+            "text": "undoNewVersionFromMovieFrame"
+          },
+          {
+            "address": "0x1005970c5",
+            "references": [
+              {
+                "from": "0x100869f50",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "newVersionFromMaster"
+          },
+          {
+            "address": "0x10059716f",
+            "references": [
+              {
+                "from": "0x100869f80",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "newVersionFromData:format:"
+          },
+          {
+            "address": "0x10059812c",
+            "references": [
+              {
+                "from": "0x10074ce08",
+                "function": null
+              },
+              {
+                "from": "0x1007776e0",
+                "function": null
+              },
+              {
+                "from": "0x100814be8",
+                "function": null
+              },
+              {
+                "from": "0x10086a500",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_stack:"
+          },
+          {
+            "address": "0x100598769",
+            "references": [
+              {
+                "from": "0x10074cf40",
+                "function": null
+              },
+              {
+                "from": "0x100814c18",
+                "function": null
+              },
+              {
+                "from": "0x100831068",
+                "function": null
+              },
+              {
+                "from": "0x10086a778",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_newVersion:"
+          },
+          {
+            "address": "0x100598777",
+            "references": [
+              {
+                "from": "0x10074cf58",
+                "function": null
+              },
+              {
+                "from": "0x100814c30",
+                "function": null
+              },
+              {
+                "from": "0x10086a780",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_newVersionAndShow:"
+          },
+          {
+            "address": "0x1005987a2",
+            "references": [
+              {
+                "from": "0x10074cf70",
+                "function": null
+              },
+              {
+                "from": "0x100814c48",
+                "function": null
+              },
+              {
+                "from": "0x100831050",
+                "function": null
+              },
+              {
+                "from": "0x10086a790",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_newVersionFromOriginal:"
+          },
+          {
+            "address": "0x1005987bc",
+            "references": [
+              {
+                "from": "0x10074cf88",
+                "function": null
+              },
+              {
+                "from": "0x100814c60",
+                "function": null
+              },
+              {
+                "from": "0x10086a798",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_newVersionFromOriginalAndShow:"
+          },
+          {
+            "address": "0x1005987dd",
+            "references": [
+              {
+                "from": "0x1007579c8",
+                "function": null
+              },
+              {
+                "from": "0x1007be620",
+                "function": null
+              },
+              {
+                "from": "0x10086a7a0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_newVersionFromMovieFrame:"
+          },
+          {
+            "address": "0x10059992b",
+            "references": [
+              {
+                "from": "0x10074bed8",
+                "function": null
+              },
+              {
+                "from": "0x10086ad80",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_makeNewVersionFromOriginal:addToSelection:actionName:"
+          },
+          {
+            "address": "0x10059a7ab",
+            "references": [
+              {
+                "from": "0x10074c478",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "duplicateVersionRef:options:"
+          },
+          {
+            "address": "0x10059a7c8",
+            "references": [
+              {
+                "from": "0x10074c490",
+                "function": null
+              },
+              {
+                "from": "0x100874058",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "duplicateVersionRefsForImageMigration:"
+          },
+          {
+            "address": "0x10059a927",
+            "references": [
+              {
+                "from": "0x10074ca90",
+                "function": null
+              },
+              {
+                "from": "0x100876258",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "duplicateVersionsOutOfStack:"
+          },
+          {
+            "address": "0x1005bd17c",
+            "references": [
+              {
+                "from": "0x10078e158",
+                "function": null
+              },
+              {
+                "from": "0x100874080",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_migrateVersionRefs:migrateToNewVersion:"
+          },
+          {
+            "address": "0x1005c3a57",
+            "references": [
+              {
+                "from": "0x10079de28",
+                "function": null
+              },
+              {
+                "from": "0x100875740",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "stackSelectionType"
+          },
+          {
+            "address": "0x1005c3c60",
+            "references": [
+              {
+                "from": "0x10079de10",
+                "function": null
+              },
+              {
+                "from": "0x100875880",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "setStackSelectionType:"
+          },
+          {
+            "address": "0x1005c3d7b",
+            "references": [
+              {
+                "from": "0x10079e178",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_stackSelectionType"
+          },
+          {
+            "address": "0x1005d0932",
+            "references": [
+              {
+                "from": "0x1007bd4f8",
+                "function": null
+              },
+              {
+                "from": "0x100878450",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "duplicateVersions:toAlbum:"
+          },
+          {
+            "address": "0x1005d0981",
+            "references": [
+              {
+                "from": "0x1007bd510",
+                "function": null
+              },
+              {
+                "from": "0x100878470",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "duplicateVersionsToAlbumFromAlbum:toAlbum:fromAlbum:"
+          },
+          {
+            "address": "0x1005d09e6",
+            "references": [
+              {
+                "from": "0x1007bd528",
+                "function": null
+              },
+              {
+                "from": "0x100878480",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "duplicateVersionsToAlbumFromProject:toAlbum:fromProject:"
+          },
+          {
+            "address": "0x1005e3376",
+            "references": [
+              {
+                "from": "0x1007e1430",
+                "function": null
+              },
+              {
+                "from": "0x10087cb40",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "_needsStyleUpdateFromSlideChange:newVersion:"
+          },
+          {
+            "address": "0x1005e8306",
+            "references": [
+              {
+                "from": "0x10087ddc8",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_newVersionFromOriginalJPEG:"
+          },
+          {
+            "address": "0x1005e8324",
+            "references": [
+              {
+                "from": "0x10087ddd0",
+                "function": null
+              }
+            ],
+            "section": "__objc_methname",
+            "text": "a_newVersionFromOriginalJPEGAndShow:"
+          }
+        ],
+        "total": 27
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "27 strings match \"(duplicateVersion|newVersionFrom|newVersion:|a_newVersion|a_duplicateVersion|stackSelection|a_stack:)\"."
+    }
+  },
+  {
+    "step": "rating-filter-assembly",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "examined": 85,
+        "status": "complete",
+        "total": 85
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_bb58ca1c6433723d4f6d9e201febf431aa309159bf626a1c9ef0e7371d2be2d6",
+      "limitations": [],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100157a19"
+        }
+      ],
+      "operation": "native_function_disassemble",
+      "params": {
+        "function": "0x100157a19"
+      },
+      "result": {
+        "assembly": "-[RKFilterFieldController setRatingFilterIndex:]:\n  0x100157a19  55                   push rbp\n  0x100157a1a  4889e5               mov rbp, rsp\n  0x100157a1d  4157                 push r15\n  0x100157a1f  4156                 push r14\n  0x100157a21  4155                 push r13\n  0x100157a23  4154                 push r12\n  0x100157a25  53                   push rbx\n  0x100157a26  50                   push rax\n  0x100157a27  4989d6               mov r14, rdx\n  0x100157a2a  4889fb               mov rbx, rdi\n  0x100157a2d  488b359cbb7100       mov rsi, [0x1008735d0]\n  0x100157a34  ba05000000           mov edx, 5\n  0x100157a39  b901000000           mov ecx, 1\n  0x100157a3e  ff1564435e00         call qword ptr [0x10073bda8]  ; _objc_msgSend@got\n  0x100157a44  4989c7               mov r15, rax\n  0x100157a47  4d85ff               test r15, r15\n  0x100157a4a  7447                 je 0x100157a93\nloc_100157a4c:\n  0x100157a4c  48895dd0             mov [rbp-0x30], rbx\n  0x100157a50  498d4eff             lea rcx, [r14-1]\n  0x100157a54  4883f907             cmp rcx, 7\n  0x100157a58  7757                 ja 0x100157ab1\nloc_100157a5a:\n  0x100157a5a  48c1e103             shl rcx, 3\n  0x100157a5e  48b80101010101000101 mov rax, 0x101000101010101\n  0x100157a68  48d3e8               shr rax, cl\n  0x100157a6b  4530ed               xor r13b, r13b\n  0x100157a6e  84c0                 test al, al\n  0x100157a70  0f848e000000         je 0x100157b04\nloc_100157a76:\n  0x100157a76  488d0d539b3f00       lea rcx, [0x1005515d0]\n  0x100157a7d  4e8b64f1f8           mov r12, [rcx+r14*8-8]\n  0x100157a82  488d0d079b3f00       lea rcx, [0x100551590]\n  0x100157a89  4a8b5cf1f8           mov rbx, [rcx+r14*8-8]\n  0x100157a8e  4188c5               mov r13b, al\n  0x100157a91  eb29                 jmp 0x100157abc\nloc_100157a93:\n  0x100157a93  488b351ebb7100       mov rsi, [0x1008735b8]\n  0x100157a9a  4889df               mov rdi, rbx\n  0x100157a9d  4883c408             add rsp, 8\n  0x100157aa1  5b                   pop rbx\n  0x100157aa2  415c                 pop r12\n  0x100157aa4  415d                 pop r13\n  0x100157aa6  415e                 pop r14\n  0x100157aa8  415f                 pop r15\n  0x100157aaa  5d                   pop rbp\n  0x100157aab  ff25f7425e00         jmp qword ptr [0x10073bda8]  ; _objc_msgSend@got\nloc_100157ab1:\n  0x100157ab1  41b501               mov r13b, 1\n  0x100157ab4  bb08000000           mov ebx, 8\n  0x100157ab9  4531e4               xor r12d, r12d\nloc_100157abc:\n  0x100157abc  488b357dba7100       mov rsi, [0x100873540]\n  0x100157ac3  4c8b35de425e00       mov r14, [0x10073bda8]  ; _objc_msgSend@got\n  0x100157aca  4c89ff               mov rdi, r15\n  0x100157acd  41ffd6               call r14\n  0x100157ad0  488b3571ba7100       mov rsi, [0x100873548]\n  0x100157ad7  4c89ff               mov rdi, r15\n  0x100157ada  4889da               mov rdx, rbx\n  0x100157add  41ffd6               call r14\n  0x100157ae0  488b35a9167100       mov rsi, [0x100869190]\n  0x100157ae7  488b3de20e7300       mov rdi, [0x1008889d0]\n  0x100157aee  4c89e2               mov rdx, r12\n  0x100157af1  41ffd6               call r14\n  0x100157af4  488b3535ba7100       mov rsi, [0x100873530]\n  0x100157afb  4c89ff               mov rdi, r15\n  0x100157afe  4889c2               mov rdx, rax\n  0x100157b01  41ffd6               call r14\nloc_100157b04:\n  0x100157b04  488b3535357100       mov rsi, [0x10086b040]\n  0x100157b0b  410fbed5             movsx edx, r13b\n  0x100157b0f  4c8b3592425e00       mov r14, [0x10073bda8]  ; _objc_msgSend@got\n  0x100157b16  4c89ff               mov rdi, r15\n  0x100157b19  4c89f0               mov rax, r14\n  0x100157b1c  ffd0                 call rax\n  0x100157b1e  488b3593ba7100       mov rsi, [0x1008735b8]\n  0x100157b25  488b5dd0             mov rbx, [rbp-0x30]\n  0x100157b29  4889df               mov rdi, rbx\n  0x100157b2c  4c89f0               mov rax, r14\n  0x100157b2f  ffd0                 call rax\n  0x100157b31  488b05d0ee7800       mov rax, [0x1008e6a08]\n  0x100157b38  488b3c03             mov rdi, [rbx+rax]\n  0x100157b3c  488b356dba7100       mov rsi, [0x1008735b0]\n  0x100157b43  4c89f0               mov rax, r14\n  0x100157b46  4883c408             add rsp, 8\n  0x100157b4a  5b                   pop rbx\n  0x100157b4b  415c                 pop r12\n  0x100157b4d  415d                 pop r13\n  0x100157b4f  415e                 pop r14\n  0x100157b51  415f                 pop r15\n  0x100157b53  5d                   pop rbp\n  0x100157b54  ffe0                 jmp rax\n",
+        "entry": "0x100157a19",
+        "function": "-[RKFilterFieldController setRatingFilterIndex:]",
+        "instructions": 85
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "85 instructions of -[RKFilterFieldController setRatingFilterIndex:]."
+    }
+  },
+  {
+    "step": "stack-version-implementation",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_e2badaf508f9a53dece2e1d50ef27b0947d3f11873e5692994a96ee5864f4aa0",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x10074ce18"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x10074ce18",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x10074ce18",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x100044f0a",
+            "name": "-[RKSelectionMgr a_stack:]",
+            "points_to": "function"
+          },
+          "value": "0x100044f0a"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x10074ce18 looks like pointer."
+    }
+  },
+  {
+    "step": "stack-version-implementation",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_32c404a1a88ecc549d3d7c895559cdb6e629096544e61c29238c0268c96b9f96",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x10074cf50"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x10074cf50",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x10074cf50",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x100046242",
+            "name": "-[RKSelectionMgr a_newVersion:]",
+            "points_to": "function"
+          },
+          "value": "0x100046242"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x10074cf50 looks like pointer."
+    }
+  },
+  {
+    "step": "stack-version-implementation",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_32cf59d78cd5ae31f3c2b85b9e439e36d3eeb2a568ffba5296c4a8e73fc12b8a",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x10074c488"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x10074c488",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x10074c488",
+        "name": null,
+        "references_to": 0,
+        "section": "__objc_const",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x10003d67f",
+            "name": "-[RKSelectionMgr duplicateVersionRef:options:]",
+            "points_to": "function"
+          },
+          "value": "0x10003d67f"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x10074c488 looks like pointer."
+    }
+  },
+  {
+    "step": "manual-stack-pseudocode",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_42ee81c115e229ff0f10d6cd1a4c866c5eab0491c06583f8f505a8e0a0d5e34e",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "unstructured_flow",
+          "message": "2 gotos remain where the control flow isn't a simple if/loop"
+        },
+        {
+          "code": "inline_asm",
+          "message": "1 instructions have no C rule and are shown as __asm(...)"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100044f0a"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x100044f0a"
+      },
+      "result": {
+        "calls": [
+          "0x100888750",
+          "0x100888770",
+          "0x100888790",
+          "0x1008887a0",
+          "_NSBeep@stub",
+          "_NSRunAlertPanel@stub",
+          "_objc_msgSend",
+          "r13",
+          "rbx"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x100044f0a",
+        "function": "-[RKSelectionMgr a_stack:]",
+        "gotos": 2,
+        "inline_asm": 1,
+        "pseudo_code": "int64_t -[RKSelectionMgr a_stack:](int64_t rdi, int64_t rdx)\n{\n    var_48 = rdx;\n    r12 = rdi;\n    rax = _objc_msgSend(rdi, *(uint64_t*)0x100869d88);\n    if (al != 0) {\n        return rax;\n    } else {\n        r15 = *(uint64_t*)0x1008e3c88;\n        rax = (*0x100888790)(*(uint64_t*)(r12 + r15), &data_100888790);\n        if (rax < 2 /* unsigned */) {\n            return rax;\n        } else {\n            r13 = _objc_msgSend@got;\n            rax = (*r13)(r12, *(uint64_t*)0x10086acd0);\n            r14 = rax;\n            rbx = *(uint64_t*)0x100888bb8;\n            rax = (*r13)(*(uint64_t*)(r12 + r15), *(uint64_t*)0x100869d60, &data_1008a7508);\n            rax = (*r13)(rbx, *(uint64_t*)0x100869d68, rax);\n            if (al == 0) {\n                rbx = *(uint64_t*)0x100888a08;\n                rax = (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a8468);\n                r14 = &data_1008a8448;\n                al = 0;\n                rax = (*r13)(rbx, *(uint64_t*)0x100867fe0, r14, rax);\n                rbx = rax;\n                rax = (*r13)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a8488);\n                al = 0;\n                return _NSRunAlertPanel@stub(rbx, r14, 0, 0, 0, rax); /* tail call */\n            } else {\n                var_40 = r14;\n                _objc_msgSend(r12, *(uint64_t*)0x100868508);\n                rax = (*0x1008887a0)(*(uint64_t*)(r12 + r15), &data_1008887a0, 0);\n                rbx = rax;\n                rax = (*0x100888750)(*(uint64_t*)0x100888d30, &data_100888750);\n                rax = (*0x100888770)(rbx, &data_100888770, rax);\n                if (al != 0) {\n                    rax = _objc_msgSend(rbx, *(uint64_t*)0x100868b48);\n                    rsi = *(uint64_t*)0x100868b40;\n                    if (rax == 0) {\n                        rdi = rbx;\n                    } else {\n                        rdi = rax;\n                    }\n                    rax = _objc_msgSend();\n                    rax = _objc_msgSend(rax, *(uint64_t*)0x10086acd8);\n                    if (al == 0) {\n                        rax = *(uint64_t*)0x1008e3c88;\n                        rax = (*0x100888790)(*(uint64_t*)(r12 + rax), &data_100888790);\n                        if (rax != 0) {\n                            r13d = 0;\n                            r14 = *(uint64_t*)0x10086ace8;\n                            rbx = *(uint64_t*)0x1008e3c88;\n                            while (true) {\nlabel_100045102:\n                                rax = (*0x1008887a0)(*(uint64_t*)(r12 + rbx), &data_1008887a0, r13);\n                                r15 = rbx;\n                                rbx = rax;\n                                rax = _objc_msgSend(rbx, *(uint64_t*)0x10086ace0);\n                                if (al != 0) {\n                                    rax = *(uint64_t*)(r12 + r15);\n                                    var_38 = rax;\n                                    var_30 = rbx;\n                                    rbx = _objc_msgSend@got;\n                                    rax = (*rbx)(rbx, r14);\n                                    rax = (*rbx)(var_38, *(uint64_t*)0x100867ee0, rax);\n                                    if (al == 0) {\n                                        rax = *(uint64_t*)(r12 + r15);\n                                        var_38 = rax;\n                                        rax = (*rbx)(var_30, r14);\n                                        r13++;\n                                        (*rbx)(var_38, *(uint64_t*)0x1008688b8, rax, r13);\n                                    }\n                                }\n                            }\n                        }\n                    }\n                }\nlabel_1000451a6:\n                r13 = var_40;\n                rbx = _objc_msgSend@got;\n                rax = *(uint64_t*)0x1008e3c88;\n                if (r13 == 0) {\n                    r14 = *(uint64_t*)(r12 + rax);\n                    r15 = *(uint64_t*)0x100888d08;\n                    rax = (*rbx)(var_48, *(uint64_t*)0x100868678);\n                    __asm(\"sete al\");\n                    rax = (*rbx)(r15, *(uint64_t*)0x10086ad00, r14, al);\n                    r13 = rax;\n                    rax = (*rbx)(r13, *(uint64_t*)0x100867f00);\n                    r14 = rax;\n                } else {\n                    rax = (*rbx)(r12, *(uint64_t*)0x10086acf0);\n                    r15 = rax;\n                    rax = (*rbx)(r13, *(uint64_t*)0x100867f00);\n                    r14 = rax;\n                    (*rbx)(r13, *(uint64_t*)0x10086acf8, r15);\n                }\n                (*rbx)(r12, *(uint64_t*)0x100868510);\n                (*rbx)(r12, *(uint64_t*)0x10086a448, r14, 0, 0);\n                if (r13 == 0) {\n                    _NSBeep@stub();\n                }\n                rsi = *(uint64_t*)0x1008685c0;\n                rdi = r12;\n                return _objc_msgSend(); /* tail call */\n            }\n        }\n    }\n    rbx = r15;\n    rax = (*0x100888790)(*(uint64_t*)(r12 + rbx), &data_100888790);\n    r13++;\n    if (r13 < rax /* unsigned */) {\n        goto label_100045102;\n    }\n    goto label_1000451a6;\n}\n",
+        "signature": "int64_t -[RKSelectionMgr a_stack:](int64_t rdi, int64_t rdx)",
+        "strings": [],
+        "structured": false
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKSelectionMgr a_stack:] (117 lines, partly unstructured)."
+    }
+  },
+  {
+    "step": "new-version-pseudocode",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_70f7aea50f78f1a83872973bdc17c7f12909785d6f26f330ba4cefefe5fc989e",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "indirect_jumps_unresolved",
+          "message": "some indirect jumps were not resolved, so code may be missing"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100046242"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x100046242"
+      },
+      "result": {
+        "calls": [
+          "rax"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x100046242",
+        "function": "-[RKSelectionMgr a_newVersion:]",
+        "gotos": 0,
+        "inline_asm": 0,
+        "pseudo_code": "int64_t -[RKSelectionMgr a_newVersion:](int64_t rdi)\n{\n    r14 = rdi;\n    rbx = _objc_msgSend@got;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a8288);\n    rsi = *(uint64_t*)0x10086ad80;\n    rdi = r14;\n    edx = 0;\n    ecx = 0;\n    r8 = rax;\n    rax = rbx;\n    goto *rax; /* computed jump */\n}\n",
+        "signature": "int64_t -[RKSelectionMgr a_newVersion:](int64_t rdi)",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKSelectionMgr a_newVersion:] (14 lines)."
+    }
+  },
+  {
+    "step": "duplicate-version-pseudocode",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_9b4b40b00e637b261d771d44b3b28fae46f530165f592bd7591e0b50ab270a20",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "indirect_jumps_unresolved",
+          "message": "some indirect jumps were not resolved, so code may be missing"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x10003d67f"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x10003d67f"
+      },
+      "result": {
+        "calls": [
+          "rax"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x10003d67f",
+        "function": "-[RKSelectionMgr duplicateVersionRef:options:]",
+        "gotos": 0,
+        "inline_asm": 0,
+        "pseudo_code": "int64_t -[RKSelectionMgr duplicateVersionRef:options:](int64_t rdi, int64_t rcx)\n{\n    r15 = rcx;\n    r14 = rdi;\n    rbx = _objc_msgSend@got;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)0x100888a60, *(uint64_t*)0x100868950);\n    r12 = rax;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)0x1008889f0, *(uint64_t*)0x100867eb8, &data_1008a8188);\n    stack_20 = r15;\n    stack_18 = rax;\n    stack_10 = 1;\n    stack_8 = 1;\n    stack_0 = 0;\n    rax = rbx;\n    rax = (*rax)(r14, *(uint64_t*)0x10086a0a8, r12, 0, 0, 0);\n    rsi = *(uint64_t*)0x100868a70;\n    rdi = rax;\n    rax = rbx;\n    goto *rax; /* computed jump */\n}\n",
+        "signature": "int64_t -[RKSelectionMgr duplicateVersionRef:options:](int64_t rdi, int64_t rcx)",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKSelectionMgr duplicateVersionRef:options:] (22 lines)."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_b7e8a670da9f40746c99d0633235b52dbf10d0cece5fbad2459b055ec1963fe0",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100551590"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x100551590",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x100551590",
+        "name": null,
+        "references_to": 1,
+        "section": "__const",
+        "type": "i64",
+        "value": 8
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x100551590 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_c029d516a89f2c836ac9301b480b227641445dc046d792ba888d07252b34aeab",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100551598"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x100551598",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x100551598",
+        "name": null,
+        "references_to": 0,
+        "section": "__const",
+        "type": "i64",
+        "value": 8
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x100551598 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_a652247bd768dcc24c29609e23aa679eda848e81e23a969aff3c55773d0b3998",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1005515a0"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1005515a0",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x1005515a0",
+        "name": null,
+        "references_to": 0,
+        "section": "__const",
+        "type": "i64",
+        "value": 8
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1005515a0 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_be09ed0e47682181d9df2b1008cd86f7e3b4a533972c8f5527bb94a932eed8b7",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1005515a8"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1005515a8",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x1005515a8",
+        "name": null,
+        "references_to": 0,
+        "section": "__const",
+        "type": "i64",
+        "value": 8
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1005515a8 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_f3d7ee11c1a528e1f8882a9d612c3270d838fca9dd949055f2a5fb3fa1dc06bd",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1005515b0"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1005515b0",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x1005515b0",
+        "name": null,
+        "references_to": 0,
+        "section": "__const",
+        "type": "i64",
+        "value": 5
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1005515b0 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_d3bce3028b4ca1af11c64edd0a6e5d3ad1b1b7d5300f51ec663a61688dfc2891",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1005515b8"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1005515b8",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x1005515b8",
+        "name": null,
+        "references_to": 0,
+        "section": "__const",
+        "type": "i64",
+        "value": 8
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1005515b8 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_cfa48903c4d0bcb1f13fc67e14a62047c11abcdef48bc578e051cfd7b2522a31",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1005515c0"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1005515c0",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x1005515c0",
+        "name": null,
+        "references_to": 0,
+        "section": "__const",
+        "type": "i64",
+        "value": 5
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1005515c0 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_8d3c9a93c6f99bc198bfac168007165f00596aa25fd3563764dbcabeb8143529",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1005515c8"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1005515c8",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x1005515c8",
+        "name": null,
+        "references_to": 0,
+        "section": "__const",
+        "type": "i64",
+        "value": 5
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1005515c8 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_01e93650433974767dad0f02f50ba33728b98bdd417f721353483f22347e8deb",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1005515d0"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1005515d0",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x1005515d0",
+        "name": null,
+        "references_to": 1,
+        "section": "__const",
+        "type": "i64",
+        "value": 1
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1005515d0 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_eac107466d0cbac93a2350adb9571874e4c60633e36332b619facf0cfe573e2b",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1005515d8"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1005515d8",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x1005515d8",
+        "name": null,
+        "references_to": 0,
+        "section": "__const",
+        "type": "i64",
+        "value": 2
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1005515d8 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_7bcd1168fa95e9a5cf6541615c4e0587983fd8489f90e8e4d20cbf53fda5918b",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1005515e0"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1005515e0",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x1005515e0",
+        "name": null,
+        "references_to": 0,
+        "section": "__const",
+        "type": "i64",
+        "value": 3
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1005515e0 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_2dd59a21cf163914a59bed72fef13b8c62c1b6fdd99a952b4cc5da23ff8f8fda",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1005515e8"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1005515e8",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x1005515e8",
+        "name": null,
+        "references_to": 0,
+        "section": "__const",
+        "type": "i64",
+        "value": 4
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1005515e8 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_cb320a6b16c4c5b66486280f64afe0f5e63d6286f0b5089493d58ecd43fa185a",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1005515f0"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1005515f0",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x1005515f0",
+        "name": null,
+        "references_to": 0,
+        "section": "__const",
+        "type": "i64",
+        "value": 5
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1005515f0 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_4b468f331bf03351f1bf1f5ded14e31028a0137b44383b3edf971713875685d0",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1005515f8"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x1005515f8",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x1005515f8",
+        "name": null,
+        "references_to": 0,
+        "section": "__const",
+        "type": "i64",
+        "value": 0
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1005515f8 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_b344e04854aedaae6b52532c51631aff23dcf58f47db3236f53196e8120d09ee",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100551600"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x100551600",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x100551600",
+        "name": null,
+        "references_to": 0,
+        "section": "__const",
+        "type": "i64",
+        "value": 0
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x100551600 looks like i64."
+    }
+  },
+  {
+    "step": "rating-table",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_1ecc53b2e1228e9300f31a62e9e98b773299d0d83e474e3a0eb575c7febda801",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100551608"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x100551608",
+        "type": "i64"
+      },
+      "result": {
+        "address": "0x100551608",
+        "name": null,
+        "references_to": 0,
+        "section": "__const",
+        "type": "i64",
+        "value": -1
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x100551608 looks like i64."
+    }
+  },
+  {
+    "step": "version-smart-selector",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_dd1fe8c0afa5f16d20f9a9d05dd8b4b0500610c0d730a13270d82e29322eb661",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x10086ad80"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x10086ad80",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x10086ad80",
+        "name": null,
+        "references_to": 4,
+        "section": "__objc_selrefs",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x10059992b",
+            "points_to": "string",
+            "text": "_makeNewVersionFromOriginal:addToSelection:actionName:"
+          },
+          "value": "0x10059992b"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x10086ad80 looks like pointer."
+    }
+  },
+  {
+    "step": "version-smart-selector",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_6a52444179e9bb34faf00b88b73da31979977361fb3e5a52f1c9b7e78385e2e9",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x10087bec8"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x10087bec8",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x10087bec8",
+        "name": null,
+        "references_to": 1,
+        "section": "__objc_selrefs",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x1005e0660",
+            "points_to": "string",
+            "text": "initWithInfoDictionary:"
+          },
+          "value": "0x1005e0660"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x10087bec8 looks like pointer."
+    }
+  },
+  {
+    "step": "version-smart-selector",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_9823391874e44f8fb003b3929965e43175697e507d41e44cea8af23ab5f15356",
+      "limitations": [
+        {
+          "code": "no_type_recovery",
+          "message": "the clean-room engine doesn't recover declared types; this reads the bytes and infers what they look like"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x10087bbd0"
+        }
+      ],
+      "operation": "native_data_show",
+      "params": {
+        "address": "0x10087bbd0",
+        "type": "pointer"
+      },
+      "result": {
+        "address": "0x10087bbd0",
+        "name": null,
+        "references_to": 3,
+        "section": "__objc_selrefs",
+        "type": "pointer",
+        "value": {
+          "target": {
+            "address": "0x1005dfc47",
+            "points_to": "string",
+            "text": "setUserQuery:"
+          },
+          "value": "0x1005dfc47"
+        }
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x10087bbd0 looks like pointer."
+    }
+  },
+  {
+    "step": "manual-stack-assembly",
+    "result": {
+      "authority": "original-files",
+      "confidence": "observed",
+      "coverage": {
+        "examined": 217,
+        "status": "complete",
+        "total": 217
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_ea94337245c7a28f9d7b9dafcab24fc9d3ae3d2fc0df54b68989853ff1375bd8",
+      "limitations": [],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x100044f0a"
+        }
+      ],
+      "operation": "native_function_disassemble",
+      "params": {
+        "function": "0x100044f0a"
+      },
+      "result": {
+        "assembly": "-[RKSelectionMgr a_stack:]:\n  0x100044f0a  55                   push rbp\n  0x100044f0b  4889e5               mov rbp, rsp\n  0x100044f0e  4157                 push r15\n  0x100044f10  4156                 push r14\n  0x100044f12  4155                 push r13\n  0x100044f14  4154                 push r12\n  0x100044f16  53                   push rbx\n  0x100044f17  4883ec28             sub rsp, 0x28\n  0x100044f1b  488955b8             mov [rbp-0x48], rdx\n  0x100044f1f  4989fc               mov r12, rdi\n  0x100044f22  488b355f4e8200       mov rsi, [0x100869d88]\n  0x100044f29  ff15796e6f00         call qword ptr [0x10073bda8]  ; _objc_msgSend@got\n  0x100044f2f  84c0                 test al, al\n  0x100044f31  0f85ee000000         jne 0x100045025\nloc_100044f37:\n  0x100044f37  4c8b3d4aed8900       mov r15, [0x1008e3c88]\n  0x100044f3e  4b8b3c3c             mov rdi, [r12+r15]\n  0x100044f42  488d3547388400       lea rsi, [0x100888790]\n  0x100044f49  ff1541388400         call qword ptr [0x100888790]\n  0x100044f4f  4883f802             cmp rax, 2\n  0x100044f53  0f82cc000000         jb 0x100045025\nloc_100044f59:\n  0x100044f59  488b35705d8200       mov rsi, [0x10086acd0]\n  0x100044f60  4c8b2d416e6f00       mov r13, [0x10073bda8]  ; _objc_msgSend@got\n  0x100044f67  4c89e7               mov rdi, r12\n  0x100044f6a  41ffd5               call r13\n  0x100044f6d  4989c6               mov r14, rax\n  0x100044f70  4b8b3c3c             mov rdi, [r12+r15]\n  0x100044f74  488b1d3d3c8400       mov rbx, [0x100888bb8]\n  0x100044f7b  488b35de4d8200       mov rsi, [0x100869d60]\n  0x100044f82  488d157f258600       lea rdx, [0x1008a7508]\n  0x100044f89  41ffd5               call r13\n  0x100044f8c  488b35d54d8200       mov rsi, [0x100869d68]\n  0x100044f93  4889df               mov rdi, rbx\n  0x100044f96  4889c2               mov rdx, rax\n  0x100044f99  41ffd5               call r13\n  0x100044f9c  84c0                 test al, al\n  0x100044f9e  0f8490000000         je 0x100045034\nloc_100044fa4:\n  0x100044fa4  4c8975c0             mov [rbp-0x40], r14\n  0x100044fa8  488b3559358200       mov rsi, [0x100868508]\n  0x100044faf  4c89e7               mov rdi, r12\n  0x100044fb2  ff15f06d6f00         call qword ptr [0x10073bda8]  ; _objc_msgSend@got\n  0x100044fb8  4b8b3c3c             mov rdi, [r12+r15]\n  0x100044fbc  488d35dd378400       lea rsi, [0x1008887a0]\n  0x100044fc3  31d2                 xor edx, edx\n  0x100044fc5  ff15d5378400         call qword ptr [0x1008887a0]\n  0x100044fcb  4889c3               mov rbx, rax\n  0x100044fce  488d357b378400       lea rsi, [0x100888750]\n  0x100044fd5  488b3d543d8400       mov rdi, [0x100888d30]\n  0x100044fdc  ff156e378400         call qword ptr [0x100888750]\n  0x100044fe2  488d3587378400       lea rsi, [0x100888770]\n  0x100044fe9  4889df               mov rdi, rbx\n  0x100044fec  4889c2               mov rdx, rax\n  0x100044fef  ff157b378400         call qword ptr [0x100888770]\n  0x100044ff5  84c0                 test al, al\n  0x100044ff7  0f84a9010000         je 0x1000451a6\nloc_100044ffd:\n  0x100044ffd  488b35443b8200       mov rsi, [0x100868b48]\n  0x100045004  4889df               mov rdi, rbx\n  0x100045007  ff159b6d6f00         call qword ptr [0x10073bda8]  ; _objc_msgSend@got\n  0x10004500d  488b352c3b8200       mov rsi, [0x100868b40]\n  0x100045014  4885c0               test rax, rax\n  0x100045017  0f8492000000         je 0x1000450af\nloc_10004501d:\n  0x10004501d  4889c7               mov rdi, rax\n  0x100045020  e98d000000           jmp 0x1000450b2\nloc_100045025:\n  0x100045025  4883c428             add rsp, 0x28\n  0x100045029  5b                   pop rbx\n  0x10004502a  415c                 pop r12\n  0x10004502c  415d                 pop r13\n  0x10004502e  415e                 pop r14\n  0x100045030  415f                 pop r15\n  0x100045032  5d                   pop rbp\n  0x100045033  c3                   ret\nloc_100045034:\n  0x100045034  488b1dcd398400       mov rbx, [0x100888a08]\n  0x10004503b  488b35762e8200       mov rsi, [0x100867eb8]\n  0x100045042  488b3da7398400       mov rdi, [0x1008889f0]\n  0x100045049  488d1518348600       lea rdx, [0x1008a8468]\n  0x100045050  41ffd5               call r13\n  0x100045053  488b35862f8200       mov rsi, [0x100867fe0]\n  0x10004505a  4c8d35e7338600       lea r14, [0x1008a8448]\n  0x100045061  4889df               mov rdi, rbx\n  0x100045064  4c89f2               mov rdx, r14\n  0x100045067  4889c1               mov rcx, rax\n  0x10004506a  30c0                 xor al, al\n  0x10004506c  41ffd5               call r13\n  0x10004506f  4889c3               mov rbx, rax\n  0x100045072  488b353f2e8200       mov rsi, [0x100867eb8]\n  0x100045079  488b3d70398400       mov rdi, [0x1008889f0]\n  0x100045080  488d1501348600       lea rdx, [0x1008a8488]\n  0x100045087  41ffd5               call r13\n  0x10004508a  4889df               mov rdi, rbx\n  0x10004508d  4c89f6               mov rsi, r14\n  0x100045090  31d2                 xor edx, edx\n  0x100045092  31c9                 xor ecx, ecx\n  0x100045094  4531c0               xor r8d, r8d\n  0x100045097  4989c1               mov r9, rax\n  0x10004509a  30c0                 xor al, al\n  0x10004509c  4883c428             add rsp, 0x28\n  0x1000450a0  5b                   pop rbx\n  0x1000450a1  415c                 pop r12\n  0x1000450a3  415d                 pop r13\n  0x1000450a5  415e                 pop r14\n  0x1000450a7  415f                 pop r15\n  0x1000450a9  5d                   pop rbp\n  0x1000450aa  e9c78f5000           jmp 0x10054e076  ; _NSRunAlertPanel@stub\nloc_1000450af:\n  0x1000450af  4889df               mov rdi, rbx\nloc_1000450b2:\n  0x1000450b2  ff15f06c6f00         call qword ptr [0x10073bda8]  ; _objc_msgSend@got\n  0x1000450b8  488b35195c8200       mov rsi, [0x10086acd8]\n  0x1000450bf  4889c7               mov rdi, rax\n  0x1000450c2  ff15e06c6f00         call qword ptr [0x10073bda8]  ; _objc_msgSend@got\n  0x1000450c8  84c0                 test al, al\n  0x1000450ca  0f85d6000000         jne 0x1000451a6\nloc_1000450d0:\n  0x1000450d0  488b05b1eb8900       mov rax, [0x1008e3c88]\n  0x1000450d7  498b3c04             mov rdi, [r12+rax]\n  0x1000450db  488d35ae368400       lea rsi, [0x100888790]\n  0x1000450e2  ff15a8368400         call qword ptr [0x100888790]\n  0x1000450e8  4885c0               test rax, rax\n  0x1000450eb  0f84b5000000         je 0x1000451a6\nloc_1000450f1:\n  0x1000450f1  4531ed               xor r13d, r13d\n  0x1000450f4  4c8b35ed5b8200       mov r14, [0x10086ace8]\n  0x1000450fb  488b1d86eb8900       mov rbx, [0x1008e3c88]\nloc_100045102:\n  0x100045102  498b3c1c             mov rdi, [r12+rbx]\n  0x100045106  488d3593368400       lea rsi, [0x1008887a0]\n  0x10004510d  4c89ea               mov rdx, r13\n  0x100045110  ff158a368400         call qword ptr [0x1008887a0]\n  0x100045116  4989df               mov r15, rbx\n  0x100045119  4889c3               mov rbx, rax\n  0x10004511c  4889df               mov rdi, rbx\n  0x10004511f  488b35ba5b8200       mov rsi, [0x10086ace0]\n  0x100045126  ff157c6c6f00         call qword ptr [0x10073bda8]  ; _objc_msgSend@got\n  0x10004512c  84c0                 test al, al\n  0x10004512e  7456                 je 0x100045186\nloc_100045130:\n  0x100045130  4b8b043c             mov rax, [r12+r15]\n  0x100045134  488945c8             mov [rbp-0x38], rax\n  0x100045138  4889df               mov rdi, rbx\n  0x10004513b  48895dd0             mov [rbp-0x30], rbx\n  0x10004513f  4c89f6               mov rsi, r14\n  0x100045142  488b1d5f6c6f00       mov rbx, [0x10073bda8]  ; _objc_msgSend@got\n  0x100045149  ffd3                 call rbx\n  0x10004514b  488b7dc8             mov rdi, [rbp-0x38]\n  0x10004514f  488b358a2d8200       mov rsi, [0x100867ee0]\n  0x100045156  4889c2               mov rdx, rax\n  0x100045159  ffd3                 call rbx\n  0x10004515b  84c0                 test al, al\n  0x10004515d  7527                 jne 0x100045186\nloc_10004515f:\n  0x10004515f  4b8b043c             mov rax, [r12+r15]\n  0x100045163  488945c8             mov [rbp-0x38], rax\n  0x100045167  488b7dd0             mov rdi, [rbp-0x30]\n  0x10004516b  4c89f6               mov rsi, r14\n  0x10004516e  ffd3                 call rbx\n  0x100045170  49ffc5               inc r13\n  0x100045173  488b7dc8             mov rdi, [rbp-0x38]\n  0x100045177  488b353a378200       mov rsi, [0x1008688b8]\n  0x10004517e  4889c2               mov rdx, rax\n  0x100045181  4c89e9               mov rcx, r13\n  0x100045184  ffd3                 call rbx\nloc_100045186:\n  0x100045186  4c89fb               mov rbx, r15\n  0x100045189  498b3c1c             mov rdi, [r12+rbx]\n  0x10004518d  488d35fc358400       lea rsi, [0x100888790]\n  0x100045194  ff15f6358400         call qword ptr [0x100888790]\n  0x10004519a  49ffc5               inc r13\n  0x10004519d  4939c5               cmp r13, rax\n  0x1000451a0  0f825cffffff         jb 0x100045102\nloc_1000451a6:\n  0x1000451a6  4c8b6dc0             mov r13, [rbp-0x40]\n  0x1000451aa  4d85ed               test r13, r13\n  0x1000451ad  488b1df46b6f00       mov rbx, [0x10073bda8]  ; _objc_msgSend@got\n  0x1000451b4  488b05cdea8900       mov rax, [0x1008e3c88]\n  0x1000451bb  742f                 je 0x1000451ec\nloc_1000451bd:\n  0x1000451bd  488b352c5b8200       mov rsi, [0x10086acf0]\n  0x1000451c4  4c89e7               mov rdi, r12\n  0x1000451c7  ffd3                 call rbx\n  0x1000451c9  4989c7               mov r15, rax\n  0x1000451cc  488b352d2d8200       mov rsi, [0x100867f00]\n  0x1000451d3  4c89ef               mov rdi, r13\n  0x1000451d6  ffd3                 call rbx\n  0x1000451d8  4989c6               mov r14, rax\n  0x1000451db  488b35165b8200       mov rsi, [0x10086acf8]\n  0x1000451e2  4c89ef               mov rdi, r13\n  0x1000451e5  4c89fa               mov rdx, r15\n  0x1000451e8  ffd3                 call rbx\n  0x1000451ea  eb42                 jmp 0x10004522e\nloc_1000451ec:\n  0x1000451ec  4d8b3404             mov r14, [r12+rax]\n  0x1000451f0  4c8b3d113b8400       mov r15, [0x100888d08]\n  0x1000451f7  488b357a348200       mov rsi, [0x100868678]\n  0x1000451fe  488b7db8             mov rdi, [rbp-0x48]\n  0x100045202  ffd3                 call rbx\n  0x100045204  4885c0               test rax, rax\n  0x100045207  0f94c0               sete al\n  0x10004520a  0fb6c8               movzx ecx, al\n  0x10004520d  488b35ec5a8200       mov rsi, [0x10086ad00]\n  0x100045214  4c89ff               mov rdi, r15\n  0x100045217  4c89f2               mov rdx, r14\n  0x10004521a  ffd3                 call rbx\n  0x10004521c  4989c5               mov r13, rax\n  0x10004521f  488b35da2c8200       mov rsi, [0x100867f00]\n  0x100045226  4c89ef               mov rdi, r13\n  0x100045229  ffd3                 call rbx\n  0x10004522b  4989c6               mov r14, rax\nloc_10004522e:\n  0x10004522e  488b35db328200       mov rsi, [0x100868510]\n  0x100045235  4c89e7               mov rdi, r12\n  0x100045238  ffd3                 call rbx\n  0x10004523a  488b3507528200       mov rsi, [0x10086a448]\n  0x100045241  4c89e7               mov rdi, r12\n  0x100045244  4c89f2               mov rdx, r14\n  0x100045247  31c9                 xor ecx, ecx\n  0x100045249  4531c0               xor r8d, r8d\n  0x10004524c  ffd3                 call rbx\n  0x10004524e  4d85ed               test r13, r13\n  0x100045251  7505                 jne 0x100045258\nloc_100045253:\n  0x100045253  e8c48d5000           call 0x10054e01c  ; _NSBeep@stub\nloc_100045258:\n  0x100045258  488b3561338200       mov rsi, [0x1008685c0]\n  0x10004525f  4c89e7               mov rdi, r12\n  0x100045262  4883c428             add rsp, 0x28\n  0x100045266  5b                   pop rbx\n  0x100045267  415c                 pop r12\n  0x100045269  415d                 pop r13\n  0x10004526b  415e                 pop r14\n  0x10004526d  415f                 pop r15\n  0x10004526f  5d                   pop rbp\n  0x100045270  ff25326b6f00         jmp qword ptr [0x10073bda8]  ; _objc_msgSend@got\n",
+        "entry": "0x100044f0a",
+        "function": "-[RKSelectionMgr a_stack:]",
+        "instructions": 217
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "217 instructions of -[RKSelectionMgr a_stack:]."
+    }
+  },
+  {
+    "step": "stamp-setting-refs",
+    "result": {
+      "authority": "original-files",
+      "confidence": "derived",
+      "coverage": {
+        "examined": 3,
+        "status": "complete",
+        "total": 3
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_02f584e70fde5996a440653c1378a81a79a060479107f79acccc6d0abce215d7",
+      "limitations": [
+        {
+          "code": "static_references",
+          "message": "references made through computed pointers at run time are not seen"
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1008af268"
+        }
+      ],
+      "operation": "native_xrefs_list",
+      "params": {
+        "address": "0x1008af268",
+        "limit": 20,
+        "offset": 0
+      },
+      "result": {
+        "address": "0x1008af268",
+        "name": null,
+        "references_from": [],
+        "references_to": [
+          {
+            "from": "0x1000bac30",
+            "function": "+[RKLiftStampTool initialize]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1000bc6c5",
+            "function": "-[RKLiftStampTool setReplaceOnStamp:]",
+            "kind": "data"
+          },
+          {
+            "from": "0x1000bc706",
+            "function": "-[RKLiftStampTool replaceOnStamp]",
+            "kind": "data"
+          }
+        ],
+        "total_to": 3
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "0x1008af268 is referenced from 3 places and refers to 0."
+    }
+  },
+  {
+    "step": "stamp-default-pseudocode",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_d89100a5bd0d01164e0ee586aea342d8005ed3e1d96807cc93b5185ac437a925",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "indirect_jumps_unresolved",
+          "message": "some indirect jumps were not resolved, so code may be missing"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1000babff"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x1000babff"
+      },
+      "result": {
+        "calls": [
+          "rax"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x1000babff",
+        "function": "+[RKLiftStampTool initialize]",
+        "gotos": 0,
+        "inline_asm": 0,
+        "pseudo_code": "int64_t +[RKLiftStampTool initialize]()\n{\n    r14 = *(uint64_t*)0x100888ae0;\n    rbx = _objc_msgSend@got;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)0x1008889d0, *(uint64_t*)0x100868278, 0);\n    rax = rbx;\n    rax = (*rax)(r14, *(uint64_t*)0x10086acb8, rax, &data_1008af268);\n    r14 = rax;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)0x100888998, *(uint64_t*)0x100867e18);\n    rsi = *(uint64_t*)0x10086b750;\n    rdi = rax;\n    rdx = r14;\n    rax = rbx;\n    goto *rax; /* computed jump */\n}\n",
+        "signature": "int64_t +[RKLiftStampTool initialize]()",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for +[RKLiftStampTool initialize] (17 lines)."
+    }
+  },
+  {
+    "step": "stamp-preference-setter-pseudocode",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_d3b165e4b7479ccf26cebbf5683083ff76dd271aa515d16cb7dc2b50ca7995c7",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "indirect_jumps_unresolved",
+          "message": "some indirect jumps were not resolved, so code may be missing"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1000bc6a1"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x1000bc6c5"
+      },
+      "result": {
+        "calls": [
+          "rax"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x1000bc6a1",
+        "function": "-[RKLiftStampTool setReplaceOnStamp:]",
+        "gotos": 0,
+        "inline_asm": 0,
+        "pseudo_code": "int64_t -[RKLiftStampTool setReplaceOnStamp:](int64_t rdx)\n{\n    r14d = edx;\n    rbx = _objc_msgSend@got;\n    rax = rbx;\n    rax = (*rax)(*(uint64_t*)0x100888998, *(uint64_t*)0x100867e18);\n    rcx = &data_1008af268;\n    rsi = *(uint64_t*)0x1008686a0;\n    rdi = rax;\n    edx = r14d;\n    rax = rbx;\n    goto *rax; /* computed jump */\n}\n",
+        "signature": "int64_t -[RKLiftStampTool setReplaceOnStamp:](int64_t rdx)",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKLiftStampTool setReplaceOnStamp:] (13 lines)."
+    }
+  },
+  {
+    "step": "stamp-preference-getter-pseudocode",
+    "result": {
+      "authority": "original-files",
+      "carries_target_content": true,
+      "confidence": "inferred",
+      "coverage": {
+        "status": "unknown"
+      },
+      "environment": {
+        "clean_room": false,
+        "engine": "builtin",
+        "engine_version": "0.5.0",
+        "host": "macos-aarch64"
+      },
+      "id": "ev_0854dd84ea715f6c6eecff6e653e2e093bd6b6aa3662633f5ead61c0269a1684",
+      "limitations": [
+        {
+          "code": "register_level",
+          "message": "variables are machine registers and stack slots; types are not recovered"
+        },
+        {
+          "code": "calling_convention_assumed",
+          "message": "call arguments follow the usual x86_64 convention and may be wrong for unusual functions"
+        },
+        {
+          "code": "conditions_from_flags",
+          "message": "branch conditions are rebuilt from the last compare and may be approximate"
+        },
+        {
+          "code": "deep_engine_unavailable",
+          "message": "Ghidra couldn't decompile this function (the bridge rejected the request (bridge_error): the decompiler gave no result: ). So this came from the built-in decompiler, which is less exact."
+        }
+      ],
+      "links": [],
+      "locations": [
+        {
+          "kind": "address",
+          "value": "0x1000bc6e2"
+        }
+      ],
+      "operation": "native_function_pseudocode",
+      "params": {
+        "function": "0x1000bc706"
+      },
+      "result": {
+        "calls": [
+          "rbx"
+        ],
+        "engine": "clean-room lifter",
+        "entry": "0x1000bc6e2",
+        "function": "-[RKLiftStampTool replaceOnStamp]",
+        "gotos": 0,
+        "inline_asm": 0,
+        "pseudo_code": "int32_t -[RKLiftStampTool replaceOnStamp]()\n{\n    rbx = _objc_msgSend@got;\n    eax = (*rbx)(*(uint64_t*)0x100888998, *(uint64_t*)0x100867e18);\n    eax = (*rbx)(rax, *(uint64_t*)0x100867e20, &data_1008af268);\n    eax = al;\n    return eax;\n}\n",
+        "signature": "int32_t -[RKLiftStampTool replaceOnStamp]()",
+        "strings": [],
+        "structured": true
+      },
+      "subject": {
+        "kind": "mach-o",
+        "name": "Aperture",
+        "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+      },
+      "summary": "Pseudo-C for -[RKLiftStampTool replaceOnStamp] (8 lines)."
+    }
+  }
+]

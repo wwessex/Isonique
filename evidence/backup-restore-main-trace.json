@@ -1,0 +1,1820 @@
+[
+  {
+    "tool": "strings",
+    "result": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"authority\":\"original-files\",\"confidence\":\"observed\",\"coverage\":{\"examined\":150,\"next_offset\":150,\"status\":\"partial\",\"total\":278},\"environment\":{\"clean_room\":false,\"engine\":\"builtin\",\"engine_version\":\"0.5.0\",\"host\":\"macos-aarch64\"},\"id\":\"ev_3b1c813862ac9bda5ec1ad5d325b40fbe939cc863820f1633d1ef8ec7571bd7a\",\"limitations\":[{\"code\":\"data_sections_only\",\"message\":\"only strings stored in the file are searched (absence is not proof)\"}],\"links\":[],\"locations\":[],\"operation\":\"native_strings_find\",\"params\":{\"case_sensitive\":false,\"limit\":150,\"mode\":\"regex\",\"offset\":0,\"pattern\":\"vault|backup|integrity|restore\"},\"result\":{\"matches\":[{\"address\":\"0x10055b60d\",\"references\":[{\"from\":\"0x1008aa5f8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"menuItemShowVaults\"},{\"address\":\"0x10055b620\",\"references\":[{\"from\":\"0x1008aa618\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"menuItemHideVaults\"},{\"address\":\"0x1005669fb\",\"references\":[{\"from\":\"0x1008bafb8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"RKDebugVaultVerifications\"},{\"address\":\"0x100566d5a\",\"references\":[{\"from\":\"0x1008bb518\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"restoreLibraryFolderRestricted\"},{\"address\":\"0x100566d79\",\"references\":[{\"from\":\"0x1008bb538\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"restoreLibraryPathUnsupported\"},{\"address\":\"0x100566da6\",\"references\":[{\"from\":\"0x1008bb578\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"restoreLibraryPathNotWritable\"},{\"address\":\"0x100566dc4\",\"references\":[{\"from\":\"0x1008bb598\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"restoreLibraryPathNotFolder\"},{\"address\":\"0x10056cf2d\",\"references\":[{\"from\":\"0x1007c6fe0\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultListController\"},{\"address\":\"0x10056cf41\",\"references\":[{\"from\":\"0x1007c6fe8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"T@,R,Vm_vaultListController\"},{\"address\":\"0x100575982\",\"references\":[{\"from\":\"0x1008cbd38\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"preset.backupSubfolderNamingPolicyName\"},{\"address\":\"0x1005759a9\",\"references\":[{\"from\":\"0x1008cbd58\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"preset.usesBackupPath\"},{\"address\":\"0x1005759bf\",\"references\":[{\"from\":\"0x1008cbd78\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"ImportBackup\"},{\"address\":\"0x1005759cc\",\"references\":[{\"from\":\"0x1008cbd98\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"BackupLocation\"},{\"address\":\"0x1005759db\",\"references\":[{\"from\":\"0x1008cbdb8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"importBackupLocation\"},{\"address\":\"0x100575a04\",\"references\":[{\"from\":\"0x1008cbe18\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"self.preset.backupPath\"},{\"address\":\"0x100575a1b\",\"references\":[{\"from\":\"0x1008cbe38\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"backupEnabled\"},{\"address\":\"0x100575a29\",\"references\":[{\"from\":\"0x1008cbe58\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"importBackupDestinationDoesNotExist\"},{\"address\":\"0x100575a4d\",\"references\":[{\"from\":\"0x1008cbe78\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"importBackupDestinationDoesNotExistFormat\"},{\"address\":\"0x100577a46\",\"references\":[{\"from\":\"0x1008cdd58\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"showVaultsPanel\"},{\"address\":\"0x100577a56\",\"references\":[{\"from\":\"0x1008cdd78\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateVault\"},{\"address\":\"0x100577a62\",\"references\":[{\"from\":\"0x1008cdd98\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"hideVaultsPanel\"},{\"address\":\"0x100577a72\",\"references\":[{\"from\":\"0x1008cddb8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultAvailableString\"},{\"address\":\"0x100577a87\",\"references\":[{\"from\":\"0x1008cddd8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultLongFormatter\"},{\"address\":\"0x100577a9a\",\"references\":[{\"from\":\"0x1008cddf8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultDisconnected\"},{\"address\":\"0x100577b08\",\"references\":[{\"from\":\"0x1008cde58\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"apvault\"},{\"address\":\"0x100577b10\",\"references\":[{\"from\":\"0x1008cde78\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultListChildren\"},{\"address\":\"0x100577b22\",\"references\":[{\"from\":\"0x1008cde98\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"arrangedObjects.vaultListName\"},{\"address\":\"0x100577b40\",\"references\":[{\"from\":\"0x1008cdeb8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultListOpened\"},{\"address\":\"0x100577c86\",\"references\":[{\"from\":\"0x1008ce0d8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"VaultMeter_Bar\"},{\"address\":\"0x100577c95\",\"references\":[{\"from\":\"0x1008ce0f8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"VaultMeter_Fill\"},{\"address\":\"0x100577ca5\",\"references\":[{\"from\":\"0x1008ce118\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultShortFormatter\"},{\"address\":\"0x100577cb9\",\"references\":[{\"from\":\"0x1007fc3c8\",\"function\":null},{\"from\":\"0x1007fc518\",\"function\":null},{\"from\":\"0x1008d8fd8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vault\"},{\"address\":\"0x100577cbf\",\"references\":[{\"from\":\"0x1007fc3d0\",\"function\":null},{\"from\":\"0x1007fc520\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"T@\\\"RKVault\\\",&,N,Vm_vault\"},{\"address\":\"0x100577fbd\",\"references\":[{\"from\":\"0x1008ce478\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"restoreLibraryPastVersion\"},{\"address\":\"0x100577fd7\",\"references\":[{\"from\":\"0x1008ce498\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"restoreLibraryErrorTitle\"},{\"address\":\"0x100577ff0\",\"references\":[{\"from\":\"0x1008ce4b8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"restoreLibraryFutureVersion\"},{\"address\":\"0x10057800c\",\"references\":[{\"from\":\"0x1008ce4d8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"RestoreDialog\"},{\"address\":\"0x10057801a\",\"references\":[{\"from\":\"0x1008ce4f8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"canRestoreLibrary\"},{\"address\":\"0x100578045\",\"references\":[{\"from\":\"0x1008ce558\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"selectSourceVault\"},{\"address\":\"0x10057807d\",\"references\":[{\"from\":\"0x1008ce5b8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"restoreLibraryFromVaultTitle\"},{\"address\":\"0x10057809a\",\"references\":[{\"from\":\"0x1008ce5d8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"restore\"},{\"address\":\"0x1005780a2\",\"references\":[{\"from\":\"0x1008ce5f8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"restoreLibraryFromVaultFormat\"},{\"address\":\"0x1005780c0\",\"references\":[{\"from\":\"0x1008ce618\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"unableToRestoreFromVaultTitle\"},{\"address\":\"0x1005780de\",\"references\":[{\"from\":\"0x1008ce638\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"unableToRestoreFromVaultMessage\"},{\"address\":\"0x1005780fe\",\"references\":[{\"from\":\"0x1008ce658\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"restoreSelectLibrarySource\"},{\"address\":\"0x100578119\",\"references\":[{\"from\":\"0x1008ce678\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"restoreSelectButton\"},{\"address\":\"0x10057812d\",\"references\":[{\"from\":\"0x1008ce698\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"AddVaultDirectory\"},{\"address\":\"0x10057814b\",\"references\":[{\"from\":\"0x1008ce6d8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"doNotShowAgainAddVault\"},{\"address\":\"0x100578162\",\"references\":[{\"from\":\"0x1008ce6f8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"addVaultWarningTitle\"},{\"address\":\"0x100578177\",\"references\":[{\"from\":\"0x1008ce718\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"addVaultWarningMessage\"},{\"address\":\"0x10057818e\",\"references\":[{\"from\":\"0x1008ce738\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"addVaultManagedImageMessage\"},{\"address\":\"0x1005781aa\",\"references\":[{\"from\":\"0x1008ce758\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"addVaultManagedImagesMessage\"},{\"address\":\"0x1005781c7\",\"references\":[{\"from\":\"0x1008ce778\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"addVaultReferencedImageMessage\"},{\"address\":\"0x1005781e6\",\"references\":[{\"from\":\"0x1008ce798\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"addVaultReferencedImagesMessage\"},{\"address\":\"0x100578206\",\"references\":[{\"from\":\"0x1008ce7b8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"addVaultTitle\"},{\"address\":\"0x100578214\",\"references\":[{\"from\":\"0x1008ce7d8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"addVaultPrompt\"},{\"address\":\"0x100578223\",\"references\":[{\"from\":\"0x1008ce7f8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"untitledVault\"},{\"address\":\"0x100578231\",\"references\":[{\"from\":\"0x1008ce818\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultNotCreatedTitle\"},{\"address\":\"0x100578246\",\"references\":[{\"from\":\"0x1008ce838\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultNotCreatedUnsupportedVolume\"},{\"address\":\"0x100578267\",\"references\":[{\"from\":\"0x1008ce858\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultNotCreatedMessage\"},{\"address\":\"0x10057827e\",\"references\":[{\"from\":\"0x1008ce878\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultAlreadyExistsAtPathTitle\"},{\"address\":\"0x10057829c\",\"references\":[{\"from\":\"0x1008ce898\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultAlreadyExistsAtPathMessage\"},{\"address\":\"0x1005782bc\",\"references\":[{\"from\":\"0x1008ce8b8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateVaultErrorTitle\"},{\"address\":\"0x1005782d2\",\"references\":[{\"from\":\"0x1008ce8d8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateVaultUnknownError\"},{\"address\":\"0x1005782ea\",\"references\":[{\"from\":\"0x1008ce8f8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateSelectedVaultTitle\"},{\"address\":\"0x100578303\",\"references\":[{\"from\":\"0x1008ce918\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultIsUpToDateFormat\"},{\"address\":\"0x100578319\",\"references\":[{\"from\":\"0x1008ce938\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultIsOfflineTitle\"},{\"address\":\"0x10057832d\",\"references\":[{\"from\":\"0x1008ce958\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultIsOfflineFormat\"},{\"address\":\"0x100578342\",\"references\":[{\"from\":\"0x1008ce978\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultNotEnoughSpaceTitle\"},{\"address\":\"0x10057835b\",\"references\":[{\"from\":\"0x1008ce998\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultNotEnoughSpaceFormat\"},{\"address\":\"0x100578375\",\"references\":[{\"from\":\"0x1008ce9b8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultUnsupportedVolumeTitle\"},{\"address\":\"0x100578391\",\"references\":[{\"from\":\"0x1008ce9d8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultUnsupportedVolumeFormat\"},{\"address\":\"0x1005783ae\",\"references\":[{\"from\":\"0x1008ce9f8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultManagerPermissionCheckFailMsg\"},{\"address\":\"0x1005783d1\",\"references\":[{\"from\":\"0x1008cea18\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultPermissionFixButtonLabel\"},{\"address\":\"0x1005783ef\",\"references\":[{\"from\":\"0x1008cea38\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultManagerPermissionCheckFailTitle\"},{\"address\":\"0x100578414\",\"references\":[{\"from\":\"0x1008cea58\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultLastUpdatedMessage\"},{\"address\":\"0x10057842c\",\"references\":[{\"from\":\"0x1008cea78\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultManagedImageMessage\"},{\"address\":\"0x100578445\",\"references\":[{\"from\":\"0x1008cea98\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultManagedImagesMessage\"},{\"address\":\"0x10057845f\",\"references\":[{\"from\":\"0x1008ceab8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultReferencedImageMessage\"},{\"address\":\"0x10057847b\",\"references\":[{\"from\":\"0x1008cead8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultReferencedImagesMessage\"},{\"address\":\"0x100578498\",\"references\":[{\"from\":\"0x1008ceaf8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateSelectedVaultFormat\"},{\"address\":\"0x1005784b2\",\"references\":[{\"from\":\"0x1008ceb18\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateOldSelectedVaultFormat\"},{\"address\":\"0x1005784cf\",\"references\":[{\"from\":\"0x1008ceb38\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateSelectedVault\"},{\"address\":\"0x1005784e3\",\"references\":[{\"from\":\"0x1008ceb58\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"doNotUpdateVaults\"},{\"address\":\"0x1005784f5\",\"references\":[{\"from\":\"0x1008ceb78\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateForiegnVaultFormat\"},{\"address\":\"0x10057850e\",\"references\":[{\"from\":\"0x1008ceb98\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"allVaultsAreOfflineTitle\"},{\"address\":\"0x100578527\",\"references\":[{\"from\":\"0x1008cebb8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"allVaultsAreOfflineMessage\"},{\"address\":\"0x100578542\",\"references\":[{\"from\":\"0x1008cebd8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateAllVaults\"},{\"address\":\"0x100578552\",\"references\":[{\"from\":\"0x1008cebf8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateConnectedVaultsTitle\"},{\"address\":\"0x10057856d\",\"references\":[{\"from\":\"0x1008cec18\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateConnectedVaultsMessage\"},{\"address\":\"0x10057858a\",\"references\":[{\"from\":\"0x1008cec38\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateAllVaultsTitle\"},{\"address\":\"0x10057859f\",\"references\":[{\"from\":\"0x1008cec58\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateAllVaultsMessage\"},{\"address\":\"0x1005785b6\",\"references\":[{\"from\":\"0x1008cec78\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"allVaultsAreUpToDateMessage\"},{\"address\":\"0x1005785d2\",\"references\":[{\"from\":\"0x1008cec98\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"allVaultsNotEnoughSpaceMessage\"},{\"address\":\"0x1005785f1\",\"references\":[{\"from\":\"0x1008cecb8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"createVaultPrompt\"},{\"address\":\"0x100578603\",\"references\":[{\"from\":\"0x1008cecd8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"noVaultsTitle\"},{\"address\":\"0x100578611\",\"references\":[{\"from\":\"0x1008cecf8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"noVaultsMessage\"},{\"address\":\"0x100578621\",\"references\":[{\"from\":\"0x1008ced18\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateVaultPath\"},{\"address\":\"0x100578631\",\"references\":[{\"from\":\"0x1008ced38\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"updateVaultPathPrompt\"},{\"address\":\"0x100578647\",\"references\":[{\"from\":\"0x1008ced58\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultPathAlreadyUpToDateTitle\"},{\"address\":\"0x100578665\",\"references\":[{\"from\":\"0x1008ced78\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultPathAlreadyUpToDateMessage\"},{\"address\":\"0x100578685\",\"references\":[{\"from\":\"0x1008ced98\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"noVaultSelectedTitle\"},{\"address\":\"0x10057869a\",\"references\":[{\"from\":\"0x1008cedb8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"noVaultSelectedMessage\"},{\"address\":\"0x1005786b1\",\"references\":[{\"from\":\"0x1008cedd8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"removeAndDeleteVault\"},{\"address\":\"0x1005786c6\",\"references\":[{\"from\":\"0x1008cedf8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"removeVault\"},{\"address\":\"0x1005786d2\",\"references\":[{\"from\":\"0x1008cee18\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"removeVaultTitle\"},{\"address\":\"0x1005786e3\",\"references\":[{\"from\":\"0x1008cee38\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"removeVaultWarning\"},{\"address\":\"0x1005836e2\",\"references\":[{\"from\":\"0x1008d71b8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"select a.zUuid, a.zName, av.zVolumePath, av.zVolumeRelativeArchivePath, a.zCreateDate,  a.zLastFullMasterFileUpdate, av.zLastKnownVaultSize, av.zLastKnownCapacity, av.zLastKnownAvailableSpace  from zRKArchive a join zRKArchiveVolume av on a.z_pk=av.zArchive\"},{\"address\":\"0x10058521c\",\"references\":[{\"from\":\"0x1008d8f38\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultPrefixForVaultsDuringRestore\"},{\"address\":\"0x10058523e\",\"references\":[{\"from\":\"0x1008d8f58\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"unableToRestoreIncorrectVersionMsg\"},{\"address\":\"0x100585261\",\"references\":[{\"from\":\"0x1008d8f78\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"unableToRestorePermissionsMessage\"},{\"address\":\"0x100585283\",\"references\":[{\"from\":\"0x1008d8f98\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"restoreNotEnoughSpaceFormat\"},{\"address\":\"0x10058529f\",\"references\":[{\"from\":\"0x1008d8fb8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"restoreNotEnoughSpaceTitle\"},{\"address\":\"0x1005852c3\",\"references\":[{\"from\":\"0x1008d8ff8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"deletingVault\"},{\"address\":\"0x1005852d1\",\"references\":[{\"from\":\"0x1008d9018\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultDeleteInProgressNoQuitTitle\"},{\"address\":\"0x1005852f2\",\"references\":[{\"from\":\"0x1008d9038\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultDeleteInProgressNoQuitMessage\"},{\"address\":\"0x10058546c\",\"references\":[{\"from\":\"0x1008d9158\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultAlreadyExistsFormat\"},{\"address\":\"0x100585485\",\"references\":[{\"from\":\"0x1008d9178\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultErrorReconnectingFormat\"},{\"address\":\"0x1005854a2\",\"references\":[{\"from\":\"0x1008d9198\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultErrorIncorrectDatabaseFormat\"},{\"address\":\"0x1005854c4\",\"references\":[{\"from\":\"0x1008d91b8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultErrorAddingBackVaultTitle\"},{\"address\":\"0x1005854e3\",\"references\":[{\"from\":\"0x1008d91d8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultErrorAddingBackVaultsTitle\"},{\"address\":\"0x100585503\",\"references\":[{\"from\":\"0x1008d91f8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultErrorFirstFiveErrors\"},{\"address\":\"0x100585522\",\"references\":[{\"from\":\"0x1008d9238\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultPrefixForOldVaults\"},{\"address\":\"0x100585562\",\"references\":[{\"from\":\"0x1008d92b8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultName\"},{\"address\":\"0x10058556c\",\"references\":[{\"from\":\"0x1008d92d8\",\"function\":null}],\"section\":\"__cstring\",\"text\":\"vaultDate\"},{\"address\":\"0x10059279e\",\"references\":[{\"from\":\"0x100868c28\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"restoreGraphicsState\"},{\"address\":\"0x10059bdc5\",\"references\":[{\"from\":\"0x1007c57d8\",\"function\":null},{\"from\":\"0x10086b648\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"vaultListController\"},{\"address\":\"0x10059bdd9\",\"references\":[{\"from\":\"0x100750a60\",\"function\":null},{\"from\":\"0x1007fabc8\",\"function\":null},{\"from\":\"0x10086b650\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"a_toggleVaultPanel:\"},{\"address\":\"0x10059ccc2\",\"references\":[{\"from\":\"0x100835b10\",\"function\":null},{\"from\":\"0x10086bbc8\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"restorePreviousLibraryPath\"},{\"address\":\"0x10059d536\",\"references\":[{\"from\":\"0x1007c4de8\",\"function\":null},{\"from\":\"0x10086bea8\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"restoreSavedSelectionAndPersistAlbum\"},{\"address\":\"0x10059dc1c\",\"references\":[{\"from\":\"0x100751888\",\"function\":null},{\"from\":\"0x10086c158\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"restoreWindowFromFS\"},{\"address\":\"0x10059de10\",\"references\":[{\"from\":\"0x100751918\",\"function\":null},{\"from\":\"0x10086c228\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"fullScreenExitViewerRestore\"},{\"address\":\"0x10059e03c\",\"references\":[{\"from\":\"0x1007fabb0\",\"function\":null},{\"from\":\"0x10086c2f8\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"isVaultPanelHidden\"},{\"address\":\"0x10059fb9c\",\"references\":[{\"from\":\"0x1007528e0\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"m_restoreToolbarExitingFullscreen\"},{\"address\":\"0x10059fbbe\",\"references\":[{\"from\":\"0x100752900\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"m_modeToRestoreAfterFSTransition\"},{\"address\":\"0x1005a28a4\",\"references\":[{\"from\":\"0x1007570f8\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"_restoreInspector\"},{\"address\":\"0x1005a71cd\",\"references\":[{\"from\":\"0x10075e758\",\"function\":null},{\"from\":\"0x10075e980\",\"function\":null},{\"from\":\"0x1007bfcb8\",\"function\":null},{\"from\":\"0x1007c0040\",\"function\":null},{\"from\":\"0x1007d43e0\",\"function\":null},{\"from\":\"0x100878750\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"restoreFactorySettings\"},{\"address\":\"0x1005acc98\",\"references\":[{\"from\":\"0x1007677b0\",\"function\":null},{\"from\":\"0x10086f9a8\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"restoreHTML\"},{\"address\":\"0x1005ad69a\",\"references\":[{\"from\":\"0x1007686c0\",\"function\":null},{\"from\":\"0x10086fc30\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"restoreFromDict:\"},{\"address\":\"0x1005ad8ba\",\"references\":[{\"from\":\"0x100768a08\",\"function\":null},{\"from\":\"0x10086fce0\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"restoreThemeSettings:masterDictionary:\"},{\"address\":\"0x1005af486\",\"references\":[{\"from\":\"0x10076b4d0\",\"function\":null},{\"from\":\"0x1008703b0\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"_restoreCGContext:\"},{\"address\":\"0x1005c529f\",\"references\":[{\"from\":\"0x1007a1ee0\",\"function\":null},{\"from\":\"0x100875d90\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"verifyVaults:\"},{\"address\":\"0x1005cbd8f\",\"references\":[{\"from\":\"0x1007b00a8\",\"function\":null},{\"from\":\"0x1007cc168\",\"function\":null},{\"from\":\"0x100877368\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"_restoreCurrentAlbumInfo\"},{\"address\":\"0x1005cd557\",\"references\":[{\"from\":\"0x1007b4758\",\"function\":null},{\"from\":\"0x100877888\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"_setSnapsToScreenEdge:restoreWindow:animate:sizeOnly:edge:\"},{\"address\":\"0x1005cd67c\",\"references\":[{\"from\":\"0x1007b47d0\",\"function\":null},{\"from\":\"0x100882d50\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"unsnapAndRestoreWindowSizeAnimate:\"},{\"address\":\"0x1005cd6c6\",\"references\":[{\"from\":\"0x1007b4a28\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"_restoreWindow\"},{\"address\":\"0x1005d4155\",\"references\":[{\"from\":\"0x100878f30\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"libraryRestoredFromVaultDistributor\"},{\"address\":\"0x1005d50f0\",\"references\":[{\"from\":\"0x1007c4dd0\",\"function\":null},{\"from\":\"0x1008793f0\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"restoreSavedSelection\"},{\"address\":\"0x1005d5598\",\"references\":[{\"from\":\"0x1007c6680\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"m_vaultListController\"},{\"address\":\"0x1005d5d21\",\"references\":[{\"from\":\"0x1007c4a28\",\"function\":null},{\"from\":\"0x1008611c8\",\"function\":null},{\"from\":\"0x100884bd8\",\"function\":null}],\"section\":\"__objc_methname\",\"text\":\"libraryRestoredFromVault:\"}],\"total\":278},\"subject\":{\"kind\":\"mach-o\",\"name\":\"Aperture\",\"sha256\":\"ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4\"},\"summary\":\"278 strings match \\\"vault|backup|integrity|restore\\\".\"}"
+        }
+      ],
+      "structuredContent": {
+        "authority": "original-files",
+        "confidence": "observed",
+        "coverage": {
+          "examined": 150,
+          "next_offset": 150,
+          "status": "partial",
+          "total": 278
+        },
+        "environment": {
+          "clean_room": false,
+          "engine": "builtin",
+          "engine_version": "0.5.0",
+          "host": "macos-aarch64"
+        },
+        "id": "ev_3b1c813862ac9bda5ec1ad5d325b40fbe939cc863820f1633d1ef8ec7571bd7a",
+        "limitations": [
+          {
+            "code": "data_sections_only",
+            "message": "only strings stored in the file are searched (absence is not proof)"
+          }
+        ],
+        "links": [],
+        "locations": [],
+        "operation": "native_strings_find",
+        "params": {
+          "case_sensitive": false,
+          "limit": 150,
+          "mode": "regex",
+          "offset": 0,
+          "pattern": "vault|backup|integrity|restore"
+        },
+        "result": {
+          "matches": [
+            {
+              "address": "0x10055b60d",
+              "references": [
+                {
+                  "from": "0x1008aa5f8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "menuItemShowVaults"
+            },
+            {
+              "address": "0x10055b620",
+              "references": [
+                {
+                  "from": "0x1008aa618",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "menuItemHideVaults"
+            },
+            {
+              "address": "0x1005669fb",
+              "references": [
+                {
+                  "from": "0x1008bafb8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "RKDebugVaultVerifications"
+            },
+            {
+              "address": "0x100566d5a",
+              "references": [
+                {
+                  "from": "0x1008bb518",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "restoreLibraryFolderRestricted"
+            },
+            {
+              "address": "0x100566d79",
+              "references": [
+                {
+                  "from": "0x1008bb538",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "restoreLibraryPathUnsupported"
+            },
+            {
+              "address": "0x100566da6",
+              "references": [
+                {
+                  "from": "0x1008bb578",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "restoreLibraryPathNotWritable"
+            },
+            {
+              "address": "0x100566dc4",
+              "references": [
+                {
+                  "from": "0x1008bb598",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "restoreLibraryPathNotFolder"
+            },
+            {
+              "address": "0x10056cf2d",
+              "references": [
+                {
+                  "from": "0x1007c6fe0",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultListController"
+            },
+            {
+              "address": "0x10056cf41",
+              "references": [
+                {
+                  "from": "0x1007c6fe8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "T@,R,Vm_vaultListController"
+            },
+            {
+              "address": "0x100575982",
+              "references": [
+                {
+                  "from": "0x1008cbd38",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "preset.backupSubfolderNamingPolicyName"
+            },
+            {
+              "address": "0x1005759a9",
+              "references": [
+                {
+                  "from": "0x1008cbd58",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "preset.usesBackupPath"
+            },
+            {
+              "address": "0x1005759bf",
+              "references": [
+                {
+                  "from": "0x1008cbd78",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "ImportBackup"
+            },
+            {
+              "address": "0x1005759cc",
+              "references": [
+                {
+                  "from": "0x1008cbd98",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "BackupLocation"
+            },
+            {
+              "address": "0x1005759db",
+              "references": [
+                {
+                  "from": "0x1008cbdb8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "importBackupLocation"
+            },
+            {
+              "address": "0x100575a04",
+              "references": [
+                {
+                  "from": "0x1008cbe18",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "self.preset.backupPath"
+            },
+            {
+              "address": "0x100575a1b",
+              "references": [
+                {
+                  "from": "0x1008cbe38",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "backupEnabled"
+            },
+            {
+              "address": "0x100575a29",
+              "references": [
+                {
+                  "from": "0x1008cbe58",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "importBackupDestinationDoesNotExist"
+            },
+            {
+              "address": "0x100575a4d",
+              "references": [
+                {
+                  "from": "0x1008cbe78",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "importBackupDestinationDoesNotExistFormat"
+            },
+            {
+              "address": "0x100577a46",
+              "references": [
+                {
+                  "from": "0x1008cdd58",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "showVaultsPanel"
+            },
+            {
+              "address": "0x100577a56",
+              "references": [
+                {
+                  "from": "0x1008cdd78",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateVault"
+            },
+            {
+              "address": "0x100577a62",
+              "references": [
+                {
+                  "from": "0x1008cdd98",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "hideVaultsPanel"
+            },
+            {
+              "address": "0x100577a72",
+              "references": [
+                {
+                  "from": "0x1008cddb8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultAvailableString"
+            },
+            {
+              "address": "0x100577a87",
+              "references": [
+                {
+                  "from": "0x1008cddd8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultLongFormatter"
+            },
+            {
+              "address": "0x100577a9a",
+              "references": [
+                {
+                  "from": "0x1008cddf8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultDisconnected"
+            },
+            {
+              "address": "0x100577b08",
+              "references": [
+                {
+                  "from": "0x1008cde58",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "apvault"
+            },
+            {
+              "address": "0x100577b10",
+              "references": [
+                {
+                  "from": "0x1008cde78",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultListChildren"
+            },
+            {
+              "address": "0x100577b22",
+              "references": [
+                {
+                  "from": "0x1008cde98",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "arrangedObjects.vaultListName"
+            },
+            {
+              "address": "0x100577b40",
+              "references": [
+                {
+                  "from": "0x1008cdeb8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultListOpened"
+            },
+            {
+              "address": "0x100577c86",
+              "references": [
+                {
+                  "from": "0x1008ce0d8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "VaultMeter_Bar"
+            },
+            {
+              "address": "0x100577c95",
+              "references": [
+                {
+                  "from": "0x1008ce0f8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "VaultMeter_Fill"
+            },
+            {
+              "address": "0x100577ca5",
+              "references": [
+                {
+                  "from": "0x1008ce118",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultShortFormatter"
+            },
+            {
+              "address": "0x100577cb9",
+              "references": [
+                {
+                  "from": "0x1007fc3c8",
+                  "function": null
+                },
+                {
+                  "from": "0x1007fc518",
+                  "function": null
+                },
+                {
+                  "from": "0x1008d8fd8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vault"
+            },
+            {
+              "address": "0x100577cbf",
+              "references": [
+                {
+                  "from": "0x1007fc3d0",
+                  "function": null
+                },
+                {
+                  "from": "0x1007fc520",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "T@\"RKVault\",&,N,Vm_vault"
+            },
+            {
+              "address": "0x100577fbd",
+              "references": [
+                {
+                  "from": "0x1008ce478",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "restoreLibraryPastVersion"
+            },
+            {
+              "address": "0x100577fd7",
+              "references": [
+                {
+                  "from": "0x1008ce498",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "restoreLibraryErrorTitle"
+            },
+            {
+              "address": "0x100577ff0",
+              "references": [
+                {
+                  "from": "0x1008ce4b8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "restoreLibraryFutureVersion"
+            },
+            {
+              "address": "0x10057800c",
+              "references": [
+                {
+                  "from": "0x1008ce4d8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "RestoreDialog"
+            },
+            {
+              "address": "0x10057801a",
+              "references": [
+                {
+                  "from": "0x1008ce4f8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "canRestoreLibrary"
+            },
+            {
+              "address": "0x100578045",
+              "references": [
+                {
+                  "from": "0x1008ce558",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "selectSourceVault"
+            },
+            {
+              "address": "0x10057807d",
+              "references": [
+                {
+                  "from": "0x1008ce5b8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "restoreLibraryFromVaultTitle"
+            },
+            {
+              "address": "0x10057809a",
+              "references": [
+                {
+                  "from": "0x1008ce5d8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "restore"
+            },
+            {
+              "address": "0x1005780a2",
+              "references": [
+                {
+                  "from": "0x1008ce5f8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "restoreLibraryFromVaultFormat"
+            },
+            {
+              "address": "0x1005780c0",
+              "references": [
+                {
+                  "from": "0x1008ce618",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "unableToRestoreFromVaultTitle"
+            },
+            {
+              "address": "0x1005780de",
+              "references": [
+                {
+                  "from": "0x1008ce638",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "unableToRestoreFromVaultMessage"
+            },
+            {
+              "address": "0x1005780fe",
+              "references": [
+                {
+                  "from": "0x1008ce658",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "restoreSelectLibrarySource"
+            },
+            {
+              "address": "0x100578119",
+              "references": [
+                {
+                  "from": "0x1008ce678",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "restoreSelectButton"
+            },
+            {
+              "address": "0x10057812d",
+              "references": [
+                {
+                  "from": "0x1008ce698",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "AddVaultDirectory"
+            },
+            {
+              "address": "0x10057814b",
+              "references": [
+                {
+                  "from": "0x1008ce6d8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "doNotShowAgainAddVault"
+            },
+            {
+              "address": "0x100578162",
+              "references": [
+                {
+                  "from": "0x1008ce6f8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "addVaultWarningTitle"
+            },
+            {
+              "address": "0x100578177",
+              "references": [
+                {
+                  "from": "0x1008ce718",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "addVaultWarningMessage"
+            },
+            {
+              "address": "0x10057818e",
+              "references": [
+                {
+                  "from": "0x1008ce738",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "addVaultManagedImageMessage"
+            },
+            {
+              "address": "0x1005781aa",
+              "references": [
+                {
+                  "from": "0x1008ce758",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "addVaultManagedImagesMessage"
+            },
+            {
+              "address": "0x1005781c7",
+              "references": [
+                {
+                  "from": "0x1008ce778",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "addVaultReferencedImageMessage"
+            },
+            {
+              "address": "0x1005781e6",
+              "references": [
+                {
+                  "from": "0x1008ce798",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "addVaultReferencedImagesMessage"
+            },
+            {
+              "address": "0x100578206",
+              "references": [
+                {
+                  "from": "0x1008ce7b8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "addVaultTitle"
+            },
+            {
+              "address": "0x100578214",
+              "references": [
+                {
+                  "from": "0x1008ce7d8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "addVaultPrompt"
+            },
+            {
+              "address": "0x100578223",
+              "references": [
+                {
+                  "from": "0x1008ce7f8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "untitledVault"
+            },
+            {
+              "address": "0x100578231",
+              "references": [
+                {
+                  "from": "0x1008ce818",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultNotCreatedTitle"
+            },
+            {
+              "address": "0x100578246",
+              "references": [
+                {
+                  "from": "0x1008ce838",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultNotCreatedUnsupportedVolume"
+            },
+            {
+              "address": "0x100578267",
+              "references": [
+                {
+                  "from": "0x1008ce858",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultNotCreatedMessage"
+            },
+            {
+              "address": "0x10057827e",
+              "references": [
+                {
+                  "from": "0x1008ce878",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultAlreadyExistsAtPathTitle"
+            },
+            {
+              "address": "0x10057829c",
+              "references": [
+                {
+                  "from": "0x1008ce898",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultAlreadyExistsAtPathMessage"
+            },
+            {
+              "address": "0x1005782bc",
+              "references": [
+                {
+                  "from": "0x1008ce8b8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateVaultErrorTitle"
+            },
+            {
+              "address": "0x1005782d2",
+              "references": [
+                {
+                  "from": "0x1008ce8d8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateVaultUnknownError"
+            },
+            {
+              "address": "0x1005782ea",
+              "references": [
+                {
+                  "from": "0x1008ce8f8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateSelectedVaultTitle"
+            },
+            {
+              "address": "0x100578303",
+              "references": [
+                {
+                  "from": "0x1008ce918",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultIsUpToDateFormat"
+            },
+            {
+              "address": "0x100578319",
+              "references": [
+                {
+                  "from": "0x1008ce938",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultIsOfflineTitle"
+            },
+            {
+              "address": "0x10057832d",
+              "references": [
+                {
+                  "from": "0x1008ce958",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultIsOfflineFormat"
+            },
+            {
+              "address": "0x100578342",
+              "references": [
+                {
+                  "from": "0x1008ce978",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultNotEnoughSpaceTitle"
+            },
+            {
+              "address": "0x10057835b",
+              "references": [
+                {
+                  "from": "0x1008ce998",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultNotEnoughSpaceFormat"
+            },
+            {
+              "address": "0x100578375",
+              "references": [
+                {
+                  "from": "0x1008ce9b8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultUnsupportedVolumeTitle"
+            },
+            {
+              "address": "0x100578391",
+              "references": [
+                {
+                  "from": "0x1008ce9d8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultUnsupportedVolumeFormat"
+            },
+            {
+              "address": "0x1005783ae",
+              "references": [
+                {
+                  "from": "0x1008ce9f8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultManagerPermissionCheckFailMsg"
+            },
+            {
+              "address": "0x1005783d1",
+              "references": [
+                {
+                  "from": "0x1008cea18",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultPermissionFixButtonLabel"
+            },
+            {
+              "address": "0x1005783ef",
+              "references": [
+                {
+                  "from": "0x1008cea38",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultManagerPermissionCheckFailTitle"
+            },
+            {
+              "address": "0x100578414",
+              "references": [
+                {
+                  "from": "0x1008cea58",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultLastUpdatedMessage"
+            },
+            {
+              "address": "0x10057842c",
+              "references": [
+                {
+                  "from": "0x1008cea78",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultManagedImageMessage"
+            },
+            {
+              "address": "0x100578445",
+              "references": [
+                {
+                  "from": "0x1008cea98",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultManagedImagesMessage"
+            },
+            {
+              "address": "0x10057845f",
+              "references": [
+                {
+                  "from": "0x1008ceab8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultReferencedImageMessage"
+            },
+            {
+              "address": "0x10057847b",
+              "references": [
+                {
+                  "from": "0x1008cead8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultReferencedImagesMessage"
+            },
+            {
+              "address": "0x100578498",
+              "references": [
+                {
+                  "from": "0x1008ceaf8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateSelectedVaultFormat"
+            },
+            {
+              "address": "0x1005784b2",
+              "references": [
+                {
+                  "from": "0x1008ceb18",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateOldSelectedVaultFormat"
+            },
+            {
+              "address": "0x1005784cf",
+              "references": [
+                {
+                  "from": "0x1008ceb38",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateSelectedVault"
+            },
+            {
+              "address": "0x1005784e3",
+              "references": [
+                {
+                  "from": "0x1008ceb58",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "doNotUpdateVaults"
+            },
+            {
+              "address": "0x1005784f5",
+              "references": [
+                {
+                  "from": "0x1008ceb78",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateForiegnVaultFormat"
+            },
+            {
+              "address": "0x10057850e",
+              "references": [
+                {
+                  "from": "0x1008ceb98",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "allVaultsAreOfflineTitle"
+            },
+            {
+              "address": "0x100578527",
+              "references": [
+                {
+                  "from": "0x1008cebb8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "allVaultsAreOfflineMessage"
+            },
+            {
+              "address": "0x100578542",
+              "references": [
+                {
+                  "from": "0x1008cebd8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateAllVaults"
+            },
+            {
+              "address": "0x100578552",
+              "references": [
+                {
+                  "from": "0x1008cebf8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateConnectedVaultsTitle"
+            },
+            {
+              "address": "0x10057856d",
+              "references": [
+                {
+                  "from": "0x1008cec18",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateConnectedVaultsMessage"
+            },
+            {
+              "address": "0x10057858a",
+              "references": [
+                {
+                  "from": "0x1008cec38",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateAllVaultsTitle"
+            },
+            {
+              "address": "0x10057859f",
+              "references": [
+                {
+                  "from": "0x1008cec58",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateAllVaultsMessage"
+            },
+            {
+              "address": "0x1005785b6",
+              "references": [
+                {
+                  "from": "0x1008cec78",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "allVaultsAreUpToDateMessage"
+            },
+            {
+              "address": "0x1005785d2",
+              "references": [
+                {
+                  "from": "0x1008cec98",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "allVaultsNotEnoughSpaceMessage"
+            },
+            {
+              "address": "0x1005785f1",
+              "references": [
+                {
+                  "from": "0x1008cecb8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "createVaultPrompt"
+            },
+            {
+              "address": "0x100578603",
+              "references": [
+                {
+                  "from": "0x1008cecd8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "noVaultsTitle"
+            },
+            {
+              "address": "0x100578611",
+              "references": [
+                {
+                  "from": "0x1008cecf8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "noVaultsMessage"
+            },
+            {
+              "address": "0x100578621",
+              "references": [
+                {
+                  "from": "0x1008ced18",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateVaultPath"
+            },
+            {
+              "address": "0x100578631",
+              "references": [
+                {
+                  "from": "0x1008ced38",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "updateVaultPathPrompt"
+            },
+            {
+              "address": "0x100578647",
+              "references": [
+                {
+                  "from": "0x1008ced58",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultPathAlreadyUpToDateTitle"
+            },
+            {
+              "address": "0x100578665",
+              "references": [
+                {
+                  "from": "0x1008ced78",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultPathAlreadyUpToDateMessage"
+            },
+            {
+              "address": "0x100578685",
+              "references": [
+                {
+                  "from": "0x1008ced98",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "noVaultSelectedTitle"
+            },
+            {
+              "address": "0x10057869a",
+              "references": [
+                {
+                  "from": "0x1008cedb8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "noVaultSelectedMessage"
+            },
+            {
+              "address": "0x1005786b1",
+              "references": [
+                {
+                  "from": "0x1008cedd8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "removeAndDeleteVault"
+            },
+            {
+              "address": "0x1005786c6",
+              "references": [
+                {
+                  "from": "0x1008cedf8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "removeVault"
+            },
+            {
+              "address": "0x1005786d2",
+              "references": [
+                {
+                  "from": "0x1008cee18",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "removeVaultTitle"
+            },
+            {
+              "address": "0x1005786e3",
+              "references": [
+                {
+                  "from": "0x1008cee38",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "removeVaultWarning"
+            },
+            {
+              "address": "0x1005836e2",
+              "references": [
+                {
+                  "from": "0x1008d71b8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "select a.zUuid, a.zName, av.zVolumePath, av.zVolumeRelativeArchivePath, a.zCreateDate,  a.zLastFullMasterFileUpdate, av.zLastKnownVaultSize, av.zLastKnownCapacity, av.zLastKnownAvailableSpace  from zRKArchive a join zRKArchiveVolume av on a.z_pk=av.zArchive"
+            },
+            {
+              "address": "0x10058521c",
+              "references": [
+                {
+                  "from": "0x1008d8f38",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultPrefixForVaultsDuringRestore"
+            },
+            {
+              "address": "0x10058523e",
+              "references": [
+                {
+                  "from": "0x1008d8f58",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "unableToRestoreIncorrectVersionMsg"
+            },
+            {
+              "address": "0x100585261",
+              "references": [
+                {
+                  "from": "0x1008d8f78",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "unableToRestorePermissionsMessage"
+            },
+            {
+              "address": "0x100585283",
+              "references": [
+                {
+                  "from": "0x1008d8f98",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "restoreNotEnoughSpaceFormat"
+            },
+            {
+              "address": "0x10058529f",
+              "references": [
+                {
+                  "from": "0x1008d8fb8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "restoreNotEnoughSpaceTitle"
+            },
+            {
+              "address": "0x1005852c3",
+              "references": [
+                {
+                  "from": "0x1008d8ff8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "deletingVault"
+            },
+            {
+              "address": "0x1005852d1",
+              "references": [
+                {
+                  "from": "0x1008d9018",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultDeleteInProgressNoQuitTitle"
+            },
+            {
+              "address": "0x1005852f2",
+              "references": [
+                {
+                  "from": "0x1008d9038",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultDeleteInProgressNoQuitMessage"
+            },
+            {
+              "address": "0x10058546c",
+              "references": [
+                {
+                  "from": "0x1008d9158",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultAlreadyExistsFormat"
+            },
+            {
+              "address": "0x100585485",
+              "references": [
+                {
+                  "from": "0x1008d9178",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultErrorReconnectingFormat"
+            },
+            {
+              "address": "0x1005854a2",
+              "references": [
+                {
+                  "from": "0x1008d9198",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultErrorIncorrectDatabaseFormat"
+            },
+            {
+              "address": "0x1005854c4",
+              "references": [
+                {
+                  "from": "0x1008d91b8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultErrorAddingBackVaultTitle"
+            },
+            {
+              "address": "0x1005854e3",
+              "references": [
+                {
+                  "from": "0x1008d91d8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultErrorAddingBackVaultsTitle"
+            },
+            {
+              "address": "0x100585503",
+              "references": [
+                {
+                  "from": "0x1008d91f8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultErrorFirstFiveErrors"
+            },
+            {
+              "address": "0x100585522",
+              "references": [
+                {
+                  "from": "0x1008d9238",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultPrefixForOldVaults"
+            },
+            {
+              "address": "0x100585562",
+              "references": [
+                {
+                  "from": "0x1008d92b8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultName"
+            },
+            {
+              "address": "0x10058556c",
+              "references": [
+                {
+                  "from": "0x1008d92d8",
+                  "function": null
+                }
+              ],
+              "section": "__cstring",
+              "text": "vaultDate"
+            },
+            {
+              "address": "0x10059279e",
+              "references": [
+                {
+                  "from": "0x100868c28",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "restoreGraphicsState"
+            },
+            {
+              "address": "0x10059bdc5",
+              "references": [
+                {
+                  "from": "0x1007c57d8",
+                  "function": null
+                },
+                {
+                  "from": "0x10086b648",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "vaultListController"
+            },
+            {
+              "address": "0x10059bdd9",
+              "references": [
+                {
+                  "from": "0x100750a60",
+                  "function": null
+                },
+                {
+                  "from": "0x1007fabc8",
+                  "function": null
+                },
+                {
+                  "from": "0x10086b650",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "a_toggleVaultPanel:"
+            },
+            {
+              "address": "0x10059ccc2",
+              "references": [
+                {
+                  "from": "0x100835b10",
+                  "function": null
+                },
+                {
+                  "from": "0x10086bbc8",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "restorePreviousLibraryPath"
+            },
+            {
+              "address": "0x10059d536",
+              "references": [
+                {
+                  "from": "0x1007c4de8",
+                  "function": null
+                },
+                {
+                  "from": "0x10086bea8",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "restoreSavedSelectionAndPersistAlbum"
+            },
+            {
+              "address": "0x10059dc1c",
+              "references": [
+                {
+                  "from": "0x100751888",
+                  "function": null
+                },
+                {
+                  "from": "0x10086c158",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "restoreWindowFromFS"
+            },
+            {
+              "address": "0x10059de10",
+              "references": [
+                {
+                  "from": "0x100751918",
+                  "function": null
+                },
+                {
+                  "from": "0x10086c228",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "fullScreenExitViewerRestore"
+            },
+            {
+              "address": "0x10059e03c",
+              "references": [
+                {
+                  "from": "0x1007fabb0",
+                  "function": null
+                },
+                {
+                  "from": "0x10086c2f8",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "isVaultPanelHidden"
+            },
+            {
+              "address": "0x10059fb9c",
+              "references": [
+                {
+                  "from": "0x1007528e0",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "m_restoreToolbarExitingFullscreen"
+            },
+            {
+              "address": "0x10059fbbe",
+              "references": [
+                {
+                  "from": "0x100752900",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "m_modeToRestoreAfterFSTransition"
+            },
+            {
+              "address": "0x1005a28a4",
+              "references": [
+                {
+                  "from": "0x1007570f8",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "_restoreInspector"
+            },
+            {
+              "address": "0x1005a71cd",
+              "references": [
+                {
+                  "from": "0x10075e758",
+                  "function": null
+                },
+                {
+                  "from": "0x10075e980",
+                  "function": null
+                },
+                {
+                  "from": "0x1007bfcb8",
+                  "function": null
+                },
+                {
+                  "from": "0x1007c0040",
+                  "function": null
+                },
+                {
+                  "from": "0x1007d43e0",
+                  "function": null
+                },
+                {
+                  "from": "0x100878750",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "restoreFactorySettings"
+            },
+            {
+              "address": "0x1005acc98",
+              "references": [
+                {
+                  "from": "0x1007677b0",
+                  "function": null
+                },
+                {
+                  "from": "0x10086f9a8",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "restoreHTML"
+            },
+            {
+              "address": "0x1005ad69a",
+              "references": [
+                {
+                  "from": "0x1007686c0",
+                  "function": null
+                },
+                {
+                  "from": "0x10086fc30",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "restoreFromDict:"
+            },
+            {
+              "address": "0x1005ad8ba",
+              "references": [
+                {
+                  "from": "0x100768a08",
+                  "function": null
+                },
+                {
+                  "from": "0x10086fce0",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "restoreThemeSettings:masterDictionary:"
+            },
+            {
+              "address": "0x1005af486",
+              "references": [
+                {
+                  "from": "0x10076b4d0",
+                  "function": null
+                },
+                {
+                  "from": "0x1008703b0",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "_restoreCGContext:"
+            },
+            {
+              "address": "0x1005c529f",
+              "references": [
+                {
+                  "from": "0x1007a1ee0",
+                  "function": null
+                },
+                {
+                  "from": "0x100875d90",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "verifyVaults:"
+            },
+            {
+              "address": "0x1005cbd8f",
+              "references": [
+                {
+                  "from": "0x1007b00a8",
+                  "function": null
+                },
+                {
+                  "from": "0x1007cc168",
+                  "function": null
+                },
+                {
+                  "from": "0x100877368",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "_restoreCurrentAlbumInfo"
+            },
+            {
+              "address": "0x1005cd557",
+              "references": [
+                {
+                  "from": "0x1007b4758",
+                  "function": null
+                },
+                {
+                  "from": "0x100877888",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "_setSnapsToScreenEdge:restoreWindow:animate:sizeOnly:edge:"
+            },
+            {
+              "address": "0x1005cd67c",
+              "references": [
+                {
+                  "from": "0x1007b47d0",
+                  "function": null
+                },
+                {
+                  "from": "0x100882d50",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "unsnapAndRestoreWindowSizeAnimate:"
+            },
+            {
+              "address": "0x1005cd6c6",
+              "references": [
+                {
+                  "from": "0x1007b4a28",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "_restoreWindow"
+            },
+            {
+              "address": "0x1005d4155",
+              "references": [
+                {
+                  "from": "0x100878f30",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "libraryRestoredFromVaultDistributor"
+            },
+            {
+              "address": "0x1005d50f0",
+              "references": [
+                {
+                  "from": "0x1007c4dd0",
+                  "function": null
+                },
+                {
+                  "from": "0x1008793f0",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "restoreSavedSelection"
+            },
+            {
+              "address": "0x1005d5598",
+              "references": [
+                {
+                  "from": "0x1007c6680",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "m_vaultListController"
+            },
+            {
+              "address": "0x1005d5d21",
+              "references": [
+                {
+                  "from": "0x1007c4a28",
+                  "function": null
+                },
+                {
+                  "from": "0x1008611c8",
+                  "function": null
+                },
+                {
+                  "from": "0x100884bd8",
+                  "function": null
+                }
+              ],
+              "section": "__objc_methname",
+              "text": "libraryRestoredFromVault:"
+            }
+          ],
+          "total": 278
+        },
+        "subject": {
+          "kind": "mach-o",
+          "name": "Aperture",
+          "sha256": "ec5b412048e771c120c67fa4c81bdd7428fe81ff1d7bc9b50504331b5019a7a4"
+        },
+        "summary": "278 strings match \"vault|backup|integrity|restore\"."
+      },
+      "isError": false
+    }
+  }
+]

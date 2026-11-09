@@ -2,6 +2,12 @@
   "version": 1,
   "values": [
     {
+      "name": "manual stack minimum selection",
+      "group": "organization",
+      "value": 2,
+      "source": "Aperture a_stack: 0x100044f0a; cmp rax,2 at 0x100044f4f and jb 0x100044f53; assembly ev_ea94337245c7a28f9d7b9dafcab24fc9d3ae3d2fc0df54b68989853ff1375bd8; StackRules checks actual selected photos; necessary prerequisite only, original additional guards unresolved"
+    },
+    {
       "name": "original version",
       "group": "compatibility",
       "value": "3.6",
@@ -90,6 +96,42 @@
       "group": "filtering",
       "value": "enabled query type 22; RKVersionIsFlagged equals integer 1; qualifier 5",
       "source": "Aperture 0x100157c47; assembly ev_8de68cf92bf67eda93f7405436fe7434677f01984bf25c961d6509586bc7dbed; BrowserFilterRules.includes; evidence/current-main-program-trace.json"
+    },
+    {
+      "name": "RAW+JPEG reset selection",
+      "group": "import",
+      "value": 1,
+      "source": "Aperture -[RKImportRAWPlusJPEGPairsTileController resetToDefaults] 0x1003f28e9, immediate 0x1003f2926; ev_7c6878a0328d8f2478ca5de4d6282994be5717829e86638ebfb19ec56c7aec8a; nib tag 1 Both/JPEG ev_f4285ecc1f2943dcbfe47ecab2eb65b366ef7134fea2261e86bf6d81f017db3c; applied as default only when no saved options"
+    },
+    {
+      "name": "RAW+JPEG option tags",
+      "group": "import",
+      "value": "1 Both/JPEG; 2 Both/RAW; 3 Separate; 4 JPEG only; 5 RAW only; 6 Matching RAW",
+      "source": "Original English.lproj/ImportRAWPlusJPEGPairs.nib selectedTag binding; ev_f4285ecc1f2943dcbfe47ecab2eb65b366ef7134fea2261e86bf6d81f017db3c; tag 6 remains unavailable; pairing catalogue model remains independent"
+    },
+    {
+      "name": "not matching RAW UI transformer",
+      "group": "import",
+      "value": "integerValue(input) != 6",
+      "source": "Aperture transformedValue: 0x1002b5bcd, cmp eax,6 at 0x1002b5be9 and setne 0x1002b5bec; ev_35a1576e57bb62059c66f94365526f9d1025f1b839eea6303a1dd3d815439c83; observed original UI rule, not used as a file-filter formula"
+    },
+    {
+      "name": "slideshow preset initial display time",
+      "group": "review",
+      "value": 3.0,
+      "source": "Aperture -[RKSlideshowPreset init] 0x10009ef9f; movsd 0x10009f15d loads f64 0x10054fe40=3.0 and setDisplayTime: selector 0x10086e230; ev_897e46652a86dc9ed27f1a31c2c3d64037089da91d6ae85bcfb541af706af27d; ev_54e75c2bc3b4a5ada25a458781a16d3b32c5e2b2cfe4bb8d559614bb1aa4cb41; checked assembly ev_e0a00156366c2d6af0d8472b04ecad14469e043991436e4663e833aa91002ead"
+    },
+    {
+      "name": "slideshow import guard",
+      "group": "review",
+      "value": "isImportInProgress -> alert and return",
+      "source": "Aperture _runSlideshowPromptForSettings: 0x1000495f1; selector 0x10086af58; test al,al 0x10004962d; assembly ev_175ef8797c08ef8a812afe159abe1bead2c066b9278dd5676d6a30c871704347; explicit native import state and shared startSlideshow guard"
+    },
+    {
+      "name": "restore source schema acceptance",
+      "group": "backup",
+      "value": "sourceVersion == currentVersion; mismatch returns false",
+      "source": "Aperture validateVaultAtPath: 0x10038c3f3; cmp/je 0x10038c424/0x10038c427; ev_577478aaaed404b126289b7f6c6e87aac0fd9bbfffe60f3ce11a266fa44d9905. Applied before destination prompt through LibraryBackup.validateBackup; Isonique schema version 1 is independent."
     }
   ]
 }
