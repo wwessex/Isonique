@@ -273,3 +273,10 @@
 - A corrupt source original blocked a combined merge of additions and edits. A corrupt destination original also blocked an edit-only merge. Both tests checked that the catalogue and original-file inventory stayed as they were before the operation.
 - The signed app listed Exposure, Rating, Caption and Keywords for one matching photo. Keep Current retained exposure 0.40. Use Imported changed it to 1.15 and saved the listed metadata with zero copies. Both original-file hashes and the source catalogue hash matched.
 - The optimized suite passed all 158 tests without skips, including four camera RAW fixtures. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.
+
+## Whole-library Trash reconciliation
+
+- Tests covered the unchecked default, exact identity matching, cancellation, repeat merges, and a shared original with an active version. Destination-only photos, photos already in destination Trash, and source-only Trash were retained in their respective libraries. Put Back restored the entire destination photo record after reopening.
+- Conflicting original IDs or fingerprints blocked publication. An immutable destination catalogue forced a save failure after staging new originals and verified that both additions and Trash moves rolled back.
+- In the signed app, the default kept both photos active. The enabled review listed the exact photo to move. The local-only version remained active and Put Back restored the moved photo with its edits and memberships. The source catalogue and original-file hashes matched their starting values.
+- The optimized suite passed all 161 tests without skips, including four camera RAW fixtures. The branding check and signed arm64 build passed on Apple M5 Pro, macOS 27.3 and Xcode 27.2.

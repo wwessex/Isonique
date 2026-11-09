@@ -288,7 +288,13 @@ extension Workspace {
         let policyPicker = NSPopUpButton()
         policyPicker.addItems(withTitles: choices.map(\.title))
         policyPicker.setAccessibilityLabel("Matching photo policy")
-        let accessory = NSStackView(views: [NSTextField(labelWithString: "Matching photos"), policyPicker])
+        let policyRow = NSStackView(views: [NSTextField(labelWithString: "Matching photos"), policyPicker])
+        policyRow.spacing = 8
+        let trashOption = NSButton(checkboxWithTitle: "Apply source Library Trash to matching photos", target: nil, action: nil)
+        trashOption.state = .off
+        let accessory = NSStackView(views: [policyRow, trashOption])
+        accessory.orientation = .vertical
+        accessory.alignment = .leading
         accessory.spacing = 8
         accessory.frame.size = accessory.fittingSize
         panel.accessoryView = accessory
@@ -296,16 +302,18 @@ extension Workspace {
         guard panel.runModal() == .OK, let source = panel.url else { return }
         let selectedPolicy = policyPicker.indexOfSelectedItem
         let policy = choices.indices.contains(selectedPolicy) ? choices[selectedPolicy].policy : .addOnly
-        Task { await mergeLibraries(from: source, photoPolicy: policy) }
+        let applyTrash = trashOption.state == .on
+        Task { await mergeLibraries(from: source, photoPolicy: policy, applyTrash: applyTrash) }
     }
 
-    func mergeLibraries(from source: URL, photoPolicy: LibraryMergePhotoPolicy = .addOnly) async {
+    func mergeLibraries(from source: URL, photoPolicy: LibraryMergePhotoPolicy = .addOnly, applyTrash: Bool = false) async {
         guard let repository, !busy else { return }
         busy = true
         status = "Comparing library catalogues…"
         let reservedHistory = history
         let task = Task.detached(priority: .utility) {
-            try await repository.mergeLibrary(from: source, photoPolicy: photoPolicy, reserving: reservedHistory, review: { preview in
+            try await repository.mergeLibrary(from: source, photoPolicy: photoPolicy, applyTrash: applyTrash,
+                                              reserving: reservedHistory, review: { preview in
                 await self.reviewLibraryMerge(preview, sourceName: source.lastPathComponent)
             }) { progress in
                 await self.reportLibraryMergeProgress(progress)
@@ -327,6 +335,12 @@ extension Workspace {
                 if result.preview.photosToUpdate > 0 {
                     let updated = mergeCount(result.preview.photosToUpdate, "matching photo", "matching photos")
                     status += " · \(updated) updated"
+                }
+                if !result.preview.trashMoves.isEmpty {
+                    batchSelection.subtract(result.preview.trashMoves.map(\.photoID))
+                    selectAfterChange(preferred: selection)
+                    let trashed = mergeCount(result.preview.trashMoves.count, "photo", "photos")
+                    status += " · \(trashed) moved to Library Trash"
                 }
             } else {
                 status = "Library merge found no changes to apply"
@@ -358,8 +372,12 @@ extension Workspace {
         var summary = [
             "\(projects), \(albums), \(photos).",
             "\(originals) to copy, \(preview.reusableOriginals) reusable by ID and fingerprint, \(preview.sharedOriginalsInSource) shared by source versions.",
-            "Source Library Trash is excluded (\(trashed))."
+            "Source Library Trash records excluded from this merge (\(trashed))."
         ]
+        if !preview.trashMoves.isEmpty {
+            let moves = mergeCount(preview.trashMoves.count, "matching photo", "matching photos")
+            summary.append("\(moves) will move to Library Trash. Use Put Back to restore them.")
+        }
         let differences = mergeCount(preview.photoDifferences.count, "matching photo", "matching photos")
         switch preview.photoPolicy {
         case .addOnly:
@@ -381,7 +399,15 @@ extension Workspace {
             let scope = $0.projectName.map { " (\($0))" } ?? ""
             return "\($0.photoName)\(scope) — \($0.fields.joined(separator: ", "))"
         }
-        let report = preview.conflicts + projectRows + (photoRows.isEmpty ? [] : ["", "Matching photo differences"] + photoRows)
+        var report = preview.conflicts + projectRows
+        if !photoRows.isEmpty { report += ["", "Matching photo differences"] + photoRows }
+        if !preview.trashMoves.isEmpty {
+            report += ["", "Move to Library Trash"]
+            report += preview.trashMoves.map {
+                let scope = $0.projectName.map { " (\($0))" } ?? ""
+                return $0.photoName + scope
+            }
+        }
         if !report.isEmpty {
             let scroll = NSTextView.scrollableTextView()
             scroll.frame.size = NSSize(width: 400, height: min(180, max(65, report.count * 24)))
@@ -389,7 +415,7 @@ extension Workspace {
                 text.string = report.joined(separator: "\n")
                 text.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
                 text.isEditable = false
-                text.setAccessibilityLabel("Project breakdown, photo differences and identity conflicts")
+                text.setAccessibilityLabel("Project breakdown, photo differences, Trash moves and identity conflicts")
             }
             alert.accessoryView = scroll
         }

@@ -18,6 +18,12 @@ public struct LibraryMergePhotoDifference: Sendable {
     public let fields: [String]
 }
 
+public struct LibraryMergeTrashMove: Sendable {
+    public let photoID: UUID
+    public let photoName: String
+    public let projectName: String?
+}
+
 public struct LibraryMergeProjectPreview: Sendable {
     public let name: String
     public let isNew: Bool
@@ -35,11 +41,12 @@ public struct LibraryMergePreview: Sendable {
     public let conflicts: [String]
     public let photoPolicy: LibraryMergePhotoPolicy
     public let photoDifferences: [LibraryMergePhotoDifference]
+    public let trashMoves: [LibraryMergeTrashMove]
 
     public var photosToAdd: Int { projects.reduce(0) { $0 + $1.photosToAdd } }
     public var hasAdditions: Bool { photosToAdd > 0 || albumsToAdd > 0 || projects.contains(where: \.isNew) }
     public var photosToUpdate: Int { photoPolicy == .preferIncoming ? photoDifferences.count : 0 }
-    public var hasChanges: Bool { hasAdditions || photosToUpdate > 0 }
+    public var hasChanges: Bool { hasAdditions || photosToUpdate > 0 || !trashMoves.isEmpty }
 }
 
 public struct LibraryMergeResult {
@@ -58,21 +65,24 @@ public enum LibraryMergeError: LocalizedError {
 public extension LibraryRepository {
     /// Compare catalogues without opening or creating either library and without reading original files.
     func previewLibraryMerge(from folder: URL, photoPolicy: LibraryMergePhotoPolicy = .addOnly,
-                             reserving history: EditHistory? = nil) throws -> LibraryMergePreview {
+                             applyTrash: Bool = false, reserving history: EditHistory? = nil) throws -> LibraryMergePreview {
         let sourceRoot = try wholeLibraryMergeSource(folder)
         let (_, source) = try LibraryBackup.readCatalogue(sourceRoot)
         let (_, destination) = try LibraryBackup.readCatalogue(root)
-        return try WholeLibraryMergePlan(source: source, destination: destination, photoPolicy: photoPolicy, history: history).preview
+        return try WholeLibraryMergePlan(source: source, destination: destination, photoPolicy: photoPolicy,
+                                         applyTrash: applyTrash, history: history).preview
     }
 
-    /// Add compatible records and optionally reconcile editable values on matching photos.
-    func mergeLibrary(from folder: URL, photoPolicy: LibraryMergePhotoPolicy = .addOnly, reserving history: EditHistory? = nil,
+    /// Add compatible records and optionally reconcile edits or explicit Trash on matching photos.
+    func mergeLibrary(from folder: URL, photoPolicy: LibraryMergePhotoPolicy = .addOnly, applyTrash: Bool = false,
+                      reserving history: EditHistory? = nil,
                       review: (LibraryMergePreview) async -> Bool,
                       progress: (ImportProgress) async -> Void = { _ in }) async throws -> LibraryMergeResult {
         let sourceRoot = try wholeLibraryMergeSource(folder)
         let (sourceCatalogue, source) = try LibraryBackup.readCatalogue(sourceRoot)
         let (catalogue, destination) = try LibraryBackup.readCatalogue(root)
-        let plan = try WholeLibraryMergePlan(source: source, destination: destination, photoPolicy: photoPolicy, history: history)
+        let plan = try WholeLibraryMergePlan(source: source, destination: destination, photoPolicy: photoPolicy,
+                                             applyTrash: applyTrash, history: history)
         try Task.checkCancellation()
         let approved = await review(plan.preview)
         try Task.checkCancellation()
@@ -122,12 +132,14 @@ private struct WholeLibraryMergePlan {
     let newAlbums: [Collection]
     let newPhotos: [Photo]
     let updatedPhotos: [UUID: Photo]
+    let trashDates: [UUID: Date]
     let incomingOriginals: [Photo]
     let existingOriginals: [UUID: Photo]
     let occupiedStacks: Set<UUID>
     let occupiedPairs: Set<UUID>
 
-    init(source: Library, destination: Library, photoPolicy: LibraryMergePhotoPolicy, history: EditHistory?) throws {
+    init(source: Library, destination: Library, photoPolicy: LibraryMergePhotoPolicy, applyTrash: Bool,
+         history: EditHistory?) throws {
         let sourceOriginals = try source.uniqueOriginals()
         let destinationOriginals = try destination.uniqueOriginals()
         let sourceProjectIDs = Set(source.projects.map(\.id))
@@ -212,6 +224,23 @@ private struct WholeLibraryMergePlan {
                 additionCounts[photo.projectID, default: 0] += 1
             }
         }
+        var moves: [LibraryMergeTrashMove] = []
+        var dates: [UUID: Date] = [:]
+        if applyTrash {
+            for photo in source.photos {
+                try Task.checkCancellation()
+                guard let date = photo.trashedAt, let current = currentPhotos[photo.id],
+                      current.trashedAt == nil else { continue }
+                guard current.originalID == photo.originalID, current.sha256 == photo.sha256,
+                      !current.sha256.isEmpty else {
+                    conflicts.append("Trash identity — \(current.displayName) does not have a matching original ID and fingerprint.")
+                    continue
+                }
+                dates[current.id] = date
+                moves.append(LibraryMergeTrashMove(photoID: current.id, photoName: current.displayName,
+                                                   projectName: current.projectID.flatMap { currentProjectNames[$0] }))
+            }
+        }
         var stackConflicts: Set<UUID> = [], pairConflicts: Set<UUID> = []
         for photo in additions {
             try Task.checkCancellation()
@@ -258,12 +287,13 @@ private struct WholeLibraryMergePlan {
         preview = LibraryMergePreview(projects: projects, albumsToAdd: incomingAlbums.count,
                                       originalsToCopy: needed.filter { currentOriginals[$0.originalID] == nil }.count,
                                       reusableOriginals: reused, sharedOriginalsInSource: sourceUses.values.filter { $0 > 1 }.count,
-                                      trashedPhotosExcluded: source.photos.count - active.count, conflicts: conflicts,
-                                      photoPolicy: photoPolicy, photoDifferences: differences)
+                                      trashedPhotosExcluded: source.photos.count - active.count - moves.count,
+                                      conflicts: conflicts, photoPolicy: photoPolicy, photoDifferences: differences, trashMoves: moves)
         newProjects = incomingProjects
         newAlbums = incomingAlbums
         newPhotos = additions
         updatedPhotos = updates
+        trashDates = dates
         incomingOriginals = needed
         existingOriginals = currentOriginals
         occupiedStacks = storedStacks
@@ -275,10 +305,12 @@ private struct WholeLibraryMergePlan {
         draft.version = max(destination.version, source.version)
         draft.projects.append(contentsOf: newProjects)
         draft.albums.append(contentsOf: newAlbums)
-        if !updatedPhotos.isEmpty {
+        if !updatedPhotos.isEmpty || !trashDates.isEmpty {
             for index in draft.photos.indices {
                 try Task.checkCancellation()
-                if let updated = updatedPhotos[draft.photos[index].id] { draft.photos[index] = updated }
+                let id = draft.photos[index].id
+                if let updated = updatedPhotos[id] { draft.photos[index] = updated }
+                if let date = trashDates[id] { draft.photos[index].trashedAt = date }
             }
         }
         var newStackCounts: [UUID: Int] = [:]

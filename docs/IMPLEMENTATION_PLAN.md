@@ -71,12 +71,14 @@ Project exports also record the starting collapsed state, global stack picks and
 
 Project exports record eligible album definitions. Merge compares names independently from complete Smart Album rules, and the review identifies conflicting fields. Right-click a regular album to rename it. Regular albums shared across projects at export or merge are protected, including memberships in Library Trash. Smart Albums must stay scoped to the matching project on both sides. Rules exported as fixed memberships, album type or scope changes, and matching definitions in older exports keep their destination values. Album deletion reconciliation remains open.
 
-File → Merge Libraries compares two full catalogues without opening the source or reading original files during review. It shows additions per project, versions that can reuse originals and identity conflicts. On approval it verifies reused destination originals, copies new managed and referenced originals into managed storage, and publishes the additions with one catalogue write. It retains existing records, preserves complete new stacks and pairs, and excludes source Trash.
+File → Merge Libraries compares two full catalogues without opening the source or reading original files during review. It shows additions per project, versions that can reuse originals and identity conflicts. On approval it verifies reused destination originals, copies new managed and referenced originals into managed storage, and publishes the additions with one catalogue write. It retains existing records by default and preserves complete new stacks and pairs.
 
 The default is Add new items only. The two review options list differing adjustment and metadata fields on active photos with matching photo IDs, original IDs and fingerprints. Whole-library review compares the two current catalogues without an export baseline. It can keep current values or apply imported values to the listed fields in the same transaction as additions. It verifies the affected destination originals and preserves photo identities, storage and memberships.
 
+The Apply source Library Trash to matching photos checkbox starts off. When enabled, the review names active destination photos with explicit source Trash records and matching photo IDs, original IDs and recorded fingerprints. Conflicting Trash identities block publication. The approved move records the source Trash date and keeps the destination edits and memberships for Put Back. Destination-only records and existing Trash stay in place.
+
 ## Next implementation slice
 
-1. Add an opt-in whole-library Trash review for explicit source Trash records with matching photo and original identities. Preserve the default merge policy and retain destination-only photos.
+1. Add a read-only Empty Library Trash review. List the catalogue records eligible for removal and identify managed originals that would need a Finder Trash handoff. Protect originals still used by another version and keep referenced originals in their current locations.
 
 Other open core work includes Finder Trash handoff for Library Trash, relocation naming and subfolders, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
