@@ -32,9 +32,12 @@ final class ManagedOriginalRecoveryTests: XCTestCase {
         let catalogue = repo.root.appendingPathComponent("catalog.json")
         let before = try Data(contentsOf: catalogue)
 
+        let scoped = try repo.recoverMissingManagedOriginals(in: fixture.search, library: library, originalIDs: [first.id])
+        XCTAssertEqual(scoped.restored, ["Portrait.nef"])
+        XCTAssertThrowsError(try repo.availableOriginalURL(backup))
         let report = try repo.recoverMissingManagedOriginals(in: fixture.search, library: library)
 
-        XCTAssertEqual(report.restored, ["Portrait.nef", "Scan.tif"])
+        XCTAssertEqual(report.restored, ["Scan.tif"])
         XCTAssertEqual(report.occupied, ["Occupied.jpg"])
         XCTAssertEqual(report.unmatched, ["Wrong.jpg"])
         XCTAssertEqual(report.ambiguous, ["Duplicate.jpg"])
