@@ -681,6 +681,8 @@ enum EditTool: String { case select, crop, straighten, brush }
                 Button("Consolidate Selected Originals") {
                     Task { await workspace.consolidateSelectedOriginals() }
                 }.disabled(!workspace.canConsolidateSelectedOriginals)
+                Button("Relocate Originals…", action: workspace.relocateSelectedOriginalsPanel)
+                    .disabled(!workspace.canRelocateSelectedOriginals)
                 Button("Refresh Original Status", action: workspace.refreshOriginalStatus).disabled(workspace.busy || workspace.repository == nil)
                 Button("Restore Library Backup…", action: workspace.restoreLibraryPanel).disabled(workspace.busy)
                 Button("Recover Aperture Originals…", action: workspace.recoverPanel).disabled(workspace.busy || workspace.repository == nil)

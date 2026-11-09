@@ -277,8 +277,9 @@ public extension LibraryRepository {
         return url
     }
 
-    private static func verifyOriginal(_ url: URL, photo: Photo) throws {
-        guard (try? url.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true else {
+    internal static func verifyOriginal(_ url: URL, photo: Photo) throws {
+        let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
+        guard values.isRegularFile == true, values.isSymbolicLink != true else {
             throw LibraryError.originalUnavailable(photo.originalName)
         }
         guard try digest(url) == photo.sha256 else { throw LibraryError.integrity(photo.originalName) }
@@ -286,14 +287,19 @@ public extension LibraryRepository {
 
     @discardableResult
     private func installManagedOriginal(from input: URL, photo: Photo) throws -> URL {
-        let fm = FileManager.default
         let target = try managedOriginalURL(photo.filename)
+        try Self.installVerifiedOriginal(from: input, at: target, photo: photo)
+        return target
+    }
+
+    internal static func installVerifiedOriginal(from input: URL, at target: URL, photo: Photo) throws {
+        let fm = FileManager.default
         guard !fm.fileExists(atPath: target.path) else { throw LibraryError.unsafePath }
-        try Self.verifyOriginal(input, photo: photo)
+        try verifyOriginal(input, photo: photo)
         let staging = target.deletingLastPathComponent().appendingPathComponent(".isonique-original-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: staging) }
         try fm.copyItem(at: input, to: staging)
-        try Self.verifyOriginal(staging, photo: photo)
+        try verifyOriginal(staging, photo: photo)
         try Task.checkCancellation()
         // Install in one filesystem operation. A competing writer cannot replace an occupied path.
         try staging.withUnsafeFileSystemRepresentation { stagedPath in
@@ -304,6 +310,5 @@ public extension LibraryRepository {
                 }
             }
         }
-        return target
     }
 }

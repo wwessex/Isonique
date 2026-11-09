@@ -138,6 +138,35 @@ extension Workspace {
         }
     }
 
+    var canRelocateSelectedOriginals: Bool {
+        !busy && repository != nil && !isViewingTrash && !selectedOriginalIDs(for: .recoverManaged).isEmpty
+    }
+
+    func relocateSelectedOriginalsPanel() {
+        guard canRelocateSelectedOriginals else { return }
+        let ids = selectedOriginalIDs(for: .recoverManaged)
+        let panel = NSOpenPanel()
+        panel.title = "Relocate Originals"
+        panel.message = "Choose a folder outside this library. Isonique verifies the copies and saves their new references before sending the old managed files to Finder Trash."
+        panel.prompt = "Relocate Originals"
+        panel.canChooseDirectories = true
+        panel.canChooseFiles = false
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let folder = panel.url else { return }
+        Task { await relocateOriginals(ids, to: folder) }
+    }
+
+    func relocateOriginals(_ ids: Set<UUID>, to folder: URL) async {
+        await runOriginalJob(status: "Copying and verifying originals for relocation…") { repository, current in
+            var draft = current
+            let report = try repository.relocateManagedOriginals(ids, to: folder, in: &draft)
+            let summary = "\(report.relocated.count) relocated · \(report.unavailable.count) unavailable"
+            return (report.relocated.isEmpty ? nil : draft, OriginalJobResult(
+                title: "Relocate Originals", summary: summary, unavailable: report.unavailable,
+                occupied: report.occupied, failed: report.failed, renamed: report.renamed, retained: report.retained))
+        }
+    }
+
     private func runOriginalJob(status pending: String,
                                 operation: @escaping @Sendable (LibraryRepository, Library) throws -> (Library?, OriginalJobResult)) async {
         guard !busy, let repository else { return }
@@ -234,13 +263,16 @@ struct OriginalJobResult: Sendable {
     var unavailable: [String] = []
     var occupied: [String] = []
     var failed: [String] = []
+    var renamed: [String] = []
+    var retained: [String] = []
     var scanErrors = 0
     var cancelled = false
 
     var details: String {
         var lines = [summary]
         let groups = [("Unmatched", unmatched), ("Multiple verified copies", ambiguous),
-                      ("Original unavailable", unavailable), ("Destination unavailable", occupied), ("Could not restore", failed)]
+                      ("Original unavailable", unavailable), ("Destination unavailable", occupied), ("Operation failed for", failed),
+                      ("Saved under another name", renamed), ("Old file retained", retained)]
         for (label, names) in groups where !names.isEmpty {
             let first = names.prefix(4).joined(separator: ", ")
             lines.append("\(label) — \(first)" + (names.count > 4 ? " and \(names.count - 4) more" : ""))

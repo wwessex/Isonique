@@ -49,8 +49,10 @@ The folder picker can target selected Browser photos, the current project or the
 
 The File menu consolidates selected references into verified managed copies. Shared versions change storage together, and external originals stay in place. If the catalogue cannot be saved, the references stay in use and a retry can reuse the verified copies.
 
+The File menu relocates selected managed originals outside the library. It checks copies, saves new references for all versions, and then sends old managed files to Finder Trash. A failed or cancelled save can leave verified destination copies that a retry can reuse.
+
 ## Next implementation slice
 
-1. Implement managed-to-referenced relocation for selected originals. Verify destination copies and save all shared-version paths before releasing managed copies. Cover naming collisions, occupied targets, cancellation, catalogue save failure and safe retry.
+1. Extend relocation to existing references. Protect source files shared by other records and make the old-copy choice explicit.
 
 Other open core work includes Finder Trash handoff, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.
