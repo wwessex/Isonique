@@ -1,6 +1,12 @@
 import Darwin
 import Foundation
 
+// Default Mac volumes can resolve different spellings to the same directory entry.
+func managedFilenameKey(_ filename: String) -> String {
+    filename.folding(options: .caseInsensitive, locale: Locale(identifier: "en_US_POSIX"))
+        .precomposedStringWithCanonicalMapping
+}
+
 public enum OriginalStorage: String, Codable, CaseIterable, Identifiable {
     case managed = "Copy into library"
     case referenced = "Leave in current location"

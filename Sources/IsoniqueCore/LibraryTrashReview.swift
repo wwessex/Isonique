@@ -44,11 +44,11 @@ public extension LibraryRepository {
         let originals = try library.uniqueOriginals()
         let active = library.activePhotos
         let activeOriginalIDs = Set(active.map(\.originalID))
-        let activeManagedNames = Set(active.filter { $0.referencedPath == nil }.map { trashStorageKey($0.filename) })
+        let activeManagedNames = Set(active.filter { $0.referencedPath == nil }.map { managedFilenameKey($0.filename) })
         let trashedOriginalIDs = Set(trashed.map(\.originalID))
         var managedNameCounts: [String: Int] = [:]
         for original in originals where original.referencedPath == nil {
-            managedNameCounts[trashStorageKey(original.filename), default: 0] += 1
+            managedNameCounts[managedFilenameKey(original.filename), default: 0] += 1
         }
         let projects = Dictionary(library.projects.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
         let photos = trashed.map {
@@ -58,7 +58,7 @@ public extension LibraryRepository {
         for original in originals where trashedOriginalIDs.contains(original.originalID) {
             try Task.checkCancellation()
             let disposition: LibraryTrashOriginalDisposition
-            let key = trashStorageKey(original.filename)
+            let key = managedFilenameKey(original.filename)
             if original.referencedPath != nil {
                 disposition = .referenced
             } else if activeOriginalIDs.contains(original.originalID) || activeManagedNames.contains(key) {
@@ -75,10 +75,4 @@ public extension LibraryRepository {
         return LibraryTrashReview(photos: photos, originals: reviewedOriginals, pendingFilenames: pending,
                                   root: root, catalogue: catalogue)
     }
-}
-
-// Default Mac volumes can resolve different spellings to the same directory entry.
-func trashStorageKey(_ filename: String) -> String {
-    filename.folding(options: .caseInsensitive, locale: Locale(identifier: "en_US_POSIX"))
-        .precomposedStringWithCanonicalMapping
 }
