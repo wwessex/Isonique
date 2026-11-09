@@ -251,6 +251,143 @@ final class WholeLibraryMergeTests: XCTestCase {
         XCTAssertEqual(try snapshot(fixture.destination), corrupt)
     }
 
+    func testExplicitTrashIsOptInAndPreservesSharedOriginalsAndPutBack() async throws {
+        let fixture = try fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let date = Date(timeIntervalSinceReferenceDate: 100)
+        var current = try fixture.destination.load()
+        current.photos[0].adjustments.exposure = 0.7
+        let visibleVersion = try XCTUnwrap(current.createVersion(of: fixture.sharedPhoto.id, from: .current))
+        let alreadyTrashed = try XCTUnwrap(current.createVersion(of: fixture.sharedPhoto.id, from: .current))
+        current.photos[3].trashedAt = date.addingTimeInterval(-10)
+        let stack = UUID()
+        current.photos[0].stackID = stack
+        current.photos[2].stackID = stack
+        current.applyStackPick(StackPickChange(stackID: stack, photoID: fixture.sharedPhoto.id, selectionID: fixture.sharedPhoto.id))
+        try fixture.destination.save(current)
+
+        var source = try fixture.source.load()
+        var sourceTrash = try XCTUnwrap(source.photos.first { $0.id == fixture.sharedPhoto.id })
+        sourceTrash.trashedAt = date
+        var earlierTrash = alreadyTrashed
+        earlierTrash.trashedAt = date
+        let sourceOnlyTrash = try XCTUnwrap(source.photos.first { $0.trashedAt != nil })
+        source.photos = [sourceTrash, current.photos[2], earlierTrash, sourceOnlyTrash]
+        source.projects = [current.projects[0], try XCTUnwrap(source.projects.first { $0.id == sourceOnlyTrash.projectID })]
+        // The project that only contains an excluded Trash record already exists on both sides.
+        current.projects.append(source.projects[1])
+        source.albums = current.albums
+        source.stackBrowser = nil
+        try fixture.destination.save(current)
+        try fixture.source.save(source)
+        let before = try snapshot(fixture.destination)
+        let sourceBefore = try snapshot(fixture.source)
+
+        let defaultResult = try await fixture.destination.mergeLibrary(from: fixture.source.root, review: {
+            XCTAssertTrue($0.trashMoves.isEmpty)
+            XCTAssertEqual($0.trashedPhotosExcluded, 3)
+            XCTAssertFalse($0.hasChanges)
+            return true
+        })
+        XCTAssertEqual(defaultResult.library.photos, current.photos)
+        XCTAssertEqual(try snapshot(fixture.destination), before)
+
+        do {
+            _ = try await fixture.destination.mergeLibrary(from: fixture.source.root, applyTrash: true, review: {
+                XCTAssertEqual($0.trashMoves.map(\.photoID), [fixture.sharedPhoto.id])
+                XCTAssertEqual($0.trashMoves.map(\.photoName), ["Shared.png"])
+                XCTAssertEqual($0.trashMoves.first?.projectName, "Shared Project")
+                XCTAssertEqual($0.trashedPhotosExcluded, 2)
+                XCTAssertTrue($0.hasChanges)
+                XCTAssertFalse($0.hasAdditions)
+                return false
+            })
+            XCTFail("Expected declined Trash review to cancel")
+        } catch is CancellationError {}
+        XCTAssertEqual(try snapshot(fixture.destination), before)
+
+        let result = try await fixture.destination.mergeLibrary(from: fixture.source.root, photoPolicy: .preferIncoming,
+                                                                 applyTrash: true, review: { _ in true })
+        let (repository, saved) = try LibraryBackup.openVerified(fixture.destination.root)
+        var expected = current.photos
+        expected[0].trashedAt = date
+        XCTAssertEqual(result.preview.photosToUpdate, 0)
+        XCTAssertEqual(result.preview.originalsToCopy, 0)
+        XCTAssertEqual(saved.photos, expected)
+        XCTAssertEqual(saved.stackBrowser, current.stackBrowser)
+        XCTAssertTrue(saved.activePhotos.contains { $0.id == visibleVersion.id })
+        XCTAssertEqual(try snapshot(repository).originals, before.originals)
+        XCTAssertEqual(try snapshot(fixture.source), sourceBefore)
+        let merged = try snapshot(repository)
+        let retry = try await repository.mergeLibrary(from: fixture.source.root, applyTrash: true, review: {
+            XCTAssertTrue($0.trashMoves.isEmpty)
+            XCTAssertFalse($0.hasChanges)
+            return true
+        })
+        XCTAssertFalse(retry.preview.hasChanges)
+        XCTAssertEqual(try snapshot(repository), merged)
+
+        var restored = saved
+        XCTAssertEqual(restored.setPhotosTrashed([fixture.sharedPhoto.id], at: nil), [expected[0]])
+        try repository.save(restored)
+        let (_, reopened) = try LibraryBackup.openVerified(repository.root)
+        XCTAssertEqual(reopened.photos, current.photos)
+        XCTAssertEqual(try snapshot(repository).originals, before.originals)
+    }
+
+    func testTrashIdentityConflictsBlockPublication() async throws {
+        let fixture = try fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        let before = try snapshot(fixture.destination)
+        var source = try fixture.source.load()
+        let shared = try XCTUnwrap(source.photos.first { $0.id == fixture.sharedPhoto.id })
+        for changeOriginalID in [true, false] {
+            var trashed = shared
+            trashed.trashedAt = Date()
+            if changeOriginalID { trashed.sharedOriginalID = UUID() }
+            else { trashed.sha256 = String(repeating: "0", count: 64) }
+            source.photos = [trashed]
+            source.stackBrowser = nil
+            try fixture.source.save(source)
+            XCTAssertTrue(try fixture.destination.previewLibraryMerge(from: fixture.source.root).conflicts.isEmpty)
+            do {
+                _ = try await fixture.destination.mergeLibrary(from: fixture.source.root, applyTrash: true, review: {
+                    XCTAssertTrue($0.trashMoves.isEmpty)
+                    XCTAssertEqual($0.conflicts.count, 1)
+                    XCTAssertTrue($0.conflicts[0].hasPrefix("Trash identity — Shared.png"))
+                    return true
+                })
+                XCTFail("Expected mismatched Trash identity to block publication")
+            } catch LibraryMergeError.identityConflicts {}
+            XCTAssertEqual(try snapshot(fixture.destination), before)
+        }
+    }
+
+    func testTrashMovesAndAdditionsRollBackTogetherOnSaveFailure() async throws {
+        let fixture = try fixture()
+        defer { try? FileManager.default.removeItem(at: fixture.root) }
+        var source = try fixture.source.load()
+        let index = try XCTUnwrap(source.photos.firstIndex { $0.id == fixture.sharedPhoto.id })
+        source.photos[index].trashedAt = Date()
+        try fixture.source.save(source)
+        let before = try snapshot(fixture.destination)
+        let sourceBefore = try snapshot(fixture.source)
+        let catalogue = fixture.destination.root.appendingPathComponent("catalog.json")
+        try FileManager.default.setAttributes([.immutable: true], ofItemAtPath: catalogue.path)
+        defer { try? FileManager.default.setAttributes([.immutable: false], ofItemAtPath: catalogue.path) }
+        do {
+            _ = try await fixture.destination.mergeLibrary(from: fixture.source.root, applyTrash: true, review: {
+                XCTAssertEqual($0.trashMoves.map(\.photoID), [fixture.sharedPhoto.id])
+                XCTAssertEqual($0.photosToAdd, 4)
+                XCTAssertEqual($0.originalsToCopy, 2)
+                return true
+            })
+            XCTFail("Expected catalogue save failure")
+        } catch is CocoaError {}
+        XCTAssertEqual(try snapshot(fixture.destination), before)
+        XCTAssertEqual(try snapshot(fixture.source), sourceBefore)
+    }
+
     func testDecliningAndCancellingThenFailedSaveLeaveNoAdditions() async throws {
         let fixture = try fixture()
         defer { try? FileManager.default.removeItem(at: fixture.root) }
