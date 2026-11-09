@@ -58,11 +58,11 @@ struct VersionsView: View {
     let photo: Photo
     @State private var name = ""
     var body: some View {
-        DisclosureGroup("Editing Versions") {
+        DisclosureGroup("Adjustment Snapshots") {
             VStack(alignment: .leading, spacing: 10) {
-                Text("Save named adjustments and return to them later. Versions share this photo’s original and metadata.").font(.caption).foregroundStyle(.secondary)
-                TextField("Version name", text: $name)
-                Button("Save Current Version") {
+                Text("Save named adjustments and return to them later. Snapshots change adjustments on this version.").font(.caption).foregroundStyle(.secondary)
+                TextField("Snapshot name", text: $name)
+                Button("Save Current Adjustments") {
                     let version = PhotoVersion(name: name.trimmingCharacters(in: .whitespacesAndNewlines), adjustments: photo.adjustments)
                     model.edit { $0.versions = ($0.versions ?? []) + [version] }; name = ""
                 }.disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -98,7 +98,7 @@ extension Workspace {
                     try BatchExport.prepareDirectory(folder, repository: repository)
                     for (index, photo) in snapshot.enumerated() {
                         let suffix = options.format == .original ? (photo.filename as NSString).pathExtension : options.format.suffix
-                        let base = ((photo.originalName as NSString).lastPathComponent as NSString).deletingPathExtension
+                        let base = photo.exportBaseName
                         let url = folder.appendingPathComponent("\(index + 1)-\(base).\(suffix)")
                         try Renderer.export(photo, repository: repository, to: url, options: options)
                         count += 1

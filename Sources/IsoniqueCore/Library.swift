@@ -196,6 +196,8 @@ public struct Collection: Codable, Identifiable, Equatable {
 public struct Photo: Codable, Identifiable, Equatable {
     public var id = UUID()
     public var trashedAt: Date?
+    public var sharedOriginalID: UUID?
+    public var versionName: String?
     public var referencedPath: String?
     public var stackID: UUID?
     public var versions: [PhotoVersion]?
@@ -231,9 +233,14 @@ public struct Library: Codable {
     public init() {}
 
     func validateSchema() throws {
-        if version == 2 { return }
-        guard version == 1, !photos.contains(where: { $0.referencedPath != nil }),
-              !albums.contains(where: { $0.rule?.query != nil || $0.rule?.projectID != nil }) else {
+        if version == 3 { return }
+        guard (1...2).contains(version),
+              !photos.contains(where: { $0.sharedOriginalID != nil || $0.versionName != nil }) else {
+            throw LibraryError.unsupportedVersion
+        }
+        if version == 1,
+           photos.contains(where: { $0.referencedPath != nil }) ||
+           albums.contains(where: { $0.rule?.query != nil || $0.rule?.projectID != nil }) {
             throw LibraryError.unsupportedVersion
         }
     }
@@ -309,11 +316,12 @@ public final class LibraryRepository {
         var library = try JSONDecoder().decode(Library.self, from: Data(contentsOf: url))
         try library.validateSchema()
         for index in library.photos.indices { library.photos[index].rating = RatingRules.clamp(library.photos[index].rating) }
-        for photo in library.photos { _ = try originalURL(photo) }
+        for photo in try library.uniqueOriginals() { _ = try originalURL(photo) }
         return library
     }
     public func save(_ library: Library) throws {
         try library.validateSchema()
+        _ = try library.uniqueOriginals()
         var normalized = library
         for index in normalized.photos.indices {
             normalized.photos[index].rating = RatingRules.clamp(normalized.photos[index].rating)
@@ -404,7 +412,7 @@ public final class LibraryRepository {
         guard try Self.digest(input) == hash else { throw LibraryError.integrity(source.lastPathComponent) }
         if referenced { photo.referencedPath = imageURL.path }
         let oldVersion = library.version
-        if referenced { library.version = 2 }
+        if referenced { library.version = max(library.version, 2) }
         library.photos.append(photo)
         do { try save(library) } catch {
             library.photos.removeLast()
@@ -475,6 +483,7 @@ public enum Renderer {
         return try renderOnCPU(url, adjustments: adjustments, maxDimension: maxDimension)
     }
     static func renderOnCPU(_ url: URL, adjustments: Adjustments, maxDimension: CGFloat?) throws -> CGImage {
+        try Task.checkCancellation()
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
         let width = properties[kCGImagePropertyPixelWidth as String] as? Int ?? 1
@@ -497,6 +506,7 @@ public enum Renderer {
             return exposed <= 0.0031308 ? exposed * 12.92 : 1.055 * pow(exposed, 1 / 2.4) - 0.055
         }
         for offset in stride(from: 0, to: decoded.width * decoded.height * 4, by: 4) {
+            if offset.isMultiple(of: 65_536) { try Task.checkCancellation() }
             let alpha = Double(pixels[offset + 3]) / 255
             guard alpha > 0 else { continue }
             let red = expose(Double(pixels[offset]) / (255 * alpha))

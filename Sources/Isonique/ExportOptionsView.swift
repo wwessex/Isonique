@@ -12,7 +12,7 @@ struct ExportOptionsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text(model.batchMode ? "Export Selected Photos" : "Export Photo").font(.title2.bold())
-            Text(model.batchMode ? "\(model.batchPhotos.count) selected photos" : (model.selected?.originalName ?? "")).foregroundStyle(.secondary)
+            Text(model.batchMode ? "\(model.batchPhotos.count) selected photos" : (model.selected?.displayName ?? "")).foregroundStyle(.secondary)
             HStack {
                 Menu("Load preset") {
                     ForEach(presets) { preset in Button(preset.name) { options = preset.options } }

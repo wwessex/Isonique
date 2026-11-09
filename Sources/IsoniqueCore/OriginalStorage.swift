@@ -24,7 +24,9 @@ public extension LibraryRepository {
         if photo.referencedPath != nil {
             try Self.verifyOriginal(input, photo: photo)
             var updated = library
-            updated.photos[index].referencedPath = input.path
+            for index in updated.photos.indices where updated.photos[index].originalID == photo.originalID {
+                updated.photos[index].referencedPath = input.path
+            }
             try save(updated)
             library = updated
         } else {
@@ -40,7 +42,9 @@ public extension LibraryRepository {
         let input = try availableOriginalURL(photo)
         let copy = try installManagedOriginal(from: input, photo: photo)
         var updated = library
-        updated.photos[index].referencedPath = nil
+        for index in updated.photos.indices where updated.photos[index].originalID == photo.originalID {
+            updated.photos[index].referencedPath = nil
+        }
         do { try save(updated) } catch {
             try? FileManager.default.removeItem(at: copy)
             throw error

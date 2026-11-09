@@ -88,7 +88,7 @@ struct SlideshowView: View {
                 Spacer()
                 Button("Done") { dismiss() }.keyboardShortcut(.cancelAction)
             }
-            Text(photos[index].originalName).font(.caption).lineLimit(1)
+            Text(photos[index].displayName).font(.caption).lineLimit(1)
         }.padding(18).frame(minWidth: 800, minHeight: 540)
         .task(id: index) {
             image = nil; failure = nil

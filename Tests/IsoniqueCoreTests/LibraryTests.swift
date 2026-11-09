@@ -358,7 +358,7 @@ final class LibraryTests: XCTestCase {
         try repo.save(library)
         let reopened = try repo.load()
         XCTAssertEqual(reopened.history?.undo.count, 100)
-        XCTAssertEqual(reopened.history?.undo.last?.caption, "")
+        XCTAssertEqual(reopened.history?.undo.last?.photo.caption, "")
         XCTAssertEqual(reopened.photos[0].caption, "After edit")
         library.history = nil; try repo.save(library); XCTAssertNil(try repo.load().history)
     }
@@ -948,4 +948,113 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(lifted.applying(to: target, groups: [], metadata: []), target)
     }
 
+}
+
+extension LibraryTests {
+    func testBrowsableVersionsShareOneOriginalAcrossExportsAndBackup() throws {
+        let source = try fixture()
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        XCTAssertTrue(try repo.importPhoto(source, projectID: nil, into: &library))
+        library.photos[0].adjustments.exposure = 1
+        library.photos[0].caption = "Initial"
+        library.photos[0].rating = 4
+        let original = library.photos[0]
+        XCTAssertEqual(original.originalID, original.id)
+        let duplicate = try XCTUnwrap(library.createVersion(of: original.id, from: .current))
+        let neutral = try XCTUnwrap(library.createVersion(of: duplicate.id, from: .original))
+        XCTAssertEqual(library.version, 3)
+        XCTAssertEqual(Set(library.photos.map(\.originalID)), [original.id])
+        XCTAssertEqual(Set(library.photos.map(\.id)).count, 3)
+        XCTAssertEqual(duplicate.adjustments, original.adjustments)
+        XCTAssertEqual(neutral.adjustments, Adjustments())
+        XCTAssertEqual(neutral.caption, "Initial")
+        XCTAssertEqual(neutral.rating, 4)
+        XCTAssertNotEqual(neutral.displayName, duplicate.displayName)
+        XCTAssertEqual(library.metadataTarget(named: original.originalName), original.id)
+
+        _ = library.updatePhotos([duplicate.id]) {
+            $0.caption = "Different"
+            $0.rating = 2
+        }
+        try repo.save(library)
+        var reloaded = try repo.load()
+        XCTAssertEqual(reloaded.photos, library.photos)
+        XCTAssertFalse(try repo.importPhoto(source, projectID: nil, into: &reloaded))
+        XCTAssertEqual(try LibraryBackup.verify(repo), 1)
+        let backup = temporary.appendingPathComponent("Backup")
+        try LibraryBackup.create(from: repo, to: backup)
+        XCTAssertEqual(try LibraryBackup.validateBackup(backup), 3)
+        XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: backup.appendingPathComponent("Originals").path).count, 1)
+        let restored = temporary.appendingPathComponent("Restored")
+        try LibraryBackup.restore(from: backup, to: restored, excluding: repo.root)
+        let (restoredRepo, restoredLibrary) = try LibraryBackup.openVerified(restored)
+        XCTAssertEqual(restoredLibrary.photos, reloaded.photos)
+
+        var options = ExportOptions()
+        options.format = .png
+        let edited = temporary.appendingPathComponent("edited.png")
+        let unedited = temporary.appendingPathComponent("unedited.png")
+        try Renderer.export(duplicate, repository: restoredRepo, to: edited, options: options)
+        try Renderer.export(neutral, repository: restoredRepo, to: unedited, options: options)
+        XCTAssertNotEqual(try LibraryRepository.digest(edited), try LibraryRepository.digest(unedited))
+        options.format = .original
+        let exportedOriginal = temporary.appendingPathComponent("original.png")
+        try Renderer.export(neutral, repository: restoredRepo, to: exportedOriginal, options: options)
+        XCTAssertEqual(try LibraryRepository.digest(exportedOriginal), try LibraryRepository.digest(source))
+        XCTAssertEqual(try LibraryRepository.digest(restoredRepo.availableOriginalURL(original)), original.sha256)
+    }
+
+    func testRelinkConsolidationAndRedoUpdateAllVersionsIncludingTrash() throws {
+        let source = try fixture()
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        var options = ImportOptions()
+        options.storage = .referenced
+        XCTAssertTrue(try repo.importPhoto(source, projectID: nil, into: &library, options: options))
+        let base = library.photos[0]
+        let duplicate = try XCTUnwrap(library.createVersion(of: base.id, from: .current))
+        let another = try XCTUnwrap(library.createVersion(of: base.id, from: .original))
+        _ = library.setPhotosTrashed([duplicate.id], at: Date())
+        var history = EditHistory()
+        history.record(.removeVersion(another))
+        XCTAssertNotNil(history.step(in: &library, redoing: false))
+
+        let relocated = temporary.appendingPathComponent("moved.png")
+        try FileManager.default.moveItem(at: source, to: relocated)
+        try repo.relinkOriginal(duplicate.id, to: relocated, in: &library)
+        XCTAssertEqual(Set(library.photos.compactMap(\.referencedPath)), [relocated.resolvingSymlinksInPath().path])
+        XCTAssertNotNil(history.step(in: &library, redoing: true))
+        XCTAssertEqual(library.photos.last?.referencedPath, relocated.resolvingSymlinksInPath().path)
+
+        try repo.consolidateOriginal(another.id, in: &library)
+        XCTAssertTrue(library.photos.allSatisfy { $0.referencedPath == nil })
+        XCTAssertEqual(try LibraryBackup.verify(repo), 1)
+        XCTAssertEqual(try repo.load().photos.count, 3)
+        XCTAssertEqual(try LibraryRepository.digest(relocated), base.sha256)
+        let otherFile = try fixture("other.png", red: 0.65)
+        XCTAssertTrue(try repo.importPhoto(otherFile, projectID: nil, into: &library, options: options))
+        XCTAssertEqual(try repo.load().version, 3)
+    }
+
+    func testCatalogueRejectsInconsistentOriginalsAndInvalidVersionChains() throws {
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        XCTAssertTrue(try repo.importPhoto(fixture(), projectID: nil, into: &library))
+        let first = library.photos[0]
+        let second = try XCTUnwrap(library.createVersion(of: first.id, from: .current))
+        _ = try XCTUnwrap(library.createVersion(of: first.id, from: .current))
+        try repo.save(library)
+
+        var invalid = library
+        invalid.photos[1].sha256 = "invalid"
+        XCTAssertThrowsError(try repo.save(invalid))
+        invalid = library
+        invalid.photos[2].sharedOriginalID = second.id
+        XCTAssertThrowsError(try repo.save(invalid))
+        invalid = library
+        invalid.version = 2
+        XCTAssertThrowsError(try repo.save(invalid))
+        XCTAssertEqual(try repo.load().photos, library.photos)
+    }
 }
