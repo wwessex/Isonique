@@ -45,7 +45,7 @@ Legacy recovery imports embedded originals and supported embedded metadata from 
 
 Isonique reads catalogue formats 1–7. Referenced originals and compound or project-scoped Smart Albums require format 2 or later. Browsable versions and stack controls require format 3 or later. Local brushes, channel curves, channel Levels and quarter-tones require formats 4, 5, 6 and 7 respectively. A library upgrades when it saves the relevant recipe in a photo, adjustment snapshot or persistent history. Backups include managed originals and retain the paths to referenced files. Keep a separate backup of those files.
 
-RAW decoding uses the Mac's ImageIO codecs. Camera RAW samples, high-bit-depth output and calibrated wide-gamut display behavior remain unqualified. Edited exports use 8-bit sRGB. The native macOS app is the sole maintained version.
+RAW decoding uses the Mac's ImageIO codecs. The Sony a7 III ARW, Canon EOS R CR3, Nikon Z 6 NEF and Ricoh GR III DNG samples passed import, editing and export on macOS 27.3. To repeat the test, place the four named fixtures from the public sample release in a local folder and run `ISONIQUE_RAW_FIXTURES=/absolute/path/to/fixtures make test-raw`. Edited exports use 8-bit sRGB. High-bit-depth output and calibrated wide-gamut display behavior remain unqualified. The native macOS app is the sole maintained version. [CC0 sample release](https://github.com/tellodaniel/revelraw-sample-raw-files/releases/tag/v1)
 
 ## Recovered mechanics
 
