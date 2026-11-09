@@ -7,10 +7,13 @@ public struct SmartAlbumRule: Codable, Equatable {
     public var ratingFilterIndex: Int?
     public var flaggedOnly: Bool
     public var text: String
+    public var query: PhotoQuery?
+    public var projectID: UUID?
     public init(minimumRating: Int = 0, flaggedOnly: Bool = false, text: String = "") {
         self.minimumRating = minimumRating; self.flaggedOnly = flaggedOnly; self.text = text
     }
-    public func includes(_ photo: Photo) -> Bool {
+    public func includes(_ photo: Photo, originalAvailable: () -> Bool? = { nil }) -> Bool {
+        if let projectID, projectID != photo.projectID { return false }
         let matchesRatingAndFlag: Bool
         if let index = ratingFilterIndex, let filter = RatingFilter(rawValue: index) {
             matchesRatingAndFlag = BrowserFilterRules.includes(rating: photo.rating, flagged: photo.flagged, ratingFilter: filter, flaggedOnly: flaggedOnly)
@@ -19,7 +22,8 @@ public struct SmartAlbumRule: Codable, Equatable {
             matchesRatingAndFlag = photo.rating >= minimumRating && (!flaggedOnly || photo.flagged)
         }
         return matchesRatingAndFlag &&
-        (text.isEmpty || [photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(text))
+            (text.isEmpty || [photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(text)) &&
+            (query?.includes(photo, originalAvailable: originalAvailable) ?? true)
     }
     public var selectedRatingFilter: RatingFilter {
         ratingFilterIndex.flatMap(RatingFilter.init(rawValue:)) ?? (minimumRating == -1 ? .all : RatingFilter(rawValue: minimumRating) ?? .unratedAndAbove)

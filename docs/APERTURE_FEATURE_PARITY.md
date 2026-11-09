@@ -20,7 +20,7 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 | Referenced originals, offline badges, reconnect, relocate, consolidate | Partially implemented | Optional referenced import, offline browser filter, verified single-file relink and copy consolidation. No bulk reconnect, managed-to-referenced relocation or offline preview cache. |
 | Projects, albums, sidebar navigation and project overview/skimming | Partially implemented | Flat projects and albums; membership, filters and sidebar navigation. No project covers or skimming. |
 | Nested folders and albums under projects; drag/drop and manual ordering | Missing | Sidebar groups are display sections only. |
-| Smart Albums and compound search | Partially implemented | Live rating, flag and text conjunction. No user-built All/Any rule set, date, lens, label, person, location, format or original status rules. |
+| Smart Albums and compound search | Partially implemented | Live All/Any rules for name, caption, keyword, camera, capture/import day, rating, flag, extension, adjustment status and original storage/availability. Smart Albums can be project-scoped. Advanced Search shares the rules and can save them as an album. No nested groups, full EXIF/IPTC, labels, person or location predicates. |
 | Manual and automatic stacks, picks, album picks, expand/collapse | Partially implemented | Explicit groups and capture-date time window; no persistent pick, album pick, collapse, promote or demote. |
 | Original/adjusted display, create and duplicate independently editable versions | Partially implemented | Saved adjustment snapshots can be restored. Versions are not separate browser items and have no independent metadata or comparison. |
 | Ratings, rejected state, flags and color labels | Partially implemented | Recovered rating bounds and filters, single/batch actions and flags. No color labels or keyboard culling equivalents. |
@@ -90,9 +90,9 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 
 | Surface | Status | Audit |
 | --- | --- | --- |
-| File | Partially implemented | Import (⌘I), export (⇧⌘E), metadata import, open/verify/backup/restore, legacy recovery and import options. Original also included library switching/creation, relocate/consolidate/reconnect, versions, deletion and print. |
+| File | Partially implemented | Import (⌘I), export (⇧⌘E), New Smart Album (⇧⌘L), metadata import, create/open/verify/backup/restore, relink/consolidate, photo Trash, legacy recovery and import options. Library merge, relocation, version deletion semantics and print remain open. |
 | Edit | Partially implemented | Undo/redo photo edit (⌘Z / ⇧⌘Z). Native text editing should retain text undo in focused inputs; application-wide override needs interaction review. |
-| View / Window | Partially implemented | SwiftUI window menu, sidebar/inspector, grid/viewer controls and Escape to Browser. Dedicated Aperture layouts, HUDs, overlays and window controls are absent. |
+| View / Window | Partially implemented | SwiftUI window menu, sidebar/inspector, Advanced Search (⇧⌘F), grid/viewer controls and Escape to Browser. Dedicated Aperture layouts, HUDs, overlays and window controls are absent. |
 | Images / Photos, Metadata, Adjustments | Partially implemented | Review and Rating menus, Inspector and edit strip expose some equivalents. No comprehensive photo, metadata or adjustment menu structure. |
 | Help | Partially implemented | Searchable Features & Limits window. No workflow help or command reference inside the app. |
 | Application preferences | Partially implemented | UserDefaults for import/export presets, history, crop ratio and library path. No Settings scene for general, appearance, import, export, labels, previews, accounts or advanced settings. |
