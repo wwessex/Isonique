@@ -34,6 +34,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var labelNames: [String: String]
     @Published var originalStatusRevision = 0
     @Published var originalJobResult: OriginalJobResult?
+    @Published var projectMergeTask: Task<ProjectLibraryMergeResult, Error>?
     @Published var projectImportTask: Task<ProjectLibraryImportResult, Error>?
     @Published var projectExportTask: Task<Int, Error>?
     @Published var originalJobTask: Task<(Library?, OriginalJobResult), Error>?
@@ -672,6 +673,12 @@ enum EditTool: String { case select, crop, straighten, brush }
                     .disabled(workspace.busy || workspace.repository == nil)
                 if let task = workspace.projectImportTask {
                     Button("Cancel Project Import", action: workspace.cancelProjectImport)
+                        .disabled(task.isCancelled)
+                }
+                Button("Merge Project Library…", action: workspace.mergeProjectLibraryPanel)
+                    .disabled(workspace.busy || workspace.repository == nil)
+                if let task = workspace.projectMergeTask {
+                    Button("Cancel Project Merge", action: workspace.cancelProjectMerge)
                         .disabled(task.isCancelled)
                 }
                 Button("Import XML / XMP Metadata…", action: workspace.importMetadataPanel)

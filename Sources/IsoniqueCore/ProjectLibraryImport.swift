@@ -11,6 +11,18 @@ public extension LibraryRepository {
     /// Add an independent project library without merging its records into existing projects.
     func importProjectLibrary(from folder: URL, reserving history: EditHistory? = nil,
                               progress: (ImportProgress) async -> Void = { _ in }) async throws -> ProjectLibraryImportResult {
+        let (sourceRoot, source, project) = try readProjectLibrary(from: folder, allowTrashed: false)
+        let originals = try source.uniqueOriginals()
+        let (catalogue, destination) = try LibraryBackup.readCatalogue(root)
+        let plan = try ProjectLibraryImportPlan(source: source, originals: originals, project: project,
+                                                destination: destination, history: history)
+        let transfers = try originals.map { (original: $0, filename: try plan.filename(for: $0) as String?) }
+        try await commitProjectLibrary(plan.result.library, catalogue: catalogue, sourceRoot: sourceRoot,
+                                       transfers: transfers, progress: progress)
+        return plan.result
+    }
+
+    internal func readProjectLibrary(from folder: URL, allowTrashed: Bool) throws -> (URL, Library, Collection) {
         try Task.checkCancellation()
         guard folder.isFileURL else { throw LibraryError.unsafePath }
         let sourceRoot = folder.standardizedFileURL.resolvingSymlinksInPath()
@@ -27,11 +39,14 @@ public extension LibraryRepository {
         guard sourceRoot.path != root.path else { throw LibraryError.unsafePath }
 
         let (_, source) = try LibraryBackup.readCatalogue(sourceRoot)
-        let originals = try source.uniqueOriginals()
-        let project = try source.validateExportedProject()
-        let (catalogue, destination) = try LibraryBackup.readCatalogue(root)
-        let plan = try ProjectLibraryImportPlan(source: source, originals: originals, project: project,
-                                                destination: destination, history: history)
+        _ = try source.uniqueOriginals()
+        return (sourceRoot, source, try source.validateExportedProject(allowTrashed: allowTrashed))
+    }
+
+    internal func commitProjectLibrary(_ library: Library, catalogue: Data, sourceRoot: URL,
+                                       transfers: [(original: Photo, filename: String?)],
+                                       progress: (ImportProgress) async -> Void) async throws {
+        let files = FileManager.default
         let staging = root.appendingPathComponent(".isonique-project-import-\(UUID().uuidString)", isDirectory: true)
         try files.createDirectory(at: staging, withIntermediateDirectories: false)
         var installed: [URL] = []
@@ -42,15 +57,19 @@ public extension LibraryRepository {
             }
             try? files.removeItem(at: staging)
         }
-        for (index, original) in originals.enumerated() {
+        for (index, transfer) in transfers.enumerated() {
             try Task.checkCancellation()
+            let original = transfer.original
             let input = try Self.managedOriginalURL(original.filename, in: sourceRoot)
-            try LibraryBackup.regularFile(input)
-            let filename = try plan.filename(for: original)
-            let copy = staging.appendingPathComponent(filename)
-            try files.copyItem(at: input, to: copy)
-            try Self.verifyOriginal(copy, photo: original)
-            await progress(ImportProgress(processed: index + 1, total: originals.count, filename: original.originalName))
+            if let filename = transfer.filename {
+                try LibraryBackup.regularFile(input)
+                let copy = staging.appendingPathComponent(filename)
+                try files.copyItem(at: input, to: copy)
+                try Self.verifyOriginal(copy, photo: original)
+            } else {
+                try Self.verifyOriginal(input, photo: original)
+            }
+            await progress(ImportProgress(processed: index + 1, total: transfers.count, filename: original.originalName))
         }
 
         try Task.checkCancellation()
@@ -68,9 +87,8 @@ public extension LibraryRepository {
         guard try Data(contentsOf: catalogueURL) == catalogue else {
             throw LibraryError.integrity("destination catalogue changed during import; try again")
         }
-        for original in originals {
+        for filename in transfers.compactMap(\.filename) {
             try Task.checkCancellation()
-            let filename = try plan.filename(for: original)
             let target = try managedOriginalURL(filename)
             try Self.publishStagedItem(staging.appendingPathComponent(filename), at: target)
             installed.append(target)
@@ -80,16 +98,15 @@ public extension LibraryRepository {
             throw LibraryError.integrity("destination catalogue changed during import; try again")
         }
         try Task.checkCancellation()
-        try save(plan.result.library)
+        try save(library)
         committed = true
-        return plan.result
     }
 }
 
 private extension Library {
-    func validateExportedProject() throws -> Collection {
+    func validateExportedProject(allowTrashed: Bool) throws -> Collection {
         guard projects.count == 1, let project = projects.first, project.rule == nil,
-              photos.allSatisfy({ $0.projectID == project.id && $0.trashedAt == nil && $0.referencedPath == nil }) else {
+              photos.allSatisfy({ $0.projectID == project.id && (allowTrashed || $0.trashedAt == nil) && $0.referencedPath == nil }) else {
             throw LibraryError.integrity("choose a self-contained library from Export Project as Library")
         }
         let albumIDs = Set(albums.map(\.id))
@@ -148,11 +165,7 @@ private struct ProjectLibraryImportPlan {
         var names = Set(oldPhotos.map { $0.filename.lowercased() })
         var copiedNames: [UUID: String] = [:]
         for original in originals {
-            let suffix = URL(fileURLWithPath: original.filename).pathExtension
-            var name: String
-            repeat { name = UUID().uuidString + (suffix.isEmpty ? "" : "." + suffix) }
-            while !names.insert(name.lowercased()).inserted
-            copiedNames[original.originalID] = name
+            copiedNames[original.originalID] = nextProjectOriginalFilename(original.filename, reserved: &names)
         }
         filenames = copiedNames
 
@@ -242,4 +255,12 @@ private struct ProjectImportIDs {
     }
 
     subscript(_ id: UUID) -> UUID { replacements[id] ?? id }
+}
+
+func nextProjectOriginalFilename(_ sourceName: String, reserved: inout Set<String>) -> String {
+    let suffix = URL(fileURLWithPath: sourceName).pathExtension
+    var name: String
+    repeat { name = UUID().uuidString + (suffix.isEmpty ? "" : "." + suffix) }
+    while !reserved.insert(name.lowercased()).inserted
+    return name
 }

@@ -130,12 +130,7 @@ extension Workspace {
             } onCancel: {
                 task.cancel()
             }
-            library = result.library
-            batchMode = false
-            batchSelection = []
-            showBrowser(allPhotos: true)
-            scope = "project:\(result.project.id)"
-            selection = photos.first?.id
+            showProjectTransfer(result.library, project: result.project)
             status = "Imported project · \(result.project.name) · \(result.photoCount) photos"
         } catch is CancellationError {
             status = "Project import cancelled"
@@ -146,7 +141,7 @@ extension Workspace {
     }
 
     private func reportProjectImportProgress(_ progress: ImportProgress) {
-        guard projectImportTask?.isCancelled == false else { return }
+        guard projectImportTask?.isCancelled == false || projectMergeTask?.isCancelled == false else { return }
         status = "Verified \(progress.processed) of \(progress.total) project originals…"
     }
 
@@ -154,6 +149,75 @@ extension Workspace {
         guard let task = projectImportTask, !task.isCancelled else { return }
         task.cancel()
         status = "Cancelling project import…"
+    }
+
+    func mergeProjectLibraryPanel() {
+        guard repository != nil, !busy else { return }
+        let panel = NSOpenPanel()
+        panel.title = "Merge Project Library"
+        panel.prompt = "Merge Project"
+        panel.message = "Choose an edited project export. Isonique finds the matching project by its saved ID and adds new photos and versions."
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        let preference = NSPopUpButton()
+        preference.addItems(withTitles: ["Keep current edits and memberships", "Use imported edits and memberships"])
+        preference.setAccessibilityLabel("Matching photos")
+        let applyTrash = NSButton(checkboxWithTitle: "Move matching photos marked as Trash into Library Trash", target: nil, action: nil)
+        let choice = NSStackView(views: [NSTextField(labelWithString: "Matching photos"), preference])
+        choice.spacing = 8
+        let accessory = NSStackView(views: [choice, applyTrash])
+        accessory.orientation = .vertical
+        accessory.alignment = .leading
+        accessory.spacing = 8
+        accessory.frame.size = accessory.fittingSize
+        panel.accessoryView = accessory
+        panel.isAccessoryViewDisclosed = true
+        guard panel.runModal() == .OK, let source = panel.url else { return }
+        let policy: ProjectMergePreference = preference.indexOfSelectedItem == 1 ? .incoming : .current
+        let includeTrash = applyTrash.state == .on
+        Task { await mergeProjectLibrary(from: source, prefer: policy, applyTrash: includeTrash) }
+    }
+
+    func mergeProjectLibrary(from source: URL, prefer preference: ProjectMergePreference, applyTrash: Bool) async {
+        guard let repository, !busy else { return }
+        busy = true
+        status = "Checking project library for merge…"
+        let task = Task.detached(priority: .utility) {
+            try await repository.mergeProjectLibrary(from: source, prefer: preference, applyTrash: applyTrash) { progress in
+                await self.reportProjectImportProgress(progress)
+            }
+        }
+        projectMergeTask = task
+        defer { projectMergeTask = nil; busy = false }
+        do {
+            let result = try await withTaskCancellationHandler {
+                try await task.value
+            } onCancel: {
+                task.cancel()
+            }
+            showProjectTransfer(result.library, project: result.project)
+            status = "Merged \(result.project.name) · \(result.added) added · \(result.updated) updated · \(result.trashed) trashed · \(result.skipped) skipped"
+        } catch is CancellationError {
+            status = "Project merge cancelled"
+        } catch {
+            self.error = error.localizedDescription
+            status = "Project merge failed"
+        }
+    }
+
+    private func showProjectTransfer(_ saved: Library, project: Collection) {
+        library = saved
+        batchMode = false
+        batchSelection = []
+        showBrowser(allPhotos: true)
+        scope = "project:\(project.id)"
+        selection = photos.first?.id
+    }
+
+    func cancelProjectMerge() {
+        guard let task = projectMergeTask, !task.isCancelled else { return }
+        task.cancel()
+        status = "Cancelling project merge…"
     }
 
     func verifyLibrary() {
