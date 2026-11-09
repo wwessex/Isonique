@@ -6,7 +6,7 @@ Isonique is an independent, native SwiftUI photo workspace for Apple Silicon Mac
 
 The current build supports managed and referenced originals, cancellable imports, multiple libraries, photo Trash, verified backups, compound Smart Albums, keyboard culling and non-destructive editing with local Dodge and Burn masks. Browsable versions share originals and can be compared side by side. Stacks support library-wide and album-specific picks, plus persistent collapse.
 
-The 9 November 2026 validation run passed 78 XCTest cases and the signed arm64 release build on Apple M5 Pro with macOS 27.3. Native QA exercised the Viewer clipping controls, comparison and Loupe on disposable libraries. Older macOS runtimes and physical camera workflows remain unverified. [Feature parity audit](docs/APERTURE_FEATURE_PARITY.md) · [Implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
+The 9 November 2026 validation run passed 82 XCTest cases and the signed arm64 release build on Apple M5 Pro with macOS 27.3. Native QA exercised the Viewer Loupe and channel curve editor on disposable libraries. Older macOS runtimes and physical camera workflows remain unverified. [Feature parity audit](docs/APERTURE_FEATURE_PARITY.md) · [Implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
 
 ## Build and run
 
@@ -43,7 +43,7 @@ Bulk import, rendering and recovery run off the UI thread. Edits are disabled du
 
 Legacy recovery imports embedded originals and supported embedded metadata from Aperture libraries. Proprietary recipes, database relationships, externally referenced files, Faces, Places, stacks and versions remain outside that recovery workflow. [Legacy library compatibility](COMPATIBILITY.md)
 
-Isonique reads catalogue formats 1–4. Referenced originals and compound or project-scoped Smart Albums require format 2 or later. Browsable versions and stack controls require format 3 or later. Saving a local brush recipe in a photo, adjustment snapshot, or persistent history upgrades the library to format 4, which requires a brush-capable build. Backups include managed originals and retain the paths to referenced files. Keep a separate backup of those files.
+Isonique reads catalogue formats 1–5. Referenced originals and compound or project-scoped Smart Albums require format 2 or later. Browsable versions and stack controls require format 3 or later. Local brush recipes require format 4 or later. Saving channel curves in a photo, adjustment snapshot or persistent history upgrades the library to format 5, which requires a curve-capable build. Backups include managed originals and retain the paths to referenced files. Keep a separate backup of those files.
 
 RAW decoding uses the Mac's ImageIO codecs. Camera RAW samples, high-bit-depth output and calibrated wide-gamut display behavior remain unqualified. Edited exports use 8-bit sRGB. The native macOS app is the sole maintained version.
 
@@ -83,7 +83,7 @@ Use **Photos → New Version from Original** (Option-G) for neutral adjustments 
 
 ### Review and tonal tools
 
-Inspector → Adjustments shows a live **luminance histogram** of a 384-pixel edited preview, **Levels** (black/white input points and gamma), and a **Master Tone Curve** (three output controls at 25%, 50%, 75% input). Levels and the piecewise-linear curve run after the other tone controls and before lens and geometry in the shared preview/export renderer. Reset buttons, presets, Undo/Redo, persistent history, named versions and the tone Stamp group include these settings. The tools use an independent 8-bit sRGB implementation. RGB channel curves remain pending.
+Inspector → Adjustments shows a live **luminance histogram** of a 384-pixel edited preview, **Levels** (black/white input points and gamma), and a **Master Tone Curve** (three output controls at 25%, 50%, 75% input). Open **Channel Curves** to edit red, green, blue or luminance independently. Click to add a point, drag to move it, or use the point picker and numeric controls. A completed drag is one Undo step. The new curves run after Levels and the master curve and before lens and geometry, in both preview and export. Reset, presets, persistent history, versions and the tone Stamp group include these settings.
 
 Choose **View → Highlight Hot & Cold Areas** or press **Option-Shift-H** to toggle both Viewer warnings. The View menu also has independent highlight and shadow switches. Red marks pixels where any rendered sRGB channel reaches the highlight threshold, blue marks pixels at or below the shadow threshold, and magenta marks pixels that meet both conditions. **Settings → Clipping Warnings** changes the default 100% highlight and 0% shadow thresholds. The warnings use the current preview before RGB proofing. They appear in the Viewer and side-by-side comparison and are excluded from exports.
 

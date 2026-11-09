@@ -19,8 +19,11 @@ The Viewer and comparison panes have highlight and shadow warnings with persiste
 
 The single-photo Viewer has a pointer-driven Loupe with full-resolution sampling, 200/400/800% magnification, a pixel grid and 8-bit sRGB readings. Tests cover coordinate mapping and alpha, and native QA verified the menu, readout and shortcut.
 
+The shared renderer and Inspector support independent red, green, blue and luminance curves. Format 5 protects the new recipes. Native QA covered point controls and Undo/Redo, and automated tests cover channel isolation, persistence and export pixels. The test record includes a 12 MP render measurement.
+
 ## Next implementation slice
 
-1. Extend curves with independent RGB and luminance editing through the shared renderer. Measure large-image rendering while adding these tools.
+1. Expand the edited histogram with combined RGB and independent channel displays.
+2. Extend Levels with per-channel controls and preserve existing recipes and export rendering.
 
 Other open core work includes Finder Trash handoff, batch relinking, original relocation, library merging/repair, import at camera devices, and interrupted-write recovery across multiple app processes. Build and interaction evidence should stay in the test record.

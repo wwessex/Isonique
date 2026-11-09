@@ -409,6 +409,41 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(try Data(contentsOf: root.appendingPathComponent("Originals/brush.png")), fixture)
     }
 
+    @MainActor
+    func testChannelCurveEditsUndoResetAndSurviveReopening() throws {
+        let root = try temporaryLibrary()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let suite = "IsoniqueCurveTests.\(UUID().uuidString)"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { preferences.removePersistentDomain(forName: suite) }
+        preferences.set(true, forKey: "history.persist")
+        let workspace = Workspace(libraryRoot: root, preferences: preferences)
+        let photo = Photo(filename: "curve.png", originalName: "curve.png", projectID: nil,
+                          width: 8, height: 8, camera: "", captureDate: "", sha256: "fixture")
+        var draft = workspace.library
+        draft.photos = [photo]
+        XCTAssertTrue(workspace.commit(draft))
+        workspace.selection = photo.id
+        var curve = ChannelCurve.identity
+        curve.insertPoint(input: 100, output: 180)
+        workspace.setChannelCurve(curve, for: .blue, photoID: UUID())
+        XCTAssertFalse(workspace.canUndo)
+        workspace.setChannelCurve(curve, for: .blue, photoID: photo.id)
+        XCTAssertEqual(workspace.library.version, 5)
+        XCTAssertEqual(workspace.selected?.adjustments.curve(for: .blue), curve)
+        XCTAssertEqual(workspace.selected?.adjustments.curve(for: .red), .identity)
+        workspace.undoEdit()
+        XCTAssertEqual(workspace.selected?.adjustments.curve(for: .blue), .identity)
+        let reopened = Workspace(libraryRoot: root, preferences: preferences)
+        XCTAssertTrue(reopened.canRedo)
+        reopened.redoEdit()
+        XCTAssertEqual(reopened.selected?.adjustments.curve(for: .blue), curve)
+        reopened.setChannelCurve(.identity, for: .blue, photoID: photo.id)
+        XCTAssertNil(reopened.selected?.adjustments.channelCurves)
+        reopened.undoEdit()
+        XCTAssertEqual(reopened.selected?.adjustments.curve(for: .blue), curve)
+    }
+
     private func temporaryLibrary() throws -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueUI-\(UUID().uuidString)")
         return try LibraryRepository.createEmpty(at: root).root
