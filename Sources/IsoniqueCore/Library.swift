@@ -491,6 +491,24 @@ public enum Renderer {
         // ImageIO still provides file decoding, including system-supported camera RAW.
         return try renderOnCPU(url, adjustments: adjustments, maxDimension: maxDimension)
     }
+    public static func thumbnail(_ url: URL, adjustments: Adjustments, maxDimension: Int) throws -> CGImage {
+        let size = max(1, maxDimension)
+        if adjustments != Adjustments() {
+            return try render(url, adjustments: adjustments, maxDimension: CGFloat(size))
+        }
+        try Task.checkCancellation()
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceThumbnailMaxPixelSize: size,
+            kCGImageSourceCreateThumbnailWithTransform: true
+        ]
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let thumbnail = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else {
+            throw LibraryError.unsupportedImage(url.lastPathComponent)
+        }
+        return thumbnail
+    }
+
     static func renderOnCPU(_ url: URL, adjustments: Adjustments, maxDimension: CGFloat?) throws -> CGImage {
         try Task.checkCancellation()
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),

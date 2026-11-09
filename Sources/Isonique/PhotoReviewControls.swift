@@ -137,12 +137,18 @@ struct ReviewSettingsView: View {
                 Text("Names apply across your Isonique libraries. The photo retains its color when you rename a label.")
                     .font(.caption).foregroundStyle(.secondary)
             }
+            Section("Browser") {
+                Picker("Layout", selection: Binding(get: { model.browserLayout }, set: model.setBrowserLayout)) {
+                    Text(BrowserPresentation.grid.rawValue).tag(BrowserPresentation.grid)
+                    Text(BrowserPresentation.list.rawValue).tag(BrowserPresentation.list)
+                }
+            }
             Section("Photo Review Keys") {
                 LabeledContent("Rating", value: "0–5")
                 LabeledContent("Reject", value: "9")
                 LabeledContent("Raise / Lower", value: "= / −")
                 LabeledContent("Flag or unflag", value: "/")
-                LabeledContent("Previous / Next", value: "← / →")
+                LabeledContent("Previous / Next", value: "← / → in Grid and Viewer, ↑ / ↓ in List")
                 Text("Click a photo to focus the Browser or Viewer before using the review keys.")
                     .font(.caption).foregroundStyle(.secondary)
             }

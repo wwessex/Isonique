@@ -322,6 +322,42 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(reopened.photos.map(\.id), [second.id])
     }
 
+    @MainActor
+    func testListBrowserRetainsLayoutAndUsesVisibleSelection() async throws {
+        let root = try temporaryLibrary()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let suite = "IsoniqueListTests.\(UUID().uuidString)"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { preferences.removePersistentDomain(forName: suite) }
+        let workspace = Workspace(libraryRoot: root, preferences: preferences)
+        let first = Photo(filename: "a.png", originalName: "a.png", projectID: nil,
+                          width: 32, height: 24, camera: "", captureDate: "", sha256: "fixture-a")
+        let second = Photo(filename: "b.png", originalName: "b.png", projectID: nil,
+                           width: 32, height: 24, camera: "", captureDate: "", sha256: "fixture-b")
+        var draft = workspace.library
+        draft.photos = [first, second]
+        XCTAssertTrue(workspace.commit(draft))
+        XCTAssertEqual(workspace.presentation, .grid)
+        workspace.choosePresentation(.list)
+        workspace.batchMode = true
+        workspace.search = "b.png"
+        workspace.setListSelection([first.id, second.id])
+        XCTAssertEqual(workspace.batchSelection, [second.id])
+        XCTAssertEqual(workspace.selected?.id, second.id)
+        workspace.openListPhoto(second.id)
+        XCTAssertEqual(workspace.presentation, .list)
+        workspace.batchMode = false
+        workspace.openListPhoto(first.id)
+        XCTAssertEqual(workspace.presentation, .list)
+        workspace.openListPhoto(second.id)
+        XCTAssertEqual(workspace.presentation, .viewer)
+        workspace.showBrowser()
+        XCTAssertEqual(workspace.presentation, .list)
+        workspace.setReviewRating(5)
+        XCTAssertEqual(workspace.selected?.rating, 5)
+        XCTAssertEqual(Workspace(libraryRoot: root, preferences: preferences).presentation, .list)
+    }
+
     private func temporaryLibrary() throws -> URL {
         let root = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueUI-\(UUID().uuidString)")
         return try LibraryRepository.createEmpty(at: root).root
