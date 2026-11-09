@@ -66,6 +66,10 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var showExportOptions = false
     @Published var showImportOptions = false
     @Published var pendingImport: [URL] = []
+    @Published var pendingDeviceImport: DeviceImportSource?
+    @Published var showDeviceImport = false
+    let cameraDiscovery = CameraDiscovery()
+    var hasPendingImport: Bool { !pendingImport.isEmpty || pendingDeviceImport != nil }
     @Published var proofProfile: Data?
     @Published var proofName = ""
     @Published var proofEnabled = false
@@ -457,19 +461,63 @@ enum EditTool: String { case select, crop, straighten, brush }
         let panel = NSOpenPanel(); panel.title = "Import photographs"
         panel.canChooseDirectories = true; panel.canChooseFiles = true; panel.allowsMultipleSelection = true
         guard panel.runModal() == .OK else { return }
-        pendingImport = panel.urls; showImportOptions = true
+        pendingDeviceImport = nil; pendingImport = panel.urls; showImportOptions = true
     }
-    func importURLs(_ urls: [URL], options: ImportOptions = ImportOptions(), newProjectName: String? = nil) {
+    func showImportSettings() {
+        pendingImport = []; pendingDeviceImport = nil; showImportOptions = true
+    }
+
+    func importDevicePanel() {
+        guard !busy, repository != nil else { return }
+        pendingImport = []; pendingDeviceImport = nil
+        cameraDiscovery.start()
+        showDeviceImport = true
+    }
+
+    func finishDevicePicker() {
+        if pendingDeviceImport != nil { showImportOptions = true }
+        else { cameraDiscovery.stop() }
+    }
+
+    func finishImportOptions() {
+        pendingImport = []; pendingDeviceImport = nil
+        if !importInProgress { cameraDiscovery.stop() }
+    }
+
+    func importURLs(_ urls: [URL], options: ImportOptions = ImportOptions(), newProjectName: String? = nil,
+                    device: DeviceImportSource? = nil) {
         guard !busy, let repository else { return }
+        if case .camera(let camera) = device, !cameraDiscovery.cameras.contains(camera) {
+            error = DeviceImportError.disconnected.localizedDescription
+            return
+        }
         busy = true; importInProgress = true; status = "Importing originals…"
         let initialLibrary = library
         let projectID = library.projects.first(where: { scope == "project:\($0.id)" })?.id
         let albumID = library.albums.first(where: { $0.rule == nil && scope == "album:\($0.id)" })?.id
         let task = Task.detached(priority: .userInitiated) {
             var draft = initialLibrary
-            let report = await ImportJob.run(urls: urls, options: options, repository: repository, projectID: projectID,
-                                             albumID: albumID, newProjectName: newProjectName, into: &draft) { progress in
-                await self.reportImportProgress(progress)
+            let report: ImportReport
+            let progress: (ImportProgress) async -> Void = { await self.reportImportProgress($0) }
+            switch device {
+            case .memoryCard(let card):
+                report = await ImportJob.run(memoryCard: card, options: options, repository: repository, projectID: projectID,
+                    albumID: albumID, newProjectName: newProjectName, into: &draft, progress: progress)
+            case .camera(let camera):
+                let session = await CameraImportSession(camera)
+                do {
+                    let files = try await session.catalogue()
+                    report = await ImportJob.run(cameraFiles: files, options: options, repository: repository, projectID: projectID,
+                        albumID: albumID, newProjectName: newProjectName, into: &draft, download: { file, destination in
+                            try await session.download(file, to: destination)
+                        }, progress: progress)
+                } catch {
+                    report = ImportReport(sourceError: error)
+                }
+                await session.close()
+            case nil:
+                report = await ImportJob.run(urls: urls, options: options, repository: repository, projectID: projectID,
+                    albumID: albumID, newProjectName: newProjectName, into: &draft, progress: progress)
             }
             return (draft, report)
         }
@@ -484,6 +532,7 @@ enum EditTool: String { case select, crop, straighten, brush }
             selection = report.selection ?? selection
             importTask = nil; importProgress = nil; cancellingImport = false
             importInProgress = false; busy = false
+            if device != nil { cameraDiscovery.stop() }
             let prefix = report.cancelled ? "Import cancelled · " : ""
             status = prefix + "Imported \(report.imported) · duplicates \(report.duplicates) · failed \(report.errors.count)"
             if !report.errors.isEmpty { error = report.errors.prefix(8).joined(separator: "\n") }
@@ -677,6 +726,8 @@ enum EditTool: String { case select, crop, straighten, brush }
                     .keyboardShortcut("l", modifiers: [.command, .shift])
                     .disabled(workspace.busy || workspace.repository == nil)
                 Button("Import Photos…", action: workspace.importPanel).keyboardShortcut("i").disabled(workspace.busy || workspace.repository == nil)
+                Button("Import from Camera or Card…", action: workspace.importDevicePanel)
+                    .disabled(workspace.busy || workspace.repository == nil)
                 if workspace.importInProgress {
                     Button("Cancel Import", action: workspace.cancelImport).disabled(workspace.cancellingImport)
                 }
@@ -699,7 +750,7 @@ enum EditTool: String { case select, crop, straighten, brush }
                 }
                 Button("Import XML / XMP Metadata…", action: workspace.importMetadataPanel)
                     .disabled(workspace.busy || workspace.isViewingTrash || workspace.library.activePhotos.isEmpty)
-                Button("Import & History Options…") { workspace.pendingImport = []; workspace.showImportOptions = true }.disabled(workspace.busy)
+                Button("Import & History Options…", action: workspace.showImportSettings).disabled(workspace.busy)
                 Divider()
                 Button("New Isonique Library…", action: workspace.createLibraryPanel).keyboardShortcut("n", modifiers: [.command, .shift]).disabled(workspace.busy)
                 Button("Open Isonique Library…", action: workspace.openLibraryPanel).disabled(workspace.busy)
@@ -1056,7 +1107,12 @@ struct ContentView: View {
         }
         .sheet(isPresented: $model.showSmartAlbum) { SmartAlbumView().environmentObject(model) }
         .sheet(isPresented: $model.showAdvancedSearch) { AdvancedSearchView().environmentObject(model) }
-        .sheet(isPresented: $model.showImportOptions) { ImportOptionsView().environmentObject(model) }
+        .sheet(isPresented: $model.showDeviceImport, onDismiss: model.finishDevicePicker) {
+            DeviceImportView(discovery: model.cameraDiscovery).environmentObject(model)
+        }
+        .sheet(isPresented: $model.showImportOptions, onDismiss: model.finishImportOptions) {
+            ImportOptionsView().environmentObject(model)
+        }
         .sheet(isPresented: $model.showRelocationOptions, onDismiss: model.chooseRelocationDestination) {
             RelocationOptionsView().environmentObject(model)
         }
@@ -1414,7 +1470,7 @@ struct Inspector: View {
                     Divider()
                     Text("Isonique preserves your originals. Camera RAW support depends on macOS decoders; editing uses Isonique’s own pixel formulas.").font(.caption).foregroundStyle(.secondary)
                     Button("Import XML / XMP Metadata…", action: model.importMetadataPanel).disabled(model.busy || model.library.activePhotos.isEmpty)
-                Button("Import & History Options…") { model.pendingImport = []; model.showImportOptions = true }
+                Button("Import & History Options…", action: model.showImportSettings)
                 Button("Recover Aperture Originals…", action: model.recoverPanel)
                     Text("Recovery copies and verifies the source first. Legacy albums, referenced files and editing recipes are not migrated.").font(.caption).foregroundStyle(.secondary)
                 }

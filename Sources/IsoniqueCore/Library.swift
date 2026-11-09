@@ -579,12 +579,11 @@ public final class LibraryRepository {
     public static func imageFiles(in folder: URL, shouldContinue: () -> Bool = { true }) -> [URL] {
         guard let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey], options: [.skipsHiddenFiles, .skipsPackageDescendants]) else { return [] }
         var files: [URL] = []
-        let imageExtensions: Set<String> = ["jpg", "jpeg", "png", "heic", "heif", "tif", "tiff", "gif", "bmp", "webp", "avif", "dng", "raw", "cr2", "cr3", "crw", "nef", "nrw", "arw", "srf", "sr2", "orf", "raf", "rw2", "pef", "ptx", "rwl", "3fr", "fff", "iiq", "mos", "mrw", "x3f", "erf", "kdc", "dcr", "srw"]
         for case let url as URL in enumerator {
             guard shouldContinue() else { break }
             let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
             if values?.isSymbolicLink == true { enumerator.skipDescendants(); continue }
-            if values?.isRegularFile == true, imageExtensions.contains(url.pathExtension.lowercased()) || CGImageSourceCreateWithURL(url as CFURL, nil) != nil { files.append(url) }
+            if values?.isRegularFile == true, ImportOptions.imageExtensions.contains(url.pathExtension.lowercased()) || CGImageSourceCreateWithURL(url as CFURL, nil) != nil { files.append(url) }
         }
         return files.sorted { $0.path < $1.path }
     }

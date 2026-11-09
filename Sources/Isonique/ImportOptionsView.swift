@@ -13,16 +13,22 @@ struct ImportOptionsView: View {
     var presets: [ImportPreset] { (try? JSONDecoder().decode([ImportPreset].self, from: savedPresets)) ?? [] }
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(model.pendingImport.isEmpty ? "Import & History Options" : "Import Options").font(.title2.bold())
+            Text(!model.hasPendingImport ? "Import & History Options" : "Import Options").font(.title2.bold())
             Form {
-                Picker("Original storage", selection: Binding(get: { options.storage ?? .managed }, set: { options.storage = $0 })) {
-                    ForEach(OriginalStorage.allCases) { storage in Text(storage.rawValue).tag(storage) }
-                }
-                if options.storage == .referenced {
-                    Text("Isonique stores a link. Keep these files and back them up separately.").font(.caption).foregroundStyle(.secondary)
+                if let device = model.pendingDeviceImport {
+                    LabeledContent("Source", value: device.name)
+                    Text("Originals are copied into the library. The camera or card is never changed.")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    Picker("Original storage", selection: Binding(get: { options.storage ?? .managed }, set: { options.storage = $0 })) {
+                        ForEach(OriginalStorage.allCases) { storage in Text(storage.rawValue).tag(storage) }
+                    }
+                    if options.storage == .referenced {
+                        Text("Isonique stores a link. Keep these files and back them up separately.").font(.caption).foregroundStyle(.secondary)
+                    }
                 }
                 Toggle("Create a project on import", isOn: Binding(get: { options.createProject == true }, set: { options.createProject = $0 }))
-                if options.createProject == true && !model.pendingImport.isEmpty {
+                if options.createProject == true && model.hasPendingImport {
                     TextField("Project name", text: $projectName, prompt: Text(defaultProjectName))
                 }
                 Picker("RAW + JPEG", selection: $options.pairing) { ForEach(PairingMode.allCases) { Text($0.title).tag($0) } }
@@ -57,20 +63,21 @@ struct ImportOptionsView: View {
                 Menu("Delete Preset") { ForEach(presets) { preset in Button(preset.name) { save(presets.filter { $0.id != preset.id }) } } }.disabled(presets.isEmpty)
                 Spacer()
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
-                Button(model.pendingImport.isEmpty ? "Save Options" : "Import") {
+                Button(!model.hasPendingImport ? "Save Options" : "Import") {
                     savedOptions = (try? JSONEncoder().encode(options)) ?? Data()
                     let urls = model.pendingImport
+                    let device = model.pendingDeviceImport
                     let name = projectName.trimmingCharacters(in: .whitespacesAndNewlines)
                     let project = options.createProject == true ? (name.isEmpty ? defaultProjectName : name) : nil
-                    model.pendingImport = []
+                    if model.hasPendingImport { model.importURLs(urls, options: options, newProjectName: project, device: device) }
                     dismiss()
-                    if !urls.isEmpty { model.importURLs(urls, options: options, newProjectName: project) }
                 }.keyboardShortcut(.defaultAction)
             }
         }.padding(24).frame(width: 580)
         .onAppear { options = (try? JSONDecoder().decode(ImportOptions.self, from: savedOptions)) ?? ImportOptions() }
     }
     private var defaultProjectName: String {
+        if let device = model.pendingDeviceImport { return device.name }
         if model.pendingImport.count == 1, let first = model.pendingImport.first, first.hasDirectoryPath {
             return first.lastPathComponent
         }
