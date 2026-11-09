@@ -122,6 +122,117 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(try repo.load().photos, [photo])
     }
 
+    func testMemoryCardSelectionSurvivesPartialImportAndCanBeRetriedAfterReconnect() async throws {
+        let fm = FileManager.default
+        let root = temporary.appendingPathComponent("Card")
+        let dcim = root.appendingPathComponent("DCIM")
+        try fm.createDirectory(at: dcim, withIntermediateDirectories: true)
+        for (index, name) in ["A.png", "B.png", "C.png"].enumerated() {
+            _ = try fixture(name, directory: dcim, red: CGFloat(index + 1) / 4)
+        }
+        let card = try XCTUnwrap(MemoryCardSource(volume: root))
+        let files = try card.photoFiles()
+        XCTAssertEqual(files.map(\.lastPathComponent), ["A.png", "B.png", "C.png"])
+        let image = try card.thumbnail(for: files[0], maximum: 16)
+        XCTAssertLessThanOrEqual(max(image.width, image.height), 16)
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        let selected = [files[0], files[2]]
+        let report = try await Task.detached {
+            var library = try repo.load()
+            return await ImportJob.run(memoryCard: card, selectedFiles: selected, options: ImportOptions(),
+                repository: repo, projectID: nil, albumID: nil, into: &library) { progress in
+                XCTAssertEqual(progress.total, 2)
+                if progress.processed == 1 { withUnsafeCurrentTask { $0?.cancel() } }
+            }
+        }.value
+        XCTAssertTrue(report.cancelled)
+        XCTAssertEqual(report.imported, 1)
+        XCTAssertEqual(try repo.load().photos.map(\.originalName), ["A.png"])
+
+        let unplugged = temporary.appendingPathComponent("Unmounted")
+        try fm.moveItem(at: root, to: unplugged)
+        XCTAssertThrowsError(try card.photoFiles())
+        var library = try repo.load()
+        let offline = await ImportJob.run(memoryCard: card, selectedFiles: selected, options: ImportOptions(),
+            repository: repo, projectID: nil, albumID: nil, into: &library)
+        XCTAssertEqual(offline.errors, [DeviceImportError.disconnected.localizedDescription])
+
+        try fm.moveItem(at: unplugged, to: root)
+        let reconnected = try XCTUnwrap(MemoryCardSource(volume: root))
+        let freshFiles = try reconnected.photoFiles()
+        let retry = await ImportJob.run(memoryCard: reconnected,
+            selectedFiles: freshFiles.filter { $0.lastPathComponent != "B.png" },
+            options: ImportOptions(), repository: repo, projectID: nil, albumID: nil, into: &library)
+        XCTAssertEqual(retry.imported, 1)
+        XCTAssertEqual(retry.duplicates, 1)
+        XCTAssertTrue(retry.errors.isEmpty)
+        XCTAssertEqual(try repo.load().photos.map(\.originalName), ["A.png", "C.png"])
+        XCTAssertEqual(try reconnected.photoFiles(), freshFiles)
+    }
+
+    func testCameraSelectionExcludesUnselectedCompanionAndDownloadsOnlyMatchingSidecar() async throws {
+        let image = try Data(contentsOf: fixture())
+        let xmp = Data(#"<photos><photo><caption>Selected JPEG</caption></photo></photos>"#.utf8)
+        let jpeg = try XCTUnwrap(CameraImportFile(components: ["100CAM", "Photo.JPG"]))
+        let raw = try XCTUnwrap(CameraImportFile(components: ["100CAM", "Photo.NEF"]))
+        let sidecar = try XCTUnwrap(CameraImportFile(components: ["100CAM", "Photo.XMP"]))
+        let otherJPEG = try XCTUnwrap(CameraImportFile(components: ["101CAM", "Photo.JPG"]))
+        let otherSidecar = try XCTUnwrap(CameraImportFile(components: ["101CAM", "Photo.XMP"]))
+        let catalogue = [jpeg, raw, sidecar, otherJPEG, otherSidecar]
+        var options = ImportOptions()
+        options.pairing = .raw
+        options.readSidecars = true
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        var downloaded: [CameraImportFile] = []
+        var progress: [ImportProgress] = []
+        let report = await ImportJob.run(cameraFiles: catalogue, selectedPhotos: [jpeg], options: options,
+            repository: repo, projectID: nil, albumID: nil, into: &library, download: { file, url in
+                downloaded.append(file)
+                try (file == sidecar ? xmp : image).write(to: url)
+            }, progress: { progress.append($0) })
+        XCTAssertEqual(downloaded, [jpeg, sidecar])
+        XCTAssertEqual(report.imported, 1)
+        XCTAssertTrue(report.errors.isEmpty)
+        XCTAssertEqual(progress.map(\.total), [1, 1])
+        let photo = try XCTUnwrap(repo.load().photos.first)
+        XCTAssertEqual(photo.originalName, "Photo.JPG")
+        XCTAssertEqual(photo.caption, "Selected JPEG")
+        XCTAssertNil(photo.pairID)
+    }
+
+    func testCameraDisconnectStopsSelectedTransferAndFreshCatalogueCanRetry() async throws {
+        let firstBytes = try Data(contentsOf: fixture("first.png", red: 0.3))
+        let retryBytes = try Data(contentsOf: fixture("retry.png", red: 0.7))
+        let first = try XCTUnwrap(CameraImportFile(components: ["100CAM", "A.png"]))
+        let disconnected = try XCTUnwrap(CameraImportFile(components: ["100CAM", "B.png"]))
+        let unselected = try XCTUnwrap(CameraImportFile(components: ["100CAM", "C.png"]))
+        let fresh = try XCTUnwrap(CameraImportFile(components: ["101CAM", "B.png"]))
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repo.load()
+        var attempted: [CameraImportFile] = []
+        let interrupted = await ImportJob.run(cameraFiles: [first, disconnected, unselected],
+            selectedPhotos: [first, disconnected], options: ImportOptions(), repository: repo,
+            projectID: nil, albumID: nil, into: &library, download: { file, url in
+                attempted.append(file)
+                if file == disconnected { throw DeviceImportError.disconnected }
+                try firstBytes.write(to: url)
+            })
+        XCTAssertEqual(attempted, [first, disconnected])
+        XCTAssertEqual(interrupted.imported, 1)
+        XCTAssertEqual(interrupted.errors, ["B.png: " + DeviceImportError.disconnected.localizedDescription])
+
+        let retry = await ImportJob.run(cameraFiles: [first, fresh], selectedPhotos: [fresh], options: ImportOptions(),
+            repository: repo, projectID: nil, albumID: nil, into: &library, download: { file, url in
+                attempted.append(file)
+                try retryBytes.write(to: url)
+            })
+        XCTAssertEqual(attempted, [first, disconnected, fresh])
+        XCTAssertEqual(retry.imported, 1)
+        XCTAssertTrue(retry.errors.isEmpty)
+        XCTAssertEqual(try repo.load().photos.map(\.originalName), ["A.png", "B.png"])
+    }
+
     func testMemoryCardAndCameraRejectUnsafeSourcePaths() throws {
         let fm = FileManager.default
         let volume = temporary.appendingPathComponent("BadCard")

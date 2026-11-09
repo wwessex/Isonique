@@ -66,7 +66,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var showExportOptions = false
     @Published var showImportOptions = false
     @Published var pendingImport: [URL] = []
-    @Published var pendingDeviceImport: DeviceImportSource?
+    @Published var pendingDeviceImport: DeviceImportSelection?
     @Published var showDeviceImport = false
     let cameraDiscovery = CameraDiscovery()
     var hasPendingImport: Bool { !pendingImport.isEmpty || pendingDeviceImport != nil }
@@ -480,14 +480,17 @@ enum EditTool: String { case select, crop, straighten, brush }
     }
 
     func finishImportOptions() {
+        if !importInProgress {
+            pendingDeviceImport?.close()
+            cameraDiscovery.stop()
+        }
         pendingImport = []; pendingDeviceImport = nil
-        if !importInProgress { cameraDiscovery.stop() }
     }
 
     func importURLs(_ urls: [URL], options: ImportOptions = ImportOptions(), newProjectName: String? = nil,
-                    device: DeviceImportSource? = nil) {
+                    device: DeviceImportSelection? = nil) {
         guard !busy, let repository else { return }
-        if case .camera(let camera) = device, !cameraDiscovery.cameras.contains(camera) {
+        if case .camera(let session, _, _) = device, !cameraDiscovery.cameras.contains(where: { $0 === session.camera }) {
             error = DeviceImportError.disconnected.localizedDescription
             return
         }
@@ -500,20 +503,14 @@ enum EditTool: String { case select, crop, straighten, brush }
             let report: ImportReport
             let progress: (ImportProgress) async -> Void = { await self.reportImportProgress($0) }
             switch device {
-            case .memoryCard(let card):
-                report = await ImportJob.run(memoryCard: card, options: options, repository: repository, projectID: projectID,
-                    albumID: albumID, newProjectName: newProjectName, into: &draft, progress: progress)
-            case .camera(let camera):
-                let session = await CameraImportSession(camera)
-                do {
-                    let files = try await session.catalogue()
-                    report = await ImportJob.run(cameraFiles: files, options: options, repository: repository, projectID: projectID,
-                        albumID: albumID, newProjectName: newProjectName, into: &draft, download: { file, destination in
-                            try await session.download(file, to: destination)
-                        }, progress: progress)
-                } catch {
-                    report = ImportReport(sourceError: error)
-                }
+            case .memoryCard(let card, let files):
+                report = await ImportJob.run(memoryCard: card, selectedFiles: files, options: options, repository: repository,
+                    projectID: projectID, albumID: albumID, newProjectName: newProjectName, into: &draft, progress: progress)
+            case .camera(let session, let catalogue, let selected):
+                report = await ImportJob.run(cameraFiles: catalogue, selectedPhotos: selected, options: options, repository: repository,
+                    projectID: projectID, albumID: albumID, newProjectName: newProjectName, into: &draft, download: { file, destination in
+                        try await session.download(file, to: destination)
+                    }, progress: progress)
                 await session.close()
             case nil:
                 report = await ImportJob.run(urls: urls, options: options, repository: repository, projectID: projectID,
