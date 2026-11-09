@@ -189,3 +189,8 @@
 - Repository tests covered scoped selection, shared versions including Trash, unavailable originals, occupied managed destinations, changed source fingerprints and cancellation. An immutable catalogue forced a filesystem write failure. Retrying reused the verified managed copy and preserved the source file.
 - The signed app consolidated two referenced originals and their shared version from a Browser batch selection. A third original was reported as unavailable. The saved catalogue and managed hashes confirmed the results, and all three source hashes remained intact.
 - The optimized suite executed 119 tests with zero failures or skips, including the four camera RAW fixtures. The signed arm64 app and archive passed strict verification on Apple M5 Pro with macOS 27.3 and Xcode 27.2.
+
+## Managed original relocation
+
+- Repository tests covered shared and trashed versions, filename conflicts, occupied destinations, cancellation, a rejected destination inside the library, a blocked catalogue write and retry without replacing the verified copy. A simulated cleanup failure retained the managed file.
+- In the signed app, File → Relocate Originals converted two managed originals and a shared version to references. It reported a fallback filename for a collision. The saved paths and destination hashes matched the catalogue, the occupied file stayed intact, and the old managed paths were released.
