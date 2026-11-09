@@ -25,18 +25,20 @@ public enum TonalTools {
         let segment = min(3, Int(x * 4)); let fraction = x * 4 - Double(segment)
         return points[segment] + (points[segment + 1] - points[segment]) * fraction
     }
-    static func applying(_ image: CGImage, table: [Double], curves: ChannelCurves? = nil) throws -> CGImage {
+    static func applying(_ image: CGImage, table: [Double], curves: ChannelCurves? = nil,
+                         channelLevels: ChannelLevels? = nil) throws -> CGImage {
         let context = try bitmap(image)
         guard let data = context.data else { throw LibraryError.unsupportedImage("levels") }
         let bytes = data.bindMemory(to: UInt8.self, capacity: image.width * image.height * 4)
         let luminance = curves?.luminance.map(LuminanceCurve.init)
-        func channelTable(_ curve: ChannelCurve?) -> [Double] {
-            let mapped = curve.map { curve in table.map { curve.value(at: $0) } } ?? table
+        func channelTable(_ curve: ChannelCurve?, _ levels: LevelValues?) -> [Double] {
+            let leveled = levels.map { table.map($0.normalized.map) } ?? table
+            let mapped = curve.map { curve in leveled.map { curve.value(at: $0) } } ?? leveled
             return luminance == nil ? mapped : mapped.map(linearSRGB)
         }
-        let red = channelTable(curves?.red)
-        let green = channelTable(curves?.green)
-        let blue = channelTable(curves?.blue)
+        let red = channelTable(curves?.red, channelLevels?.red)
+        let green = channelTable(curves?.green, channelLevels?.green)
+        let blue = channelTable(curves?.blue, channelLevels?.blue)
         for offset in stride(from: 0, to: image.width * image.height * 4, by: 4) {
             if offset.isMultiple(of: 65_536) { try Task.checkCancellation() }
             let alphaByte = Double(bytes[offset + 3])

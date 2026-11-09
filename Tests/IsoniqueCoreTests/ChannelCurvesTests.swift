@@ -72,11 +72,24 @@ final class ChannelCurvesTests: XCTestCase {
         library.upgradeForChannelCurves()
         XCTAssertEqual(library.version, 5)
         try repository.save(library)
+        XCTAssertEqual(try repository.load().photos.first?.adjustments, recipe)
+        var levels = LevelValues()
+        levels.blackPoint = 0.16
+        levels.whitePoint = 0.92
+        levels.gamma = 1.2
+        recipe.setLevels(levels, for: .blue)
+        library.photos[0].adjustments = recipe
+        XCTAssertThrowsError(try repository.save(library))
+        library.upgradeForChannelLevels()
+        XCTAssertEqual(library.version, 6)
+        try repository.save(library)
         let photo = try XCTUnwrap(repository.load().photos.first)
         XCTAssertEqual(photo.adjustments, recipe)
         XCTAssertEqual(recipe.stamping(onto: Adjustments(), groups: [.tone]), recipe)
         XCTAssertNil(recipe.stamping(onto: Adjustments(), groups: [.basic]).channelCurves)
+        XCTAssertNil(recipe.stamping(onto: Adjustments(), groups: [.basic]).channelLevels)
         XCTAssertNil(AdjustmentPreset.natural.applying(to: recipe).channelCurves)
+        XCTAssertNil(AdjustmentPreset.natural.applying(to: recipe).channelLevels)
 
         let original = try repository.availableOriginalURL(photo)
         let preview = try Renderer.render(original, adjustments: photo.adjustments)
@@ -89,6 +102,33 @@ final class ChannelCurvesTests: XCTestCase {
         XCTAssertEqual(try pixels(XCTUnwrap(CGImageSourceCreateImageAtIndex(exported, 0, nil))), try pixels(preview))
         XCTAssertEqual(try LibraryRepository.digest(original), digest)
         XCTAssertEqual(try LibraryRepository.digest(source), digest)
+    }
+
+    func testChannelLevelsClipAndRemapOnlySelectedChannelBeforeCurve() throws {
+        var settings = Adjustments()
+        var levels = LevelValues()
+        levels.blackPoint = 0.25
+        levels.whitePoint = 0.75
+        levels.gamma = 2
+        settings.setLevels(levels, for: .red)
+        let source = try bitmap([32, 40, 75, 255, 128, 128, 128, 255, 240, 20, 90, 255], width: 3)
+        let identity = (0...255).map { Double($0) / 255 }
+        let output = try TonalTools.applying(source, table: identity, channelLevels: settings.channelLevels)
+        XCTAssertEqual(try pixels(output), [0, 40, 75, 255, 181, 128, 128, 255, 255, 20, 90, 255])
+        var curve = ChannelCurve.identity
+        curve.insertPoint(input: 181, output: 90)
+        settings.setCurve(curve, for: .red)
+        let composited = try TonalTools.applying(source, table: identity, curves: settings.channelCurves,
+                                                 channelLevels: settings.channelLevels)
+        XCTAssertEqual(try pixels(composited), [0, 40, 75, 255, 90, 128, 128, 255, 255, 20, 90, 255])
+        levels.blackPoint = 4
+        levels.whitePoint = 0.5
+        levels.gamma = .nan
+        settings.setLevels(levels, for: .blue)
+        let blue = settings.levels(for: .blue)
+        XCTAssertEqual(blue.blackPoint, 0.99)
+        XCTAssertEqual(blue.whitePoint, 1)
+        XCTAssertEqual(blue.gamma, 1)
     }
 
     private var raisedMidtones: ChannelCurve {

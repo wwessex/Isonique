@@ -166,6 +166,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         let nextHistory = newHistory ?? history
         var saved = draft
         saved.history = keepHistory ? nextHistory : nil
+        saved.upgradeForChannelLevels()
         saved.upgradeForChannelCurves()
         saved.upgradeForBrushRecipes()
         do {
@@ -1215,6 +1216,9 @@ struct Inspector: View {
                     adjustment("Gamma", path: \.adjustments.gamma, range: 0.1...4, neutral: 1)
                     Button("Reset Levels") { model.edit { $0.adjustments.blackPoint = 0; $0.adjustments.whitePoint = 1; $0.adjustments.gamma = 1 } }
                 }.padding(.top, 10)
+            }
+            DisclosureGroup("Channel Levels") {
+                ChannelLevelsEditor(photo: photo).id(photo.id).padding(.top, 10)
             }
             DisclosureGroup("Master Tone Curve") {
                 VStack(spacing: 10) {

@@ -99,10 +99,11 @@ public struct Adjustments: Codable, Equatable {
     public var curveMidtones: Double = 0.5
     public var curveHighlights: Double = 0.75
     public internal(set) var channelCurves: ChannelCurves?
+    public internal(set) var channelLevels: ChannelLevels?
     public var lensDistortion: Double = 0
     public var localBrushes: [LocalBrushStroke] = []
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, localBrushes }
+    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, localBrushes }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
@@ -127,6 +128,7 @@ public struct Adjustments: Codable, Equatable {
         curveMidtones = try values.decodeIfPresent(Double.self, forKey: .curveMidtones) ?? 0.5
         curveHighlights = try values.decodeIfPresent(Double.self, forKey: .curveHighlights) ?? 0.75
         channelCurves = try values.decodeIfPresent(ChannelCurves.self, forKey: .channelCurves)
+        channelLevels = try values.decodeIfPresent(ChannelLevels.self, forKey: .channelLevels)
         lensDistortion = try values.decodeIfPresent(Double.self, forKey: .lensDistortion) ?? 0
         localBrushes = try values.decodeIfPresent([LocalBrushStroke].self, forKey: .localBrushes) ?? []
     }
@@ -173,6 +175,7 @@ public extension Adjustments {
             result.blackPoint = blackPoint; result.whitePoint = whitePoint; result.gamma = gamma
             result.curveShadows = curveShadows; result.curveMidtones = curveMidtones; result.curveHighlights = curveHighlights
             result.channelCurves = channelCurves
+            result.channelLevels = channelLevels
         }
         if groups.contains(.geometry) {
             result.quarterTurns = quarterTurns; result.straighten = straighten
@@ -261,7 +264,13 @@ public struct Library: Codable {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
 
+    public mutating func upgradeForChannelLevels() {
+        if version < 6, hasRecipe(where: { $0.channelLevels?.isEmpty == false }) { version = 6 }
+    }
+
     func validateSchema() throws {
+        if version == 6 { return }
+        guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
         if version == 5 { return }
         guard !hasRecipe(where: { $0.channelCurves?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
         if version == 4 { return }
@@ -600,7 +609,8 @@ public enum Renderer {
         }
         guard let result = context.makeImage() else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
         let toned = try applyTone(result, adjustments: adjustments)
-        let levels = try TonalTools.applying(toned, table: toneTable, curves: adjustments.channelCurves)
+        let levels = try TonalTools.applying(toned, table: toneTable, curves: adjustments.channelCurves,
+                                             channelLevels: adjustments.channelLevels)
         let geometry = PhotoGeometry(width: decoded.width, height: decoded.height, adjustments: adjustments)
         let image = try applyGeometry(applyLens(levels, amount: geometry.lensAmount), geometry: geometry)
         return (image, geometry)
