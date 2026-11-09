@@ -50,6 +50,15 @@ public struct PhotoVersion: Codable, Identifiable, Equatable {
     public init(name: String, adjustments: Adjustments) { self.name = name; self.adjustments = adjustments }
 }
 public extension Library {
+    var activePhotos: [Photo] { photos.filter { $0.trashedAt == nil } }
+
+    /// Keep identity, membership, recipes and originals intact until Put Back.
+    mutating func setPhotosTrashed(_ ids: Set<UUID>, at date: Date?) -> [Photo] {
+        updatePhotos(ids) { photo in
+            if (photo.trashedAt == nil) != (date == nil) { photo.trashedAt = date }
+        }
+    }
+
     /// Applies a batch to a stable ID snapshot, even if edits change current filters.
     mutating func updatePhotos(_ ids: Set<UUID>, change: (inout Photo) -> Void) -> [Photo] {
         var previous: [Photo] = []

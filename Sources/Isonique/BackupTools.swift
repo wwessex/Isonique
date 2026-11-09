@@ -9,7 +9,23 @@ extension Workspace {
         scope = "all"; search = ""; ratingFilter = .all
         batchMode = false; batchSelection = []; selection = nil
         viewer = false; tool = .select; compareOriginal = false; liftedAdjustments = nil
-        UserDefaults.standard.set(repo.root.path, forKey: "library.selectedRoot")
+        if !ProcessInfo.processInfo.arguments.contains("--library") {
+            UserDefaults.standard.set(repo.root.path, forKey: "library.selectedRoot")
+        }
+    }
+
+    func createLibraryPanel() {
+        guard !busy else { return }
+        let panel = NSSavePanel()
+        panel.title = "New Isonique Library"
+        panel.nameFieldStringValue = "Isonique Library"
+        panel.message = "Choose a location and name for a new library folder."
+        guard panel.runModal() == .OK, let destination = panel.url else { return }
+        do {
+            let repository = try LibraryRepository.createEmpty(at: destination)
+            activateLibrary(repository, library: Library())
+            status = "Created library · \(repository.root.path)"
+        } catch { self.error = error.localizedDescription }
     }
 
     func openLibraryPanel() {

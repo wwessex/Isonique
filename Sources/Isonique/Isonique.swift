@@ -46,11 +46,13 @@ enum EditTool: String { case select, crop, straighten }
     var canUndo: Bool { !history.undo.isEmpty }
     var canRedo: Bool { !history.redo.isEmpty }
     var repository: LibraryRepository?
-    init() {
+    init(libraryRoot: URL? = nil) {
         do {
             let args = ProcessInfo.processInfo.arguments
             let root: URL
-            if let index = args.firstIndex(of: "--library"), args.indices.contains(index + 1) {
+            if let libraryRoot {
+                root = libraryRoot
+            } else if let index = args.firstIndex(of: "--library"), args.indices.contains(index + 1) {
                 root = URL(fileURLWithPath: args[index + 1], isDirectory: true)
             } else if let saved = UserDefaults.standard.string(forKey: "library.selectedRoot") {
                 root = URL(fileURLWithPath: saved, isDirectory: true)
@@ -69,8 +71,10 @@ enum EditTool: String { case select, crop, straighten }
             selection = photos.first?.id
         } catch { self.error = error.localizedDescription; status = "Library unavailable" }
     }
+    var isViewingTrash: Bool { scope == "trash" }
     var photos: [Photo] {
         library.photos.filter { photo in
+            guard (photo.trashedAt != nil) == isViewingTrash else { return false }
             let inScope: Bool
             if scope.hasPrefix("project:"), let id = UUID(uuidString: String(scope.dropFirst(8))) { inScope = photo.projectID == id }
             else if scope.hasPrefix("album:"), let id = UUID(uuidString: String(scope.dropFirst(6))) {
@@ -92,26 +96,71 @@ enum EditTool: String { case select, crop, straighten }
     }
     var selected: Photo? { photos.first { $0.id == selection } }
     var title: String {
+        if isViewingTrash { return "Trash" }
         if scope == "flagged" { return "Flagged" }
         if let project = library.projects.first(where: { scope == "project:\($0.id)" }) { return project.name }
         if let album = library.albums.first(where: { scope == "album:\($0.id)" }) { return album.name }
         if scope.hasPrefix("stack:") { return "Photo Stack" }
         return "All Photos"
     }
-    func save() {
-        library.history = keepHistory ? history : nil
-        do { try repository?.save(library) } catch { self.error = error.localizedDescription }
+    @discardableResult
+    func commit(_ draft: Library, history newHistory: EditHistory? = nil) -> Bool {
+        guard !busy, let repository else { return false }
+        let nextHistory = newHistory ?? history
+        var saved = draft
+        saved.history = keepHistory ? nextHistory : nil
+        do {
+            try repository.save(saved)
+            library = saved
+            if newHistory != nil { history = nextHistory }
+            return true
+        } catch {
+            self.error = error.localizedDescription
+            return false
+        }
     }
-    func undoEdit() {
-        guard !busy, let photo = history.undo.last, let index = library.photos.firstIndex(where: { $0.id == photo.id }) else { return }
-        history.undo.removeLast(); history.redo.append(library.photos[index]); restore(photo)
+    func save() { commit(library) }
+    func undoEdit() { stepHistory(redo: false) }
+    func redoEdit() { stepHistory(redo: true) }
+    private func stepHistory(redo: Bool) {
+        var nextHistory = history
+        let photo = redo ? nextHistory.redo.popLast() : nextHistory.undo.popLast()
+        guard let photo, let index = library.photos.firstIndex(where: { $0.id == photo.id }) else { return }
+        let current = library.photos[index]
+        if redo { nextHistory.undo.append(current) } else { nextHistory.redo.append(current) }
+        var draft = library
+        draft.photos[index] = photo
+        guard commit(draft, history: nextHistory) else { return }
+        selectAfterChange(preferred: photo.id)
     }
-    func redoEdit() {
-        guard !busy, let photo = history.redo.last, let index = library.photos.firstIndex(where: { $0.id == photo.id }) else { return }
-        history.redo.removeLast(); history.undo.append(library.photos[index]); restore(photo)
+    private func selectAfterChange(preferred: UUID?) {
+        let visible = photos
+        selection = visible.first { $0.id == preferred }?.id ?? visible.first?.id
+        compareOriginal = false; tool = .select
+        if visible.isEmpty { viewer = false }
+    }
+    var selectedTrashActionIDs: Set<UUID> {
+        if batchMode { return Set(photos.map(\.id)).intersection(batchSelection) }
+        return selected.map { [$0.id] } ?? []
+    }
+    func setPhotosTrashed(_ ids: Set<UUID>, trashed: Bool) {
+        var draft = library
+        let previous = draft.setPhotosTrashed(ids, at: trashed ? Date() : nil)
+        guard commitPhotoChanges(draft, previous: previous) else { return }
+        batchSelection.subtract(ids)
+        selectAfterChange(preferred: selection)
+        let description = previous.count == 1 ? "1 photo" : "\(previous.count) photos"
+        status = trashed ? "Moved \(description) to Trash" : "Put back \(description)"
+    }
+    @discardableResult
+    func commitPhotoChanges(_ draft: Library, previous: [Photo]) -> Bool {
+        guard !previous.isEmpty else { return false }
+        var nextHistory = history
+        for photo in previous { nextHistory.record(photo) }
+        return commit(draft, history: nextHistory)
     }
     func importMetadataPanel() {
-        guard !busy else { return }
+        guard !busy, !isViewingTrash else { return }
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.xml, UTType(filenameExtension: "xmp") ?? .xml]
         panel.message = "Import XMP into the selected photo, or match XML records by unique source filename. Supported XML: Isonique photo records and AlbumData.xml metadata."
         guard panel.runModal() == .OK, let url = panel.url else { return }
@@ -120,14 +169,22 @@ enum EditTool: String { case select, crop, straighten }
             var changes: [(Int, Photo)] = []
             for record in records {
                 let matches = library.photos.indices.filter { index in
-                    if let name = record.filename { return (library.photos[index].sourceName ?? library.photos[index].originalName) == name }
-                    return library.photos[index].id == selection
+                    let photo = library.photos[index]
+                    guard photo.trashedAt == nil else { return false }
+                    if let name = record.filename { return (photo.sourceName ?? photo.originalName) == name }
+                    return photo.id == selection
                 }
                 guard matches.count == 1 else { throw CocoaError(.fileReadCorruptFile) }
                 changes.append((matches[0], record.applying(to: library.photos[matches[0]])))
             }
-            for (index, photo) in changes where library.photos[index] != photo { history.record(library.photos[index]); library.photos[index] = photo }
-            save(); status = "Imported metadata for \(changes.count) records"
+            var draft = library
+            var previous: [Photo] = []
+            for (index, photo) in changes where draft.photos[index] != photo {
+                previous.append(draft.photos[index]); draft.photos[index] = photo
+            }
+            if previous.isEmpty || commitPhotoChanges(draft, previous: previous) {
+                status = "Imported metadata for \(changes.count) records"
+            }
         } catch { self.error = "Metadata import stopped: unsupported, malformed or ambiguous records. " + error.localizedDescription }
     }
     func chooseProofProfile() {
@@ -140,13 +197,10 @@ enum EditTool: String { case select, crop, straighten }
         } catch { self.error = "Choose a valid RGB ICC profile. CMYK printer proofing is not supported." }
     }
     func edit(_ change: (inout Photo) -> Void) {
-        guard !busy, let id = selection, let index = library.photos.firstIndex(where: { $0.id == id }) else { return }
-        let previous = library.photos[index]
-        change(&library.photos[index])
-        library.photos[index].rating = RatingRules.clamp(library.photos[index].rating)
-        guard library.photos[index] != previous else { return }
-        history.record(previous)
-        save()
+        guard !busy, !isViewingTrash, let photo = selected else { return }
+        var draft = library
+        let previous = draft.updatePhotos([photo.id], change: change)
+        commitPhotoChanges(draft, previous: previous)
     }
     // Original delta action 0x100032854 and rejection control 0x1004320d4.
     // Menu and inspector actions share the recovered rules and edit history.
@@ -155,12 +209,6 @@ enum EditTool: String { case select, crop, straighten }
     }
     func setRejected(_ rejected: Bool) {
         edit { $0.rating = RatingRules.rejectionRating(isRejected: rejected) }
-    }
-    func restore(_ photo: Photo) {
-        guard let index = library.photos.firstIndex(where: { $0.id == photo.id }) else { return }
-        library.photos[index] = photo
-        selection = photo.id; compareOriginal = false; tool = .select
-        save()
     }
     func rotate(_ turns: Int) {
         compareOriginal = false; tool = .select
@@ -183,23 +231,25 @@ enum EditTool: String { case select, crop, straighten }
     }
     func lift() {
         // Original lift returns before resetting its clipboard if there is no version.
-        guard let selected else { return }
+        guard !isViewingTrash, let selected else { return }
         liftedAdjustments = LiftedSettings(selected)
         status = "Settings lifted · select another photo and Stamp"
     }
-    var batchPhotos: [Photo] { library.photos.filter { batchSelection.contains($0.id) } }
+    var batchPhotos: [Photo] { library.photos.filter { $0.trashedAt == nil && batchSelection.contains($0.id) } }
     func editBatch(_ change: (inout Photo) -> Void) {
-        guard !busy else { return }
-        let previous = library.updatePhotos(batchSelection, change: change)
-        for photo in previous { history.record(photo) }
-        save(); status = "Updated \(previous.count) photos · Undo restores one photo at a time"
+        guard !busy, !isViewingTrash else { return }
+        var draft = library
+        let previous = draft.updatePhotos(Set(batchPhotos.map(\.id)), change: change)
+        if commitPhotoChanges(draft, previous: previous) {
+            status = "Updated \(previous.count) photos · Undo restores one photo at a time"
+        }
     }
     func stackSelection() {
         guard StackRules.canStack(photoCount: batchPhotos.count) else { return }
         let id = UUID(); editBatch { $0.stackID = id }
     }
     func stamp() {
-        guard let liftedAdjustments, !stampGroups.isEmpty || !stampMetadata.isEmpty else { return }
+        guard !isViewingTrash, let liftedAdjustments, !stampGroups.isEmpty || !stampMetadata.isEmpty else { return }
         compareOriginal = false; tool = .select
         if batchMode { editBatch { $0 = liftedAdjustments.applying(to: $0, groups: stampGroups, metadata: stampMetadata) } }
         else { edit { $0 = liftedAdjustments.applying(to: $0, groups: stampGroups, metadata: stampMetadata) } }
@@ -212,14 +262,16 @@ enum EditTool: String { case select, crop, straighten }
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         let item = Collection(name: trimmed)
-        if project { library.projects.append(item); scope = "project:\(item.id)" }
-        else { library.albums.append(item); scope = "album:\(item.id)" }
-        selection = nil; save()
+        var draft = library
+        if project { draft.projects.append(item) } else { draft.albums.append(item) }
+        guard commit(draft) else { return }
+        scope = project ? "project:\(item.id)" : "album:\(item.id)"
+        selection = nil
     }
     func startSlideshow() {
         // Aperture _runSlideshowPromptForSettings: 0x1000495f1 checks isImportInProgress.
         guard !importInProgress else { error = "Wait for the import to finish before starting a slideshow."; return }
-        guard !busy, repository != nil else { return }
+        guard !busy, !isViewingTrash, repository != nil else { return }
         slideshowPhotos = batchMode ? photos.filter { batchSelection.contains($0.id) } : photos
         showSlideshow = !slideshowPhotos.isEmpty
     }
@@ -234,7 +286,7 @@ enum EditTool: String { case select, crop, straighten }
         busy = true; importInProgress = true; status = "Importing and verifying originals…"
         var snapshot = library
         let projectID = library.projects.first(where: { scope == "project:\($0.id)" })?.id
-        let albumID = library.albums.first(where: { scope == "album:\($0.id)" })?.id
+        let albumID = library.albums.first(where: { $0.rule == nil && scope == "album:\($0.id)" })?.id
         Task {
             let result = await Task.detached(priority: .userInitiated) { () -> (Library, Int, Int, [String], UUID?) in
                 var imported = 0, duplicates = 0, errors: [String] = []
@@ -250,35 +302,39 @@ enum EditTool: String { case select, crop, straighten }
                 var pairs: [String: [(UUID, Bool)]] = [:]
                 for file in files {
                     do {
-                        let sidecar = file.deletingPathExtension().appendingPathExtension("xmp")
-                        let metadata = options.readSidecars && FileManager.default.fileExists(atPath: sidecar.path) ? try MetadataXML.read(sidecar) : []
-                        if try repository.importPhoto(file, projectID: projectID, into: &snapshot) {
-                            let index = snapshot.photos.count - 1
-                            importedSelection = snapshot.photos[index].id
-                            snapshot.photos[index].sourceName = file.lastPathComponent
-                            snapshot.photos[index] = options.applying(to: snapshot.photos[index])
-                            for record in metadata { snapshot.photos[index] = record.applying(to: snapshot.photos[index]) }
-                            if let albumID { snapshot.photos[index].albumIDs.insert(albumID) }
-                            let key = ImportOptions.key(file)
+                        if try repository.importPhoto(file, projectID: projectID, into: &snapshot, options: options, albumID: albumID) {
+                            let id = snapshot.photos[snapshot.photos.count - 1].id
+                            importedSelection = id
                             if options.pairing.linksCompanions, ImportOptions.isRAW(file) || ImportOptions.isJPEG(file) {
-                                pairs[key, default: []].append((snapshot.photos[index].id, ImportOptions.isRAW(file)))
+                                pairs[ImportOptions.key(file), default: []].append((id, ImportOptions.isRAW(file)))
                             }
-                            try repository.save(snapshot); imported += 1
+                            imported += 1
                         } else { duplicates += 1 }
                     } catch { errors.append("\(file.lastPathComponent): \(error.localizedDescription)") }
                 }
-                for members in pairs.values where members.contains(where: { $0.1 }) && members.contains(where: { !$0.1 }) {
-                    let pairID = UUID(), ids = Set(members.map { $0.0 })
-                    for index in snapshot.photos.indices where ids.contains(snapshot.photos[index].id) { snapshot.photos[index].pairID = pairID }
-                    if let selected = importedSelection, ids.contains(selected),
-                       let primary = members.first(where: { $0.1 == (options.pairing == .linkedRAW) }) {
-                        importedSelection = primary.0
-                    }
+                let matchedPairs = pairs.values.filter { members in
+                    members.contains { $0.1 } && members.contains { !$0.1 }
                 }
-                do { try repository.save(snapshot) } catch { errors.append(error.localizedDescription) }
+                if !matchedPairs.isEmpty {
+                    var paired = snapshot
+                    var pairedSelection = importedSelection
+                    for members in matchedPairs {
+                        let pairID = UUID(), ids = Set(members.map { $0.0 })
+                        for index in paired.photos.indices where ids.contains(paired.photos[index].id) { paired.photos[index].pairID = pairID }
+                        if let selected = importedSelection, ids.contains(selected),
+                           let primary = members.first(where: { $0.1 == (options.pairing == .linkedRAW) }) {
+                            pairedSelection = primary.0
+                        }
+                    }
+                    do {
+                        try repository.save(paired)
+                        snapshot = paired
+                        importedSelection = pairedSelection
+                    } catch { errors.append("RAW + JPEG linking: \(error.localizedDescription)") }
+                }
                 return (snapshot, imported, duplicates, errors, importedSelection)
             }.value
-            library = result.0; save(); selection = result.4 ?? selection; importInProgress = false; busy = false
+            library = result.0; selection = result.4 ?? selection; importInProgress = false; busy = false
             status = "Imported \(result.1) · duplicates \(result.2) · failed \(result.3.count)"
             if !result.3.isEmpty { error = result.3.prefix(8).joined(separator: "\n") }
         }
@@ -302,8 +358,9 @@ enum EditTool: String { case select, crop, straighten }
             library = result.0; status = result.1; error = result.2; busy = false
         }
     }
-    func exportPanel() { if (batchMode ? !batchPhotos.isEmpty : selected != nil) && !busy { showExportOptions = true } }
+    func exportPanel() { if !isViewingTrash, (batchMode ? !batchPhotos.isEmpty : selected != nil) && !busy { showExportOptions = true } }
     func exportWithOptions(_ options: ExportOptions) {
+        guard !isViewingTrash else { return }
         if batchMode { exportBatch(options); return }
         guard let photo = selected, let repository, !busy else { return }
         let panel = NSSavePanel()
@@ -349,21 +406,21 @@ enum EditTool: String { case select, crop, straighten }
         .defaultSize(width: 1440, height: 900)
         .commands {
             CommandMenu("Review") {
-                Button("Auto Stack by Capture Time…") { workspace.showAutoStack = true }.disabled(workspace.busy || workspace.photos.isEmpty)
+                Button("Auto Stack by Capture Time…") { workspace.showAutoStack = true }.disabled(workspace.busy || workspace.isViewingTrash || workspace.photos.isEmpty)
                 Button("Start Slideshow…") {
                     workspace.startSlideshow()
-                }.disabled(workspace.busy || workspace.photos.isEmpty || workspace.repository == nil)
+                }.disabled(workspace.busy || workspace.isViewingTrash || workspace.photos.isEmpty || workspace.repository == nil)
             }
             CommandMenu("Rating") {
                 Button("Raise Rating") { workspace.adjustRating(by: 1) }
-                    .disabled(workspace.busy || workspace.selected == nil || (workspace.selected?.rating ?? RatingRules.maximum) >= RatingRules.maximum)
+                    .disabled(workspace.busy || workspace.isViewingTrash || workspace.selected == nil || (workspace.selected?.rating ?? RatingRules.maximum) >= RatingRules.maximum)
                 Button("Lower Rating") { workspace.adjustRating(by: -1) }
-                    .disabled(workspace.busy || workspace.selected == nil || (workspace.selected?.rating ?? RatingRules.rejected) <= RatingRules.rejected)
+                    .disabled(workspace.busy || workspace.isViewingTrash || workspace.selected == nil || (workspace.selected?.rating ?? RatingRules.rejected) <= RatingRules.rejected)
                 Divider()
                 Button(workspace.selected?.rating == RatingRules.rejected ? "Unreject Photo" : "Reject Photo") {
                     workspace.setRejected(workspace.selected?.rating != RatingRules.rejected)
                 }
-                .disabled(workspace.busy || workspace.selected == nil)
+                .disabled(workspace.busy || workspace.isViewingTrash || workspace.selected == nil)
             }
             CommandGroup(replacing: .help) {
                 Button("Features & Limits…") { openWindow(id: "features") }
@@ -374,14 +431,22 @@ enum EditTool: String { case select, crop, straighten }
             }
             CommandGroup(after: .newItem) {
                 Button("Import Photos…", action: workspace.importPanel).keyboardShortcut("i").disabled(workspace.busy || workspace.repository == nil)
-                Button("Import XML / XMP Metadata…", action: workspace.importMetadataPanel).disabled(workspace.busy || workspace.library.photos.isEmpty)
-                Button("Import & History Options…") { workspace.pendingImport = []; workspace.showImportOptions = true }
+                Button("Import XML / XMP Metadata…", action: workspace.importMetadataPanel)
+                    .disabled(workspace.busy || workspace.isViewingTrash || workspace.library.activePhotos.isEmpty)
+                Button("Import & History Options…") { workspace.pendingImport = []; workspace.showImportOptions = true }.disabled(workspace.busy)
+                Divider()
+                Button("New Isonique Library…", action: workspace.createLibraryPanel).keyboardShortcut("n", modifiers: [.command, .shift]).disabled(workspace.busy)
                 Button("Open Isonique Library…", action: workspace.openLibraryPanel).disabled(workspace.busy)
                 Button("Back Up Library…", action: workspace.backupLibraryPanel).disabled(workspace.busy || workspace.repository == nil)
                 Button("Check Library Integrity", action: workspace.verifyLibrary).disabled(workspace.busy || workspace.repository == nil)
                 Button("Restore Library Backup…", action: workspace.restoreLibraryPanel).disabled(workspace.busy)
                 Button("Recover Aperture Originals…", action: workspace.recoverPanel).disabled(workspace.busy || workspace.repository == nil)
-                Button("Export Photos…", action: workspace.exportPanel).keyboardShortcut("e", modifiers: [.command, .shift]).disabled((workspace.batchMode ? workspace.batchPhotos.isEmpty : workspace.selected == nil) || workspace.busy)
+                Button("Export Photos…", action: workspace.exportPanel).keyboardShortcut("e", modifiers: [.command, .shift])
+                    .disabled(workspace.isViewingTrash || (workspace.batchMode ? workspace.batchPhotos.isEmpty : workspace.selected == nil) || workspace.busy)
+                Divider()
+                Button(workspace.isViewingTrash ? "Put Back Photos" : "Move Photos to Trash") {
+                    workspace.setPhotosTrashed(workspace.selectedTrashActionIDs, trashed: !workspace.isViewingTrash)
+                }.keyboardShortcut(.delete, modifiers: [.command]).disabled(workspace.busy || workspace.selectedTrashActionIDs.isEmpty)
             }
         }
         Window("Features & Limits", id: "features") {
@@ -432,13 +497,14 @@ struct ContentView: View {
                     Section("Library") {
                         Label("All Photos", systemImage: "photo.on.rectangle.angled").tag("all").simultaneousGesture(TapGesture().onEnded { model.showBrowser(allPhotos: true) })
                         Label("Flagged", systemImage: "flag").tag("flagged")
+                        Label("Trash", systemImage: "trash").tag("trash")
                     }
                     Section("Projects") {
                         ForEach(model.library.projects) { project in Label(project.name, systemImage: "folder").tag("project:\(project.id)") }
                     }
                     Section("Stacks") {
-                        ForEach(Array(Set(model.library.photos.compactMap(\.stackID))).sorted { $0.uuidString < $1.uuidString }, id: \.self) { id in
-                            Label(model.library.photos.first(where: { $0.stackID == id })?.originalName ?? "Stack", systemImage: "square.3.layers.3d").tag("stack:\(id)")
+                        ForEach(Array(Set(model.library.activePhotos.compactMap(\.stackID))).sorted { $0.uuidString < $1.uuidString }, id: \.self) { id in
+                            Label(model.library.activePhotos.first(where: { $0.stackID == id })?.originalName ?? "Stack", systemImage: "square.3.layers.3d").tag("stack:\(id)")
                         }
                     }
                     Section("Albums") {
@@ -452,7 +518,7 @@ struct ContentView: View {
                     Menu { Button("New Project") { creatingProject = true; showCollection = true }; Button("New Album") { creatingProject = false; showCollection = true }; Button("New Smart Album…") { model.editingSmartAlbum = nil; model.showSmartAlbum = true } } label: { Image(systemName: "plus"); Text("Create") }
                         .menuStyle(.borderlessButton)
                     Spacer()
-                    Text("\(model.library.photos.count) photos").font(.caption).foregroundStyle(.secondary)
+                    Text("\(model.library.activePhotos.count) photos").font(.caption).foregroundStyle(.secondary)
                 }.padding()
             }.background(.ultraThinMaterial).navigationSplitViewColumnWidth(min: 210, ideal: 240, max: 300)
         } detail: {
@@ -467,21 +533,30 @@ struct ContentView: View {
                     }
                     VStack(alignment: .leading, spacing: 3) { Text(model.title).font(.title2.weight(.semibold)); Text("\(model.photos.count) photographs").font(.caption).foregroundStyle(.secondary) }
                     Spacer()
+                    if model.isViewingTrash {
+                        Button("Put Back") { model.setPhotosTrashed(model.selectedTrashActionIDs, trashed: false) }
+                            .disabled(model.selectedTrashActionIDs.isEmpty)
+                    }
                     Picker("Rating filter", selection: $model.ratingFilter) { ForEach(RatingFilter.allCases) { filter in Text(filter.label).tag(filter) } }.labelsHidden().frame(width: 165)
                     Picker("View", selection: $model.viewer) { Image(systemName: "square.grid.2x2").tag(false); Image(systemName: "rectangle.bottomthird.inset.filled").tag(true) }.labelsHidden().pickerStyle(.segmented).frame(width: 80)
                 }.padding(.horizontal, 22).padding(.vertical, 16)
                 Divider().opacity(0.4)
                 if model.batchMode { BatchBar() }
-                EditBar().disabled(model.batchMode)
+                if !model.isViewingTrash { EditBar().disabled(model.batchMode) }
                 Divider().opacity(0.4)
                 HSplitView {
                     VStack(spacing: 0) {
                         if model.photos.isEmpty {
                             VStack(spacing: 18) {
                                 Image(systemName: "camera.aperture").font(.system(size: 64, weight: .ultraLight)).foregroundStyle(.secondary)
-                                Text(model.library.photos.isEmpty ? "A new home for your photographs" : "No photographs in this view").font(.title2)
-                                Text("Import into projects. Organise with albums. Keep every original.").foregroundStyle(.secondary)
-                                Button(action: model.importPanel) { Label("Import Photographs…", systemImage: "square.and.arrow.down") }.buttonStyle(.borderedProminent)
+                                if model.isViewingTrash {
+                                    Text("No matching photos in Trash").font(.title2)
+                                    Text("Photos moved to Trash can be put back from here.").foregroundStyle(.secondary)
+                                } else {
+                                    Text(model.library.activePhotos.isEmpty ? "A new home for your photographs" : "No photographs in this view").font(.title2)
+                                    Text("Import into projects. Organise with albums. Keep every original.").foregroundStyle(.secondary)
+                                    Button(action: model.importPanel) { Label("Import Photographs…", systemImage: "square.and.arrow.down") }.buttonStyle(.borderedProminent)
+                                }
                             }.frame(maxWidth: .infinity, maxHeight: .infinity)
                         } else if model.viewer, let photo = model.selected, let repo = model.repository, let url = try? repo.originalURL(photo) {
                             PhotoViewer(photo: photo, url: url, original: model.compareOriginal).frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -491,7 +566,7 @@ struct ContentView: View {
                             ScrollView { LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 16)], spacing: 18) { ForEach(model.photos) { photo in photoCell(photo, compact: false) } }.padding(20) }
                         }
                     }.frame(minWidth: 400).background(Color(white: 0.055))
-                    if model.showInspector {
+                    if model.showInspector && !model.isViewingTrash {
                         Inspector().frame(minWidth: 260, idealWidth: 290, maxWidth: 340).workspaceGlass(radius: 20).padding(10)
                     }
                 }
@@ -524,10 +599,10 @@ struct ContentView: View {
                     Button("Start Slideshow…") {
                         model.startSlideshow()
                     }
-                } label: { Label("Review", systemImage: "play.rectangle") }.disabled(model.busy || model.photos.isEmpty || model.repository == nil)
+                } label: { Label("Review", systemImage: "play.rectangle") }.disabled(model.busy || model.isViewingTrash || model.photos.isEmpty || model.repository == nil)
             }
             ToolbarItem { Button(action: model.importPanel) { Label("Import", systemImage: "square.and.arrow.down") } }
-            ToolbarItem { Button(action: model.exportPanel) { Label("Export", systemImage: "square.and.arrow.up") }.disabled(model.batchMode ? model.batchPhotos.isEmpty : model.selected == nil) }
+            ToolbarItem { Button(action: model.exportPanel) { Label("Export", systemImage: "square.and.arrow.up") }.disabled(model.isViewingTrash || (model.batchMode ? model.batchPhotos.isEmpty : model.selected == nil)) }
         }
         .sheet(isPresented: $model.showAutoStack) { AutoStackView().environmentObject(model) }
         .sheet(isPresented: $model.showSlideshow) {
@@ -544,7 +619,12 @@ struct ContentView: View {
             }.padding(28)
         }
         .alert("Isonique", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button("OK") { model.error = nil } } message: { Text(model.error ?? "") }
-        .onChange(of: model.scope) { _, _ in model.selection = model.photos.first?.id; model.batchSelection = []; model.showBrowser() }
+        .onChange(of: model.scope) { _, _ in
+            if model.isViewingTrash { model.search = ""; model.ratingFilter = .all }
+            model.selection = model.photos.first?.id
+            model.batchSelection = []
+            model.showBrowser()
+        }
         .onExitCommand { model.showBrowser() }
         .onChange(of: model.viewer) { _, viewing in if !viewing { model.tool = .select; model.compareOriginal = false } }
         .onChange(of: model.search) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
@@ -572,6 +652,11 @@ struct ContentView: View {
                     .background((model.batchMode ? model.batchSelection.contains(photo.id) : model.selection == photo.id) ? Color.accentColor.opacity(0.18) : Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke((model.batchMode ? model.batchSelection.contains(photo.id) : model.selection == photo.id) ? Color.accentColor : Color.white.opacity(0.07), lineWidth: (model.batchMode ? model.batchSelection.contains(photo.id) : model.selection == photo.id) ? 2 : 1))
             }.buttonStyle(.plain)
+            .contextMenu {
+                Button(model.isViewingTrash ? "Put Back" : "Move to Trash") {
+                    model.setPhotosTrashed([photo.id], trashed: !model.isViewingTrash)
+                }
+            }
         }
     }
 }
@@ -600,21 +685,22 @@ struct EditBar: View {
                 }
             }
         }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 16).padding(.vertical, 10).background(.ultraThinMaterial)
-            .disabled(model.selected == nil)
     }
     var controls: some View {
         HStack(spacing: 14) {
-            tool("Select", icon: "cursorarrow", mode: .select)
-            Button { model.rotate(-1) } label: { Label("Left", systemImage: "rotate.left") }.help("Rotate 90° left; clears crop")
-            Button { model.rotate(1) } label: { Label("Right", systemImage: "rotate.right") }.help("Rotate 90° right; clears crop")
-            Divider().frame(height: 20)
-            tool("Crop", icon: "crop", mode: .crop)
-            tool("Straighten", icon: "level", mode: .straighten)
-            Divider().frame(height: 20)
-            Button(action: model.lift) { Label("Lift", systemImage: "eyedropper") }.help("Copy adjustments from this photo")
-            Button(action: model.stamp) { Label("Stamp", systemImage: "eyedropper.full") }.disabled(model.liftedAdjustments == nil || (model.stampGroups.isEmpty && model.stampMetadata.isEmpty)).help("Apply the adjustments and metadata selected in Inspector")
-            Divider().frame(height: 20)
-            Toggle(isOn: $model.compareOriginal) { Label("Original", systemImage: "square.on.square") }.toggleStyle(.button).disabled(model.tool != .select).help("Compare with the untouched original")
+            Group {
+                tool("Select", icon: "cursorarrow", mode: .select)
+                Button { model.rotate(-1) } label: { Label("Left", systemImage: "rotate.left") }.help("Rotate 90° left; clears crop")
+                Button { model.rotate(1) } label: { Label("Right", systemImage: "rotate.right") }.help("Rotate 90° right; clears crop")
+                Divider().frame(height: 20)
+                tool("Crop", icon: "crop", mode: .crop)
+                tool("Straighten", icon: "level", mode: .straighten)
+                Divider().frame(height: 20)
+                Button(action: model.lift) { Label("Lift", systemImage: "eyedropper") }.help("Copy adjustments from this photo")
+                Button(action: model.stamp) { Label("Stamp", systemImage: "eyedropper.full") }.disabled(model.liftedAdjustments == nil || (model.stampGroups.isEmpty && model.stampMetadata.isEmpty)).help("Apply the adjustments and metadata selected in Inspector")
+                Divider().frame(height: 20)
+                Toggle(isOn: $model.compareOriginal) { Label("Original", systemImage: "square.on.square") }.toggleStyle(.button).disabled(model.tool != .select).help("Compare with the untouched original")
+            }.disabled(model.selected == nil)
             Button { model.undoEdit() } label: { Image(systemName: "arrow.uturn.backward") }.disabled(!model.canUndo).help("Undo photo edit").accessibilityLabel("Undo photo edit")
             Button { model.redoEdit() } label: { Image(systemName: "arrow.uturn.forward") }.disabled(!model.canRedo).help("Redo photo edit").accessibilityLabel("Redo photo edit")
         }.buttonStyle(.borderless).font(.caption).fixedSize(horizontal: true, vertical: false)
@@ -730,7 +816,7 @@ struct Inspector: View {
                     Text("Select a photograph to view metadata and adjustments.").foregroundStyle(.secondary)
                     Divider()
                     Text("Isonique preserves your originals. Camera RAW support depends on macOS decoders; editing uses Isonique’s own pixel formulas.").font(.caption).foregroundStyle(.secondary)
-                    Button("Import XML / XMP Metadata…", action: model.importMetadataPanel).disabled(model.busy || model.library.photos.isEmpty)
+                    Button("Import XML / XMP Metadata…", action: model.importMetadataPanel).disabled(model.busy || model.library.activePhotos.isEmpty)
                 Button("Import & History Options…") { model.pendingImport = []; model.showImportOptions = true }
                 Button("Recover Aperture Originals…", action: model.recoverPanel)
                     Text("Recovery copies and verifies the source first. Legacy albums, referenced files and editing recipes are not migrated.").font(.caption).foregroundStyle(.secondary)
@@ -761,7 +847,7 @@ struct Inspector: View {
             }
             if let pair = photo.pairID {
                 Text("Linked RAW + JPEG").foregroundStyle(.secondary)
-                ForEach(model.library.photos.filter { $0.pairID == pair && $0.id != photo.id }) { companion in
+                ForEach(model.library.activePhotos.filter { $0.pairID == pair && $0.id != photo.id }) { companion in
                     Button("View " + companion.originalName) { model.selection = companion.id }
                 }
             }
