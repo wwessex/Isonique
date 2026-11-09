@@ -16,6 +16,23 @@ public struct LibraryFirstAidReport: Sendable {
     let catalogue: Data
 }
 
+public struct LibraryFirstAidBackupMatch: Sendable {
+    public let backup: URL
+    public let original: LibraryFirstAidOriginal
+}
+
+public struct LibraryFirstAidInspectedFile: Sendable {
+    public let filename: String
+    public let sha256: String
+    public let catalogueMatches: [LibraryFirstAidOriginal]
+    public let backupMatches: [LibraryFirstAidBackupMatch]
+}
+
+public struct LibraryFirstAidInspection: Sendable {
+    public let files: [LibraryFirstAidInspectedFile]
+    public let unavailableFiles: [String]
+}
+
 public extension LibraryRepository {
     /// Check catalogue and storage metadata without opening, hashing or changing original files.
     func libraryFirstAidReport() throws -> LibraryFirstAidReport {
@@ -35,8 +52,7 @@ public extension LibraryRepository {
 
         for original in originals {
             try Task.checkCancellation()
-            let item = LibraryFirstAidOriginal(id: original.originalID, name: original.originalName,
-                                               location: original.referencedPath ?? directory.appendingPathComponent(original.filename).path)
+            let item = firstAidOriginal(original, in: root)
             do {
                 try LibraryBackup.regularFile(originalURL(original))
             } catch let error as CocoaError where error.isMissingFirstAidPath {
@@ -65,7 +81,7 @@ public extension LibraryRepository {
     /// Restore only managed originals listed as missing in the reviewed report.
     func recoverMissingManagedOriginals(in folder: URL, after report: LibraryFirstAidReport) throws
         -> ManagedOriginalRecoveryReport {
-        let library = try libraryForFirstAidRecovery(report)
+        let library = try libraryForFirstAidAction(report)
         return try recoverMissingManagedOriginals(in: folder, library: library,
                                                    originalIDs: Set(report.missingManagedOriginals.map(\.id)),
                                                    expectedCatalogue: report.catalogue)
@@ -74,14 +90,61 @@ public extension LibraryRepository {
     /// Relink only originals listed as offline, including versions in Library Trash.
     func reconnectOfflineReferences(in folder: URL, after report: LibraryFirstAidReport) throws
         -> (library: Library, report: OriginalReconnectReport) {
-        var library = try libraryForFirstAidRecovery(report)
+        var library = try libraryForFirstAidAction(report)
         let recovery = try reconnectMissingReferences(in: folder, library: &library,
                                                        originalIDs: Set(report.offlineReferences.map(\.id)),
                                                        includeTrashed: true, expectedCatalogue: report.catalogue)
         return (library, recovery)
     }
 
-    private func libraryForFirstAidRecovery(_ report: LibraryFirstAidReport) throws -> Library {
+    /// Identify reviewed untracked files by their contents and leave all libraries in place.
+    func inspectUntrackedManagedFiles(after report: LibraryFirstAidReport, backups: [URL] = []) throws
+        -> LibraryFirstAidInspection {
+        let library = try libraryForFirstAidAction(report)
+        let originals = Dictionary(grouping: try library.uniqueOriginals(), by: \.sha256)
+        var files: [(filename: String, sha256: String)] = []
+        var unavailable: [String] = []
+        for name in report.untrackedManagedFiles {
+            try Task.checkCancellation()
+            do {
+                let path = try managedOriginalURL(name)
+                try LibraryBackup.regularFile(path)
+                files.append((name, try Self.digest(path)))
+            } catch {
+                unavailable.append(name)
+            }
+        }
+
+        let fingerprints = Set(files.map(\.sha256))
+        var matchedBackups: [String: [LibraryFirstAidBackupMatch]] = [:]
+        var inspectedBackups: Set<URL> = []
+        for backup in backups {
+            try Task.checkCancellation()
+            guard backup.isFileURL else { throw LibraryError.unsafePath }
+            let folder = backup.standardizedFileURL.resolvingSymlinksInPath()
+            guard inspectedBackups.insert(folder).inserted else { continue }
+            for photo in try LibraryBackup.verifiedBackupOriginals(in: folder, matching: fingerprints) {
+                let item = firstAidOriginal(photo, in: folder)
+                matchedBackups[photo.sha256, default: []].append(LibraryFirstAidBackupMatch(backup: folder, original: item))
+            }
+        }
+
+        let inspected = files.map { file in
+            LibraryFirstAidInspectedFile(filename: file.filename, sha256: file.sha256,
+                                         catalogueMatches: (originals[file.sha256] ?? []).map { firstAidOriginal($0, in: root) },
+                                         backupMatches: matchedBackups[file.sha256] ?? [])
+        }
+        try checkFirstAidCatalogue(report.catalogue)
+        return LibraryFirstAidInspection(files: inspected, unavailableFiles: unavailable)
+    }
+
+    private func firstAidOriginal(_ photo: Photo, in library: URL) -> LibraryFirstAidOriginal {
+        LibraryFirstAidOriginal(id: photo.originalID, name: photo.originalName,
+                               location: photo.referencedPath ?? library.appendingPathComponent("Originals")
+                                .appendingPathComponent(photo.filename).path)
+    }
+
+    private func libraryForFirstAidAction(_ report: LibraryFirstAidReport) throws -> Library {
         guard report.root == root else { throw LibraryError.unsafePath }
         let (catalogue, library) = try LibraryBackup.readCatalogue(root)
         guard catalogue == report.catalogue else {

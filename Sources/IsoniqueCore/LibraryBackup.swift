@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 /// Independent Isonique backups. Does not read or repair Apple's catalogues.
 public enum LibraryBackup {
@@ -28,6 +29,11 @@ public enum LibraryBackup {
 
     private static func read(_ folder: URL, allowMissingManaged: Bool = false) throws -> Snapshot {
         let (data, library) = try readCatalogue(folder)
+        return try readOriginals(in: folder, data: data, library: library, allowMissingManaged: allowMissingManaged)
+    }
+
+    private static func readOriginals(in folder: URL, data: Data, library: Library,
+                                      allowMissingManaged: Bool = false) throws -> Snapshot {
         let originals = folder.appendingPathComponent("Originals")
         guard originals.resolvingSymlinksInPath() == originals else { throw LibraryError.unsafePath }
         var hashes: [String: String] = [:]
@@ -113,16 +119,38 @@ public enum LibraryBackup {
     }
 
     private static func readBackup(_ source: URL) throws -> Snapshot {
+        let (data, library, manifest) = try readBackupCatalogue(source)
+        let snapshot = try readOriginals(in: source, data: data, library: library)
+        guard snapshot.originals == manifest.originals else { throw LibraryError.integrity("backup manifest") }
+        return snapshot
+    }
+
+    /// Verify the selected backup's catalogue and the managed files relevant to an inspection.
+    static func verifiedBackupOriginals(in source: URL, matching fingerprints: Set<String>) throws -> [Photo] {
+        let (_, library, manifest) = try readBackupCatalogue(source)
+        let managed = try library.uniqueOriginals().filter { $0.referencedPath == nil }
+        let saved = Dictionary(uniqueKeysWithValues: managed.map { ($0.filename, $0.sha256) })
+        guard saved == manifest.originals else { throw LibraryError.integrity("backup manifest") }
+        let matches = managed.filter { fingerprints.contains($0.sha256) }
+        for photo in matches {
+            try Task.checkCancellation()
+            let path = try LibraryRepository.managedOriginalURL(photo.filename, in: source)
+            try LibraryRepository.verifyOriginal(path, photo: photo)
+        }
+        return matches
+    }
+
+    private static func readBackupCatalogue(_ source: URL) throws -> (Data, Library, Manifest) {
         let manifestURL = source.appendingPathComponent("backup-manifest.json")
         try regularFile(manifestURL)
         let manifest = try JSONDecoder().decode(Manifest.self, from: Data(contentsOf: manifestURL))
         guard manifest.version == 1 else { throw LibraryError.unsupportedVersion }
-        guard try LibraryRepository.digest(source.appendingPathComponent("catalog.json")) == manifest.catalogSHA256 else {
+        let (data, library) = try readCatalogue(source)
+        let fingerprint = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        guard fingerprint == manifest.catalogSHA256 else {
             throw LibraryError.integrity("backup catalogue")
         }
-        let snapshot = try read(source)
-        guard snapshot.originals == manifest.originals else { throw LibraryError.integrity("backup manifest") }
-        return snapshot
+        return (data, library, manifest)
     }
 
     private static func copy(_ snapshot: Snapshot, from source: URL, to destination: URL, excluding current: URL?) throws {

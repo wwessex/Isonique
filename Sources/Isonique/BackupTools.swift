@@ -2,6 +2,18 @@ import SwiftUI
 import AppKit
 import IsoniqueCore
 
+private enum LibraryFirstAidAction {
+    case recover(OriginalFolderOperation)
+    case inspect
+
+    var title: String {
+        switch self {
+        case .recover(let operation): return operation.title + "…"
+        case .inspect: return "Inspect Untracked Files…"
+        }
+    }
+}
+
 extension Workspace {
     private func activateLibrary(_ repo: LibraryRepository, library restored: Library) {
         if !ProcessInfo.processInfo.arguments.contains("--library") {
@@ -449,22 +461,26 @@ extension Workspace {
         status = "Checking library storage…"
         Task {
             let report: LibraryFirstAidReport
-            let recovery: OriginalFolderOperation?
+            let action: LibraryFirstAidAction?
             do {
                 defer { busy = false }
                 report = try await Task.detached(priority: .utility) { try repository.libraryFirstAidReport() }.value
-                recovery = presentLibraryFirstAid(report)
+                action = presentLibraryFirstAid(report)
                 status = "Library First Aid review complete"
             } catch {
                 self.error = error.localizedDescription
                 status = "Library First Aid review failed"
                 return
             }
-            if let recovery { findOriginalsPanel(recovery, firstAid: report) }
+            switch action {
+            case .recover(let operation): findOriginalsPanel(operation, firstAid: report)
+            case .inspect: inspectFirstAidFiles(after: report)
+            case nil: break
+            }
         }
     }
 
-    private func presentLibraryFirstAid(_ report: LibraryFirstAidReport) -> OriginalFolderOperation? {
+    private func presentLibraryFirstAid(_ report: LibraryFirstAidReport) -> LibraryFirstAidAction? {
         func originalRows(_ originals: [LibraryFirstAidOriginal]) -> [String] {
             originals.map { "\($0.name) — \($0.location)" }
         }
@@ -481,23 +497,84 @@ extension Workspace {
         alert.informativeText = (["Read-only report of catalogue and file locations."] + totals).joined(separator: "\n")
         let sections = groups.filter { !$0.1.isEmpty }.map { [$0.0] + $0.1 }
         if !sections.isEmpty {
-            let scroll = NSTextView.scrollableTextView()
-            scroll.frame.size = NSSize(width: 460, height: min(240, 22 * sections.reduce(0) { $0 + $1.count + 1 }))
-            if let text = scroll.documentView as? NSTextView {
-                text.string = sections.map { $0.joined(separator: "\n") }.joined(separator: "\n\n")
-                text.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
-                text.isEditable = false
-                text.setAccessibilityLabel("Library First Aid findings")
-            }
-            alert.accessoryView = scroll
+            alert.accessoryView = firstAidDetails(sections, label: "Library First Aid findings")
         }
         alert.addButton(withTitle: "Done")
-        var recoveries: [OriginalFolderOperation] = []
-        if !report.missingManagedOriginals.isEmpty { recoveries.append(.recoverManaged) }
-        if !report.offlineReferences.isEmpty { recoveries.append(.reconnect) }
-        for operation in recoveries { alert.addButton(withTitle: operation.title + "…") }
+        var actions: [LibraryFirstAidAction] = []
+        if !report.missingManagedOriginals.isEmpty { actions.append(.recover(.recoverManaged)) }
+        if !report.offlineReferences.isEmpty { actions.append(.recover(.reconnect)) }
+        if !report.untrackedManagedFiles.isEmpty { actions.append(.inspect) }
+        for action in actions { alert.addButton(withTitle: action.title) }
         let index = alert.runModal().rawValue - NSApplication.ModalResponse.alertSecondButtonReturn.rawValue
-        return recoveries.indices.contains(index) ? recoveries[index] : nil
+        return actions.indices.contains(index) ? actions[index] : nil
+    }
+
+    private func inspectFirstAidFiles(after report: LibraryFirstAidReport) {
+        guard let repository, !busy else { return }
+        let choice = NSAlert()
+        choice.messageText = "Inspect Untracked Files"
+        choice.informativeText = "Compare the reviewed files with saved catalogue fingerprints. You can also choose Isonique backups to check for matching managed originals."
+        choice.addButton(withTitle: "Catalogue Only")
+        choice.addButton(withTitle: "Choose Backups…")
+        choice.addButton(withTitle: "Cancel")
+        let backups: [URL]
+        switch choice.runModal() {
+        case .alertFirstButtonReturn: backups = []
+        case .alertSecondButtonReturn:
+            let panel = NSOpenPanel()
+            panel.title = "Choose Isonique Backups"
+            panel.prompt = "Inspect"
+            panel.canChooseDirectories = true
+            panel.canChooseFiles = false
+            panel.allowsMultipleSelection = true
+            guard panel.runModal() == .OK else { return }
+            backups = panel.urls
+        default: return
+        }
+        busy = true
+        status = "Comparing original fingerprints…"
+        Task {
+            defer { busy = false }
+            do {
+                let inspection = try await Task.detached(priority: .utility) {
+                    try repository.inspectUntrackedManagedFiles(after: report, backups: backups)
+                }.value
+                presentFirstAidInspection(inspection)
+                status = "Untracked file inspection complete"
+            } catch {
+                self.error = error.localizedDescription
+                status = "Untracked file inspection failed"
+            }
+        }
+    }
+
+    private func presentFirstAidInspection(_ inspection: LibraryFirstAidInspection) {
+        let alert = NSAlert()
+        alert.messageText = "Untracked File Inspection"
+        alert.informativeText = "Files inspected (\(inspection.files.count)). Files unavailable (\(inspection.unavailableFiles.count))."
+        var sections = inspection.files.map { file in
+            var rows = [file.filename, "SHA-256 \(file.sha256)"]
+            if file.catalogueMatches.isEmpty && file.backupMatches.isEmpty { rows.append("No fingerprint matches") }
+            rows += file.catalogueMatches.map { "Catalogue — \($0.name) — \($0.location)" }
+            rows += file.backupMatches.map { "Verified backup file — \($0.original.name) — \($0.original.location)" }
+            return rows
+        }
+        if !inspection.unavailableFiles.isEmpty { sections.append(["Unavailable for inspection"] + inspection.unavailableFiles) }
+        if !sections.isEmpty { alert.accessoryView = firstAidDetails(sections, label: "Untracked file fingerprint matches") }
+        alert.addButton(withTitle: "Done")
+        alert.runModal()
+    }
+
+    private func firstAidDetails(_ sections: [[String]], label: String) -> NSScrollView {
+        let scroll = NSTextView.scrollableTextView()
+        scroll.frame.size = NSSize(width: 460, height: min(240, 22 * sections.reduce(0) { $0 + $1.count + 1 }))
+        if let text = scroll.documentView as? NSTextView {
+            text.string = sections.map { $0.joined(separator: "\n") }.joined(separator: "\n\n")
+            text.font = .systemFont(ofSize: NSFont.smallSystemFontSize)
+            text.isEditable = false
+            text.setAccessibilityLabel(label)
+        }
+        return scroll
     }
 
     func backupLibraryPanel() {
