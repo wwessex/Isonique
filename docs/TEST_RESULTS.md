@@ -219,3 +219,8 @@
 - Cancellation after the first verified copy left no staged files or catalogue changes. An immutable catalogue forced a save failure after copies had been published, and rollback removed those copies. A retry succeeded. The tests also covered a destination catalogue change during import and corrupt source bytes.
 - Native QA imported a library with matching IDs using File → Import Project Library. The separate project and album appeared with distinct names. The saved catalogue had six photo records and four verified originals, with the imported edits and shared-original links intact. Source hashes matched before and after.
 - The signed Apple Silicon build passed strict verification on macOS 27.3. The optimized suite executed 135 tests with zero failures or skips, including four camera RAW fixtures.
+
+## Merge an edited project library
+
+- Repository tests covered both matching-photo policies, metadata and edit conflicts, album and stack membership, shared originals, explicit Trash, and absent and moved photos. Wrong project IDs and conflicting fingerprints were rejected. Cancellation and a forced catalogue write failure left the destination catalogue and original files intact.
+- In the signed app, File → Merge Project Library added one version, updated one photo and moved one photo into Library Trash. The saved catalogue and original hashes confirmed the changes. The incoming catalogue and files matched their pre-merge hashes.
