@@ -23,6 +23,13 @@ public extension LibraryRepository {
     }
 
     internal func readProjectLibrary(from folder: URL, allowTrashed: Bool) throws -> (URL, Library, Collection) {
+        let sourceRoot = try otherLibraryRoot(folder)
+        let (_, source) = try LibraryBackup.readCatalogue(sourceRoot)
+        _ = try source.uniqueOriginals()
+        return (sourceRoot, source, try source.validateExportedProject(allowTrashed: allowTrashed))
+    }
+
+    internal func otherLibraryRoot(_ folder: URL) throws -> URL {
         try Task.checkCancellation()
         guard folder.isFileURL else { throw LibraryError.unsafePath }
         let sourceRoot = folder.standardizedFileURL.resolvingSymlinksInPath()
@@ -38,9 +45,7 @@ public extension LibraryRepository {
         }
         guard sourceRoot.path != root.path else { throw LibraryError.unsafePath }
 
-        let (_, source) = try LibraryBackup.readCatalogue(sourceRoot)
-        _ = try source.uniqueOriginals()
-        return (sourceRoot, source, try source.validateExportedProject(allowTrashed: allowTrashed))
+        return sourceRoot
     }
 
     internal func commitProjectLibrary(_ library: Library, catalogue: Data, sourceRoot: URL,
