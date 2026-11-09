@@ -154,3 +154,9 @@
 - Four XCTest cases covered cache hits, resolution, edit and revision invalidation, replacement and deletion, least-recently-used eviction, cancellation, shared results, and the decode limit. A thumbnail whose source changed during decoding was rejected.
 - A release-mode request replay used 1,200 disposable catalogue records with 2700 × 1800 JPEG fixtures and an exposure edit on every fourth photo. Direct decoding took 822 ms at up to 12 concurrent decodes. The bounded cache took 1,682 ms for the cold pass at three workers. Revisiting the most recent 80 grid thumbnails took 58.3 ms and 80 decodes directly, or 1.5 ms and zero decodes with the cache. This measures thumbnail requests, excluding UI frame timing.
 - Native QA opened the disposable catalogue in the signed Apple Silicon build, scrolled the grid forward and back, switched to the list, and opened the Viewer filmstrip. The retained thumbnail budget is 64 MiB and 512 entries, with up to three decodes in flight. Visible and in-flight images use separate memory.
+
+## Browser filter and sort reuse
+
+- Two XCTest cases covered catalogue edits, scope, search, rating, sort direction and selection, including live file appearance and removal for the originals filter, Advanced Search and Smart Albums. The local working-tree suite executed 106 cases with one optional RAW fixture skip and zero failures.
+- An optimized probe reused the disposable 1,200-photo catalogue. Over three runs of 200 unchanged name-sorted reads, the median dropped from 454.9 ms for direct filtering and sorting to 0.233 ms for reused results. This measures repeated catalogue reads. A changed query, sort or catalogue still recomputes the result.
+- The signed arm64 release archive passed strict verification.

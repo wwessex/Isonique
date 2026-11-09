@@ -10,7 +10,9 @@ enum PhotoSort: String, CaseIterable, Identifiable {
 }
 enum EditTool: String { case select, crop, straighten, brush }
 @MainActor final class Workspace: ObservableObject {
-    @Published var library = Library()
+    @Published var library = Library() {
+        didSet { browserSnapshot = nil }
+    }
     @Published var scope = "all"
     @Published var selection: UUID?
     @Published var batchMode = false
@@ -63,6 +65,24 @@ enum EditTool: String { case select, crop, straighten, brush }
     let viewerRenderCache = ViewerRenderCache()
     let thumbnailCache = ThumbnailCache()
     let preferences: UserDefaults
+    private var browserSnapshot: BrowserSnapshot?
+    private struct BrowserSnapshot {
+        struct Key: Equatable {
+            let scope: String
+            let search: String
+            let query: PhotoQuery?
+            let rating: RatingFilter
+            let color: ColorLabelFilter
+            let originals: OriginalFilter
+            let sort: PhotoSort
+            let descending: Bool
+            let locale: String
+            let timeZone: String
+        }
+        let key: Key
+        let photos: [Photo]
+        let indices: [UUID: Int]
+    }
     var keepHistory: Bool { preferences.bool(forKey: "history.persist") }
     var canUndo: Bool { !history.undo.isEmpty }
     var canRedo: Bool { !history.redo.isEmpty }
@@ -98,7 +118,26 @@ enum EditTool: String { case select, crop, straighten, brush }
         } catch { self.error = error.localizedDescription; status = "Library unavailable" }
     }
     var isViewingTrash: Bool { scope == "trash" }
-    var photos: [Photo] { filteredPhotos(advancedQuery: advancedSearch) }
+    var photos: [Photo] {
+        let key = BrowserSnapshot.Key(scope: scope, search: search, query: advancedSearch, rating: ratingFilter,
+                                      color: colorFilter, originals: originalFilter, sort: sort,
+                                      descending: sortDescending, locale: Locale.current.identifier,
+                                      timeZone: TimeZone.current.identifier)
+        if let snapshot = browserSnapshot, snapshot.key == key { return snapshot.photos }
+        let visible = filteredPhotos(advancedQuery: advancedSearch)
+        let albumQuery = currentAlbumID.flatMap { id in library.albums.first { $0.id == id }?.rule?.query }
+        let readsAvailability = originalFilter == .unavailable ||
+            advancedSearch?.criteria.contains { $0.field == .availability } == true ||
+            albumQuery?.criteria.contains { $0.field == .availability } == true
+        if readsAvailability {
+            browserSnapshot = nil
+        } else {
+            let indices = Dictionary(visible.enumerated().map { ($0.element.id, $0.offset) },
+                                     uniquingKeysWith: { first, _ in first })
+            browserSnapshot = BrowserSnapshot(key: key, photos: visible, indices: indices)
+        }
+        return visible
+    }
 
     func filteredPhotos(advancedQuery: PhotoQuery?, includingCollapsed: Bool = false) -> [Photo] {
         let identifier = scope.split(separator: ":").last.flatMap { UUID(uuidString: String($0)) }
@@ -155,7 +194,12 @@ enum EditTool: String { case select, crop, straighten, brush }
         case .captured: return lhs.captureDate == rhs.captureDate ? lhs.importedAt < rhs.importedAt : lhs.captureDate < rhs.captureDate
         }
     }
-    var selected: Photo? { photos.first { $0.id == selection } }
+    var selected: Photo? {
+        guard let selection else { return nil }
+        let visible = photos
+        if let snapshot = browserSnapshot { return snapshot.indices[selection].map { visible[$0] } }
+        return visible.first { $0.id == selection }
+    }
     var title: String {
         if isViewingTrash { return "Trash" }
         if scope == "flagged" { return "Flagged" }
