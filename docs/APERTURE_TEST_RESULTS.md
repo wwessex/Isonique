@@ -1,0 +1,49 @@
+# Aperture test results
+
+## Baseline, 9 November 2026
+
+- `make test` passed 41 XCTest cases on arm64 macOS 27.3 (26C5035r), Xcode 27.2, Swift 6.4.2. Coverage includes generated still images, library round trips, original hashes, export, geometry, tone, organization and verified backup/restore.
+- The existing release configuration targets macOS 14+ and explicitly builds Apple Silicon. Only this macOS native version exists. Intel, older macOS runtime, camera/tether hardware, real RAW fixtures, HDR/wide-gamut display accuracy and VoiceOver are untested at baseline.
+- Existing build history is in [VALIDATION.md](../VALIDATION.md). A screenshot verifies startup rendering; interactive tests are recorded separately when performed.
+
+## Core persistence, Trash and multiple libraries
+
+- `make test` passed 47 XCTest cases. Added import metadata and album round trip, symlink copy, malformed sidecar and save rollback/retry, safe library creation, Trash backup/restart, workspace selection, undo/redo and failed workspace write tests.
+- `make build` passed arm64 release compilation, staged strict ad-hoc signature verification and archive generation. The native launch probe reported one visible arm64 Isonique window.
+- Exercised the native import picker and sheet with a synthetic PNG. Command-Delete hid it from All Photos, the Trash sidebar showed it, and Put Back cleared Trash. Shift-Command-N created a separate empty library, then File → Open Isonique Library switched back and showed the restored photo. Verified source and stored copy SHA-256 matched and the two catalogues contained one and zero photos respectively.
+- A sync conflict produced 16 untracked duplicate files during the pass. Verified each against Git and preserved them outside the repository in `checks/isonique-sync-duplicates`. SwiftPM initially compiled the duplicate Swift sources. Normal builds resumed after relocation.
+- Photo Trash retains original files and is included in backup. Finder Trash handoff and folder, album, and version Trash remain pending. Catalogue format 1 remains readable by older builds, which ignore the photo Trash field.
+
+## Referenced originals and missing-file recovery
+
+- `make test` passed 50 cases. New tests cover referenced import without managed copies, move detection, wrong-file rejection, relink and export across a renamed extension, consolidation with an injected catalogue failure, backup/restore with an offline reference, missing managed file restoration and history across a relink.
+- Catalogue version 2 is selected when the first referenced original is imported. This build reads managed-only version 1, while older builds reject version 2. Backup manifest format remains 1. Backups retain referenced paths and copy managed originals, including originals in photo Trash. Integrity Check validates available referenced bytes and reports a missing reference as a failure.
+- References use absolute filesystem paths and the permissions of the native desktop process. Removable-drive mount/unmount UI refresh is connected to macOS notifications. Physical drive ejection, network volumes and File Provider recovery are untested.
+- The arm64 release and signed archive built. The app launched with a visible window and a synthetic offline reference. Native interaction capture returned ScreenCaptureKit error -3811 during the follow-up, so relink and consolidation interactions are covered by core/workspace tests in this pass.
+- A 3472 × 1994 startup capture was inspected. The offline photo card displayed its warning and referenced badge, and the histogram reported that the original was unavailable.
+
+## Import job progress and cancellation
+
+- `make test` passed 52 cases. A deterministic cancellation after the first of three fixtures verified progress counts, no second copy, an intact source and a persisted project with its one committed photo. A separate test covered folder enumeration, continued import after a malformed image, and no empty project after duplicate/failure-only intake.
+- Cancellation takes effect between files or directory entries. The current file's copy, hash checks and catalogue write finish together. RAW + JPEG pairs with both committed members are linked before the job reports completion.
+- Import-job arm64 release compilation, strict staged signing and archive generation passed. The interactive cancel control was not exercised against a large input.
+
+## Compound Smart Albums and Advanced Search
+
+- `make test` passed 56 cases. Added All/Any and exact keyword tests, normalized extensions, leap-day and absent capture dates, original availability, saved rule compatibility, live browser/album membership, Undo and reopening the catalogue.
+- Advanced albums or project-scoped Smart Albums select catalogue version 2. Older simple albums keep their existing semantics. Date rules use day precision, with capture dates taken from EXIF and import dates displayed in the Mac’s local time zone.
+
+## Shared flip and tone rendering
+
+- `make test` passed 58 cases. Expanded tests cover both flip axes and cropped pixels, neutral legacy recipes, geometry and tone Stamp, saved recipes, directional brightness/vibrancy, sepia channel ordering, Undo/Redo, and unchanged original hashes.
+- The generated 32 × 24 PNG round trip matched the preview's RGBA bytes within one 8-bit code value. Larger images, high-bit-depth profiles, HDR, and real RAW inputs remain unqualified.
+- Brightness applies a midtone lift, vibrancy favors lower relative chroma, and sepia blends a tinted luminance treatment. These are independent sRGB operations. Historical Aperture vibrancy also protected skin tones.
+- Follow-up native QA on a separately identified, signed test copy succeeded after the earlier capture failure. Relink opened a moved synthetic PNG in the viewer, Info showed its external location, and Consolidate changed storage to Managed while retaining the external file. Shift-Command-F opened Advanced Search, a filename rule updated the match count, and Save as Smart Album selected the album and displayed its photo. Photos → Flip Horizontally enabled Undo, and Command-Z enabled Redo.
+
+## Keyboard review, labels and final release
+
+- `make test` passed 60 XCTest cases. New tests cover culling under Unrated Only, persisted label and label-name settings, filter membership, Undo/Redo, and stable color values in compound searches.
+- The native test accepted 4 for four stars and Command-4 for a green label. Typing a 5 into the Caption field preserved the four-star rating. Settings opened with Command-comma and accepted a multiword label name.
+- The native macOS arm64 version was the only maintained app. Tests ran on Apple M5 Pro, 24 GB, macOS 27.3 and Xcode 27.2. No alternate platform, Intel runtime, macOS 14/15 runtime, actual camera/tether device, genuine RAW dataset, high-bit-depth export or calibrated wide-gamut/XDR measurement was available in this pass.
+- The final `make build` passed. The app extracted from `build/Isonique.zip` passed strict signature verification, reported an arm64 executable, and rendered a 3472 × 1994 startup screenshot. Visual inspection confirmed the rated and labelled card, flip menu, adjustment controls and histogram. The launch emitted a non-blocking system sandbox-extension diagnostic and completed with exit status 0.
+- Compared the synthetic input, moved reference and consolidated managed copy after native QA. All three SHA-256 hashes matched. The persisted catalogue had the expected color/rating and the saved Smart Album in their respective test libraries.

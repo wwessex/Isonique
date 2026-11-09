@@ -7,6 +7,7 @@ let package = Package(
     targets: [
         .target(name: "IsoniqueCore"),
         .executableTarget(name: "Isonique", dependencies: ["IsoniqueCore"]),
-        .testTarget(name: "IsoniqueCoreTests", dependencies: ["IsoniqueCore"])
+        .testTarget(name: "IsoniqueCoreTests", dependencies: ["IsoniqueCore"]),
+        .testTarget(name: "IsoniqueTests", dependencies: ["Isonique", "IsoniqueCore"])
     ]
 )

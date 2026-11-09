@@ -17,12 +17,12 @@ public enum LibraryBackup {
         let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
         guard values.isRegularFile == true, values.isSymbolicLink != true else { throw LibraryError.unsafePath }
     }
-    private static func read(_ folder: URL) throws -> Snapshot {
+    private static func read(_ folder: URL, allowMissingManaged: Bool = false) throws -> Snapshot {
         let catalog = folder.appendingPathComponent("catalog.json")
         try regularFile(catalog)
         let data = try Data(contentsOf: catalog)
         let library = try JSONDecoder().decode(Library.self, from: data)
-        guard library.version == 1 else { throw LibraryError.unsupportedVersion }
+        try library.validateSchema()
         let originals = folder.appendingPathComponent("Originals")
         guard originals.resolvingSymlinksInPath() == originals else { throw LibraryError.unsafePath }
         guard Set(library.photos.map(\.id)).count == library.photos.count else { throw LibraryError.integrity("duplicate photo identities") }
@@ -30,8 +30,19 @@ public enum LibraryBackup {
         for photo in library.photos {
             guard !photo.filename.isEmpty, photo.filename != ".", photo.filename != "..",
                   photo.filename == (photo.filename as NSString).lastPathComponent else { throw LibraryError.unsafePath }
+            if let path = photo.referencedPath {
+                _ = try LibraryRepository.referenceURL(path, libraryRoot: folder)
+                continue
+            }
             let url = originals.appendingPathComponent(photo.filename)
-            try regularFile(url)
+            if allowMissingManaged {
+                do { try regularFile(url) }
+                catch let error as CocoaError where error.code == .fileReadNoSuchFile || error.code == .fileNoSuchFile {
+                    continue
+                }
+            } else {
+                try regularFile(url)
+            }
             guard try LibraryRepository.digest(url) == photo.sha256 else { throw LibraryError.integrity(photo.originalName) }
             hashes[photo.filename] = photo.sha256
         }
@@ -40,12 +51,18 @@ public enum LibraryBackup {
 
     /// Reads every catalogue-referenced original without modifying any library files.
     public static func verify(_ repository: LibraryRepository) throws -> Int {
-        try read(repository.root).library.photos.count
+        let library = try read(repository.root).library
+        for photo in library.photos where photo.referencedPath != nil {
+            let url = try repository.availableOriginalURL(photo)
+            guard try LibraryRepository.digest(url) == photo.sha256 else { throw LibraryError.integrity(photo.originalName) }
+        }
+        return library.photos.count
     }
 
+    /// Check every present managed original and allow a missing file to be relinked in the workspace.
     public static func openVerified(_ source: URL) throws -> (LibraryRepository, Library) {
         let root = source.standardizedFileURL.resolvingSymlinksInPath()
-        _ = try read(root)
+        _ = try read(root, allowMissingManaged: true)
         let repository = try LibraryRepository(root: root)
         return (repository, try repository.load())
     }

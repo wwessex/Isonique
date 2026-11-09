@@ -102,7 +102,7 @@ final class LibraryBackupTests: XCTestCase {
         }
         try saved.write(to: manifestURL)
         let catalogURL = backup.appendingPathComponent("catalog.json")
-        var catalog = try repo.load(); catalog.version = 2
+        var catalog = try repo.load(); catalog.version = 3
         try JSONEncoder().encode(catalog).write(to: catalogURL)
         // Keep the manifest hash consistent to exercise the catalogue version guard.
         manifest["version"] = 1
