@@ -58,7 +58,7 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 
 | Aperture workflow | Status | Isonique audit |
 | --- | --- | --- |
-| Grid, filmstrip, list and two Browsers | Partially implemented | Grid and single viewer with filmstrip. No list, dual Browser, Quick Preview mode or manual ordering. |
+| Grid, filmstrip, list and two Browsers | Partially implemented | Grid, native metadata List Browser and single viewer with filmstrip. List shares filters, batch selection, stack covers and keyboard review. Column sorting uses the workspace Sort & Filter menu. Configurable metadata columns, dual Browser, Quick Preview and manual order are pending. [Aperture Help](https://aperture.skydocu.com/en/organize-and-sort-photos/change-the-browser-view/work-with-photos-in-list-view/) |
 | Single-image, multiple-image, Compare and Primary Only | Partially implemented | Single image, original toggle and side-by-side comparison with a pinned reference and selected alternate. Multi-image layouts, synchronized zoom and Aperture’s Promote Compare command are pending. |
 | Full-screen Viewer/Browser/Projects, HUDs, secondary display | Partially implemented | Native window controls and slideshow. No dedicated full-screen photo layouts or secondary display targeting. |
 | Zoom, Loupe and pixel-level inspection | Partially implemented | Binary fit/full-resolution render; no loupe, pan or precise magnification presets. |
@@ -92,11 +92,11 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 | --- | --- | --- |
 | File | Partially implemented | Import (⌘I), export (⇧⌘E), New Smart Album (⇧⌘L), metadata import, create/open/verify/backup/restore, relink/consolidate, photo Trash, legacy recovery and import options. Library merge, relocation, version deletion semantics and print remain open. |
 | Edit | Partially implemented | Undo/redo photo edit (⌘Z / ⇧⌘Z). Native text editing should retain text undo in focused inputs; application-wide override needs interaction review. |
-| View / Window | Partially implemented | SwiftUI window menu, sidebar/inspector, Advanced Search (⇧⌘F), grid/viewer controls and Escape to Browser. Dedicated Aperture layouts, HUDs, overlays and window controls are absent. |
+| View / Window | Partially implemented | SwiftUI window menu, sidebar/inspector, Advanced Search (⇧⌘F), grid/list/viewer controls and Escape to Browser. Dedicated Aperture layouts, HUDs, overlays and window controls are absent. |
 | Images / Photos, Metadata, Adjustments | Partially implemented | Photos, Metadata, Rating and Review menus, Inspector and edit strip expose flip, labels, flags, ratings, slideshow and auto-stack commands. Full menu parity is pending. |
 | Help | Partially implemented | Searchable Features & Limits window. No workflow help or command reference inside the app. |
-| Application preferences | Partially implemented | Native Settings edits persistent color-label names and shows the review keys. Import/export presets, history, crop ratio and library path are persisted in their workflow controls. General, appearance, preview, accounts and advanced Settings sections are pending. |
-| Command sets and gestures | Partially implemented | Focused Browser/Viewer review supports 0–5, 9, =, −, / and arrow navigation, with ⌘0–7 for color labels. Original Command Editor, alternate command sets, W inspector cycling, full-screen command and customizable gestures remain open. [Aperture shortcut card mirror](https://apple.manymanuals.de/pc-workstation-barebones/aperture/user-manual-6725) |
+| Application preferences | Partially implemented | Native Settings edits persistent color-label names and browser layout, and shows the review keys. Import/export presets, history, crop ratio and library path are persisted in their workflow controls. General, appearance, preview, accounts and advanced Settings sections are pending. |
+| Command sets and gestures | Partially implemented | Focused Browser/Viewer review supports 0–5, 9, =, −, / and arrow navigation, with ⌘0–7 for color labels, Control-G/L for Grid/List, Option-G/V for versions, and Option-O for comparison. Original Command Editor, alternate command sets, W inspector cycling, full-screen command and customizable gestures remain open. [Aperture shortcut card mirror](https://apple.manymanuals.de/pc-workstation-barebones/aperture/user-manual-6725) |
 | Native workspace polish | Partially implemented | Dark appearance, macOS 26 material with fallback, AppKit panels and named controls. Light appearance, systematic VoiceOver testing, trackpad interaction and toolbar customization outstanding. |
 
 ## Proposed modern work

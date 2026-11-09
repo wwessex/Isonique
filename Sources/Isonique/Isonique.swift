@@ -39,6 +39,7 @@ enum EditTool: String { case select, crop, straighten }
     @Published var status = "Ready · originals are preserved"
     @Published var error: String?
     @Published var viewer = false
+    @Published var browserLayout: BrowserPresentation
     @Published var showInspector = true
     @Published var compareOriginal = false
     @Published var comparisonID: UUID?
@@ -59,6 +60,8 @@ enum EditTool: String { case select, crop, straighten }
     var repository: LibraryRepository?
     init(libraryRoot: URL? = nil, preferences: UserDefaults = .standard) {
         self.preferences = preferences
+        let layout = preferences.string(forKey: "browser.layout").flatMap(BrowserPresentation.init(rawValue:))
+        browserLayout = layout == .list ? .list : .grid
         labelNames = preferences.dictionary(forKey: "photo.labelNames") as? [String: String] ?? [:]
         do {
             let args = ProcessInfo.processInfo.arguments
@@ -176,6 +179,12 @@ enum EditTool: String { case select, crop, straighten }
         guard let entry = nextHistory.step(in: &draft, redoing: redo),
               commit(draft, history: nextHistory) else { return }
         selectAfterChange(preferred: entry.selectionID)
+        switch entry {
+        case .edit: status = redo ? "Photo edit redone" : "Photo edit undone"
+        case .removeVersion: status = "Version creation undone"
+        case .restoreVersion: status = "Version creation redone"
+        case .stackPick: status = redo ? "Pick change redone" : "Pick change undone"
+        }
     }
     func selectAfterChange(preferred: UUID?) {
         let visible = photos
@@ -269,6 +278,11 @@ enum EditTool: String { case select, crop, straighten }
             scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all; colorFilter = .all; advancedSearch = nil
         }
     }
+    func exitViewer() {
+        if comparisonID != nil { stopComparison() }
+        else { showBrowser() }
+    }
+
     func chooseTool(_ next: EditTool) {
         if next != .select { stopComparison() }
         viewer = true; compareOriginal = false; tool = next
@@ -446,6 +460,12 @@ enum EditTool: String { case select, crop, straighten }
         .defaultSize(width: 1440, height: 900)
         .commands {
             CommandGroup(after: .toolbar) {
+                ForEach(BrowserPresentation.allCases) { presentation in
+                    Button(presentation.rawValue) { workspace.choosePresentation(presentation) }
+                        .keyboardShortcut(presentation.shortcut)
+                        .disabled(workspace.busy || workspace.repository == nil || (presentation == .viewer && workspace.batchMode))
+                }
+                Divider()
                 Button("Advanced Search…") { workspace.showAdvancedSearch = true }
                     .keyboardShortcut("f", modifiers: [.command, .shift])
                     .disabled(workspace.busy || workspace.repository == nil)
@@ -635,7 +655,7 @@ struct ContentView: View {
                 HStack {
                     if model.viewer {
                         Button { model.showBrowser() } label: { Label("Back to \(model.title)", systemImage: "chevron.left") }
-                            .help("Return to the photo grid; Escape also goes back")
+                            .help("Return to the Browser; Escape also goes back")
                         if model.scope != "all" || !model.search.isEmpty || model.ratingFilter != .all || model.originalFilter != .all || model.colorFilter != .all || model.advancedSearch != nil {
                             Button("All Photos") { model.showBrowser(allPhotos: true) }
                         }
@@ -651,7 +671,12 @@ struct ContentView: View {
                             .disabled(model.selectedTrashActionIDs.isEmpty)
                     }
                     Picker("Rating filter", selection: $model.ratingFilter) { ForEach(RatingFilter.allCases) { filter in Text(filter.label).tag(filter) } }.labelsHidden().frame(width: 165)
-                    Picker("View", selection: $model.viewer) { Image(systemName: "square.grid.2x2").tag(false); Image(systemName: "rectangle.bottomthird.inset.filled").tag(true) }.labelsHidden().pickerStyle(.segmented).frame(width: 80)
+                    Picker("View", selection: Binding(get: { model.presentation }, set: model.choosePresentation)) {
+                        ForEach(BrowserPresentation.allCases) { presentation in
+                            Image(systemName: presentation.icon).accessibilityLabel(presentation.rawValue).tag(presentation)
+                                .disabled(presentation == .viewer && model.batchMode)
+                        }
+                    }.labelsHidden().pickerStyle(.segmented).frame(width: 116)
                 }.padding(.horizontal, 22).padding(.vertical, 16)
                 Divider().opacity(0.4)
                 if model.batchMode { BatchBar() }
@@ -683,11 +708,18 @@ struct ContentView: View {
                             }.frame(maxWidth: .infinity, maxHeight: .infinity)
                             ScrollView(.horizontal) { LazyHStack(spacing: 10) { ForEach(model.photos) { photo in photoCell(photo, compact: true) } }.padding(12) }
                                 .scrollIndicators(.hidden).frame(height: 128).workspaceGlass(radius: 18).padding(.horizontal, 16).padding(.bottom, 14)
+                        } else if model.browserLayout == .list {
+                            PhotoListBrowser(model: model, photos: model.photos)
                         } else {
                             ScrollView { LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: 16)], spacing: 18) { ForEach(model.photos) { photo in photoCell(photo, compact: false) } }.padding(20) }
                         }
                     }.frame(minWidth: 400).background(Color(white: 0.055))
                         .focusable().focusEffectDisabled().focused($browserFocused)
+                        .onKeyPress(.escape) {
+                            guard model.viewer else { return .ignored }
+                            model.exitViewer()
+                            return .handled
+                        }
                         .onKeyPress(keys: [.leftArrow, .rightArrow, "0", "1", "2", "3", "4", "5", "9", "=", "-", "/"], phases: .down, action: model.reviewKey)
                     if model.showInspector && !model.isViewingTrash {
                         Inspector().frame(minWidth: 260, idealWidth: 290, maxWidth: 340).workspaceGlass(radius: 20).padding(10)
@@ -769,11 +801,10 @@ struct ContentView: View {
             model.batchSelection = []
             model.showBrowser()
         }
-        .onExitCommand {
-            if model.comparisonID != nil { model.stopComparison() } else { model.showBrowser() }
-        }
+        .onExitCommand(perform: model.exitViewer)
         .onChange(of: model.viewer) { _, viewing in
-            if !viewing { model.tool = .select; model.compareOriginal = false; model.stopComparison() }
+            if viewing { browserFocused = true }
+            else { model.tool = .select; model.compareOriginal = false; model.stopComparison() }
         }
         .onChange(of: model.compareOriginal) { _, original in if original { model.stopComparison() } }
         .onChange(of: model.search) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
@@ -798,7 +829,7 @@ struct ContentView: View {
             } label: {
                 VStack(alignment: .leading, spacing: 6) {
                     Group {
-                        if let url { Thumbnail(url: url) }
+                        if let url { Thumbnail(url: url, adjustments: photo.adjustments, maximum: compact ? 220 : 360) }
                         else { Label("Original unavailable", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.secondary) }
                     }.frame(height: compact ? 76 : 140).frame(maxWidth: .infinity).background(Color.black.opacity(0.3)).clipped()
                     HStack {
@@ -806,7 +837,7 @@ struct ContentView: View {
                         Text(photo.displayName).lineLimit(1)
                         if photo.id == model.comparisonID { Image(systemName: "pin.fill").accessibilityLabel("Comparison reference") }
                         if let stackID = photo.stackID {
-                            StackBadge(stackID: stackID, photoID: photo.id)
+                            StackBadge(stackID: stackID, photo: photo, model: model)
                         }
                         if photo.referencedPath != nil { Image(systemName: "link").accessibilityLabel("Referenced original") }
                         if let label = photo.colorLabel {
@@ -818,27 +849,7 @@ struct ContentView: View {
                     .background((model.batchMode ? model.batchSelection.contains(photo.id) : model.selection == photo.id) ? Color.accentColor.opacity(0.18) : Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke((model.batchMode ? model.batchSelection.contains(photo.id) : model.selection == photo.id) ? Color.accentColor : Color.white.opacity(0.07), lineWidth: (model.batchMode ? model.batchSelection.contains(photo.id) : model.selection == photo.id) ? 2 : 1))
             }.buttonStyle(.plain)
-            .contextMenu {
-                Button(model.isViewingTrash ? "Put Back" : "Move to Trash") {
-                    model.setPhotosTrashed([photo.id], trashed: !model.isViewingTrash)
-                }
-                if !model.isViewingTrash {
-                    StackContextActions(photo: photo)
-                    Button("New Version from Original") { model.createVersion(from: .original, of: photo.id) }.disabled(model.batchMode)
-                    Button("Duplicate Version") { model.createVersion(from: .current, of: photo.id) }.disabled(model.batchMode)
-                    if model.selection != photo.id {
-                        Button("Compare with Selected") { model.showComparison(reference: photo.id) }.disabled(!model.canCreateVersion)
-                    }
-                    Divider()
-                    if let url { Button("Reveal Original in Finder") { NSWorkspace.shared.activateFileViewerSelecting([url]) } }
-                    if photo.referencedPath != nil || url == nil {
-                        Button("Relink Original…") { model.relinkOriginalPanel(photo) }
-                    }
-                    if photo.referencedPath != nil, url != nil {
-                        Button("Consolidate Original") { model.consolidateOriginal(photo) }
-                    }
-                }
-            }
+            .contextMenu { PhotoContextActions(model: model, photo: photo, url: url) }
         }
     }
 }
@@ -896,16 +907,32 @@ struct EditBar: View {
 }
 struct Thumbnail: View {
     let url: URL
+    let adjustments: Adjustments
+    let maximum: Int
     @State private var image: NSImage?
+
+    private struct Request: Equatable {
+        let url: URL
+        let adjustments: Adjustments
+        let maximum: Int
+    }
+
     var body: some View {
-        Group { if let image { Image(nsImage: image).resizable().scaledToFit() } else { Image(systemName: "photo").foregroundStyle(.secondary) } }
-            .task(id: url) {
-                let cg = await Task.detached(priority: .utility) { () -> CGImage? in
-                    guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
-                    return CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceThumbnailMaxPixelSize: 360, kCGImageSourceCreateThumbnailWithTransform: true] as CFDictionary)
-                }.value
-                if !Task.isCancelled, let cg { image = NSImage(cgImage: cg, size: .zero) }
+        let request = Request(url: url, adjustments: adjustments, maximum: maximum)
+        Group {
+            if let image { Image(nsImage: image).resizable().scaledToFit() }
+            else { Image(systemName: "photo").foregroundStyle(.secondary) }
+        }.task(id: request) {
+            let render = Task.detached(priority: .utility) {
+                try? Renderer.thumbnail(request.url, adjustments: request.adjustments, maxDimension: request.maximum)
             }
+            let thumbnail = await withTaskCancellationHandler {
+                await render.value
+            } onCancel: { render.cancel() }
+            if !Task.isCancelled {
+                image = thumbnail.map { NSImage(cgImage: $0, size: .zero) }
+            }
+        }
     }
 }
 struct PhotoViewer: View {

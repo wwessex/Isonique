@@ -998,6 +998,10 @@ extension LibraryTests {
         try Renderer.export(duplicate, repository: restoredRepo, to: edited, options: options)
         try Renderer.export(neutral, repository: restoredRepo, to: unedited, options: options)
         XCTAssertNotEqual(try LibraryRepository.digest(edited), try LibraryRepository.digest(unedited))
+        let editedThumbnail = try Renderer.thumbnail(source, adjustments: duplicate.adjustments, maxDimension: 16)
+        let expectedThumbnail = try Renderer.render(source, adjustments: duplicate.adjustments, maxDimension: 16)
+        XCTAssertEqual(editedThumbnail.width, 16)
+        XCTAssertEqual(editedThumbnail.dataProvider?.data as Data?, expectedThumbnail.dataProvider?.data as Data?)
         options.format = .original
         let exportedOriginal = temporary.appendingPathComponent("original.png")
         try Renderer.export(neutral, repository: restoredRepo, to: exportedOriginal, options: options)

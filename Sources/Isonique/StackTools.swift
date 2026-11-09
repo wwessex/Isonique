@@ -87,14 +87,18 @@ extension Workspace {
 }
 
 struct StackBadge: View {
-    @EnvironmentObject var model: Workspace
-    let stackID: UUID
-    let photoID: UUID
+    private let albumPick: Bool
+    private let stackPick: Bool
+    private let collapsed: Bool
+
+    @MainActor
+    init(stackID: UUID, photo: Photo, model: Workspace) {
+        albumPick = model.isAlbumPick(photo)
+        stackPick = model.library.stackBrowser?.picks[stackID] == photo.id
+        collapsed = model.isStackCollapsed(stackID)
+    }
 
     var body: some View {
-        let albumPick = model.currentAlbumID.flatMap { model.library.stackBrowser?.albumPicks[$0]?[stackID] } == photoID
-        let stackPick = model.library.stackBrowser?.picks[stackID] == photoID
-        let collapsed = model.isStackCollapsed(stackID)
         HStack(spacing: 3) {
             Image(systemName: albumPick ? "bookmark.fill" : (stackPick ? "star.circle.fill" : "square.3.layers.3d"))
                 .foregroundStyle(albumPick || stackPick ? Color.accentColor : Color.secondary)
@@ -106,7 +110,7 @@ struct StackBadge: View {
 }
 
 struct StackContextActions: View {
-    @EnvironmentObject var model: Workspace
+    @ObservedObject var model: Workspace
     let photo: Photo
 
     var body: some View {

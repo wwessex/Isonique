@@ -59,3 +59,10 @@
 
 - All 66 XCTest cases passed. New tests cover a manual stack’s first pick, persistent global and album-specific picks, collapsed presentation, filtered fallback, fallback while a pick is in Trash, Put Back, and Undo/Redo for album picks. Opening a stack from the sidebar bypasses the collapsed display.
 - Stack preferences are stored per library in format 3. Existing stacks open expanded. Automatic stacking still uses the capture-time window and selects the first member by capture order.
+
+## Native List Browser and final release
+
+- All 67 XCTest cases passed. The list workspace test covers persisted layout, filtered multi-selection, culling and returning from the Viewer. Version thumbnail pixels matched the shared preview renderer at the same dimensions.
+- Native QA exercised Control-L, single-row rating, Command-click selection, Command-K stacking, Shift-Command-Backslash album picks, and the persisted album and global covers. The first run found a crash when SwiftUI’s table removed a stack row. Passing explicit display values to the badge fixed it. The same collapse path and context-menu expansion passed on a rebuilt app. A subsequent focus fix made Escape return to the list after double-clicking a row.
+- The final signed archive passed strict verification after extraction. Its arm64 executable opened a disposable format-3 library and produced a 3472 × 1994 screenshot showing distinct edited and neutral thumbnails. Five entries in that library matched the hashes of their three original files.
+- The sole maintained variant is native Apple Silicon macOS. This run used an Apple M5 Pro with 24 GB, macOS 27.3 and Xcode 27.2. Earlier macOS runtimes, Intel, camera RAW and tether hardware, calibrated XDR, and large-library performance remain unverified.
