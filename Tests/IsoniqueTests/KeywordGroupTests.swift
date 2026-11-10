@@ -123,6 +123,74 @@ final class KeywordGroupTests: XCTestCase {
         XCTAssertEqual(workspace.library.photos, [expected, second])
     }
 
+    @MainActor
+    func testQuickRemovalChangesOnlyVisibleSelectionAndUndoesAsOneEdit() throws {
+        let (root, preferences) = try fixture()
+        defer { cleanUp(root, preferences) }
+        let workspace = Workspace(libraryRoot: root, preferences: preferences)
+        let project = Collection(name: "Current shoot")
+        let first = photo("First", keywords: "Coast, CAFE\u{301}, café, blue hour", projectID: project.id)
+        let second = photo("Second", keywords: "CAFÉ", projectID: project.id)
+        let unselected = photo("Unselected", keywords: "CAFÉ", projectID: project.id)
+        let hidden = photo("Hidden", keywords: "CAFÉ")
+        var draft = workspace.library
+        draft.projects = [project]
+        draft.photos = [first, second, unselected, hidden]
+        XCTAssertTrue(workspace.commit(draft))
+
+        workspace.scope = "project:\(project.id)"
+        workspace.batchMode = true
+        workspace.batchSelection = [first.id, second.id, hidden.id]
+        XCTAssertTrue(workspace.removeKeywords("Café"))
+        XCTAssertEqual(workspace.library.photos.map(\.keywords), ["Coast, blue hour", "", "CAFÉ", "CAFÉ"])
+        XCTAssertEqual(workspace.library.photos.map(\.caption), draft.photos.map(\.caption))
+        XCTAssertFalse(workspace.removeKeywords("Café"))
+        XCTAssertEqual(workspace.history.undo.count, 1)
+
+        let removed = workspace.library.photos
+        workspace.undoEdit()
+        XCTAssertEqual(workspace.library.photos, draft.photos)
+        workspace.redoEdit()
+        XCTAssertEqual(workspace.library.photos, removed)
+    }
+
+    @MainActor
+    func testKeywordShortcutUsesActiveGroupAndRequiresAnEligibleSelection() throws {
+        let (root, preferences) = try fixture()
+        defer { cleanUp(root, preferences) }
+        let workspace = Workspace(libraryRoot: root, preferences: preferences)
+        var draft = workspace.library
+        let first = photo("First", keywords: "Keep")
+        let second = photo("Second", keywords: "")
+        draft.photos = [first, second]
+        XCTAssertTrue(workspace.commit(draft))
+        workspace.selection = first.id
+
+        XCTAssertEqual(workspace.keywordShortcut("1", modifiers: .option), .ignored)
+        let light = try KeywordGroup(name: "Light", keywordText: "Dawn, Dusk")
+        let places = try KeywordGroup(name: "Places", keywordText: "Coast, Hills")
+        try workspace.saveKeywordGroup(light)
+        try workspace.saveKeywordGroup(places)
+        XCTAssertEqual(workspace.keywordShortcut("2", modifiers: []), .ignored)
+        XCTAssertEqual(workspace.keywordShortcut("2", modifiers: [.command, .option]), .ignored)
+        XCTAssertEqual(workspace.keywordShortcut("2", modifiers: [.option, .numericPad]), .ignored)
+        XCTAssertEqual(workspace.keywordShortcut("3", modifiers: .option), .ignored)
+        workspace.showKeywordControls = false
+        XCTAssertEqual(workspace.keywordShortcut("2", modifiers: .option), .ignored)
+        workspace.showKeywordControls = true
+        workspace.batchMode = true
+        XCTAssertEqual(workspace.keywordShortcut("2", modifiers: .option), .ignored)
+
+        workspace.batchSelection = [first.id, second.id]
+        XCTAssertEqual(workspace.keywordShortcut("2", modifiers: .option), .handled)
+        XCTAssertEqual(workspace.library.photos.map(\.keywords), ["Keep, Hills", "Hills"])
+        XCTAssertEqual(workspace.keywordShortcut("2", modifiers: [.option, .shift]), .handled)
+        XCTAssertEqual(workspace.library.photos, draft.photos)
+        workspace.selectKeywordGroup(light.id)
+        XCTAssertEqual(workspace.keywordShortcut("2", modifiers: .option), .handled)
+        XCTAssertEqual(workspace.library.photos.map(\.keywords), ["Keep, Dusk", "Dusk"])
+    }
+
     private func photo(_ name: String, keywords: String, projectID: UUID? = nil) -> Photo {
         var photo = Photo(filename: name + ".jpg", originalName: name + ".jpg", projectID: projectID,
                           width: 20, height: 16, camera: "", captureDate: "", sha256: name)

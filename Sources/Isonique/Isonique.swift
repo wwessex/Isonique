@@ -712,6 +712,12 @@ enum EditTool: String { case select, crop, straighten, brush }
                         Button("Apply Group") { workspace.addKeywords(group.keywordText) }
                     }
                     .disabled(!workspace.canOpenBatchMetadata)
+                    Menu("Remove Keyword") {
+                        ForEach(group.keywords, id: \.self) { keyword in
+                            Button(keyword) { workspace.removeKeywords(keyword) }
+                        }
+                    }
+                    .disabled(!workspace.canOpenBatchMetadata)
                 }
                 Divider()
                 Button("Batch Change…", action: workspace.openBatchMetadata)
@@ -1060,7 +1066,11 @@ struct ContentView: View {
                                 } else {
                                     MissingOriginalView(photo: photo)
                                 }
-                            }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                            }
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .simultaneousGesture(TapGesture().onEnded {
+                                if model.tool == .select { browserFocused = true }
+                            })
                             ScrollView(.horizontal) { LazyHStack(spacing: 10) { ForEach(model.photos) { photo in photoCell(photo, compact: true) } }.padding(12) }
                                 .scrollIndicators(.hidden).frame(height: 128).workspaceGlass(radius: 18).padding(.horizontal, 16).padding(.bottom, 14)
                         } else if model.browserLayout == .list {
@@ -1074,6 +1084,7 @@ struct ContentView: View {
                         }
                     }.frame(minWidth: 400).background(Color(white: 0.055))
                         .focusable().focusEffectDisabled().focused($browserFocused)
+                        .keywordShortcuts(for: model)
                         .onKeyPress(.escape) {
                             guard model.viewer else { return .ignored }
                             model.exitViewer()

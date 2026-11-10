@@ -133,9 +133,11 @@ Metadata → Manage Keyword Groups creates, renames and edits named groups, and 
 
 View → Show Keyword Controls displays a group picker, individual keyword buttons and Apply Group. The Metadata menu also offers the active group's keywords. Assignment appends to the visible selection, skips existing keywords and uses the same grouped history as Batch Change. Editing or deleting a group leaves already assigned photo keywords intact. [Historical Aperture workflow](https://aperture.skydocu.com/en/organize-and-sort-photos/add-keywords-to-photos/apply-keywords-using-keyword-controls-and-presets/)
 
-## Next camera-independent slice
+## Quick keyword removal and shortcuts
 
-Extend the keyword controls with quick removal and keyboard assignment scoped to Browser and Viewer focus.
+The keyword controls support Shift-click removal and Metadata → Remove Keyword. With Keyword Controls visible and the Grid Browser, List Browser or Viewer focused, Option–1 through Option–8 add keywords by active group order. Add Shift to remove the corresponding keyword. Search and Inspector text fields keep their normal key input. The same catalogue history handles assignment and removal, so Undo restores the entire selection in one step. [Aperture shortcut reference](https://www.manualshelf.com/manual/apple/aperture-3-upgrade/operation-manual-english/page-298.html)
+
+The next slice is a reusable keyword vocabulary with import and export.
 
 ## Pending physical camera checks
 

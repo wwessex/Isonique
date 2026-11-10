@@ -411,3 +411,10 @@
 - Single-keyword and whole-group tests checked visible selection, preservation of captions, an unselected sibling version, another project and Library Trash. Reapplying a group with no new keywords left the catalogue and history unchanged. Reopening preserved the assigned keywords, and one Undo/Redo affected the whole group assignment even after its definition was deleted.
 - In a signed app copy with isolated preferences, the Metadata command created a group from three entries and the toolbar showed two distinct buttons. With no batch selection, assignment was disabled. A single keyword button and Apply Group updated the selected photos, and the Info inspector reflected one-step Undo/Redo. The group and controls reappeared after relaunch. The unselected photo's keywords and all three managed file hashes matched their baselines.
 - All 218 optimized XCTest cases passed without skips, including four RAW fixtures and the Finder Trash handoff. Branding and strict signature verification passed for the sole maintained app, native arm64 on Apple M5 Pro with macOS 27.3 and Xcode 27.2. Physical PTP checks remain pending.
+
+## Quick keyword removal and shortcuts
+
+- Tests verified case-insensitive removal across the visible selection, including equivalent Unicode spellings, without changing other keywords or captions. A repeated removal created no extra history. One Undo and Redo covered the entire selection.
+- Shortcut tests checked active group order, missing slots, hidden controls, empty selections and unrelated modifiers.
+- In a signed app copy with isolated preferences, Option–1 and Option–Shift–1 worked in the Grid Browser, List Browser and Viewer. The Grid batch used one Undo and Redo for both selected photos. Caption and Search received their normal Option-key characters, and clicking the Viewer image restored shortcut focus. Shift-click removed the keyword. The final catalogue values and all three original file hashes matched their baselines.
+- All 220 release tests passed, including the RAW fixtures and Finder Trash handoff. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
