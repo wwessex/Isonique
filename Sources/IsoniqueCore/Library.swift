@@ -242,6 +242,7 @@ public struct Photo: Codable, Identifiable, Equatable {
     public var width: Int
     public var height: Int
     public var camera: String
+    public var cameraEXIF: CameraEXIF?
     public var captureDate: String
     public var sha256: String
     public var adjustments = Adjustments()
@@ -320,14 +321,20 @@ public struct Library: Codable {
         albums.contains { $0.rule?.query?.criteria.contains { $0.field.iptcField != nil } == true }
     }
 
+    fileprivate var hasEXIFSearch: Bool {
+        photos.contains { $0.cameraEXIF?.isEmpty == false }
+            || albums.contains { $0.rule?.query?.criteria.contains { $0.field.isEXIF } == true }
+    }
+
     func validateSchema() throws {
+        if version < 14, hasEXIFSearch { throw LibraryError.unsupportedVersion }
         if version < 12, hasIPTCRules { throw LibraryError.unsupportedVersion }
         if version < 11, hasIPTCMetadata { throw LibraryError.unsupportedVersion }
         if version < 10, hasKeywordPaths { throw LibraryError.unsupportedVersion }
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...13).contains(version) { return }
+        if (7...14).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -495,6 +502,7 @@ public final class LibraryRepository {
     func writeCatalogue(_ library: Library) throws -> Library {
         var normalized = library
         normalized.upgradeForKeywordPaths()
+        if normalized.version < 14, normalized.hasEXIFSearch { normalized.version = 14 }
         if normalized.version < 12, normalized.hasIPTCRules { normalized.version = 12 }
         if normalized.version < 11, normalized.hasIPTCMetadata { normalized.version = 11 }
         if let requiredVersion = normalized.history?.requiredCatalogueVersion {
@@ -577,6 +585,11 @@ public final class LibraryRepository {
         var photo = Photo(filename: filename, originalName: source.lastPathComponent, projectID: projectID,
                           width: width, height: height, camera: camera,
                           captureDate: exif[kCGImagePropertyExifDateTimeOriginal as String] as? String ?? "", sha256: hash)
+        if CGImageSourceGetPrimaryImageIndex(imageSource) == 0 {
+            photo.cameraEXIF = CameraEXIF(properties: properties)
+        } else {
+            photo.cameraEXIF = try? Self.cameraEXIF(in: imageSource, name: photo.originalName)
+        }
         let iptc = properties[kCGImagePropertyIPTCDictionary as String] as? [String: Any] ?? [:]
         photo.caption = iptc[kCGImagePropertyIPTCCaptionAbstract as String] as? String ?? ""
         if let keywords = iptc[kCGImagePropertyIPTCKeywords as String] as? [String] {

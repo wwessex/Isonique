@@ -1,7 +1,7 @@
 import Foundation
 import ImageIO
 
-public struct CameraEXIF: Equatable, Sendable {
+public struct CameraEXIF: Codable, Equatable, Sendable {
     public let exposureSeconds: Double?
     public let fNumber: Double?
     public let iso: Int?
@@ -52,10 +52,16 @@ public struct CameraEXIF: Equatable, Sendable {
 public extension LibraryRepository {
     func cameraEXIF(for photo: Photo) throws -> CameraEXIF {
         let url = try availableOriginalURL(photo)
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-              let properties = CGImageSourceCopyPropertiesAtIndex(source, CGImageSourceGetPrimaryImageIndex(source), nil)
-                as? [String: Any] else {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
             throw LibraryError.unsupportedImage(photo.originalName)
+        }
+        return try Self.cameraEXIF(in: source, name: photo.originalName)
+    }
+
+    internal static func cameraEXIF(in source: CGImageSource, name: String) throws -> CameraEXIF {
+        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, CGImageSourceGetPrimaryImageIndex(source), nil)
+                as? [String: Any] else {
+            throw LibraryError.unsupportedImage(name)
         }
         return CameraEXIF(properties: properties)
     }

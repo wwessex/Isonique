@@ -189,9 +189,15 @@ Expand Info → EXIF to inspect shutter speed, aperture, ISO, focal length and l
 
 The Metadata View picker includes General, EXIF Info, IPTC Core and Caption & Keywords. General uses the existing Info layout. Manage Metadata Views creates a view from selected fields or duplicates the current view as a starting point. Use the move buttons to set the display order. Custom views can be renamed, edited and deleted. The active view and custom definitions are stored in app preferences and shared across libraries. Deleting the active custom view returns Info to General. Editable fields use the existing photo edit controls. [Aperture 3.5 Help](https://aperture.skydocu.com/en/work-with-metadata/work-with-metadata-views/create-modify-and-manage-metadata-views/)
 
+## Catalogue-backed EXIF search
+
+Advanced Search and Smart Albums compare saved shutter speed, aperture, ISO, focal length and lens. Shutter speed accepts seconds or a fraction and compares exposure duration. Aperture and focal length accept decimal values, ISO accepts positive whole numbers, and lens uses text comparisons. Present and missing rules test whether the catalogue has a value. A missing value, including one from an unindexed photo, matches only an explicit missing rule.
+
+Imports read EXIF during the normal catalogue save. For older photos, Metadata → Catalogue EXIF from Originals verifies selected original fingerprints and records their capture values in one save. It skips unavailable or changed originals and supports cancellation. The catalogue preserves indexed values while originals are offline. Saved capture values and EXIF Smart Album rules use format 14. [Aperture 3.5 Help](https://aperture.skydocu.com/en/organize-and-sort-photos/search-for-photos/search-using-a-combination-of-criteria/)
+
 ## Next checkpoint
 
-Add catalogue-backed EXIF search for the five capture fields. Verify typed comparisons, missing values, and search of offline originals with previously catalogued metadata.
+Add a read-only GPS view in Info. Verify coordinate parsing, references and offline handling. Follow with catalogue-backed location search and map browsing.
 
 ## Pending physical camera checks
 

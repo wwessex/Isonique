@@ -26,7 +26,7 @@ public extension LibraryRepository {
         for photo in photos where photo.hasUncataloguedIPTC {
             try Task.checkCancellation()
             let id = photo.originalID
-            let result = originals[id] ?? Result { try autoreleasepool { try verifiedIPTC(for: photo) } }
+            let result = originals[id] ?? Result { try autoreleasepool { try Self.embeddedIPTC(in: verifiedMetadataSource(for: photo)) } }
             originals[id] = result
             switch result {
             case .success(let fields):
@@ -40,7 +40,7 @@ public extension LibraryRepository {
                                    issues: issues, originalCount: originals.count)
     }
 
-    private func verifiedIPTC(for photo: Photo) throws -> IPTCMetadata {
+    internal func verifiedMetadataSource(for photo: Photo) throws -> CGImageSource {
         let url = try availableOriginalURL(photo)
         // Read one original at a time and give ImageIO the same bytes we verified.
         let data = try Data(contentsOf: url, options: .uncached)
@@ -48,6 +48,6 @@ public extension LibraryRepository {
         guard hash == photo.sha256 else { throw LibraryError.integrity(photo.originalName) }
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
               CGImageSourceGetCount(source) > 0 else { throw LibraryError.unsupportedImage(photo.originalName) }
-        return Self.embeddedIPTC(in: source)
+        return source
     }
 }

@@ -52,6 +52,7 @@ final class RawWorkflowTests: XCTestCase {
         let saved = try XCTUnwrap(repository.load().photos.first)
         XCTAssertEqual(saved.adjustments, photo.adjustments)
         let exif = try repository.cameraEXIF(for: saved)
+        XCTAssertEqual(saved.cameraEXIF, exif, sample.file)
         XCTAssertEqual(try XCTUnwrap(exif.exposureSeconds), sample.seconds, accuracy: 0.000001, sample.file)
         XCTAssertEqual(try XCTUnwrap(exif.fNumber), sample.aperture, accuracy: 0.001, sample.file)
         XCTAssertEqual(exif.iso, sample.iso, sample.file)

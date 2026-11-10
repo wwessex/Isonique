@@ -16,7 +16,10 @@ public enum PhotoQueryOperator: String, CaseIterable, Codable, Identifiable {
     case maximum = "is at most"
     case since = "is on or after"
     case until = "is on or before"
+    case isPresent = "is present"
+    case isMissing = "is missing"
     public var id: Self { self }
+    public var needsValue: Bool { self != .isPresent && self != .isMissing }
 }
 
 public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
@@ -29,6 +32,11 @@ public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
     case iptcCopyright = "IPTC Copyright"
     case iptcCredit = "IPTC Credit"
     case camera = "Camera"
+    case exifShutterSpeed = "EXIF Shutter Speed"
+    case exifAperture = "EXIF Aperture"
+    case exifISO = "EXIF ISO"
+    case exifFocalLength = "EXIF Focal Length"
+    case exifLens = "EXIF Lens"
     case format = "File extension"
     case captured = "Capture date"
     case imported = "Import date"
@@ -50,10 +58,20 @@ public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
         }
     }
 
+    var isEXIF: Bool {
+        switch self {
+        case .exifShutterSpeed, .exifAperture, .exifISO, .exifFocalLength, .exifLens: return true
+        default: return false
+        }
+    }
+
     public var operators: [PhotoQueryOperator] {
         switch self {
         case .filename, .caption, .keyword, .camera, .iptcTitle, .iptcCreator, .iptcCopyright, .iptcCredit:
             return [.contains, .excludes, .equals, .differs]
+        case .exifShutterSpeed, .exifAperture, .exifISO, .exifFocalLength:
+            return [.equals, .minimum, .maximum, .differs, .isPresent, .isMissing]
+        case .exifLens: return [.contains, .excludes, .equals, .differs, .isPresent, .isMissing]
         case .keywordPath: return [.equals, .inBranch, .differs]
         case .format, .colorLabel: return [.equals, .differs]
         case .captured, .imported: return [.since, .until, .equals, .differs]
@@ -82,9 +100,12 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
 
     public var isValid: Bool {
         guard field.operators.contains(comparison) else { return false }
+        if !comparison.needsValue { return true }
         if field == .keywordPath { return keywordPath != nil }
         guard !term.isEmpty else { return false }
         switch field {
+        case .exifShutterSpeed, .exifAperture, .exifFocalLength: return exifNumber != nil
+        case .exifISO: return exifISO != nil
         case .captured, .imported: return Self.dayNumber(term, separator: "-") != nil
         case .format: return !Self.normalizedExtension(term).isEmpty
         case .colorLabel: return term == "0" || Int(term).flatMap(PhotoColorLabel.init(rawValue:)) != nil
@@ -95,7 +116,8 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
     }
 
     func includes(_ photo: Photo, originalAvailable: () -> Bool?) -> Bool {
-        guard field.operators.contains(comparison), field == .keywordPath || !term.isEmpty else { return false }
+        guard field.operators.contains(comparison),
+              !comparison.needsValue || field == .keywordPath || !term.isEmpty else { return false }
         switch field {
         case .filename: return matchesText([photo.displayName, photo.originalName, photo.sourceName ?? photo.originalName])
         case .caption: return matchesText([photo.caption])
@@ -109,6 +131,16 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
             let found = paths.contains(keywordPath)
             return comparison == .equals ? found : !found
         case .camera: return matchesText([photo.camera])
+        case .exifShutterSpeed: return matchesEXIFNumber(photo.cameraEXIF?.exposureSeconds)
+        case .exifAperture: return matchesEXIFNumber(photo.cameraEXIF?.fNumber)
+        case .exifFocalLength: return matchesEXIFNumber(photo.cameraEXIF?.focalLengthMM)
+        case .exifISO:
+            return matchesEXIFValue(photo.cameraEXIF?.iso) { actual in
+                guard let expected = exifISO else { return false }
+                let order: ComparisonResult = actual == expected ? .orderedSame : (actual < expected ? .orderedAscending : .orderedDescending)
+                return matchesOrder(order)
+            }
+        case .exifLens: return matchesEXIFValue(photo.cameraEXIF?.lens) { matchesText([$0]) }
         case .format:
             let extensionValue = Self.normalizedExtension((photo.filename as NSString).pathExtension)
             let expected = Self.normalizedExtension(term)
@@ -137,6 +169,65 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
         case .storage: return matchesBool(photo.referencedPath != nil)
         case .availability: return originalAvailable().map(matchesBool) ?? false
         case .adjusted: return matchesBool(photo.adjustments != Adjustments())
+        }
+    }
+
+    private var exifISO: Int? {
+        guard let value = Int(term), value > 0 else { return nil }
+        return value
+    }
+
+    private var exifNumber: Double? {
+        var input = term.lowercased()
+        switch field {
+        case .exifShutterSpeed:
+            if input.hasSuffix("s") { input.removeLast() }
+            let parts = input.split(separator: "/", omittingEmptySubsequences: false)
+            if parts.count == 2,
+               let numerator = Self.positiveDecimal(String(parts[0])),
+               let denominator = Self.positiveDecimal(String(parts[1])) {
+                let seconds = numerator / denominator
+                return seconds.isFinite && seconds > 0 ? seconds : nil
+            }
+        case .exifAperture:
+            if input.hasPrefix("f/") || input.hasPrefix("ƒ/") { input.removeFirst(2) }
+        case .exifFocalLength:
+            if input.hasSuffix("mm") { input.removeLast(2) }
+        default: return nil
+        }
+        return Self.positiveDecimal(input)
+    }
+
+    private static func positiveDecimal(_ text: String) -> Double? {
+        let decimal = text.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: ",", with: ".")
+        guard decimal.allSatisfy({ "0123456789.".contains($0) }),
+              let value = Double(decimal), value.isFinite, value > 0 else { return nil }
+        return value
+    }
+
+    private func matchesEXIFValue<Value>(_ actual: Value?, match: (Value) -> Bool) -> Bool {
+        if comparison == .isMissing { return actual == nil }
+        if comparison == .isPresent { return actual != nil }
+        return actual.map(match) ?? false
+    }
+
+    private func matchesEXIFNumber(_ value: Double?) -> Bool {
+        matchesEXIFValue(value) { actual in
+            guard let expected = exifNumber else { return false }
+            // ImageIO can return a float32 approximation of the recorded rational.
+            let same = abs(actual - expected) <= max(actual, expected) * 0.000001
+            let order: ComparisonResult = same ? .orderedSame : (actual < expected ? .orderedAscending : .orderedDescending)
+            return matchesOrder(order)
+        }
+    }
+
+    private func matchesOrder(_ order: ComparisonResult) -> Bool {
+        switch comparison {
+        case .equals: return order == .orderedSame
+        case .differs: return order != .orderedSame
+        case .minimum: return order != .orderedAscending
+        case .maximum: return order != .orderedDescending
+        default: return false
         }
     }
 

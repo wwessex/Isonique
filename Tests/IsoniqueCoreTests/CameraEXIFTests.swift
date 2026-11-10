@@ -25,6 +25,7 @@ extension LibraryTests {
         let catalogueBefore = try Data(contentsOf: catalogue)
         let originalHash = try LibraryRepository.digest(jpeg)
         let full = try repository.cameraEXIF(for: library.photos[0])
+        XCTAssertEqual(library.photos[0].cameraEXIF, full)
         XCTAssertEqual(try XCTUnwrap(full.exposureSeconds), 1.0 / 125, accuracy: 0.000001)
         XCTAssertEqual(try XCTUnwrap(full.fNumber), 2.8, accuracy: 0.001)
         XCTAssertEqual(full.iso, 640)
@@ -81,6 +82,80 @@ extension LibraryTests {
         XCTAssertEqual(metadata.iso, 320)
         XCTAssertNil(metadata.focalLengthMM)
         XCTAssertEqual(metadata.lens, "Aux Lens")
+    }
+
+    func testCatalogueEXIFBackfillsOlderPhotosAndSearchesOfflineAfterReopening() throws {
+        let source = try exifJPEG("Online.jpg", exif: [
+            kCGImagePropertyExifExposureTime as String: 1.0 / 125,
+            kCGImagePropertyExifFNumber as String: 2.8,
+            kCGImagePropertyExifISOSpeedRatings as String: [400],
+            kCGImagePropertyExifFocalLength as String: 35.5,
+            kCGImagePropertyExifLensModel as String: "Test 35 mm"
+        ])
+        let offline = try exifJPEG("Offline.jpg", exif: [kCGImagePropertyExifFNumber as String: 8])
+        let empty = try exifJPEG("Empty.jpg", exif: [:])
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var draft = try repo.load()
+        var options = ImportOptions()
+        options.storage = .referenced
+        for original in [source, offline, empty] {
+            XCTAssertTrue(try repo.importPhoto(original, projectID: nil, into: &draft, options: options))
+        }
+        for index in draft.photos.indices { draft.photos[index].cameraEXIF = nil }
+        draft.version = 2
+        let id = draft.photos[0].id
+        let sibling = try XCTUnwrap(draft.createVersion(of: id, from: .current))
+        var history = EditHistory()
+        history.record(draft.photos[0])
+        draft.photos[0].caption = "Edited before backfill"
+        draft.history = history
+        draft = try repo.save(draft)
+        try FileManager.default.removeItem(at: offline)
+        let offlineID = draft.photos[1].id
+        let ids = Set(draft.photos.map(\.id))
+        let indexed = try repo.catalogueEXIF(for: ids, in: &draft)
+        XCTAssertEqual(indexed.indexed, 3)
+        XCTAssertEqual(indexed.withCaptureSettings, 2)
+        XCTAssertEqual(indexed.issues.count, 1)
+        XCTAssertTrue(indexed.issues.first?.contains("Offline.jpg") == true)
+        XCTAssertNil(draft.photos.first { $0.id == offlineID }?.cameraEXIF)
+        XCTAssertEqual(draft.photos.first { $0.id == sibling.id }?.cameraEXIF, draft.photos[0].cameraEXIF)
+        XCTAssertEqual(draft.photos[2].cameraEXIF?.isEmpty, true)
+        XCTAssertEqual(try repo.catalogueEXIF(for: ids, in: &draft).indexed, 0)
+
+        let criteria = [
+            PhotoQueryCriterion(field: .exifShutterSpeed, comparison: .equals, value: "1/125 s"),
+            PhotoQueryCriterion(field: .exifAperture, comparison: .maximum, value: "f/2.8"),
+            PhotoQueryCriterion(field: .exifISO, comparison: .minimum, value: "400"),
+            PhotoQueryCriterion(field: .exifFocalLength, comparison: .equals, value: "35.5 mm"),
+            PhotoQueryCriterion(field: .exifLens, comparison: .contains, value: "test 35")
+        ]
+        var query = PhotoQuery()
+        query.criteria = criteria
+        var rule = SmartAlbumRule()
+        rule.query = query
+        var album = Collection(name: "Capture settings")
+        album.rule = rule
+        draft.albums = [album]
+        XCTAssertEqual(try repo.save(draft).version, 14)
+
+        let originalHash = try LibraryRepository.digest(source)
+        let unplugged = temporary.appendingPathComponent("Unplugged.jpg")
+        try FileManager.default.moveItem(at: source, to: unplugged)
+        var reopened = try repo.load()
+        let photo = reopened.photos[0]
+        XCTAssertThrowsError(try repo.availableOriginalURL(photo))
+        let savedRule = try XCTUnwrap(reopened.albums.first?.rule)
+        XCTAssertTrue(savedRule.includes(photo, originalAvailable: {
+            XCTFail("An EXIF-only rule tried to read original availability")
+            return false
+        }))
+        XCTAssertEqual(Set(reopened.photos.filter { savedRule.includes($0) }.map(\.id)), [id, sibling.id])
+        var reopenedHistory = try XCTUnwrap(reopened.history)
+        XCTAssertNotNil(reopenedHistory.step(in: &reopened, redoing: false))
+        XCTAssertEqual(reopened.photos[0].caption, "")
+        XCTAssertEqual(reopened.photos[0].cameraEXIF, photo.cameraEXIF)
+        XCTAssertEqual(try LibraryRepository.digest(unplugged), originalHash)
     }
 
     private func exifJPEG(_ name: String, exif: [String: Any], orientation: Int = 1) throws -> URL {
