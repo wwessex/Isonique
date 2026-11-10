@@ -1019,6 +1019,9 @@ struct ContentView: View {
     @Environment(\.openWindow) private var openWindow
     @State private var collectionEditor: CollectionEditor?
     @FocusState private var browserFocused: Bool
+    private static let welcomeIcon: NSImage = Bundle.main.url(forResource: "Isonique", withExtension: "icns")
+        .flatMap(NSImage.init(contentsOf:)) ?? NSApplication.shared.applicationIconImage
+
     private var workspaceView: some View {
         NavigationSplitView {
             VStack(alignment: .leading, spacing: 0) {
@@ -1123,7 +1126,12 @@ struct ContentView: View {
                             }
                         } else if model.photos.isEmpty {
                             VStack(spacing: 18) {
-                                Image(systemName: "camera.aperture").font(.system(size: 64, weight: .ultraLight)).foregroundStyle(.secondary)
+                                Image(nsImage: Self.welcomeIcon)
+                                    .renderingMode(.original)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .frame(width: 80, height: 80)
+                                    .accessibilityHidden(true)
                                 if model.isViewingTrash {
                                     Text("No matching photos in Trash").font(.title2)
                                     Text("Photos moved to Trash can be put back from here.").foregroundStyle(.secondary)
