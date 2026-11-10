@@ -100,6 +100,8 @@ public extension Library {
             return .removeVersion(restored)
         case .stackPick(let change):
             return .stackPick(applyStackPick(change))
+        case .captureDates(let changes):
+            return replaceCaptureDates(changes).map(PhotoHistoryEntry.captureDates)
         }
     }
 }
@@ -109,17 +111,24 @@ public enum PhotoHistoryEntry: Codable, Equatable {
     case removeVersion(Photo)
     case restoreVersion(Photo)
     case stackPick(StackPickChange)
+    case captureDates([CaptureDateChange])
 
     public var photo: Photo? {
         switch self {
         case .edit(let photo), .removeVersion(let photo), .restoreVersion(let photo): return photo
-        case .stackPick: return nil
+        case .stackPick, .captureDates: return nil
         }
     }
 
     public var selectionID: UUID? {
         if case .stackPick(let change) = self { return change.selectionID }
+        if case .captureDates(let changes) = self { return changes.first?.photoID }
         return photo?.id
+    }
+
+    var captureDatePhotoIDs: [UUID] {
+        if case .captureDates(let changes) = self { return changes.map(\.photoID) }
+        return []
     }
 
     var isEdit: Bool {
@@ -144,6 +153,13 @@ public struct EditHistory: Codable {
         redo.removeAll()
     }
 
+    var hasCaptureDateChanges: Bool {
+        (undo + redo).contains { entry in
+            if case .captureDates = entry { return true }
+            return false
+        }
+    }
+
     public mutating func discardEmptiedTrash(photoIDs: Set<UUID>, originalIDs: Set<UUID>) {
         func isRemoved(_ entry: PhotoHistoryEntry) -> Bool {
             if let photo = entry.photo {
@@ -154,8 +170,15 @@ public struct EditHistory: Codable {
             }
             return false
         }
-        undo.removeAll(where: isRemoved)
-        redo.removeAll(where: isRemoved)
+        func keepingActiveTargets(_ entry: PhotoHistoryEntry) -> PhotoHistoryEntry? {
+            if case .captureDates(let changes) = entry {
+                let kept = changes.filter { !photoIDs.contains($0.photoID) }
+                return kept.isEmpty ? nil : .captureDates(kept)
+            }
+            return isRemoved(entry) ? nil : entry
+        }
+        undo = undo.compactMap(keepingActiveTargets)
+        redo = redo.compactMap(keepingActiveTargets)
     }
 
     public mutating func step(in library: inout Library, redoing: Bool) -> PhotoHistoryEntry? {

@@ -164,7 +164,8 @@ private struct WholeLibraryMergePlan {
             if case .stackPick(let pick) = entry { return pick }
             return nil
         }
-        let reservedPhotoIDs = Set(historyEntries.compactMap(\.selectionID) + historicPicks.compactMap(\.photoID))
+        let reservedPhotoIDs = Set(historyEntries.compactMap(\.selectionID) + historicPicks.compactMap(\.photoID)
+            + historyEntries.flatMap(\.captureDatePhotoIDs))
         let currentPresentation = destination.stackBrowser ?? StackBrowserState()
         let storedPhotos = destination.photos + historicPhotos
         var storedStacks = Set(storedPhotos.compactMap(\.stackID))

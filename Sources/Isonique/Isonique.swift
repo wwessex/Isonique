@@ -64,6 +64,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var showRelocationOptions = false
     var pendingRelocationOptions: OriginalRelocationOptions?
     @Published var showExportOptions = false
+    @Published var captureDateCorrection: CaptureDateCorrection?
     @Published var showImportOptions = false
     @Published var pendingImport: [URL] = []
     @Published var pendingDeviceImport: DeviceImportSelection?
@@ -281,6 +282,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         case .removeVersion: status = "Version creation undone"
         case .restoreVersion: status = "Version creation redone"
         case .stackPick: status = redo ? "Pick change redone" : "Pick change undone"
+        case .captureDates: status = redo ? "Capture date adjustment redone" : "Capture date adjustment undone"
         }
     }
     func selectAfterChange(preferred: UUID?) {
@@ -690,6 +692,9 @@ enum EditTool: String { case select, crop, straighten, brush }
                 }.disabled(!workspace.canToggleSelectedStack)
             }
             CommandMenu("Metadata") {
+                Button("Adjust Date and Time…", action: workspace.openCaptureDateCorrection)
+                    .disabled(!workspace.canAdjustCaptureDate)
+                Divider()
                 Button("Clear Color Label") { workspace.setColorLabel(nil) }
                     .keyboardShortcut("0").disabled(!workspace.canReviewSelection)
                 ForEach(PhotoColorLabel.allCases) { label in
@@ -1123,6 +1128,9 @@ struct ContentView: View {
         .sheet(isPresented: $model.showRelocationOptions, onDismiss: model.chooseRelocationDestination) {
             RelocationOptionsView().environmentObject(model)
         }
+        .sheet(item: $model.captureDateCorrection) { correction in
+            CaptureDateView(correction: correction).environmentObject(model)
+        }
         .sheet(isPresented: $model.showExportOptions) { ExportOptionsView().environmentObject(model) }
         .sheet(item: $collectionEditor) { CollectionNameSheet($0).environmentObject(model) }
         .alert("Isonique", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button("OK") { model.error = nil } } message: { Text(model.error ?? "") }
@@ -1488,7 +1496,11 @@ struct Inspector: View {
         VStack(alignment: .leading, spacing: 14) {
             Text("\(photo.width) × \(photo.height) · \((photo.originalName as NSString).pathExtension.uppercased())").font(.caption).foregroundStyle(.secondary)
             if !photo.camera.isEmpty { LabeledContent("Camera", value: photo.camera) }
-            if !photo.captureDate.isEmpty { LabeledContent("Captured", value: photo.captureDate) }
+            LabeledContent("Captured", value: photo.captureDate.isEmpty ? "Unknown" : photo.captureDate)
+            if !model.batchMode {
+                Button("Adjust Date and Time…", action: model.openCaptureDateCorrection)
+                    .disabled(!model.canAdjustCaptureDate)
+            }
             LabeledContent("Imported", value: photo.importedAt.formatted(date: .abbreviated, time: .shortened))
             HStack(spacing: 6) {
                 ForEach(1...RatingRules.maximum, id: \.self) { rating in Button { model.edit { $0.rating = rating } } label: { Image(systemName: photo.rating >= rating ? "star.fill" : "star").foregroundStyle(.orange) }.buttonStyle(.plain).help("Rate \(rating) stars") }
