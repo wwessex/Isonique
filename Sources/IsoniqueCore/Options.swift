@@ -29,11 +29,34 @@ public struct ExportPreset: Codable, Identifiable {
 }
 public enum StampMetadata: String, CaseIterable, Identifiable {
     case caption = "Caption", keywords = "Keywords", rating = "Rating"
+    case iptcTitle = "IPTC Title", iptcCreator = "IPTC Creator"
+    case iptcCopyright = "IPTC Copyright", iptcCredit = "IPTC Credit"
     public var id: String { rawValue }
+
+    public var iptcField: IPTCField? {
+        switch self {
+        case .iptcTitle: return .title
+        case .iptcCreator: return .creator
+        case .iptcCopyright: return .copyright
+        case .iptcCredit: return .credit
+        default: return nil
+        }
+    }
 }
 public struct LiftedSettings {
     public let source: Photo
-    public init(_ photo: Photo) { source = photo }
+    public init(_ photo: Photo, embeddedIPTC: IPTCMetadata = IPTCMetadata()) {
+        var snapshot = photo
+        let iptc = photo.iptc?.overriding(embeddedIPTC) ?? embeddedIPTC
+        snapshot.iptc = iptc.isEmpty ? nil : iptc
+        source = snapshot
+    }
+
+    public func includesMetadata(_ field: StampMetadata) -> Bool {
+        guard let iptcField = field.iptcField else { return true }
+        return source.iptc?[iptcField] != nil
+    }
+
     public func applying(to target: Photo, groups: Set<AdjustmentGroup>, metadata: Set<StampMetadata>) -> Photo {
         var result = target
         result.adjustments = source.adjustments.stamping(onto: target.adjustments, groups: groups)
@@ -43,6 +66,11 @@ public struct LiftedSettings {
             result.keywordPaths = source.keywordPaths
         }
         if metadata.contains(.rating) { result.rating = RatingRules.clamp(source.rating) }
+        let iptc = metadata.compactMap { option -> IPTCFieldEdit? in
+            guard let field = option.iptcField, let values = source.iptc?[field] else { return nil }
+            return IPTCFieldEdit(field: field, values: values)
+        }
+        if !iptc.isEmpty { result.applyIPTC(iptc) }
         return result
     }
 }

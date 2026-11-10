@@ -72,7 +72,7 @@ public struct BatchMetadataReview: Identifiable {
 
     public func preview(_ values: MetadataPresetValues) -> Preview {
         let input = KeywordList.uniqueValues(values.keywords)
-        return preview(caption: values.caption, iptc: values.iptc, keywordChange: {
+        return preview(caption: values.caption, iptc: { _ in values.iptc }, keywordChange: {
             values.keywordMode.replacement(for: $0, using: input)
         })
     }
@@ -94,14 +94,26 @@ public struct BatchMetadataReview: Identifiable {
         })
     }
 
-    private func preview(caption: String?, iptc: IPTCMetadata = IPTCMetadata(), keywordChange: (String) -> String? = { _ in nil },
+    func previewInheritedIPTC(_ originals: [UUID: IPTCMetadata]) -> Preview {
+        preview(caption: nil, iptc: { target in
+            guard let embedded = originals[target.id] else { return IPTCMetadata() }
+            var result = IPTCMetadata()
+            for field in IPTCField.allCases where target.iptc?[field] == nil {
+                result[field] = embedded[field]
+            }
+            return result
+        })
+    }
+
+    private func preview(caption: String?, iptc: (Target) -> IPTCMetadata = { _ in IPTCMetadata() }, keywordChange: (String) -> String? = { _ in nil },
                          keywordPathChange: ([KeywordPath]) -> [KeywordPath]? = { _ in nil }) -> Preview {
         let rows = targets.compactMap { target -> Row? in
             let newCaption = caption != target.caption ? caption : nil
             let newKeywords = keywordChange(target.keywords)
             let newPaths = keywordPathChange(target.keywordPaths)
+            let fields = iptc(target)
             let iptcEdits = IPTCField.allCases.compactMap { field -> IPTCFieldEdit? in
-                guard let values = iptc[field], values != target.iptc?[field] else { return nil }
+                guard let values = fields[field], values != target.iptc?[field] else { return nil }
                 return IPTCFieldEdit(field: field, values: values)
             }
             let previousIPTC = iptcEdits.map { IPTCFieldEdit(field: $0.field, values: target.iptc?[$0.field]) }
@@ -166,18 +178,22 @@ extension Photo {
     }
 }
 
+extension BatchMetadataChange {
+    func applying(to photo: inout Photo) -> Self {
+        let previous = Self(photoID: photo.id,
+                            caption: caption.map { _ in photo.caption },
+                            keywords: keywords.map { _ in photo.keywords },
+                            keywordPaths: keywordPaths.map { _ in photo.keywordPaths ?? [] },
+                            iptc: iptc.map { photo.applyIPTC($0) })
+        if let caption { photo.caption = caption }
+        if let keywords { photo.keywords = keywords }
+        if let keywordPaths { photo.keywordPaths = keywordPaths.isEmpty ? nil : keywordPaths }
+        return previous
+    }
+}
+
 extension Library {
     mutating func replaceBatchMetadata(_ changes: [BatchMetadataChange]) -> [BatchMetadataChange]? {
-        applyPhotoFieldChanges(changes, photoID: \.photoID) { photo, change in
-            let previous = BatchMetadataChange(photoID: photo.id,
-                                               caption: change.caption.map { _ in photo.caption },
-                                               keywords: change.keywords.map { _ in photo.keywords },
-                                               keywordPaths: change.keywordPaths.map { _ in photo.keywordPaths ?? [] },
-                                               iptc: change.iptc.map { photo.applyIPTC($0) })
-            if let caption = change.caption { photo.caption = caption }
-            if let keywords = change.keywords { photo.keywords = keywords }
-            if let paths = change.keywordPaths { photo.keywordPaths = paths.isEmpty ? nil : paths }
-            return previous
-        }
+        applyPhotoFieldChanges(changes, photoID: \.photoID) { photo, change in change.applying(to: &photo) }
     }
 }

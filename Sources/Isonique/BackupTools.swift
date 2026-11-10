@@ -53,7 +53,7 @@ extension Workspace {
         history = keepHistory ? (library.history ?? EditHistory()) : EditHistory()
         scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all; colorFilter = .all; advancedSearch = nil
         batchMode = false; batchSelection = []; selection = nil
-        viewer = false; tool = .select; compareOriginal = false; stopComparison(); liftedAdjustments = nil
+        viewer = false; tool = .select; compareOriginal = false; stopComparison(); liftedAdjustments = nil; liftLookupID = nil
     }
 
     func createLibraryPanel() {

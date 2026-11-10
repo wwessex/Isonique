@@ -29,7 +29,7 @@ struct BatchBar: View {
                         }
                         Button("Batch Change…", action: model.openBatchMetadata)
                             .disabled(!model.canOpenBatchMetadata)
-                        Button("Stamp", action: model.stamp).disabled(model.liftedAdjustments == nil)
+                        Button("Stamp", action: model.stamp).disabled(!model.canStamp)
                         Menu("Organize") {
                             Menu("Add to Album") {
                                 ForEach(model.library.albums.filter { $0.rule == nil }) { album in
