@@ -229,9 +229,17 @@ In Assign Location, enter an address or place name and choose Search Apple Maps 
 
 Open Assign Location, enter coordinates or choose them with Apple Maps search or Pick on Map, then use Saved Places → Save Current Coordinates. Saved places live in app preferences and are available offline across Isonique libraries. Choose a saved name to fill the draft coordinates and centre an open map. Use Assign Location to apply the coordinates. The Saved Places menu also lets you rename or remove an entry. Photos retain their assigned coordinates when the saved entry is renamed or removed.
 
+## GPX track matching
+
+Select one or more versions and choose Match GPX Track from Metadata or Info → GPS → Location. Choose a GPX 1.0 or 1.1 file, confirm the camera time zone and review the proposed coordinates alongside any existing catalogue location. The time zone defaults to the Mac’s current setting. When a camera timestamp falls in a repeated daylight-saving hour, enter a fixed offset such as UTC+01:00 to disambiguate it.
+
+Matching uses exact fixes or interpolates between the surrounding points in one continuous segment. The maximum gap defaults to two minutes. Missing or invalid timestamps, conflicting fixes, discontinuities and times outside the track can leave a photo unmatched. Uncheck individual matches or cancel to discard the review. Applying saves the checked location changes as one Undo step using the existing catalogue format. Places and GPS Smart Albums update from the assigned coordinates, including for offline originals. GPX reading and matching run locally in the background.
+
+Aperture imported GPX tracks into projects, drew tracks in Places and supported both timestamp matching and manual waypoint assignment. Isonique’s file picker opens a temporary review and saves the confirmed photo coordinates. [Aperture 3.5 Help](https://aperture.skydocu.com/en/organize-and-sort-photos/organize-photos-using-places/import-and-work-with-gps-track-file-data/)
+
 ## Next checkpoint
 
-Add GPX track matching to the location workflow. Verify timestamp matching, preview and cancellation.
+Add project-scoped GPS track overlays to Places. Verify track persistence, visibility and removal without changing assigned photo coordinates.
 
 ## Pending physical camera checks
 

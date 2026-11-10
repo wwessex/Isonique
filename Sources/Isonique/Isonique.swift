@@ -80,6 +80,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var inheritedIPTCScan: Task<InheritedIPTCReview, Error>?
     @Published var originalMetadataCatalogueTask: Task<(Library, MetadataCatalogueResult), Error>?
     @Published var locationEditor: PhotoLocationEdit?
+    @Published var gpxLocationEditor: GPXLocationEdit?
     @Published var captureDateCorrection: CaptureDateCorrection?
     @Published var showImportOptions = false
     @Published var pendingImport: [URL] = []
@@ -1268,6 +1269,9 @@ struct ContentView: View {
         }
         .sheet(item: $model.locationEditor) { edit in
             PhotoLocationEditor(edit: edit).environmentObject(model)
+        }
+        .sheet(item: $model.gpxLocationEditor) { edit in
+            GPXLocationView(edit: edit).environmentObject(model)
         }
         .sheet(item: $model.captureDateCorrection) { correction in
             CaptureDateView(correction: correction).environmentObject(model)

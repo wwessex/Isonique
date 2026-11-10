@@ -66,8 +66,10 @@ extension Workspace {
             error = "The library, selection or location has changed. Reopen the location editor to review it."
             return false
         }
+        return commitLocationChanges(edit.changes(to: coordinates))
+    }
 
-        let changes = edit.changes(to: coordinates)
+    func commitLocationChanges(_ changes: [PhotoLocationChange]) -> Bool {
         var draft = library
         guard let previous = draft.replaceLocations(changes) else { return false }
         var nextHistory = history
@@ -90,6 +92,8 @@ struct PhotoLocationCommands: View {
             .disabled(!model.canEditLocation(.clear))
         Button("Use Original Location…") { model.openLocationEditor(.useOriginal) }
             .disabled(!model.canEditLocation(.useOriginal))
+        Button("Match GPX Track…", action: model.chooseGPXTrack)
+            .disabled(model.metadataEditingTargets.isEmpty)
     }
 }
 

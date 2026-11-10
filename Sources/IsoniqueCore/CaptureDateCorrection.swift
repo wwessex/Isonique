@@ -71,7 +71,7 @@ public struct CaptureDateCorrection: Identifiable {
         return Preview(changes: changes, skipped: skipped)
     }
 
-    static func parse(_ value: String) -> Date? {
+    package static func parse(_ value: String) -> Date? {
         guard value.utf8.count == 19, let date = formatter.date(from: value),
               formatter.string(from: date) == value else { return nil }
         return date
