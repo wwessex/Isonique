@@ -1,6 +1,6 @@
 # Isonique validation
 
-[Workflow test results](docs/TEST_RESULTS.md) records the native macOS checks for library management, review and rendering, including which RAW samples and system versions were exercised. The separate [development provenance notes](MECHANICS.md) describe historical research that informed some behaviours.
+[Workflow test results](docs/APERTURE_TEST_RESULTS.md) records the native macOS checks for library management, review and rendering, including which RAW samples and system versions were exercised. The separate [development provenance notes](MECHANICS.md) describe historical research that informed some behaviours.
 
 ## Reproduce the checks
 

@@ -11,7 +11,7 @@ Keep the existing native app, independent catalogue and shared renderer. Deliver
 
 ## Checkpoint
 
-Baseline audited at `0ebda9a`. Per-file import transaction, photo Trash/Put Back, independent library creation and atomic workspace photo edits are complete. Referenced import, missing-file status, verified single-file relink and copy consolidation are implemented. Import runs as a cancellable job with per-file progress and optional new project creation. Compound Smart Albums and advanced browser search now use shared criteria. Horizontal/vertical flip and basic brightness, vibrancy and sepia are in the shared renderer. Keyboard culling, color labels and persistent label names are in the native workspace. Browsable versions and side-by-side comparison now use a stable shared-original identity. Stacks have persistent picks, album picks and collapsed Browser covers. The native List Browser uses the workspace filters, selection and review commands and remembers its layout. Historical evidence, baseline status and remaining gaps are indexed in [workflow comparison](WORKFLOW_COMPARISON.md). Runtime evidence belongs in [test results](TEST_RESULTS.md).
+Baseline audited at `0ebda9a`. Per-file import transaction, photo Trash/Put Back, independent library creation and atomic workspace photo edits are complete. Referenced import, missing-file status, verified single-file relink and copy consolidation are implemented. Import runs as a cancellable job with per-file progress and optional new project creation. Compound Smart Albums and advanced browser search now use shared criteria. Horizontal/vertical flip and basic brightness, vibrancy and sepia are in the shared renderer. Keyboard culling, color labels and persistent label names are in the native workspace. Browsable versions and side-by-side comparison now use a stable shared-original identity. Stacks have persistent picks, album picks and collapsed Browser covers. The native List Browser uses the workspace filters, selection and review commands and remembers its layout. Historical evidence, baseline status and remaining gaps are indexed in [workflow comparison](APERTURE_FEATURE_PARITY.md). Runtime evidence belongs in [test results](APERTURE_TEST_RESULTS.md).
 
 Dodge and Burn are integrated with the Viewer and shared renderer. Format 4 stores strokes with the edit recipe, snapshots and optional persistent Undo/Redo. Coverage, edge falloff, geometry mapping, persistence, Undo and preview/export consistency have automated tests.
 
@@ -162,6 +162,20 @@ Import reads hierarchy paths from embedded XMP. Enable Read matching .xmp sideca
 Info → IPTC Metadata edits the selected version. Enter one creator per line to retain the byline order. Save IPTC Metadata commits the edited fields together. Metadata → Batch Change previews per-field replacements for the visible selection. Check a field and leave its input blank to clear it. “From original” in the preview means the catalogue has no saved value for that field. Each Apply is one Undo step, and catalogue format 11 supports these fields and their persistent history.
 
 Import reads the four fields from embedded IPTC and XMP, with matching sidecar fields taking precedence when present. Older catalogues can read inherited fields from available originals in Info and during export. Edited image export can embed the current IPTC values. XMP sidecars work with both edited images and byte-for-byte originals. Title and copyright use the default XMP language value, or the first supplied translation when no default is present. Creator uses an ordered list. [IPTC Photo Metadata Standard](https://www.iptc.org/std/photometadata/specification/IPTC-PhotoMetadata-2025.1.html#metadata-properties)
+
+## IPTC search and saved rules
+
+Quick Search finds catalogue IPTC title, creator, copyright and credit. Advanced Search and Smart Albums offer field-specific substring and exact comparisons with their negations. Each creator is compared separately. An IPTC Smart Album rule requires catalogue format 12. Search reads the catalogue so results work with offline originals. Values inherited only from an older library’s originals remain available in Info and export.
+
+## Reusable metadata presets
+
+Metadata → Batch Change → Reusable Metadata Presets saves checked caption and IPTC fields, plus the chosen flat keyword mode. Loading a preset fills the editor, where users can review, revise and apply the results as one Undo step. Presets live in app preferences and are shared across libraries. Case-insensitive duplicate names are refused.
+
+Import Options offers the same presets independently of storage, pairing and filename choices. A chosen preset applies after the import caption, keyword and rating defaults. Matching XMP fields take precedence. Saved import options and full import presets keep their chosen metadata values as a snapshot. Removing a reusable preset leaves saved import snapshots and previously edited photos intact.
+
+## Next checkpoint
+
+Add IPTC metadata fields to selective Lift and Stamp. Reuse existing per-field merge rules and grouped history so a Stamp applies only checked fields and preserves the rest. Verify single and visible batch selection, explicit clears, ordered creators, Undo/Redo after reopening and legacy catalogues. After that, add a reviewed way to catalogue inherited IPTC fields on older originals so they become searchable without reimport.
 
 ## Pending physical camera checks
 

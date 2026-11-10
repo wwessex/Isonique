@@ -1,11 +1,26 @@
 import Foundation
 
-public enum BatchKeywordMode: String, CaseIterable, Identifiable {
+public enum BatchKeywordMode: String, CaseIterable, Codable, Identifiable {
     case unchanged = "Leave Unchanged"
     case append = "Append"
     case replace = "Replace"
 
     public var id: Self { self }
+
+    func replacement(for current: String, using input: [String]) -> String? {
+        switch self {
+        case .unchanged:
+            return nil
+        case .append:
+            let existing = KeywordList.values(current)
+            let known = Set(existing.map(KeywordList.key))
+            let additions = input.filter { !known.contains(KeywordList.key($0)) }
+            return additions.isEmpty ? nil : (existing + additions).joined(separator: ", ")
+        case .replace:
+            let replacement = input.joined(separator: ", ")
+            return replacement == current ? nil : replacement
+        }
+    }
 }
 
 public struct BatchMetadataChange: Codable, Equatable {
@@ -52,20 +67,13 @@ public struct BatchMetadataReview: Identifiable {
 
     public func preview(caption: String?, keywordMode: BatchKeywordMode, keywords: String,
                         iptc: IPTCMetadata = IPTCMetadata()) -> Preview {
-        let input = KeywordList.uniqueValues(keywords)
-        let replacement = input.joined(separator: ", ")
-        return preview(caption: caption, iptc: iptc, keywordChange: { keywords in
-            switch keywordMode {
-            case .unchanged:
-                return nil
-            case .append:
-                let existing = KeywordList.values(keywords)
-                let known = Set(existing.map(KeywordList.key))
-                let additions = input.filter { !known.contains(KeywordList.key($0)) }
-                return additions.isEmpty ? nil : (existing + additions).joined(separator: ", ")
-            case .replace:
-                return replacement == keywords ? nil : replacement
-            }
+        preview(MetadataPresetValues(caption: caption, keywordMode: keywordMode, keywords: keywords, iptc: iptc))
+    }
+
+    public func preview(_ values: MetadataPresetValues) -> Preview {
+        let input = KeywordList.uniqueValues(values.keywords)
+        return preview(caption: values.caption, iptc: values.iptc, keywordChange: {
+            values.keywordMode.replacement(for: $0, using: input)
         })
     }
 

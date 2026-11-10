@@ -316,13 +316,18 @@ public struct Library: Codable {
         photos.contains { $0.iptc?.isEmpty == false }
     }
 
+    fileprivate var hasIPTCRules: Bool {
+        albums.contains { $0.rule?.query?.criteria.contains { $0.field.iptcField != nil } == true }
+    }
+
     func validateSchema() throws {
+        if version < 12, hasIPTCRules { throw LibraryError.unsupportedVersion }
         if version < 11, hasIPTCMetadata { throw LibraryError.unsupportedVersion }
         if version < 10, hasKeywordPaths { throw LibraryError.unsupportedVersion }
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...11).contains(version) { return }
+        if (7...12).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -490,6 +495,7 @@ public final class LibraryRepository {
     func writeCatalogue(_ library: Library) throws -> Library {
         var normalized = library
         normalized.upgradeForKeywordPaths()
+        if normalized.version < 12, normalized.hasIPTCRules { normalized.version = 12 }
         if normalized.version < 11, normalized.hasIPTCMetadata { normalized.version = 11 }
         if let requiredVersion = normalized.history?.requiredCatalogueVersion {
             normalized.version = max(normalized.version, requiredVersion)

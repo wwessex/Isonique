@@ -369,7 +369,7 @@
 
 ## Tethered capture evaluation
 
-- The ImageCaptureCore probe type-checked the remote and on-camera shutter capability checks, the remote shutter call, and the new-item callback against the macOS 14 arm64 target using Xcode 27.2. This checked API availability. Physical shutter execution and native callback delivery remain pending. [Tethered capture evaluation](IMPLEMENTATION_PLAN.md#tethered-capture-evaluation)
+- The ImageCaptureCore probe type-checked the remote and on-camera shutter capability checks, the remote shutter call, and the new-item callback against the macOS 14 arm64 target using Xcode 27.2. This checked API availability. Physical shutter execution and native callback delivery remain pending. [Tethered capture evaluation](APERTURE_IMPLEMENTATION_PLAN.md#tethered-capture-evaluation)
 - Simulated arrivals passed selected new files through the production camera importer. The initial catalogue photo was excluded, the new photo and XMP caption were saved, and replaying the event downloaded the files again but created no duplicate catalogue record. Both runs removed their staging directories.
 - Two simulated arrival batches for a JPEG and its RAW companion saved both files as independent originals. A separate existing test confirmed pairing when both arrive in a single batch. The simulation used synthetic image bytes and logical camera filenames to exercise pairing.
 - All 200 optimized XCTest cases passed without skips on native macOS arm64, including the four external RAW fixtures and Finder Trash handoff.
@@ -446,3 +446,10 @@
 - Embedded IPTC import, legacy export inheritance and edited JPEG IPTC were verified against ImageIO. Rendered JPEG and byte-for-byte original exports round-tripped the four fields through XMP sidecars. Tests covered ordered creators, Unicode, omitted fields and explicit clears, including empty XMP credit in both element and attribute form.
 - In the signed macOS app, saved an individual title edit from Info, then previewed and applied a title replacement and credit clear to two of three selected-library fixtures. Undo restored the prior title and credit, and Redo reapplied both changes. The saved catalogue retained both creators and copyright on all three photos. The unselected photo and original file hashes were unchanged.
 - All 233 release tests passed, including four checksum-verified RAW fixtures and Finder Trash handoff. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
+
+## IPTC search and reusable metadata presets
+
+- Quick Search matched each of the four stored IPTC fields. Advanced Search tested field-specific comparisons, diacritic-insensitive matching and matching each creator separately. A saved IPTC rule upgraded an empty library to format 12. Smart Album membership followed edits, persistent Undo and Redo after reopening.
+- Presets survived reopening in another library. Tests covered empty and duplicate preset names, preview and application to the chosen photo, preservation of unchecked fields, duplicate-free keyword append, Undo/Redo and preset deletion. Import tests verified older settings decode, a saved import setup retains the preset snapshot and matching XMP overrides only fields it supplies.
+- In the signed macOS app, Quick Search found a photo by IPTC title. Advanced Search offered all four IPTC fields and saved a title rule as a Smart Album with one matching photo. A credit-only preset saved and reloaded in Batch Change, then applied to that photo and to a separate photo through Import Options. The saved catalogue confirmed the expected credit, the untouched fields and the import original's matching fingerprint.
+- All 238 release tests passed, including four checksum-verified RAW fixtures and Finder Trash handoff. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2. All local Markdown document links resolved after the parity records were renamed.

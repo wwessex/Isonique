@@ -38,7 +38,7 @@ struct ImportOptionsView: View {
                 Text("Both links matching files and opens the chosen original; switch in Info. Edits stay separate. Only filters all input files. Prefer keeps unpaired files of either format.").font(.caption).foregroundStyle(.secondary)
                 TextField("Name prefix", text: $options.prefix)
                 Text("Changes catalogue and export names; source files are never renamed.").font(.caption).foregroundStyle(.secondary)
-                Toggle("Apply metadata preset (replaces embedded values)", isOn: $options.applyMetadata)
+                Toggle("Apply caption, keyword and rating defaults", isOn: $options.applyMetadata)
                 Group {
                     TextField("Caption", text: $options.caption)
                     TextField("Keywords, separated by commas", text: $options.keywords)
@@ -47,6 +47,18 @@ struct ImportOptionsView: View {
                         ForEach(1...5, id: \.self) { Text("\($0) stars").tag($0) }
                     }
                 }.disabled(!options.applyMetadata)
+                Menu {
+                    Button("None") { options.reusableMetadata = nil }
+                    ForEach(model.metadataPresets) { preset in
+                        Button(preset.name) { options.reusableMetadata = preset }
+                    }
+                } label: {
+                    LabeledContent("Reusable metadata preset", value: options.reusableMetadata?.name ?? String(localized: "None"))
+                }.disabled(model.metadataPresets.isEmpty && options.reusableMetadata == nil)
+                if options.reusableMetadata != nil {
+                    Text("The preset applies its chosen fields after import defaults. Sidecar values take precedence.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
                 Toggle("Read matching .xmp sidecars", isOn: $options.readSidecars)
                 Text("Supported IPTC fields, caption, keywords and rating in sidecars take precedence when present. Invalid sidecars are reported. Use File → Import XML / XMP Metadata for existing photos.").font(.caption).foregroundStyle(.secondary)
                 Toggle("Keep Undo/Redo history after closing", isOn: $persistHistory).onChange(of: persistHistory) { _, _ in model.save() }

@@ -24,6 +24,10 @@ public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
     case caption = "Caption"
     case keyword = "Keyword"
     case keywordPath = "Keyword path"
+    case iptcTitle = "IPTC Title"
+    case iptcCreator = "IPTC Creator"
+    case iptcCopyright = "IPTC Copyright"
+    case iptcCredit = "IPTC Credit"
     case camera = "Camera"
     case format = "File extension"
     case captured = "Capture date"
@@ -36,9 +40,20 @@ public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
     case adjusted = "Adjustments"
     public var id: Self { self }
 
+    var iptcField: IPTCField? {
+        switch self {
+        case .iptcTitle: return .title
+        case .iptcCreator: return .creator
+        case .iptcCopyright: return .copyright
+        case .iptcCredit: return .credit
+        default: return nil
+        }
+    }
+
     public var operators: [PhotoQueryOperator] {
         switch self {
-        case .filename, .caption, .keyword, .camera: return [.contains, .excludes, .equals, .differs]
+        case .filename, .caption, .keyword, .camera, .iptcTitle, .iptcCreator, .iptcCopyright, .iptcCredit:
+            return [.contains, .excludes, .equals, .differs]
         case .keywordPath: return [.equals, .inBranch, .differs]
         case .format, .colorLabel: return [.equals, .differs]
         case .captured, .imported: return [.since, .until, .equals, .differs]
@@ -84,6 +99,8 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
         switch field {
         case .filename: return matchesText([photo.displayName, photo.originalName, photo.sourceName ?? photo.originalName])
         case .caption: return matchesText([photo.caption])
+        case .iptcTitle, .iptcCreator, .iptcCopyright, .iptcCredit:
+            return matchesText(field.iptcField.flatMap { photo.iptc?[$0] } ?? [])
         case .keyword: return matchesText(photo.keywordNames)
         case .keywordPath:
             guard let keywordPath else { return false }
