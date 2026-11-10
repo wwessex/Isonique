@@ -92,13 +92,9 @@ public struct CaptureDateCorrection: Identifiable {
 public extension Library {
     /// Apply a complete set of date changes and return the previous values for Undo.
     mutating func replaceCaptureDates(_ changes: [CaptureDateChange]) -> [CaptureDateChange]? {
-        guard !changes.isEmpty, Set(changes.map(\.photoID)).count == changes.count else { return nil }
-        let indices = Dictionary(uniqueKeysWithValues: photos.indices.map { (photos[$0].id, $0) })
-        let targets = changes.compactMap { change in indices[change.photoID].map { ($0, change) } }
-        guard targets.count == changes.count else { return nil }
-        return targets.map { index, change in
-            let previous = CaptureDateChange(photoID: change.photoID, value: photos[index].captureDate)
-            photos[index].captureDate = change.value
+        applyPhotoFieldChanges(changes, photoID: \.photoID) { photo, change in
+            let previous = CaptureDateChange(photoID: photo.id, value: photo.captureDate)
+            photo.captureDate = change.value
             return previous
         }
     }

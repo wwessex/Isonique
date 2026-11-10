@@ -102,6 +102,8 @@ public extension Library {
             return .stackPick(applyStackPick(change))
         case .captureDates(let changes):
             return replaceCaptureDates(changes).map(PhotoHistoryEntry.captureDates)
+        case .batchMetadata(let changes):
+            return replaceBatchMetadata(changes).map(PhotoHistoryEntry.batchMetadata)
         }
     }
 }
@@ -112,23 +114,34 @@ public enum PhotoHistoryEntry: Codable, Equatable {
     case restoreVersion(Photo)
     case stackPick(StackPickChange)
     case captureDates([CaptureDateChange])
+    case batchMetadata([BatchMetadataChange])
 
     public var photo: Photo? {
         switch self {
         case .edit(let photo), .removeVersion(let photo), .restoreVersion(let photo): return photo
-        case .stackPick, .captureDates: return nil
+        case .stackPick, .captureDates, .batchMetadata: return nil
         }
     }
 
     public var selectionID: UUID? {
         if case .stackPick(let change) = self { return change.selectionID }
-        if case .captureDates(let changes) = self { return changes.first?.photoID }
-        return photo?.id
+        return photo?.id ?? groupedPhotoIDs.first
     }
 
-    var captureDatePhotoIDs: [UUID] {
-        if case .captureDates(let changes) = self { return changes.map(\.photoID) }
-        return []
+    var groupedPhotoIDs: [UUID] {
+        switch self {
+        case .captureDates(let changes): return changes.map(\.photoID)
+        case .batchMetadata(let changes): return changes.map(\.photoID)
+        default: return []
+        }
+    }
+
+    var requiredCatalogueVersion: Int? {
+        switch self {
+        case .captureDates: return 8
+        case .batchMetadata: return 9
+        default: return nil
+        }
     }
 
     var isEdit: Bool {
@@ -153,11 +166,8 @@ public struct EditHistory: Codable {
         redo.removeAll()
     }
 
-    var hasCaptureDateChanges: Bool {
-        (undo + redo).contains { entry in
-            if case .captureDates = entry { return true }
-            return false
-        }
+    var requiredCatalogueVersion: Int? {
+        (undo + redo).compactMap(\.requiredCatalogueVersion).max()
     }
 
     public mutating func discardEmptiedTrash(photoIDs: Set<UUID>, originalIDs: Set<UUID>) {
@@ -174,6 +184,10 @@ public struct EditHistory: Codable {
             if case .captureDates(let changes) = entry {
                 let kept = changes.filter { !photoIDs.contains($0.photoID) }
                 return kept.isEmpty ? nil : .captureDates(kept)
+            }
+            if case .batchMetadata(let changes) = entry {
+                let kept = changes.filter { !photoIDs.contains($0.photoID) }
+                return kept.isEmpty ? nil : .batchMetadata(kept)
             }
             return isRemoved(entry) ? nil : entry
         }

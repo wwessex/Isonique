@@ -302,9 +302,10 @@ public struct Library: Codable {
     }
 
     func validateSchema() throws {
-        if version == 8 { return }
-        guard history?.hasCaptureDateChanges != true else { throw LibraryError.unsupportedVersion }
-        if version == 7 { return }
+        if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
+            throw LibraryError.unsupportedVersion
+        }
+        if (7...9).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -471,7 +472,9 @@ public final class LibraryRepository {
     // The caller holds the catalogue write lock through this atomic replacement.
     func writeCatalogue(_ library: Library) throws -> Library {
         var normalized = library
-        if normalized.history?.hasCaptureDateChanges == true { normalized.version = max(normalized.version, 8) }
+        if let requiredVersion = normalized.history?.requiredCatalogueVersion {
+            normalized.version = max(normalized.version, requiredVersion)
+        }
         try normalized.validateSchema()
         _ = try normalized.uniqueOriginals()
         for index in normalized.photos.indices {

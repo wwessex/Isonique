@@ -2,16 +2,16 @@ import IsoniqueCore
 import SwiftUI
 
 extension Workspace {
-    private var captureDateTargets: [Photo] {
+    var metadataEditingTargets: [Photo] {
         guard !busy, !isViewingTrash, repository != nil else { return [] }
         if batchMode { return photos.filter { batchSelection.contains($0.id) } }
         return selected.map { [$0] } ?? []
     }
 
-    var canAdjustCaptureDate: Bool { !captureDateTargets.isEmpty }
+    var canAdjustCaptureDate: Bool { !metadataEditingTargets.isEmpty }
 
     func openCaptureDateCorrection() {
-        let targets = captureDateTargets
+        let targets = metadataEditingTargets
         guard !targets.isEmpty else { return }
         captureDateCorrection = CaptureDateCorrection(photos: targets, preferredReferenceID: selection)
     }

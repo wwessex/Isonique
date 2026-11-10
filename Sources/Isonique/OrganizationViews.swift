@@ -27,6 +27,8 @@ struct BatchBar: View {
                                 Button(preset.rawValue) { model.editBatch { $0.adjustments = preset.applying(to: $0.adjustments) } }
                             }
                         }
+                        Button("Batch Change…", action: model.openBatchMetadata)
+                            .disabled(!model.canOpenBatchMetadata)
                         Button("Stamp", action: model.stamp).disabled(model.liftedAdjustments == nil)
                         Menu("Organize") {
                             Menu("Add to Album") {

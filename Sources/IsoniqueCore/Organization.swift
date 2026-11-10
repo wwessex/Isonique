@@ -91,6 +91,18 @@ public extension Library {
     }
 }
 
+extension Library {
+    /// Resolve every target before changing any fields and return the inverse changes in review order.
+    mutating func applyPhotoFieldChanges<Change>(_ changes: [Change], photoID: KeyPath<Change, UUID>,
+                                                 update: (inout Photo, Change) -> Change) -> [Change]? {
+        guard !changes.isEmpty, Set(changes.map { $0[keyPath: photoID] }).count == changes.count else { return nil }
+        let indices = Dictionary(uniqueKeysWithValues: photos.indices.map { (photos[$0].id, $0) })
+        let targets = changes.compactMap { change in indices[change[keyPath: photoID]].map { ($0, change) } }
+        guard targets.count == changes.count else { return nil }
+        return targets.map { index, change in update(&photos[index], change) }
+    }
+}
+
 public enum BatchExport {
     /// Validate before creating anything; refuse existing folders and library locations.
     public static func prepareDirectory(_ folder: URL, repository: LibraryRepository) throws {

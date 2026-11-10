@@ -121,9 +121,15 @@ Metadata → Adjust Date and Time and the Info inspector preview a correction fo
 
 One catalogue save records the correction. Undo and Redo restore the group in a single step, and format 8 stores that group when persistent history is enabled. The original files and their fingerprints are preserved. Adjusted JPEG, PNG and TIFF exports include the corrected EXIF capture time when EXIF is enabled. [Historical Aperture workflow](https://aperture.skydocu.com/en/work-with-metadata/adjust-the-photo-date-and-time/)
 
+## Batch caption and keyword editing
+
+Metadata → Batch Change, Shift-Command-B, and the selection bar open a review for the current visible selection. The preview lists each affected photo with the current and resulting values. Caption replacement is optional. Keywords can be left unchanged, appended or replaced. Append skips case-insensitive duplicates and preserves existing order and spelling. Replace uses the new list, and an empty replacement clears the chosen field.
+
+Apply writes the reviewed values in one catalogue save. If the selected records or their metadata changed after review, the app asks for a fresh preview. The change updates search and Smart Albums, and Undo and Redo restore the affected fields together. Persistent batch metadata history uses catalogue format 9. Captions and keywords continue to use the existing catalogue fields. [Historical Aperture workflow](https://aperture.skydocu.com/en/work-with-metadata/batch-change-metadata/)
+
 ## Next camera-independent slice
 
-Extend Metadata with a batch change dialog for captions and keywords. Preview which selected versions will change and support appending keywords as well as replacing them.
+Add reusable keyword groups and quick assignment using the existing catalogue keyword field.
 
 ## Pending physical camera checks
 
