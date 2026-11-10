@@ -127,9 +127,15 @@ Metadata → Batch Change, Shift-Command-B, and the selection bar open a review 
 
 Apply writes the reviewed values in one catalogue save. If the selected records or their metadata changed after review, the app asks for a fresh preview. The change updates search and Smart Albums, and Undo and Redo restore the affected fields together. Persistent batch metadata history uses catalogue format 9. Captions and keywords continue to use the existing catalogue fields. [Historical Aperture workflow](https://aperture.skydocu.com/en/work-with-metadata/batch-change-metadata/)
 
+## Reusable keyword groups
+
+Metadata → Manage Keyword Groups creates, renames and edits named groups, and confirms before deleting them. Group definitions, the active group and visibility of the controls live in application preferences and are available across libraries. Keyword order determines button order. Duplicate entries are removed using the same matching as Batch Change.
+
+View → Show Keyword Controls displays a group picker, individual keyword buttons and Apply Group. The Metadata menu also offers the active group's keywords. Assignment appends to the visible selection, skips existing keywords and uses the same grouped history as Batch Change. Editing or deleting a group leaves already assigned photo keywords intact. [Historical Aperture workflow](https://aperture.skydocu.com/en/organize-and-sort-photos/add-keywords-to-photos/apply-keywords-using-keyword-controls-and-presets/)
+
 ## Next camera-independent slice
 
-Add reusable keyword groups and quick assignment using the existing catalogue keyword field.
+Extend the keyword controls with quick removal and keyboard assignment scoped to Browser and Viewer focus.
 
 ## Pending physical camera checks
 

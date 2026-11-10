@@ -44,8 +44,7 @@ public struct BatchMetadataReview: Identifiable {
     }
 
     public func preview(caption: String?, keywordMode: BatchKeywordMode, keywords: String) -> Preview {
-        var inputKeys: Set<String> = []
-        let input = Self.keywordValues(keywords).filter { inputKeys.insert(Self.keywordKey($0)).inserted }
+        let input = KeywordList.uniqueValues(keywords)
         let replacement = input.joined(separator: ", ")
         let rows = targets.compactMap { target -> Row? in
             let newCaption = caption != target.caption ? caption : nil
@@ -54,9 +53,9 @@ public struct BatchMetadataReview: Identifiable {
             case .unchanged:
                 newKeywords = nil
             case .append:
-                let existing = Self.keywordValues(target.keywords)
-                let known = Set(existing.map(Self.keywordKey))
-                let additions = input.filter { !known.contains(Self.keywordKey($0)) }
+                let existing = KeywordList.values(target.keywords)
+                let known = Set(existing.map(KeywordList.key))
+                let additions = input.filter { !known.contains(KeywordList.key($0)) }
                 newKeywords = additions.isEmpty ? nil : (existing + additions).joined(separator: ", ")
             case .replace:
                 newKeywords = replacement == target.keywords ? nil : replacement
@@ -83,12 +82,20 @@ public struct BatchMetadataReview: Identifiable {
               }) else { return nil }
         return library.replaceBatchMetadata(preview.rows.map(\.after))
     }
+}
 
-    private static func keywordValues(_ input: String) -> [String] {
+public enum KeywordList {
+    /// Clean comma-separated input and keep the first spelling and position of each keyword.
+    public static func uniqueValues(_ input: String) -> [String] {
+        var seen: Set<String> = []
+        return values(input).filter { seen.insert(key($0)).inserted }
+    }
+
+    static func values(_ input: String) -> [String] {
         input.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
     }
 
-    private static func keywordKey(_ value: String) -> String {
+    static func key(_ value: String) -> String {
         value.folding(options: .caseInsensitive, locale: Locale(identifier: "en_US_POSIX"))
     }
 }
