@@ -46,20 +46,34 @@ public struct BatchMetadataReview: Identifiable {
     public func preview(caption: String?, keywordMode: BatchKeywordMode, keywords: String) -> Preview {
         let input = KeywordList.uniqueValues(keywords)
         let replacement = input.joined(separator: ", ")
-        let rows = targets.compactMap { target -> Row? in
-            let newCaption = caption != target.caption ? caption : nil
-            let newKeywords: String?
+        return preview(caption: caption) { keywords in
             switch keywordMode {
             case .unchanged:
-                newKeywords = nil
+                return nil
             case .append:
-                let existing = KeywordList.values(target.keywords)
+                let existing = KeywordList.values(keywords)
                 let known = Set(existing.map(KeywordList.key))
                 let additions = input.filter { !known.contains(KeywordList.key($0)) }
-                newKeywords = additions.isEmpty ? nil : (existing + additions).joined(separator: ", ")
+                return additions.isEmpty ? nil : (existing + additions).joined(separator: ", ")
             case .replace:
-                newKeywords = replacement == target.keywords ? nil : replacement
+                return replacement == keywords ? nil : replacement
             }
+        }
+    }
+
+    public func previewRemovingKeywords(_ keywords: String) -> Preview {
+        let removedKeys = Set(KeywordList.values(keywords).map(KeywordList.key))
+        return preview(caption: nil) { keywords in
+            let existing = KeywordList.values(keywords)
+            let kept = existing.filter { !removedKeys.contains(KeywordList.key($0)) }
+            return kept.count == existing.count ? nil : kept.joined(separator: ", ")
+        }
+    }
+
+    private func preview(caption: String?, keywordChange: (String) -> String?) -> Preview {
+        let rows = targets.compactMap { target -> Row? in
+            let newCaption = caption != target.caption ? caption : nil
+            let newKeywords = keywordChange(target.keywords)
             guard newCaption != nil || newKeywords != nil else { return nil }
             return Row(name: target.name,
                        before: BatchMetadataChange(photoID: target.id,

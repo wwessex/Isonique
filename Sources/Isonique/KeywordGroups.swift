@@ -112,12 +112,25 @@ extension Workspace {
 
     @discardableResult
     func addKeywords(_ keywords: String) -> Bool {
+        applyKeywordChange(noChange: "Selected photos already have these keywords") { review in
+            review.preview(caption: nil, keywordMode: .append, keywords: keywords)
+        }
+    }
+
+    @discardableResult
+    func removeKeywords(_ keywords: String) -> Bool {
+        applyKeywordChange(noChange: "Selected photos don’t have these keywords") { review in
+            review.previewRemovingKeywords(keywords)
+        }
+    }
+
+    private func applyKeywordChange(noChange: String, preview makePreview: (BatchMetadataReview) -> BatchMetadataReview.Preview) -> Bool {
         let targets = metadataEditingTargets
         guard !targets.isEmpty else { return false }
         let review = BatchMetadataReview(photos: targets)
-        let preview = review.preview(caption: nil, keywordMode: .append, keywords: keywords)
+        let preview = makePreview(review)
         guard !preview.rows.isEmpty else {
-            status = "Selected photos already have these keywords"
+            status = noChange
             return false
         }
         return applyBatchMetadata(preview, for: review)

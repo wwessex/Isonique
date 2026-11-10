@@ -117,6 +117,7 @@ struct PhotoListBrowser: View {
         }
         .environment(\.defaultMinListRowHeight, 30)
         .accessibilityLabel("Photo list")
+        .keywordShortcuts(for: model)
         .onKeyPress(keys: ["0", "1", "2", "3", "4", "5", "9", "=", "-", "/"], phases: .down, action: model.reviewKey)
         .contextMenu(forSelectionType: UUID.self) { ids in
             if let id = ids.first, ids.count == 1, let photo = photos.first(where: { $0.id == id }) {

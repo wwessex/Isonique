@@ -1,4 +1,32 @@
+import AppKit
 import SwiftUI
+
+extension View {
+    func keywordShortcuts(for model: Workspace) -> some View {
+        onKeyPress(phases: .down) { press in
+            guard press.modifiers.contains(.option) else { return .ignored }
+            // Shift may turn the digit into punctuation before SwiftUI matches the key.
+            let event = NSApp.currentEvent
+            let character = event?.type == .keyDown ? event?.characters(byApplyingModifiers: [])?.first : nil
+            return model.keywordShortcut(KeyEquivalent(character ?? press.key.character), modifiers: press.modifiers)
+        }
+    }
+}
+
+extension Workspace {
+    func keywordShortcut(_ key: KeyEquivalent, modifiers: EventModifiers) -> KeyPress.Result {
+        let shortcutModifiers = modifiers.intersection([.option, .shift, .command, .control])
+        guard shortcutModifiers == .option || shortcutModifiers == [.option, .shift],
+              !modifiers.contains(.numericPad),
+              showKeywordControls, let group = keywordGroups.active,
+              let slot = key.character.wholeNumberValue, (1...8).contains(slot),
+              group.keywords.indices.contains(slot - 1), canOpenBatchMetadata else { return .ignored }
+        let keyword = group.keywords[slot - 1]
+        if shortcutModifiers.contains(.shift) { removeKeywords(keyword) }
+        else { addKeywords(keyword) }
+        return .handled
+    }
+}
 
 struct KeywordControls: View {
     @EnvironmentObject private var model: Workspace
@@ -13,9 +41,19 @@ struct KeywordControls: View {
                 .frame(maxWidth: 220)
                 ScrollView(.horizontal) {
                     HStack(spacing: 6) {
-                        ForEach(group.keywords, id: \.self) { keyword in
-                            Button(keyword) { model.addKeywords(keyword) }
-                                .accessibilityLabel("Add keyword \(keyword)")
+                        ForEach(Array(group.keywords.enumerated()), id: \.element) { index, keyword in
+                            Button(keyword) {
+                                if NSApp.currentEvent?.modifierFlags.contains(.shift) == true {
+                                    model.removeKeywords(keyword)
+                                } else {
+                                    model.addKeywords(keyword)
+                                }
+                            }
+                            .accessibilityLabel("Add keyword \(keyword)")
+                            .accessibilityAction(named: Text("Remove keyword \(keyword)")) { model.removeKeywords(keyword) }
+                            .help(index < 8
+                                  ? "Add \(keyword) with Option-\(index + 1) or remove it with Option-Shift-\(index + 1) when the Browser or Viewer has focus. Shift-click also removes it."
+                                  : "Click to add \(keyword) or Shift-click to remove it.")
                         }
                     }
                 }
