@@ -1,6 +1,6 @@
 # Isonique editing and Inspector comparison — 8 November 2026
 
-This is a historical development record. For current coverage, see the [workflow comparison](docs/APERTURE_FEATURE_PARITY.md) and [test results](docs/APERTURE_TEST_RESULTS.md). The maintained application is the SwiftUI/AppKit macOS app. There are no independent web/PWA, Windows, iOS or Android variants in this repository.
+This is a historical development record. For current coverage, see the [workflow comparison](docs/WORKFLOW_COMPARISON.md) and [test results](docs/TEST_RESULTS.md). The maintained application is the SwiftUI/AppKit macOS app. There are no independent web/PWA, Windows, iOS or Android variants in this repository.
 
 ## References checked
 
@@ -35,7 +35,7 @@ Retouch/clone/heal, red-eye removal, localized adjustment brushes, histogram, cu
 
 ## Validation
 
-Seven XCTest cases pass, including old-recipe decoding, saved recipe round trips, matching CPU/preview/export dimensions, clockwise/counterclockwise pixel placement, top-left crop coordinates, opaque straighten corners and unchanged original hashes. The arm64 release build and staged bundle signature verification pass. Craft Anything's `rebuild_check` is run after the final release build; its result is recorded in `VALIDATION.md`.
+Seven XCTest cases passed, including old-recipe decoding, saved recipe round trips, matching CPU/preview/export dimensions, clockwise/counterclockwise pixel placement, top-left crop coordinates, opaque straighten corners and unchanged original hashes. The arm64 release build and staged bundle signature verification passed.
 
 Only the native Apple Silicon macOS variant is present and checked on this host. Intel, macOS 14/15 runtime behavior, actual RAW cameras and physical mobile devices are not validated.
 
@@ -43,13 +43,13 @@ Only the native Apple Silicon macOS variant is present and checked on this host.
 
 Added Info / Adjustments / Library tabs, editable numeric values and individual reset buttons, warmth and tint, shadow lift and highlight reduction, four color/tone presets, geometry shortcuts and grouped Stamp checkboxes. Presets retain crop, rotation and straighten; unchecked Stamp groups retain the target values. Imported date and Reveal Managed Original are available under Info. Toolbar sorting supports filename, import date, rating and capture date in both directions; 2-star and 4-star minimum filters fill the previous gaps.
 
-New tone controls use an independent shared 8-bit sRGB transform after exposure/color and before geometry in both rendering paths, including export. Warmth changes red/blue gain; tint adjusts green against magenta. Shadows lift dark tones and Highlights reduce bright tones using smooth luminance weighting. These are not reconstructed Apple RAW formulas and cannot recover clipped original data. Old catalogues decode missing fields to neutral values; older executables ignore the new fields. Catalogue version remains 1.
+New tone controls use Isonique’s shared 8-bit sRGB transform after exposure and colour and before geometry in both rendering paths, including export. Warmth changes red and blue gain, and tint adjusts green against magenta. Shadows lift dark tones and Highlights reduce bright tones using smooth luminance weighting. Clipped original data stays clipped. Old catalogues decode missing fields to neutral values, and older executables ignore the new fields. Catalogue version remains 1.
 
-The latest validation supersedes the earlier seven-test count above: 11 tests pass, including persistence/export, legacy defaults, neutral rendering, directional tone effects, selective stamping and geometry preservation by presets. `rebuild_check` passes build, screenshot and mechanics. Screenshot inspected at 2880×1800; interactive menus, typing and Finder reveal were not automated. Only native Apple Silicon macOS is present; Intel and macOS 14/15 execution are untested.
+The Inspector expansion passed 11 tests covering persistence, export, legacy defaults, neutral rendering, directional tone effects, selective stamping and geometry preservation by presets. The arm64 build passed and a 2880×1800 startup screenshot was inspected. Interactive menus, typing and Finder reveal were outside the automated check.
 
 ## Rating-filter follow-up
 
-The native filter added exact Unrated only and Rejected only choices alongside the star thresholds. Historical binary analysis informed the filter values and comparisons. See the [development provenance notes](MECHANICS.md) for scope and limitations.
+The native filter added exact Unrated only and Rejected only choices alongside the star thresholds. Historical binary analysis informed the filter values and comparisons. See the [development provenance notes](docs/DEVELOPMENT_PROVENANCE.md) for scope and limitations.
 
 ## Library compatibility follow-up
 

@@ -1,6 +1,6 @@
 # Isonique development provenance
 
-Isonique is a separate Swift application with its own executable, catalogue, edit recipes and backup format. It uses public macOS APIs for its interface, system image decoding, metadata and colour management. The Swift package declares no third-party dependencies. Research into alternative processing libraries is documented separately. [Processing notes](PROCESSING_ALTERNATIVES.md)
+Isonique is a separate Swift application with its own executable, catalogue, edit recipes and backup format. It uses public macOS APIs for its interface, system image decoding, metadata and colour management. The Swift package declares no third-party dependencies. Research into alternative processing libraries is documented separately. [Processing notes](../PROCESSING_ALTERNATIVES.md)
 
 ## Historical Aperture research
 
@@ -16,7 +16,7 @@ Earlier development used public manuals and screenshots alongside direct analysi
 
 The review found Swift implementations of these behaviours and no bundled Aperture executable, private framework, original interface resource or application artwork in the current build inputs. It did not establish the authorship or redistribution rights of each line or value. The photo renderer is implemented in the Isonique source, with system decoding and colour APIs. There is no claim of legacy pixel fidelity.
 
-Raw disassembly, decompiler output and extracted strings were removed from the working source tree. Earlier repository snapshots and separate local research records may still contain them. Those records need a rights and provenance review before redistribution. Changing the product name and removing raw outputs from the current tree does not settle the provenance of behaviour informed by the earlier analysis.
+The current source tree excludes raw disassembly, decompiler output and extracted strings. Earlier public commits, publication branches and separate local research records retain copies. Rights to redistribute those records and the provenance of behaviour informed by the earlier analysis remain unresolved.
 
 ## External fixtures
 

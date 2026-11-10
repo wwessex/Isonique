@@ -1,18 +1,18 @@
-# Isonique workflow comparison with Aperture 3
+# Isonique workflow comparison
 
-This historical comparison describes which workflows Isonique supports and where the two applications differ. Baseline audited against Isonique commit `0ebda9a` on 9 November 2026. Only the native Swift/SwiftUI/AppKit macOS app is maintained. The Swift package has a UI executable, an IsoniqueCore library, XCTest and no external package dependencies. ImageIO handles decoding and encoding, Core Graphics runs an 8-bit sRGB pipeline, and CryptoKit supplies SHA-256. Libraries store an atomic JSON catalogue and byte-verified originals on disk. UserDefaults holds several app-level options. There are no web/PWA, iOS, Android, Windows or other maintained app sources. See the [compatibility inventory](../COMPATIBILITY.md) for legacy catalogue evidence and [test results](APERTURE_TEST_RESULTS.md) for what was exercised.
+This reference records the workflows available in Isonique. Notes on Apple’s discontinued Aperture 3 provide historical context where relevant. The initial comparison used Isonique commit `0ebda9a` on 9 November 2026. Only the native Swift/SwiftUI/AppKit macOS app is maintained. The Swift package has a UI executable, an IsoniqueCore library, XCTest and no external package dependencies. ImageIO handles decoding and encoding, Core Graphics runs an 8-bit sRGB pipeline, and CryptoKit supplies SHA-256. Libraries store an atomic JSON catalogue and byte-verified originals on disk. UserDefaults holds several app-level options. There are no web/PWA, iOS, Android, Windows or other maintained app sources. See the [compatibility inventory](../COMPATIBILITY.md) for legacy catalogue evidence and [test results](TEST_RESULTS.md) for what was exercised.
 
 ## Historical sources and scope
 
 - Apple introduced Faces, Places, non-destructive Brushes, adjustment presets, richer full-screen browsing and multimedia slideshows in Aperture 3. The Apple-authored launch and 3.5 manuals establish workflows and controls. The supplied 908-page PDF exceeded the browser extractor limit, and direct download returned HTTP 403. The 3.5 guide's complete text and the mirrored Apple Help supplied the detailed baseline. [Apple launch announcement](https://www.apple.com/uk/newsroom/2010/02/09Apple-Releases-Aperture-3/), [Apple Aperture 3 manual index](https://manuals.plus/m/3cdedfd315f296a727dc36c3d1097eb5923ff228252dc12b207021f3b8da88e0), [Apple Aperture 3.5 User Guide](https://manuals.plus/m/1c479d8d9aca8e7f49239d83e673f00ea3d728f55419ace76037fdca54ff2182), [Apple Help mirror](https://aperture.skydocu.com/en/)
 - The 3.5 guide documents the unified iPhoto library, iCloud shared streams, SmugMug and Apple Maps workflows. Apple’s 3.4.5 update addressed camera/card deletion and ejection. The contemporaneous 3.6 release-note transcription identifies Yosemite compatibility and fixes for soft proofing performance, shared streams, writing IPTC to originals and Library First Aid. It separately reports RAW Decode 6. The original 3.6 support link did not load. [Apple 3.4.5 release notes](https://support.apple.com/en-me/106572), [3.6 release-note transcription](https://www.photojoseph.com/tips/2014/10/20/aperture-36-release-notes-and-raw-engine-v6)
-- Historical command reference is the Apple shortcut card plus the 3.5 guide’s workspace and individual workflow sections. The table records representative commands and gaps. An exhaustive command-by-command transcription and direct execution of Aperture 3.6 are outstanding. [Apple shortcut card mirror](https://www.yumpu.com/en/document/view/55992561/apple-aperture-3-keyboard-shortcuts-aperture-3-keyboard-shortcuts), [Command Editor help](https://aperture.skydocu.com/en/customize-the-aperture-workspace/customize-keyboard-shortcuts/overview/)
+- Historical command reference is the Apple shortcut card plus the 3.5 guide’s workspace and individual workflow sections. The table records representative commands and gaps. The historical shortcut comparison draws on those published references. [Apple shortcut card mirror](https://www.yumpu.com/en/document/view/55992561/apple-aperture-3-keyboard-shortcuts-aperture-3-keyboard-shortcuts), [Command Editor help](https://aperture.skydocu.com/en/customize-the-aperture-workspace/customize-keyboard-shortcuts/overview/)
 
 Statuses refer to the feature scope named in each row. “Fully implemented and tested” requires verified operation and integration for that scope. Existing code without enough evidence for that label is marked as needing improvement or partial. Historical workflow and modern design choices are tracked separately.
 
 ## Library, selection and metadata
 
-| Aperture workflow | Status | Isonique audit |
+| Workflow | Status | Isonique implementation |
 | --- | --- | --- |
 | Create and switch independent Isonique libraries | Fully implemented and tested | File → New Isonique Library (⇧⌘N) creates a new folder. File → Open Isonique Library verifies and switches libraries. Both commands exercised in the native app. Normal launch remembers the selected path. |
 | Library recents and relocation | Partially implemented | File → Open Recent Library switches between up to ten saved library paths. The same verified opener is used when selecting a library from a new location. Finder document opening remains open. Aperture provided a Switch to Library submenu. [Aperture Help](https://aperture.skydocu.com/en/work-with-projects-and-the-library/work-with-library-files/view-other-libraries/) |
@@ -60,7 +60,7 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 
 ## Image adjustment controls
 
-| Aperture workflow | Status | Isonique audit |
+| Workflow | Status | Isonique implementation |
 | --- | --- | --- |
 | Exposure, contrast, saturation, preset monochrome | Implemented but needs improvement | Shared renderer, numeric fields, resets and tested pixel results. 8-bit sRGB intermediate and adjustment clipping limit grading latitude. |
 | Exposure brightness, recovery, black point and highlight/shadow detail | Partially implemented | Shadows, highlights and a Levels black point are real. Midtone-weighted brightness is available. Highlight recovery and extended-range RAW treatment remain absent. |
@@ -80,7 +80,7 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 
 ## Browser, Viewer and geospatial workflows
 
-| Aperture workflow | Status | Isonique audit |
+| Workflow | Status | Isonique implementation |
 | --- | --- | --- |
 | Grid, filmstrip, list and two Browsers | Partially implemented | Grid, native metadata List Browser and single viewer with filmstrip. List shares filters, batch selection, stack covers and keyboard review. Column sorting uses the workspace Sort & Filter menu. Configurable metadata columns, dual Browser, Quick Preview and manual order are pending. [Aperture Help](https://aperture.skydocu.com/en/organize-and-sort-photos/change-the-browser-view/work-with-photos-in-list-view/) |
 | Single-image, multiple-image, Compare and Primary Only | Partially implemented | Single image, original toggle and side-by-side comparison with a pinned reference and selected alternate. Multi-image layouts, synchronized zoom and Aperture’s Promote Compare command are pending. |
@@ -106,13 +106,13 @@ Statuses refer to the feature scope named in each row. “Fully implemented and 
 
 ## Ingest, output and publishing
 
-| Aperture workflow | Status | Isonique audit |
+| Workflow | Status | Isonique implementation |
 | --- | --- | --- |
 | File/folder import, naming, metadata presets, duplicate rejection | Implemented but needs improvement | Background execution and presets. Metadata, naming and membership commit with the original in one catalogue write per file. Pair linking remains a separate final transaction. Duplicate hashing and catalogue writes still scale poorly for large batches. |
 | Import preview, automatic projects, progress, cancellation and post-import actions | Partially implemented | Background scanning, per-file progress, cancellation between files and optional project creation. Completed imports survive cancellation. No import selection grid, time-zone correction, automatic project splitting, backup-on-import, move source or eject. |
 | RAW+JPEG pairing and preferred original | Partially implemented | By folder/stem, limited to newly imported partners. No switching one version’s underlying original. |
 | Camera and memory card import | Partially implemented | File → Import from Camera or Card discovers local Image Capture cameras and mounted removable media with a DCIM folder. The thumbnail grid starts empty and supports checking or unchecking individual photos, Select All and Deselect All. Import applies presets and RAW/JPEG preferences to the selected photos and copies their originals into the library. Disconnect clears the browser selection. Mounted media and the empty device browser passed in the signed app. Camera transfers were tested with a simulated transport. Physical PTP validation remains pending. Device deletion and eject remain unavailable. |
-| Tethered capture | Partially implemented | File → Tethered Capture checks the connected camera’s Mac-triggered shutter capability and collects new matching arrivals for one shot. The managed importer links RAW/JPEG companions that arrive within the grouping window. Simulated arrivals cover replay suppression, cancellation, timeouts and reconnect. Physical shutter control, native delivery and grouping timing still require hardware validation. [Native adapter](APERTURE_IMPLEMENTATION_PLAN.md#native-imagecapturecore-tethered-capture) |
+| Tethered capture | Partially implemented | File → Tethered Capture checks the connected camera’s Mac-triggered shutter capability and collects new matching arrivals for one shot. The managed importer links RAW/JPEG companions that arrive within the grouping window. Simulated arrivals cover replay suppression, cancellation, timeouts and reconnect. Physical shutter control, native delivery and grouping timing still require hardware validation. [Native adapter](IMPLEMENTATION_PLAN.md#native-imagecapturecore-tethered-capture) |
 | Original/adjusted export, JPEG/TIFF/PNG/PSD and modern HEIF | Partially implemented | JPEG/TIFF/PNG and byte-copy original; no HEIF/PSD, 16-bit working output or export color-space choice. |
 | Size, quality, export presets, batch and naming templates | Partially implemented | Long-edge downsize, JPEG quality, presets and unique batch filenames. No naming tokens, TIFF compression or comprehensive format options. |
 | Metadata options, IPTC on originals and watermark | Partially implemented | EXIF/IPTC/GPS switches for rendered output and optional XMP sidecars for both rendered and original output. Original files retain their source bytes. Watermarking remains open. |
