@@ -35,6 +35,7 @@ struct PhotoMetadataInspector: View {
             }
             switch model.metadataViews.selection {
             case .builtIn(.general): general
+            case .builtIn(.gps): gps
             case .builtIn(let view): fieldList(view.fields)
             case .custom:
                 if let view = model.metadataViews.selectedCustomView {
@@ -85,30 +86,49 @@ struct PhotoMetadataInspector: View {
         row(.originalStorage)
     }
 
-    @ViewBuilder private func fieldList(_ fields: [MetadataViewField]) -> some View {
-        if fields.contains(where: \.isEXIF) {
-            EXIFMetadataReader(photo: photo) { readout in
-                orderedRows(fields, exif: readout)
+    private var gps: some View {
+        OriginalMetadataReader(photo: photo) { readout in
+            switch readout {
+            case .metadata(let metadata) where metadata.gps == nil:
+                Text("No valid GPS coordinates found in the original.").foregroundStyle(.secondary)
+            case .metadata:
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(BuiltInMetadataView.gps.fields) { row($0, original: readout) }
+                }
+            case .offline:
+                Text("GPS is unavailable while the original is offline.").foregroundStyle(.secondary)
+            case .unreadable:
+                Text("Could not read GPS from the original.").foregroundStyle(.secondary)
+            case .loading:
+                ProgressView("Reading GPS…").controlSize(.small)
             }
-        } else {
-            orderedRows(fields, exif: nil)
         }
     }
 
-    @ViewBuilder private func orderedRows(_ fields: [MetadataViewField], exif: EXIFReadout?) -> some View {
+    @ViewBuilder private func fieldList(_ fields: [MetadataViewField]) -> some View {
+        if fields.contains(where: \.readsOriginal) {
+            OriginalMetadataReader(photo: photo) { readout in
+                orderedRows(fields, original: readout)
+            }
+        } else {
+            orderedRows(fields, original: nil)
+        }
+    }
+
+    @ViewBuilder private func orderedRows(_ fields: [MetadataViewField], original: OriginalMetadataReadout?) -> some View {
         if fields.contains(where: { $0.iptcField != nil }) {
             IPTCMetadataEditor(photo: photo) { editor in
                 VStack(alignment: .leading, spacing: 8) {
-                    ForEach(fields) { row($0, exif: exif, editor: editor) }
+                    ForEach(fields) { row($0, original: original, editor: editor) }
                     editor.actions
                 }
             }.id(photo.id)
         } else {
-            ForEach(fields) { row($0, exif: exif) }
+            ForEach(fields) { row($0, original: original) }
         }
     }
 
-    @ViewBuilder private func row(_ field: MetadataViewField, exif: EXIFReadout? = nil,
+    @ViewBuilder private func row(_ field: MetadataViewField, original: OriginalMetadataReadout? = nil,
                                   editor: IPTCFieldEditor? = nil) -> some View {
         switch field {
         case .name:
@@ -152,8 +172,17 @@ struct PhotoMetadataInspector: View {
         case .title, .creator, .copyright, .credit:
             if let iptcField = field.iptcField, let editor { editor.row(iptcField) }
         case .shutterSpeed, .aperture, .iso, .focalLength, .lens:
-            if let exif {
-                LabeledContent(field.label, value: exif.value(for: field)).textSelection(.enabled)
+            if let original {
+                LabeledContent(field.label, value: original.value(for: field)).textSelection(.enabled)
+            }
+        case .latitude, .longitude:
+            if let original {
+                let value = original.value(for: field)
+                LabeledContent(field.label, value: value)
+                    .textSelection(.enabled)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(field.label)
+                    .accessibilityValue(value)
             }
         case .originalStorage:
             OriginalInfoView(photo: photo)

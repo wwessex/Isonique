@@ -195,9 +195,13 @@ Advanced Search and Smart Albums compare saved shutter speed, aperture, ISO, foc
 
 Imports read EXIF during the normal catalogue save. For older photos, Metadata → Catalogue EXIF from Originals verifies selected original fingerprints and records their capture values in one save. It skips unavailable or changed originals and supports cancellation. The catalogue preserves indexed values while originals are offline. Saved capture values and EXIF Smart Album rules use format 14. [Aperture 3.5 Help](https://aperture.skydocu.com/en/organize-and-sort-photos/search-for-photos/search-using-a-combination-of-criteria/)
 
+## Read-only GPS in Info
+
+Choose GPS in the Info inspector’s Metadata View menu to see signed latitude and longitude in decimal degrees. The reader uses the primary image’s embedded GPS metadata, requires a complete pair with valid hemisphere references, and distinguishes missing or invalid coordinates, an offline original and an unreadable image. Latitude and Longitude can also be added to custom metadata views. The view reads locally and leaves original bytes and the catalogue unchanged. Aperture’s Info inspector also had a Map pane for viewing and assigning locations. [Aperture 3.5 Help](https://aperture.skydocu.com/en/organize-and-sort-photos/organize-photos-using-places/work-with-locations-in-the-info-inspector/)
+
 ## Next checkpoint
 
-Add a read-only GPS view in Info. Verify coordinate parsing, references and offline handling. Follow with catalogue-backed location search and map browsing.
+Add catalogue-backed GPS indexing and location search for Advanced Search and Smart Albums. Verify that indexed coordinates remain usable with offline originals. Follow with map browsing.
 
 ## Pending physical camera checks
 
