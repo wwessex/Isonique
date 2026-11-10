@@ -52,7 +52,7 @@ struct DeviceImportView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Import from Camera or Card").font(.title2.bold())
-            Text("Choose a device and select the photos to copy into the library.")
+            Text("Choose a device and check the photos you want to import. Only checked photos will be copied.")
                 .foregroundStyle(.secondary)
             HStack {
                 Picker("Device", selection: $choice) {
@@ -244,6 +244,7 @@ struct DeviceImportView: View {
                 if case .card(let url) = photo.file { return url }
                 return nil
             }
+            guard !files.isEmpty else { return }
             model.pendingDeviceImport = .memoryCard(card, files)
         case .camera:
             guard let session = cameraSession else { return }
@@ -251,6 +252,7 @@ struct DeviceImportView: View {
                 if case .camera(let file) = photo.file { return file }
                 return nil
             }
+            guard !files.isEmpty else { return }
             session.endPreview()
             model.pendingDeviceImport = .camera(session, catalogue: cameraCatalogue, selected: Set(files))
             cameraSession = nil

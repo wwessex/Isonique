@@ -1,4 +1,5 @@
 import CoreGraphics
+@preconcurrency import ImageCaptureCore
 import ImageIO
 import IsoniqueCore
 import SwiftUI
@@ -66,25 +67,51 @@ private actor SimulatedTetherCamera {
     }
 }
 
-struct SimulatedTetherView: View {
+enum TetherCaptureSource: String, Identifiable {
+    case camera, simulated
+    var id: Self { self }
+}
+
+struct TetherCaptureView: View {
+    let source: TetherCaptureSource
+
     @EnvironmentObject private var model: Workspace
     @Environment(\.dismiss) private var dismiss
     @State private var session = TetheredCaptureSession()
-    @State private var camera = SimulatedTetherCamera()
+    @State private var simulator = SimulatedTetherCamera()
+    @StateObject private var discovery = CameraDiscovery()
+    @State private var cameraID: ObjectIdentifier?
+    @State private var native: CameraImportSession?
     @State private var connected = false
     @State private var connecting = false
     @State private var shooting = false
     @State private var stopping = false
-    @State private var message = "Connect the simulated camera to take a shot."
+    @State private var message = ""
+
+    private var camera: ICCameraDevice? {
+        discovery.cameras.first { ObjectIdentifier($0) == cameraID }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Simulated Tethered Capture").font(.title2.bold())
-            Text("Capture imports a generated photo into the current library.").foregroundStyle(.secondary)
+            Text(source == .simulated ? "Simulated Tethered Capture" : "Tethered Capture").font(.title2.bold())
+            Text(source == .simulated ? "Capture imports a generated photo into the current library."
+                 : "Take one photo at a time from the Mac and import it into the current library.")
+                .foregroundStyle(.secondary)
+            if source == .camera {
+                Picker("Camera", selection: $cameraID) {
+                    Text(discovery.cameras.isEmpty ? "No camera connected" : "Choose a camera")
+                        .tag(nil as ObjectIdentifier?)
+                    ForEach(discovery.cameras, id: \.self) { camera in
+                        Text(camera.name ?? "Camera").tag(Optional(ObjectIdentifier(camera)))
+                    }
+                }
+                .disabled(discovery.cameras.isEmpty || connected || connecting || shooting)
+            }
             HStack {
                 Text(connected ? "Camera connected" : "Camera disconnected")
                     .font(.headline)
-                if shooting { ProgressView().controlSize(.small) }
+                if shooting || connecting { ProgressView().controlSize(.small) }
             }
             Text(message).accessibilityIdentifier("TetherCaptureStatus")
             HStack {
@@ -92,10 +119,10 @@ struct SimulatedTetherView: View {
                     if connected { disconnect() }
                     else { connect() }
                 }
-                .disabled(connecting || (!connected && shooting))
+                .disabled(connecting || (!connected && (shooting || (source == .camera && camera == nil))))
                 Button("Cancel Shot") { cancel() }.disabled(!shooting || stopping)
                 Spacer()
-                Button("Close") { dismiss() }.disabled(shooting)
+                Button("Close") { dismiss() }.disabled(shooting || connecting)
                 Button("Capture") { capture() }
                     .keyboardShortcut(.defaultAction)
                     .disabled(!connected || shooting || connecting || model.busy)
@@ -103,41 +130,74 @@ struct SimulatedTetherView: View {
         }
         .padding(24)
         .frame(width: 540)
-        .interactiveDismissDisabled(shooting)
-        .task { connect() }
-        .onDisappear { Task { await session.disconnect() } }
+        .interactiveDismissDisabled(shooting || connecting)
+        .task {
+            if source == .simulated { connect() }
+            else {
+                message = "Connect and unlock a camera in photo transfer mode, then choose it above."
+                discovery.start()
+            }
+        }
+        .onChange(of: discovery.cameras) { _, _ in
+            guard source == .camera, cameraID != nil, camera == nil else { return }
+            cameraID = nil
+            if connected { disconnect() }
+            else { native?.close() }
+        }
+        .onDisappear {
+            native?.close()
+            discovery.stop()
+            Task { await session.disconnect() }
+        }
     }
 
     private func connect() {
         guard !connecting else { return }
+        let nativeCamera = camera.map(CameraImportSession.init)
+        guard source == .simulated || nativeCamera != nil else { return }
+        native = nativeCamera
         connecting = true
+        message = "Opening camera session…"
         Task {
             defer { connecting = false }
             do {
-                let connection = await camera.connection()
+                let connection: TetheredCameraConnection
+                if let nativeCamera { connection = try await nativeCamera.tetheredConnection() }
+                else { connection = await simulator.connection() }
                 try await session.connect(connection)
+                if source == .camera, camera == nil {
+                    await session.disconnect()
+                    throw DeviceImportError.disconnected
+                }
                 connected = true
                 message = "Ready for a single shot."
             } catch {
+                await nativeCamera?.closeTetheredConnection()
+                native = nil
                 message = error.localizedDescription
             }
         }
     }
 
-    private func disconnect() {
+    private func disconnect(message status: String = "Camera disconnected.") {
         connected = false
         connecting = true
         stopping = true
         Task {
             defer { connecting = false }
             await session.disconnect()
-            if !shooting { message = "Camera disconnected." }
+            await native?.closeTetheredConnection()
+            native = nil
+            if !shooting { message = status }
         }
     }
 
     private func cancel() {
-        stopping = true
-        Task { await session.cancel() }
+        if source == .camera { disconnect(message: "Shot cancelled. Reconnect to take another shot.") }
+        else {
+            stopping = true
+            Task { await session.cancel() }
+        }
     }
 
     private func capture() {
@@ -164,8 +224,10 @@ struct SimulatedTetherView: View {
                 } else {
                     let prefix = result.report.cancelled ? "Shot cancelled. " : ""
                     message = "\(prefix)Imported \(result.report.imported) · duplicates \(result.report.duplicates)"
+                    if result.report.cancelled, source == .camera { message += " Reconnect to take another shot." }
                 }
                 model.status = message
+                if native?.tetherNeedsReconnect == true, connected { disconnect(message: message) }
             } catch {
                 message = error.localizedDescription
             }

@@ -105,6 +105,21 @@ private final class CameraRequest {
     }
 }
 
+enum NativeTetherError: LocalizedError {
+    case remoteShutterUnavailable, reconnectRequired
+
+    static func supportsRemoteShutter(_ capabilities: [String]) -> Bool {
+        capabilities.contains(ICDeviceCapability.cameraDeviceCanTakePicture.rawValue)
+    }
+
+    var errorDescription: String? {
+        switch self {
+        case .remoteShutterUnavailable: return "This camera does not report support for taking a picture from the Mac."
+        case .reconnectRequired: return "Reconnect the camera before taking another shot."
+        }
+    }
+}
+
 @MainActor final class CameraImportSession: NSObject, ICCameraDeviceDelegate {
     let camera: ICCameraDevice
     private var opening: CameraRequest?
@@ -116,6 +131,8 @@ private final class CameraRequest {
     private var removed = false
     private var closed = false
     private var requestedSession = false
+    private var tethering = false
+    private var shot: TetheredShotEvents?
 
     init(_ camera: ICCameraDevice) { self.camera = camera }
 
@@ -136,6 +153,43 @@ private final class CameraRequest {
             }
         }
         try Task.checkCancellation()
+        return register(camera.mediaFiles ?? [])
+    }
+
+    func tetheredConnection() async throws -> TetheredCameraConnection {
+        let baseline = try await catalogue()
+        guard NativeTetherError.supportsRemoteShutter(camera.capabilities) else {
+            throw NativeTetherError.remoteShutterUnavailable
+        }
+        tethering = true
+        return TetheredCameraConnection(initialCatalogue: baseline, capture: { try await self.capture() },
+                                        download: { try await self.download($0, to: $1) })
+    }
+
+    var tetherNeedsReconnect: Bool {
+        removed || closed || !camera.hasOpenSession ||
+            !NativeTetherError.supportsRemoteShutter(camera.capabilities) ||
+            shot.map { !$0.isCollecting && !$0.completed } == true
+    }
+
+    private func capture() throws -> AsyncThrowingStream<CameraImportFile, Error> {
+        try Task.checkCancellation()
+        guard tethering, !closed, !removed, camera.hasOpenSession else { throw DeviceImportError.disconnected }
+        guard NativeTetherError.supportsRemoteShutter(camera.capabilities) else {
+            throw NativeTetherError.remoteShutterUnavailable
+        }
+        if let shot {
+            guard !shot.isCollecting else { throw TetheredCaptureError.busy }
+            // A failed shutter may still deliver files. Start a fresh camera session before another request.
+            guard shot.completed else { throw NativeTetherError.reconnectRequired }
+        }
+        let shot = TetheredShotEvents(baseline: files.keys)
+        self.shot = shot
+        camera.requestTakePicture()
+        return shot.stream
+    }
+
+    private func register(_ items: [ICCameraItem]) -> [CameraImportFile] {
         var seen: Set<ObjectIdentifier> = []
         var records: [CameraImportFile] = []
         func add(_ file: ICCameraFile, inheritedFolders: [String]? = nil) {
@@ -155,7 +209,7 @@ private final class CameraRequest {
             if let raw = file.pairedRawImage { add(raw, inheritedFolders: ancestors) }
             for sidecar in (file.sidecarFiles ?? []).compactMap({ $0 as? ICCameraFile }) { add(sidecar, inheritedFolders: ancestors) }
         }
-        for file in (camera.mediaFiles ?? []).compactMap({ $0 as? ICCameraFile }) { add(file) }
+        for file in items.compactMap({ $0 as? ICCameraFile }) { add(file) }
         return records
     }
 
@@ -217,14 +271,33 @@ private final class CameraRequest {
     }
 
     func close() {
-        guard !closed else { return }
+        if endSession() { closeSession() }
+    }
+
+    func closeTetheredConnection() async {
+        guard endSession() else { return }
+        let request = CameraRequest()
+        try? await request.wait(seconds: 8, interrupt: {}) {
+            self.camera.requestCloseSession(options: nil) { error in
+                Task { @MainActor in request.finish(error) }
+            }
+        }
+    }
+
+    private func endSession() -> Bool {
+        guard !closed else { return false }
         closed = true
         endPreview()
-        if camera.delegate === self {
-            if requestedSession { closeSession() }
-            camera.delegate = nil
+        shot?.fail(DeviceImportError.disconnected)
+        opening?.finish(DeviceImportError.disconnected)
+        if transfer?.finish(DeviceImportError.disconnected) == true {
+            downloadProgress?.cancel()
+            camera.cancelDownload()
         }
+        let ownsDelegate = camera.delegate === self
+        if ownsDelegate { camera.delegate = nil }
         files = [:]
+        return ownsDelegate && requestedSession
     }
 
     private func closeSession() {
@@ -234,6 +307,7 @@ private final class CameraRequest {
     private func disconnect() {
         removed = true
         endPreview()
+        shot?.fail(DeviceImportError.disconnected)
         opening?.finish(DeviceImportError.disconnected)
         transfer?.finish(DeviceImportError.disconnected)
     }
@@ -254,14 +328,31 @@ private final class CameraRequest {
         Task { @MainActor in opening?.finish() }
     }
 
-    nonisolated func cameraDevice(_ camera: ICCameraDevice, didAdd items: [ICCameraItem]) {}
+    nonisolated func device(_ device: ICDevice, didEncounterError error: Error?) {
+        if let error { Task { @MainActor in shot?.fail(error) } }
+    }
+
+    nonisolated func cameraDevice(_ camera: ICCameraDevice, didAdd items: [ICCameraItem]) {
+        Task { @MainActor in
+            guard tethering, !closed, !removed else { return }
+            let arrivals = register(items)
+            shot?.receive(arrivals)
+        }
+    }
     nonisolated func cameraDevice(_ camera: ICCameraDevice, didRemove items: [ICCameraItem]) {}
     nonisolated func cameraDevice(_ camera: ICCameraDevice, didRenameItems items: [ICCameraItem]) {}
-    nonisolated func cameraDeviceDidChangeCapability(_ camera: ICCameraDevice) {}
+    nonisolated func cameraDeviceDidChangeCapability(_ camera: ICCameraDevice) {
+        Task { @MainActor in
+            if !NativeTetherError.supportsRemoteShutter(camera.capabilities) {
+                shot?.fail(NativeTetherError.remoteShutterUnavailable)
+            }
+        }
+    }
     nonisolated func cameraDevice(_ camera: ICCameraDevice, didReceivePTPEvent eventData: Data) {}
     nonisolated func cameraDeviceDidRemoveAccessRestriction(_ device: ICDevice) {}
     nonisolated func cameraDeviceDidEnableAccessRestriction(_ device: ICDevice) {
         Task { @MainActor in
+            shot?.fail(DeviceImportError.accessRestricted)
             opening?.finish(DeviceImportError.accessRestricted)
             transfer?.finish(DeviceImportError.accessRestricted)
         }

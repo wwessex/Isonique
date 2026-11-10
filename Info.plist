@@ -11,7 +11,7 @@
 <key>CFBundleVersion</key><string>1</string>
 <key>LSMinimumSystemVersion</key><string>14.0</string>
 <key>NSHighResolutionCapable</key><true/>
-<key>NSCameraUsageDescription</key><string>Isonique imports copies of photographs from a connected camera without changing the camera’s files.</string>
+<key>NSCameraUsageDescription</key><string>Isonique takes a photo when you trigger a connected camera and imports copies of the photos you choose.</string>
 <key>NSRemovableVolumesUsageDescription</key><string>Isonique reads photographs from memory cards you choose to import.</string>
 <key>NSPrincipalClass</key><string>NSApplication</string>
 </dict></plist>
