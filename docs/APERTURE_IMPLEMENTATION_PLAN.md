@@ -205,9 +205,15 @@ New imports index the primary image’s embedded GPS. In an older library, selec
 
 Search uses the saved catalogue values, including while an indexed original is offline. Coordinates and saved GPS rules require catalogue format 15. An index entry that only records a completed check without coordinates does not require an upgrade.
 
+## Places map browsing
+
+Choose View → Places, the map button beside Grid and List, or Control–M. Places follows the sidebar scope and active filters. It plots geotagged versions even if they share a collapsed stack. Photos at identical coordinates share a pin. Click a pin to select a photo in the filmstrip and Inspector, or choose a thumbnail to centre its location. Open Selected Photo switches to the Viewer. Back returns to Places.
+
+Map pins and selection use the catalogue, so offline originals still appear with an unavailable thumbnail. The Apple Maps basemap may require an internet connection. The app plots the catalogue’s coordinates without requesting the Mac’s location. [Aperture 3.5 Help](https://aperture.skydocu.com/en/organize-and-sort-photos/organize-photos-using-places/view-photo-locations/) [Apple MapKit](https://developer.apple.com/documentation/mapkit/mkmapview)
+
 ## Next checkpoint
 
-Add map browsing for photos with catalogued coordinates. Verify offline originals, map selection and the library and project scopes.
+Add a non-destructive location assignment workflow. Verify editing and clearing coordinates, Undo/Redo, persistence and updates to Places and Smart Albums.
 
 ## Pending physical camera checks
 

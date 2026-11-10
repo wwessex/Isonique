@@ -47,6 +47,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var status = "Ready · originals are preserved"
     @Published var error: String?
     @Published var viewer = false
+    @Published var places = false
     @Published var showLoupe = false
     @Published var curveSampling: CurveSamplingRequest?
     @Published var curvePointSelection: CurvePointSelection?
@@ -105,6 +106,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     private struct BrowserSnapshot {
         struct Key: Equatable {
             let scope: String
+            let places: Bool
             let search: String
             let query: PhotoQuery?
             let rating: RatingFilter
@@ -177,7 +179,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     }
     var isViewingTrash: Bool { scope == "trash" }
     var photos: [Photo] {
-        let key = BrowserSnapshot.Key(scope: scope, search: search, query: advancedSearch, rating: ratingFilter,
+        let key = BrowserSnapshot.Key(scope: scope, places: usesPlacesPhotos, search: search, query: advancedSearch, rating: ratingFilter,
                                       color: colorFilter, originals: originalFilter, sort: sort,
                                       descending: sortDescending, locale: Locale.current.identifier,
                                       timeZone: TimeZone.current.identifier)
@@ -201,7 +203,8 @@ enum EditTool: String { case select, crop, straighten, brush }
         let identifier = scope.split(separator: ":").last.flatMap { UUID(uuidString: String($0)) }
         let smartRule = scope.hasPrefix("album:") ? library.albums.first { $0.id == identifier }?.rule : nil
         let filtered = library.photos.filter { photo in
-            guard (photo.trashedAt != nil) == isViewingTrash else { return false }
+            guard (photo.trashedAt != nil) == isViewingTrash,
+                  !usesPlacesPhotos || photo.gpsIndex?.coordinates != nil else { return false }
             let inScope: Bool
             if scope.hasPrefix("project:"), let identifier { inScope = photo.projectID == identifier }
             else if scope.hasPrefix("album:"), let identifier {
@@ -216,7 +219,7 @@ enum EditTool: String { case select, crop, straighten, brush }
                 photo.matchesSearchText(search) &&
                 (advancedQuery?.includes(photo, originalAvailable: { self.isOriginalAvailable(photo) }) ?? true)
         }.sorted { lhs, rhs in sortDescending ? orderedBefore(rhs, lhs) : orderedBefore(lhs, rhs) }
-        guard !includingCollapsed, !isViewingTrash, !isViewingStack, let state = library.stackBrowser else { return filtered }
+        guard !includingCollapsed, !usesPlacesPhotos, !isViewingTrash, !isViewingStack, let state = library.stackBrowser else { return filtered }
         return state.presenting(filtered, albumID: currentAlbumID)
     }
 
@@ -684,7 +687,7 @@ enum EditTool: String { case select, crop, straighten, brush }
                 ForEach(BrowserPresentation.allCases) { presentation in
                     Button(presentation.rawValue) { workspace.choosePresentation(presentation) }
                         .keyboardShortcut(presentation.shortcut)
-                        .disabled(workspace.busy || workspace.repository == nil || (presentation == .viewer && workspace.batchMode))
+                        .disabled(!workspace.canChoosePresentation(presentation))
                 }
                 GridThumbnailSizePicker(model: workspace)
                 Toggle("Show Keyword Controls", isOn: $workspace.showKeywordControls)
@@ -1094,9 +1097,9 @@ struct ContentView: View {
                     Picker("View", selection: Binding(get: { model.presentation }, set: model.choosePresentation)) {
                         ForEach(BrowserPresentation.allCases) { presentation in
                             Image(systemName: presentation.icon).accessibilityLabel(presentation.rawValue).tag(presentation)
-                                .disabled(presentation == .viewer && model.batchMode)
+                                .disabled(!model.canChoosePresentation(presentation))
                         }
-                    }.labelsHidden().pickerStyle(.segmented).frame(width: 116)
+                    }.labelsHidden().pickerStyle(.segmented).frame(width: 155)
                 }.padding(.horizontal, 22).padding(.vertical, 16)
                 Divider().opacity(0.4)
                 if model.batchMode { BatchBar() }
@@ -1105,7 +1108,11 @@ struct ContentView: View {
                 Divider().opacity(0.4)
                 HSplitView {
                     VStack(spacing: 0) {
-                        if model.photos.isEmpty {
+                        if model.presentation == .places {
+                            PlacesBrowser(model: model) { photo, onSelect in
+                                photoCell(photo, compact: true, onSelect: onSelect)
+                            }
+                        } else if model.photos.isEmpty {
                             VStack(spacing: 18) {
                                 Image(systemName: "camera.aperture").font(.system(size: 64, weight: .ultraLight)).foregroundStyle(.secondary)
                                 if model.isViewingTrash {
@@ -1168,7 +1175,12 @@ struct ContentView: View {
         .searchable(text: $model.search, prompt: "Search photos and metadata")
         .toolbar {
             ToolbarItem { Toggle("Select Photos", isOn: $model.batchMode).onChange(of: model.batchMode) { _, active in
-                model.batchSelection = []; if active { model.showBrowser() }
+                model.batchSelection = []
+                if active {
+                    model.places = false
+                    model.showBrowser()
+                    if model.selected == nil { model.selection = model.photos.first?.id }
+                }
             } }
             ToolbarItem { Button { openWindow(id: "features") } label: { Label("Features & Limits", systemImage: "questionmark.circle") }.help("See available features and what is still missing") }
             ToolbarItem { Button { withAnimation(.easeInOut(duration: 0.2)) { model.showInspector.toggle() } } label: { Label("Inspector", systemImage: "sidebar.right") }.help("Show or hide inspector") }
@@ -1276,11 +1288,13 @@ struct ContentView: View {
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didUnmountNotification)) { _ in model.refreshOriginalStatus() }
         .onChange(of: model.selection) { _, _ in model.tool = .select; model.compareOriginal = false }
     }
-    @ViewBuilder func photoCell(_ photo: Photo, compact: Bool) -> some View {
+    @ViewBuilder func photoCell(_ photo: Photo, compact: Bool, onSelect: (() -> Void)? = nil) -> some View {
         if let repo = model.repository {
             let url = try? repo.availableOriginalURL(photo)
             Button {
-                if model.batchMode {
+                if let onSelect {
+                    onSelect()
+                } else if model.batchMode {
                     if !model.batchSelection.insert(photo.id).inserted { model.batchSelection.remove(photo.id) }
                     model.selection = photo.id
                 } else { model.selectBrowserPhoto(photo.id); model.viewer = true }
