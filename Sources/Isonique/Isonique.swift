@@ -64,6 +64,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var showRelocationOptions = false
     var pendingRelocationOptions: OriginalRelocationOptions?
     @Published var showExportOptions = false
+    @Published var batchMetadataReview: BatchMetadataReview?
     @Published var captureDateCorrection: CaptureDateCorrection?
     @Published var showImportOptions = false
     @Published var pendingImport: [URL] = []
@@ -283,6 +284,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         case .restoreVersion: status = "Version creation redone"
         case .stackPick: status = redo ? "Pick change redone" : "Pick change undone"
         case .captureDates: status = redo ? "Capture date adjustment redone" : "Capture date adjustment undone"
+        case .batchMetadata: status = redo ? "Batch metadata change redone" : "Batch metadata change undone"
         }
     }
     func selectAfterChange(preferred: UUID?) {
@@ -692,6 +694,9 @@ enum EditTool: String { case select, crop, straighten, brush }
                 }.disabled(!workspace.canToggleSelectedStack)
             }
             CommandMenu("Metadata") {
+                Button("Batch Change…", action: workspace.openBatchMetadata)
+                    .keyboardShortcut("b", modifiers: [.command, .shift])
+                    .disabled(!workspace.canOpenBatchMetadata)
                 Button("Adjust Date and Time…", action: workspace.openCaptureDateCorrection)
                     .disabled(!workspace.canAdjustCaptureDate)
                 Divider()
@@ -1127,6 +1132,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $model.showRelocationOptions, onDismiss: model.chooseRelocationDestination) {
             RelocationOptionsView().environmentObject(model)
+        }
+        .sheet(item: $model.batchMetadataReview) { review in
+            BatchMetadataView(review: review).environmentObject(model)
         }
         .sheet(item: $model.captureDateCorrection) { correction in
             CaptureDateView(correction: correction).environmentObject(model)
