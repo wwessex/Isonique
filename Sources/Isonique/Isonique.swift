@@ -64,6 +64,11 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var showRelocationOptions = false
     var pendingRelocationOptions: OriginalRelocationOptions?
     @Published var showExportOptions = false
+    @Published var keywordGroups: KeywordGroupPreferences
+    @Published var showKeywordControls: Bool {
+        didSet { preferences.set(showKeywordControls, forKey: KeywordGroupPreferences.controlsKey) }
+    }
+    @Published var showKeywordGroupEditor = false
     @Published var batchMetadataReview: BatchMetadataReview?
     @Published var captureDateCorrection: CaptureDateCorrection?
     @Published var showImportOptions = false
@@ -117,6 +122,8 @@ enum EditTool: String { case select, crop, straighten, brush }
         recentLibraryPaths = Array(storedRecents.filter { $0.hasPrefix("/") && seenPaths.insert($0).inserted }
             .prefix(Self.recentLibraryLimit))
         clipping = ClippingSettings(preferences: preferences)
+        keywordGroups = KeywordGroupPreferences.load(from: preferences)
+        showKeywordControls = preferences.bool(forKey: KeywordGroupPreferences.controlsKey)
         let layout = preferences.string(forKey: "browser.layout").flatMap(BrowserPresentation.init(rawValue:))
         browserLayout = layout == .list ? .list : .grid
         gridThumbnailSize = preferences.string(forKey: GridThumbnailSize.preferenceKey)
@@ -638,6 +645,7 @@ enum EditTool: String { case select, crop, straighten, brush }
                         .disabled(workspace.busy || workspace.repository == nil || (presentation == .viewer && workspace.batchMode))
                 }
                 GridThumbnailSizePicker(model: workspace)
+                Toggle("Show Keyword Controls", isOn: $workspace.showKeywordControls)
                 Divider()
                 Button("Advanced Search…") { workspace.showAdvancedSearch = true }
                     .keyboardShortcut("f", modifiers: [.command, .shift])
@@ -694,6 +702,18 @@ enum EditTool: String { case select, crop, straighten, brush }
                 }.disabled(!workspace.canToggleSelectedStack)
             }
             CommandMenu("Metadata") {
+                Button("Manage Keyword Groups…") { workspace.showKeywordGroupEditor = true }
+                if let group = workspace.keywordGroups.active {
+                    Menu("Add Keyword") {
+                        ForEach(group.keywords, id: \.self) { keyword in
+                            Button(keyword) { workspace.addKeywords(keyword) }
+                        }
+                        Divider()
+                        Button("Apply Group") { workspace.addKeywords(group.keywordText) }
+                    }
+                    .disabled(!workspace.canOpenBatchMetadata)
+                }
+                Divider()
                 Button("Batch Change…", action: workspace.openBatchMetadata)
                     .keyboardShortcut("b", modifiers: [.command, .shift])
                     .disabled(!workspace.canOpenBatchMetadata)
@@ -1014,6 +1034,7 @@ struct ContentView: View {
                 }.padding(.horizontal, 22).padding(.vertical, 16)
                 Divider().opacity(0.4)
                 if model.batchMode { BatchBar() }
+                if model.showKeywordControls && !model.isViewingTrash { KeywordControls() }
                 if !model.isViewingTrash { EditBar().disabled(model.batchMode) }
                 Divider().opacity(0.4)
                 HSplitView {
@@ -1132,6 +1153,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $model.showRelocationOptions, onDismiss: model.chooseRelocationDestination) {
             RelocationOptionsView().environmentObject(model)
+        }
+        .sheet(isPresented: $model.showKeywordGroupEditor) {
+            KeywordGroupEditor().environmentObject(model)
         }
         .sheet(item: $model.batchMetadataReview) { review in
             BatchMetadataView(review: review).environmentObject(model)
