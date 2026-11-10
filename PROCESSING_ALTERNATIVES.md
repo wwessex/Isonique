@@ -1,6 +1,6 @@
 # Isonique processing alternatives
 
-This engineering note records the 8 November 2026 processing review. See the [test results](docs/APERTURE_TEST_RESULTS.md) for later RAW validation. The current app uses independent, source-defined pixel equations; it does not recover or reproduce Apple's proprietary RAW engine. Camera RAW decoding still uses Apple ImageIO. No third-party engine listed below is bundled or claimed to work in this build.
+This engineering note records the 8 November 2026 processing review. See the [test results](docs/TEST_RESULTS.md) for later RAW validation. The current app uses independent, source-defined pixel equations; it does not recover or reproduce Apple's proprietary RAW engine. Camera RAW decoding still uses Apple ImageIO. No third-party engine listed below is bundled or claimed to work in this build.
 
 ## Candidates
 
