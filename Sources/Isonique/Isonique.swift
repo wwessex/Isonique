@@ -1602,6 +1602,7 @@ struct Inspector: View {
                     .disabled(!model.canAdjustCaptureDate)
             }
             LabeledContent("Imported", value: photo.importedAt.formatted(date: .abbreviated, time: .shortened))
+            EXIFInspectorView(photo: photo)
             HStack(spacing: 6) {
                 ForEach(1...RatingRules.maximum, id: \.self) { rating in Button { model.edit { $0.rating = rating } } label: { Image(systemName: photo.rating >= rating ? "star.fill" : "star").foregroundStyle(.orange) }.buttonStyle(.plain).help("Rate \(rating) stars") }
                 Spacer()

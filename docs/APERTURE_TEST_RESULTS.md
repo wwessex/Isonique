@@ -460,3 +460,10 @@
 - The inherited IPTC scan read each shared original once. Tests covered offline and fingerprint-mismatched originals, cancellation, stale metadata, retained overrides and explicit clears, catalogue persistence, search, and Undo/Redo. Original bytes matched before and after the review and apply.
 - In the signed app, the Photos shortcuts lifted a source and stamped a title and credit clear onto two selected photos. One Undo and Redo restored and reapplied the batch. The Metadata review added Bravo’s missing title and copyright. Quick Search found the saved title, and the catalogue retained the credit clear. All managed original hashes matched.
 - All 242 release tests passed, including the four verified RAW fixtures and Finder Trash handoff. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
+
+## Read-only EXIF in Info
+
+- The JPEG test covered all five fields on a rotated original, a partial EXIF record, a photo with no capture settings, and offline, unreadable and restored references. It checked the catalogue bytes and original fingerprint before and after reading. A separate test covered valid APEX fallbacks, auxiliary lens metadata and invalid numeric values.
+- The RAW workflow checked capture settings on Sony ARW, Canon CR3, Nikon NEF and Ricoh DNG files alongside the existing preview and export checks.
+- In the signed app, Info → EXIF stayed open across selection changes. It showed the rotated JPEG and Sony RAW values, displayed unavailable fields for a partial JPEG and showed a distinct message for an offline reference. The catalogue bytes and original fingerprints matched after inspection.
+- All 244 release tests passed, including four RAW fixtures and Finder Trash handoff. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
