@@ -27,9 +27,9 @@ struct PhotoLocationEdit: Identifiable {
     let libraryRoot: URL
     let photos: [Photo]
 
-    func changes(to coordinates: GPSCoordinates?) -> [PhotoLocationChange] {
+    func changes(to coordinates: GPSCoordinates?, restrictedTo selection: Set<UUID>? = nil) -> [PhotoLocationChange] {
         photos.compactMap { photo in
-            guard action.includes(photo) else { return nil }
+            guard selection?.contains(photo.id) != false, action.includes(photo) else { return nil }
             let override: PhotoLocationOverride?
             switch action {
             case .assign:

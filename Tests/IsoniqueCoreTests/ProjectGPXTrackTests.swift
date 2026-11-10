@@ -28,6 +28,7 @@ final class ProjectGPXTrackTests: XCTestCase {
         let track = try ProjectGPXTrack(contentsOf: url)
         XCTAssertEqual(track.name, "Walk")
         XCTAssertEqual(track.segments.map { $0.map(\.latitude) }, [[1, 2], [3, 4], [5, 6]])
+        XCTAssertEqual(track.waypoints?.map(\.coordinates.latitude), [50])
         XCTAssertTrue(track.isVisible)
         XCTAssertThrowsError(try GPXTrack(contentsOf: url)) {
             XCTAssertEqual($0 as? GPXTrack.ReadError, .noTimedPoints)
@@ -63,6 +64,26 @@ final class ProjectGPXTrackTests: XCTestCase {
         XCTAssertTrue(library.setProjectGPXTrackVisibility(false, trackID: track.id, in: project.id))
         XCTAssertFalse(library.removeProjectGPXTrack(track.id, from: otherProject.id))
         XCTAssertEqual(try repository.save(library).version, 17)
+        XCTAssertNil(try repository.load().projects[0].gpxTracks?.first?.waypoints)
+
+        let waypointFile = root.appendingPathComponent("Stops.gpx")
+        try """
+        <gpx xmlns="http://www.topografix.com/GPX/1/1" xmlns:ext="urn:extra">
+          <wpt lat="51" lon="-1"><name><![CDATA[  Camp & Café  ]]></name></wpt>
+          <wpt lat="52" lon="-2"><name>   </name></wpt>
+          <wpt lat="93" lon="0"><name>Invalid location</name></wpt>
+          <ext:wpt lat="54" lon="-4"><name>Extension point</name></ext:wpt>
+          <rte><rtept lat="53" lon="-3"><name>Route point</name></rtept></rte>
+        </gpx>
+        """.write(to: waypointFile, atomically: true, encoding: .utf8)
+        let stops = try ProjectGPXTrack(contentsOf: waypointFile)
+        XCTAssertTrue(stops.segments.isEmpty)
+        XCTAssertEqual(stops.waypoints?.map(\.name), ["Camp & Café", nil])
+        XCTAssertEqual(stops.waypoints?.map(\.coordinates.latitude), [51, 52])
+        var withWaypoints = try repository.load()
+        XCTAssertTrue(withWaypoints.addProjectGPXTrack(stops, to: project.id))
+        XCTAssertEqual(try repository.save(withWaypoints).version, 18)
+        try FileManager.default.removeItem(at: waypointFile)
 
         let export = root.appendingPathComponent("Export")
         XCTAssertEqual(try LibraryBackup.exportProject(project.id, from: repository, to: export), 0)
@@ -70,6 +91,7 @@ final class ProjectGPXTrackTests: XCTestCase {
         let savedTracks = try repository.load().projects[0].gpxTracks
         XCTAssertEqual(exported.projects.map(\.id), [project.id])
         XCTAssertEqual(exported.projects[0].gpxTracks, savedTracks)
+        XCTAssertEqual(exported.projects[0].gpxTracks?.last?.waypoints, stops.waypoints)
         XCTAssertEqual(savedTracks?.first?.isVisible, false)
 
         let imported = try await repository.importProjectLibrary(from: export)
@@ -79,6 +101,6 @@ final class ProjectGPXTrackTests: XCTestCase {
         XCTAssertTrue(draft.removeProjectGPXTrack(track.id, from: imported.project.id))
         let saved = try repository.save(draft)
         XCTAssertEqual(saved.projects.first { $0.id == project.id }?.gpxTracks, savedTracks)
-        XCTAssertNil(saved.projects.first { $0.id == imported.project.id }?.gpxTracks)
+        XCTAssertEqual(saved.projects.first { $0.id == imported.project.id }?.gpxTracks, [stops])
     }
 }

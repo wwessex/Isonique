@@ -73,7 +73,9 @@ struct PlacesBrowser<PhotoCell: View>: View {
             }
             if hasMapContent {
                 PlacesMap(places: places, tracks: tracks, scope: model.scope, selected: model.selected?.cataloguedLocation,
-                          framing: framing, onSelect: model.selectPlace)
+                          framing: framing, onSelect: model.selectPlace) { trackID, waypointID in
+                    model.openGPXWaypointAssignment(trackID: trackID, waypointID: waypointID)
+                }
                 if !photos.isEmpty { filmstrip(photos) }
             } else {
                 ContentUnavailableView {
@@ -82,7 +84,7 @@ struct PlacesBrowser<PhotoCell: View>: View {
                     if project?.gpxTracks?.isEmpty == false {
                         Text("Show a track from the GPX Tracks menu.")
                     } else if project != nil {
-                        Text("Import a route from the GPX Tracks menu, or catalogue GPS from photos in Grid or List.")
+                        Text("Import a GPX file from the GPX Tracks menu, or catalogue GPS from photos in Grid or List.")
                     } else {
                         Text("Choose Grid or List to select older photos, then choose Metadata → Catalogue GPS from Originals.")
                     }
@@ -126,6 +128,7 @@ struct PlacesMap: NSViewRepresentable {
     let selected: GPSCoordinates?
     let framing: Framing
     let onSelect: (GPSCoordinates) -> Void
+    let onSelectWaypoint: (UUID, UUID) -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -138,6 +141,7 @@ struct PlacesMap: NSViewRepresentable {
     func updateNSView(_ map: PhotoMapView, context: Context) {
         let coordinator = context.coordinator
         coordinator.onSelect = onSelect
+        coordinator.onSelectWaypoint = onSelectWaypoint
         coordinator.selected = selected
         let scopeChanged = coordinator.scope != scope
         let tracksChanged = coordinator.updateTrackOverlays(tracks, on: map, replacing: scopeChanged)
@@ -166,8 +170,12 @@ struct PlacesMap: NSViewRepresentable {
             if !contentChanged, let centre = framing.centre {
                 map.fit(PhotoMapFraming.bounds(for: [centre]))
             } else {
-                let trackPoints = tracks.lazy.flatMap { $0.segments.joined() }
-                map.fit(PhotoMapFraming.bounds(for: points.union(trackPoints)))
+                var boundsPoints = points
+                for track in tracks {
+                    boundsPoints.formUnion(track.segments.joined())
+                    boundsPoints.formUnion((track.waypoints ?? []).lazy.map(\.coordinates))
+                }
+                map.fit(PhotoMapFraming.bounds(for: boundsPoints))
             }
         }
         coordinator.scope = scope
@@ -185,27 +193,46 @@ struct PlacesMap: NSViewRepresentable {
         }
     }
 
+    final class WaypointPin: MKPointAnnotation {
+        let trackID: UUID
+        let waypointID: UUID
+
+        init(trackID: UUID, waypoint: GPXWaypoint) {
+            self.trackID = trackID
+            waypointID = waypoint.id
+            super.init()
+            coordinate = CLLocationCoordinate2D(latitude: waypoint.coordinates.latitude, longitude: waypoint.coordinates.longitude)
+            title = waypoint.displayName
+        }
+    }
+
     final class Coordinator: NSObject, MKMapViewDelegate {
         var pins: [GPSCoordinates: Pin] = [:]
         var selected: GPSCoordinates?
         var framing: Framing?
         var scope: String?
         var onSelect: ((GPSCoordinates) -> Void)?
-        private var trackOverlays: [UUID: [MKPolyline]] = [:]
+        var onSelectWaypoint: ((UUID, UUID) -> Void)?
+        private var trackContent: [UUID: (overlays: [MKPolyline], waypoints: [WaypointPin])] = [:]
 
         @discardableResult
         func updateTrackOverlays(_ tracks: [ProjectGPXTrack], on map: MKMapView, replacing: Bool = false) -> Bool {
-            let current = Set(trackOverlays.keys)
+            let current = Set(trackContent.keys)
             let incoming = Set(tracks.map(\.id))
             guard replacing || current != incoming else { return false }
             let removed = replacing ? current : current.subtracting(incoming)
             for id in removed {
-                if let overlays = trackOverlays.removeValue(forKey: id) { map.removeOverlays(overlays) }
+                if let content = trackContent.removeValue(forKey: id) {
+                    map.removeOverlays(content.overlays)
+                    map.removeAnnotations(content.waypoints)
+                }
             }
-            for track in tracks where trackOverlays[track.id] == nil {
+            for track in tracks where trackContent[track.id] == nil {
                 let overlays = GPXTrackPolyline.overlays(for: track)
-                trackOverlays[track.id] = overlays
+                let waypoints = (track.waypoints ?? []).map { WaypointPin(trackID: track.id, waypoint: $0) }
+                trackContent[track.id] = (overlays, waypoints)
                 map.addOverlays(overlays, level: .aboveRoads)
+                map.addAnnotations(waypoints)
             }
             return true
         }
@@ -221,17 +248,30 @@ struct PlacesMap: NSViewRepresentable {
         }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: any MKAnnotation) -> MKAnnotationView? {
-            guard let pin = annotation as? Pin else { return nil }
-            let identifier = "Photo location"
+            let isWaypoint = annotation is WaypointPin
+            guard isWaypoint || annotation is Pin else { return nil }
+            let identifier = isWaypoint ? "GPX waypoint" : "Photo location"
             let marker = mapView.dequeueReusableAnnotationView(withIdentifier: identifier) as? MKMarkerAnnotationView
-                ?? MKMarkerAnnotationView(annotation: pin, reuseIdentifier: identifier)
-            marker.annotation = pin
-            marker.glyphImage = NSImage(systemSymbolName: "photo", accessibilityDescription: nil)
-            marker.setAccessibilityLabel(pin.title)
+                ?? MKMarkerAnnotationView(annotation: annotation, reuseIdentifier: identifier)
+            marker.annotation = annotation
+            marker.glyphImage = NSImage(systemSymbolName: isWaypoint ? "flag.fill" : "photo", accessibilityDescription: nil)
+            let name = annotation.title ?? nil
+            if isWaypoint {
+                marker.markerTintColor = .systemPurple
+                marker.setAccessibilityLabel(name.map { String(localized: "GPX waypoint \($0)") })
+            } else {
+                marker.setAccessibilityLabel(name)
+            }
             return marker
         }
 
         func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
+            if let waypoint = view.annotation as? WaypointPin,
+               trackContent[waypoint.trackID]?.waypoints.contains(where: { $0 === waypoint }) == true {
+                mapView.deselectAnnotation(waypoint, animated: false)
+                onSelectWaypoint?(waypoint.trackID, waypoint.waypointID)
+                return
+            }
             guard let pin = view.annotation as? Pin, pin.point != selected else { return }
             onSelect?(pin.point)
         }

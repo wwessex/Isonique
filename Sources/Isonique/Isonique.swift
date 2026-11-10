@@ -81,6 +81,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var originalMetadataCatalogueTask: Task<(Library, MetadataCatalogueResult), Error>?
     @Published var locationEditor: PhotoLocationEdit?
     @Published var gpxLocationEditor: GPXLocationEdit?
+    @Published var gpxWaypointAssignment: GPXWaypointAssignment?
     @Published var captureDateCorrection: CaptureDateCorrection?
     @Published var showImportOptions = false
     @Published var pendingImport: [URL] = []
@@ -201,12 +202,12 @@ enum EditTool: String { case select, crop, straighten, brush }
         return visible
     }
 
-    func filteredPhotos(advancedQuery: PhotoQuery?, includingCollapsed: Bool = false) -> [Photo] {
+    func filteredPhotos(advancedQuery: PhotoQuery?, includingCollapsed: Bool = false, includingUnlocated: Bool = false) -> [Photo] {
         let identifier = scope.split(separator: ":").last.flatMap { UUID(uuidString: String($0)) }
         let smartRule = scope.hasPrefix("album:") ? library.albums.first { $0.id == identifier }?.rule : nil
         let filtered = library.photos.filter { photo in
             guard (photo.trashedAt != nil) == isViewingTrash,
-                  !usesPlacesPhotos || photo.cataloguedLocation != nil else { return false }
+                  includingUnlocated || !usesPlacesPhotos || photo.cataloguedLocation != nil else { return false }
             let inScope: Bool
             if scope.hasPrefix("project:"), let identifier { inScope = photo.projectID == identifier }
             else if scope.hasPrefix("album:"), let identifier {
@@ -1272,6 +1273,9 @@ struct ContentView: View {
         }
         .sheet(item: $model.gpxLocationEditor) { edit in
             GPXLocationView(edit: edit).environmentObject(model)
+        }
+        .sheet(item: $model.gpxWaypointAssignment) { assignment in
+            GPXWaypointAssignmentView(assignment: assignment).environmentObject(model)
         }
         .sheet(item: $model.captureDateCorrection) { correction in
             CaptureDateView(correction: correction).environmentObject(model)

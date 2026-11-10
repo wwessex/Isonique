@@ -540,3 +540,10 @@
 - Catalogue tests reopened a format 16 library, added a track in format 17 and verified that a project library export and import retained the route and its visibility. Removing the imported copy preserved the source project's route.
 - In the native macOS test app, imported a route and used Fit Map to display the line alongside the assigned photo pin. A second project showed only its own pin. Hid the route, renamed the source file and relaunched. Show Track restored the route from the catalogue. Cancelling removal kept the route visible. Confirming removal cleared the route and preserved the photo pin, catalogue location fields and original file hashes.
 - All 283 release tests passed, including four RAW fixtures and Finder Trash handoff. The branding check passed and the arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
+
+## Manual GPX waypoint assignment in Places
+
+- Parser and catalogue tests covered named and unnamed waypoints, waypoint-only files, invalid coordinates, GPX 1.0 and 1.1, and format 17 track compatibility. Waypoints survived reopening and project export and import in format 18.
+- Workspace and MapKit tests verified project scope, photo filters, waypoint marker selection, selection of an untagged version and exclusion of sibling, trashed and out-of-project versions. Cancellation preserved catalogue bytes. Assignment created one persisted Undo step and left original file bytes intact.
+- In the native macOS app, opened the preview from a waypoint pin and cancelled it after selecting two photos. The catalogue location fields matched the baseline. The other project displayed its own pin. Reopened the preview from the track submenu, chose a different waypoint, assigned two checked versions and verified one-step Undo and Redo in Places. The other project's photo location and the original file hashes matched the baseline.
+- All 284 release tests passed, including four RAW fixtures and Finder Trash handoff. The branding check passed and the arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.

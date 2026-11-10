@@ -1,15 +1,30 @@
 import Foundation
 
+public struct GPXWaypoint: Codable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let name: String?
+    public let coordinates: GPSCoordinates
+
+    init(name: String?, coordinates: GPSCoordinates) {
+        id = UUID()
+        self.name = name
+        self.coordinates = coordinates
+    }
+}
+
 public struct ProjectGPXTrack: Codable, Equatable, Identifiable, Sendable {
     public let id: UUID
     public internal(set) var name: String
     public let segments: [[GPSCoordinates]]
+    public let waypoints: [GPXWaypoint]?
     public internal(set) var isVisible: Bool
 
     public init(contentsOf url: URL) throws {
         id = UUID()
         name = url.deletingPathExtension().lastPathComponent
-        segments = try GPXTrack.overlaySegments(from: url)
+        let geometry = try GPXTrack.projectGeometry(from: url)
+        segments = geometry.segments
+        waypoints = geometry.waypoints.isEmpty ? nil : geometry.waypoints
         isVisible = true
     }
 }
@@ -54,6 +69,10 @@ public extension Library {
 }
 
 extension Library {
+    var hasProjectGPXWaypoints: Bool {
+        projects.contains { $0.gpxTracks?.contains { $0.waypoints?.isEmpty == false } == true }
+    }
+
     func validateProjectGPXTracks() throws {
         guard !albums.contains(where: { $0.gpxTracks?.isEmpty == false }) else {
             throw LibraryError.integrity("an album contains project GPX tracks")
@@ -61,8 +80,12 @@ extension Library {
         for project in projects {
             guard let tracks = project.gpxTracks else { continue }
             let ids = Set(tracks.map(\.id))
-            guard ids.count == tracks.count,
-                  tracks.allSatisfy({ !$0.segments.isEmpty && $0.segments.allSatisfy { $0.count > 1 } }) else {
+            guard ids.count == tracks.count, tracks.allSatisfy({ track in
+                let waypoints = track.waypoints ?? []
+                return (!track.segments.isEmpty || !waypoints.isEmpty)
+                    && track.segments.allSatisfy { $0.count > 1 }
+                    && Set(waypoints.map(\.id)).count == waypoints.count
+            }) else {
                 throw LibraryError.integrity("invalid project GPX tracks")
             }
         }

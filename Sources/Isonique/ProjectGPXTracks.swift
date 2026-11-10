@@ -72,6 +72,10 @@ struct ProjectGPXTracksMenu: View {
                 Divider()
                 ForEach(tracks) { track in
                     Menu(track.name) {
+                        if track.waypoints?.isEmpty == false {
+                            Button("Assign Waypoint…") { model.openGPXWaypointAssignment(trackID: track.id) }
+                                .disabled(!track.isVisible)
+                        }
                         Button(track.isVisible ? "Hide Track" : "Show Track") {
                             model.setGPXTrackVisibility(!track.isVisible, trackID: track.id, in: project.id)
                         }

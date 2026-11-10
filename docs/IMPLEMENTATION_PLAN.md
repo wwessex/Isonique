@@ -243,9 +243,15 @@ Select a project, open Places and choose GPX Tracks → Import GPX Track. A file
 
 Use the track’s submenu to show, hide or remove it. The library saves route geometry and visibility in catalogue format 17, so the project can reopen the route after the GPX source moves. A project library export includes its saved routes, and importing that library copies them into the imported project. Merging edits into an existing project keeps its current track list. Removing a route preserves photo assignments and photo edit history. Match GPX Track continues to use a GPX file for timestamp matching. [GPX 1.1 schema](https://www.topografix.com/GPX/1/1/) · [MapKit polyline rendering](https://developer.apple.com/documentation/mapkit/mkpolylinerenderer)
 
+## Manual GPX waypoint assignment
+
+Open a project in Places and import a GPX file containing waypoints. Files containing only waypoints also work. Click a waypoint pin or use GPX Tracks → [track name] → Assign Waypoint. The preview shows the destination coordinates and the current locations of eligible photo versions. Check the versions to update, including those that have no pin yet. The preview respects the current project filters and excludes trashed versions.
+
+Assign Location saves the checked changes as one Undo step. Cancel closes the preview without saving. The catalogue stores waypoints in format 18 and includes them in project library exports. Reimport files saved with the earlier GPX overlay feature to add their waypoints. [GPX 1.1 schema](https://www.topografix.com/GPX/1/1/)
+
 ## Next checkpoint
 
-Add manual GPX waypoint assignment in Places with a preview for the selected photo versions. Verify scope, cancellation and Undo/Redo.
+Add project location assignment for versions without a location. Verify the preview, preservation of existing assignments and Undo/Redo.
 
 ## Pending physical camera checks
 

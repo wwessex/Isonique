@@ -8,7 +8,7 @@ public struct GPXTrack: Sendable {
             switch self {
             case .invalidTrack: return "The file is not a readable GPX track."
             case .noTimedPoints: return "The GPX file has no track points with valid coordinates and timestamps."
-            case .noDrawableSegments: return "The GPX file has no track segment with two distinct, valid coordinates."
+            case .noDrawableSegments: return "The GPX file has no drawable track segments or valid waypoints."
             }
         }
     }
@@ -41,10 +41,10 @@ public struct GPXTrack: Sendable {
         segments = reader.timedSegments
     }
 
-    static func overlaySegments(from url: URL) throws -> [[GPSCoordinates]] {
+    static func projectGeometry(from url: URL) throws -> (segments: [[GPSCoordinates]], waypoints: [GPXWaypoint]) {
         let reader = try GPXTrackReader.read(GPXTrackReader.parser(for: url), purpose: .overlay)
-        guard !reader.overlaySegments.isEmpty else { throw ReadError.noDrawableSegments }
-        return reader.overlaySegments
+        guard !reader.overlaySegments.isEmpty || !reader.waypoints.isEmpty else { throw ReadError.noDrawableSegments }
+        return (reader.overlaySegments, reader.waypoints)
     }
 
     /// Match only within a continuous segment. Overlapping tracks must agree, with exact fixes taking precedence.
@@ -96,19 +96,21 @@ public struct GPXTrack: Sendable {
 
 private final class GPXTrackReader: NSObject, XMLParserDelegate {
     enum Purpose { case matching, overlay }
-    private enum Element { case root, track, segment, point, time, ignored }
+    private enum Element { case root, track, segment, point, time, waypoint, waypointName, ignored }
 
     private let purpose: Purpose
     private var path: [Element] = []
     private var namespace = ""
     private var coordinates: GPSCoordinates?
-    private var timeText = ""
+    private var elementText = ""
+    private var waypointName: String?
     private var pointTime: Date?
     private var timedSegment: [GPXTrack.Point] = []
     private var overlaySegment: [GPSCoordinates] = []
     private var hasGPXRoot = false
     private(set) var timedSegments: [[GPXTrack.Point]] = []
     private(set) var overlaySegments: [[GPSCoordinates]] = []
+    private(set) var waypoints: [GPXWaypoint] = []
 
     private init(purpose: Purpose) { self.purpose = purpose }
 
@@ -148,25 +150,37 @@ private final class GPXTrackReader: NSObject, XMLParserDelegate {
             pointTime = nil
             element = .point
         case (.point, "time") where uri == namespace && purpose == .matching:
-            timeText = ""
+            elementText = ""
             element = .time
+        case (.root, "wpt") where uri == namespace && purpose == .overlay:
+            coordinates = Self.coordinates(attributes)
+            waypointName = nil
+            element = .waypoint
+        case (.waypoint, "name") where uri == namespace:
+            elementText = ""
+            element = .waypointName
         default: element = .ignored
         }
         path.append(element)
     }
 
     func parser(_ parser: XMLParser, foundCharacters string: String) {
-        if path.last == .time { timeText += string }
+        if path.last == .time || path.last == .waypointName { elementText += string }
     }
 
     func parser(_ parser: XMLParser, foundCDATA data: Data) {
-        if path.last == .time, let string = String(data: data, encoding: .utf8) { timeText += string }
+        if let string = String(data: data, encoding: .utf8) { self.parser(parser, foundCharacters: string) }
     }
 
     func parser(_ parser: XMLParser, didEndElement name: String, namespaceURI: String?, qualifiedName: String?) {
         switch path.popLast() {
         case .time:
-            pointTime = Self.timestamp(timeText)
+            pointTime = Self.timestamp(elementText)
+        case .waypointName:
+            let name = elementText.trimmingCharacters(in: .whitespacesAndNewlines)
+            waypointName = name.isEmpty ? nil : name
+        case .waypoint:
+            if let coordinates { waypoints.append(GPXWaypoint(name: waypointName, coordinates: coordinates)) }
         case .point:
             appendPoint()
         case .segment:

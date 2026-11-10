@@ -338,6 +338,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 18, hasProjectGPXWaypoints { throw LibraryError.unsupportedVersion }
         if version < 17, hasProjectGPXTracks { throw LibraryError.unsupportedVersion }
         try validateProjectGPXTracks()
         if version < 16, hasLocationOverrides { throw LibraryError.unsupportedVersion }
@@ -349,7 +350,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...17).contains(version) { return }
+        if (7...18).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -517,6 +518,7 @@ public final class LibraryRepository {
     func writeCatalogue(_ library: Library) throws -> Library {
         var normalized = library
         normalized.upgradeForKeywordPaths()
+        if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
         if normalized.version < 15, normalized.hasGPSSearch { normalized.version = 15 }
