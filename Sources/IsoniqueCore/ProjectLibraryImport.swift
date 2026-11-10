@@ -159,7 +159,8 @@ private struct ProjectLibraryImportPlan {
         let oldState = destination.stackBrowser ?? StackBrowserState()
         let photoIDs = ProjectImportIDs(source.photos.flatMap { [$0.id, $0.originalID] },
                                         avoiding: oldPhotos.flatMap { [$0.id, $0.originalID] }
-                                            + oldPicks.map(\.selectionID) + oldPicks.compactMap(\.photoID))
+                                            + oldPicks.map(\.selectionID) + oldPicks.compactMap(\.photoID)
+                                            + historyEntries.flatMap(\.captureDatePhotoIDs))
         let projectIDs = ProjectImportIDs([project.id], avoiding: destination.projects.map(\.id)
             + oldPhotos.compactMap(\.projectID) + destination.albums.compactMap { $0.rule?.projectID })
         let albumIDs = ProjectImportIDs(source.albums.map(\.id), avoiding: destination.albums.map(\.id)

@@ -302,6 +302,8 @@ public struct Library: Codable {
     }
 
     func validateSchema() throws {
+        if version == 8 { return }
+        guard history?.hasCaptureDateChanges != true else { throw LibraryError.unsupportedVersion }
         if version == 7 { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
@@ -468,9 +470,10 @@ public final class LibraryRepository {
 
     // The caller holds the catalogue write lock through this atomic replacement.
     func writeCatalogue(_ library: Library) throws -> Library {
-        try library.validateSchema()
-        _ = try library.uniqueOriginals()
         var normalized = library
+        if normalized.history?.hasCaptureDateChanges == true { normalized.version = max(normalized.version, 8) }
+        try normalized.validateSchema()
+        _ = try normalized.uniqueOriginals()
         for index in normalized.photos.indices {
             normalized.photos[index].rating = RatingRules.clamp(normalized.photos[index].rating)
             normalized.photos[index].adjustments.straighten = StraightenRules.clamp(normalized.photos[index].adjustments.straighten)
@@ -859,6 +862,9 @@ public enum Renderer {
             var exif = embedded[kCGImagePropertyExifDictionary as String] as? [String: Any] ?? [:]
             // Remove stale geometry and embedded maker previews after applying edits.
             exif.removeValue(forKey: kCGImagePropertyExifMakerNote as String)
+            if CaptureDateCorrection.parse(photo.captureDate) != nil {
+                exif[kCGImagePropertyExifDateTimeOriginal as String] = photo.captureDate
+            }
             exif[kCGImagePropertyExifPixelXDimension as String] = image.width
             exif[kCGImagePropertyExifPixelYDimension as String] = image.height
             properties[kCGImagePropertyExifDictionary as String] = exif

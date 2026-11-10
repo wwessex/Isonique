@@ -115,7 +115,17 @@ File → Tethered Capture opens the chosen camera’s session and waits for its 
 
 The signed bundle enables the Hardened Runtime and includes Apple’s required Photos Library entitlement for ImageCaptureCore. Isonique continues to use its own catalogue and file storage. [ImageCaptureCore configuration](https://developer.apple.com/documentation/imagecapturecore?changes=l_11)
 
-## Next implementation slice
+## Capture date and time correction
+
+Metadata → Adjust Date and Time and the Info inspector preview a correction for the selected photo versions. For a batch, the default shifts all valid dates by the reference photo's change. It skips photos without a valid date and reports them before applying. Turning off Keep intervals between photos assigns one capture time to the whole selection and can fill missing dates. The entered date is interpreted as a camera wall-clock value at second precision. Date sorting, capture-date filters, automatic stacking and relocation templates use the saved catalogue value.
+
+One catalogue save records the correction. Undo and Redo restore the group in a single step, and format 8 stores that group when persistent history is enabled. The original files and their fingerprints are preserved. Adjusted JPEG, PNG and TIFF exports include the corrected EXIF capture time when EXIF is enabled. [Historical Aperture workflow](https://aperture.skydocu.com/en/work-with-metadata/adjust-the-photo-date-and-time/)
+
+## Next camera-independent slice
+
+Extend Metadata with a batch change dialog for captions and keywords. Preview which selected versions will change and support appending keywords as well as replacing them.
+
+## Pending physical camera checks
 
 1. Run the [physical PTP camera import checklist](../VALIDATION.md#physical-ptp-camera-import) when a camera is available. Record thumbnail, deselection, active transfer cancellation and reconnect results.
 2. Run the [physical tethered capture checklist](../VALIDATION.md#physical-tethered-capture) with a camera that advertises the remote shutter capability. Measure the interval between RAW and JPEG arrivals and check the behavior after cancellation and rapid successive shots. The quiet period is provisional because the native callback reports file additions without identifying the originating shutter request.
