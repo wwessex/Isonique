@@ -87,26 +87,47 @@ struct PhotoMetadataInspector: View {
     }
 
     private var gps: some View {
-        OriginalMetadataReader(photo: photo) { readout in
-            switch readout {
-            case .metadata(let metadata) where metadata.gps == nil:
-                Text("No valid GPS coordinates found in the original.").foregroundStyle(.secondary)
-            case .metadata:
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(BuiltInMetadataView.gps.fields) { row($0, original: readout) }
+        VStack(alignment: .leading, spacing: 8) {
+            if photo.hasCataloguedLocation {
+                if photo.cataloguedLocation != nil {
+                    gpsRows(original: nil)
+                    if case .assigned = photo.locationOverride {
+                        Text("Assigned in the catalogue").foregroundStyle(.secondary)
+                    }
+                } else if photo.locationOverride == .cleared {
+                    Text("Location cleared in the catalogue.").foregroundStyle(.secondary)
+                } else {
+                    Text("No valid GPS coordinates found in the original.").foregroundStyle(.secondary)
                 }
-            case .offline:
-                Text("GPS is unavailable while the original is offline.").foregroundStyle(.secondary)
-            case .unreadable:
-                Text("Could not read GPS from the original.").foregroundStyle(.secondary)
-            case .loading:
-                ProgressView("Reading GPS…").controlSize(.small)
+            } else {
+                OriginalMetadataReader(photo: photo) { readout in
+                    switch readout {
+                    case .metadata(let metadata) where metadata.gps == nil:
+                        Text("No valid GPS coordinates found in the original.").foregroundStyle(.secondary)
+                    case .metadata:
+                        gpsRows(original: readout)
+                    case .offline:
+                        Text("GPS is unavailable while the original is offline.").foregroundStyle(.secondary)
+                    case .unreadable:
+                        Text("Could not read GPS from the original.").foregroundStyle(.secondary)
+                    case .loading:
+                        ProgressView("Reading GPS…").controlSize(.small)
+                    }
+                }
             }
+            Menu("Location") { PhotoLocationCommands(model: model) }
+                .disabled(!model.canEditLocation(.assign))
+        }
+    }
+
+    private func gpsRows(original: OriginalMetadataReadout?) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(BuiltInMetadataView.gps.fields) { row($0, original: original) }
         }
     }
 
     @ViewBuilder private func fieldList(_ fields: [MetadataViewField]) -> some View {
-        if fields.contains(where: \.readsOriginal) {
+        if fields.contains(where: { $0.isEXIF || ($0.isGPS && !photo.hasCataloguedLocation) }) {
             OriginalMetadataReader(photo: photo) { readout in
                 orderedRows(fields, original: readout)
             }
@@ -176,14 +197,12 @@ struct PhotoMetadataInspector: View {
                 LabeledContent(field.label, value: original.value(for: field)).textSelection(.enabled)
             }
         case .latitude, .longitude:
-            if let original {
-                let value = original.value(for: field)
-                LabeledContent(field.label, value: value)
-                    .textSelection(.enabled)
-                    .accessibilityElement(children: .ignore)
-                    .accessibilityLabel(field.label)
-                    .accessibilityValue(value)
-            }
+            let value = gpsValue(for: field, original: original)
+            LabeledContent(field.label, value: value)
+                .textSelection(.enabled)
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(field.label)
+                .accessibilityValue(value)
         case .originalStorage:
             OriginalInfoView(photo: photo)
         case .linkedOriginal:
@@ -193,6 +212,15 @@ struct PhotoMetadataInspector: View {
                 linkedOriginals
             }
         }
+    }
+
+    private func gpsValue(for field: MetadataViewField, original: OriginalMetadataReadout?) -> String {
+        if let point = photo.cataloguedLocation {
+            return OriginalMetadataReadout.coordinate(field == .latitude ? point.latitude : point.longitude)
+        }
+        if photo.locationOverride == .cleared { return String(localized: "Cleared") }
+        if photo.hasCataloguedLocation { return String(localized: "Unavailable") }
+        return original?.value(for: field) ?? String(localized: "Unavailable")
     }
 
     private func ratingControls(showFlag: Bool) -> some View {

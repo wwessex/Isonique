@@ -79,6 +79,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var inheritedIPTCReview: InheritedIPTCReview?
     @Published var inheritedIPTCScan: Task<InheritedIPTCReview, Error>?
     @Published var originalMetadataCatalogueTask: Task<(Library, MetadataCatalogueResult), Error>?
+    @Published var locationEditor: PhotoLocationEdit?
     @Published var captureDateCorrection: CaptureDateCorrection?
     @Published var showImportOptions = false
     @Published var pendingImport: [URL] = []
@@ -204,7 +205,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         let smartRule = scope.hasPrefix("album:") ? library.albums.first { $0.id == identifier }?.rule : nil
         let filtered = library.photos.filter { photo in
             guard (photo.trashedAt != nil) == isViewingTrash,
-                  !usesPlacesPhotos || photo.gpsIndex?.coordinates != nil else { return false }
+                  !usesPlacesPhotos || photo.cataloguedLocation != nil else { return false }
             let inScope: Bool
             if scope.hasPrefix("project:"), let identifier { inScope = photo.projectID == identifier }
             else if scope.hasPrefix("album:"), let identifier {
@@ -307,6 +308,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         case .captureDates: status = redo ? "Capture date adjustment redone" : "Capture date adjustment undone"
         case .batchMetadata: status = redo ? "Batch metadata change redone" : "Batch metadata change undone"
         case .stamp: status = redo ? "Stamp redone" : "Stamp undone"
+        case .locations: status = redo ? "Location change redone" : "Location change undone"
         }
     }
     func selectAfterChange(preferred: UUID?) {
@@ -786,6 +788,7 @@ enum EditTool: String { case select, crop, straighten, brush }
                 if let scan = workspace.originalMetadataCatalogueTask {
                     Button("Cancel Metadata Cataloguing") { scan.cancel() }.disabled(scan.isCancelled)
                 }
+                PhotoLocationCommands(model: workspace)
                 Button("Adjust Date and Time…", action: workspace.openCaptureDateCorrection)
                     .disabled(!workspace.canAdjustCaptureDate)
                 Divider()
@@ -1248,6 +1251,9 @@ struct ContentView: View {
         }
         .sheet(item: $model.inheritedIPTCReview) { review in
             InheritedIPTCReviewView(review: review).environmentObject(model)
+        }
+        .sheet(item: $model.locationEditor) { edit in
+            PhotoLocationEditor(edit: edit).environmentObject(model)
         }
         .sheet(item: $model.captureDateCorrection) { correction in
             CaptureDateView(correction: correction).environmentObject(model)

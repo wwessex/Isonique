@@ -244,6 +244,7 @@ public struct Photo: Codable, Identifiable, Equatable {
     public var camera: String
     public var cameraEXIF: CameraEXIF?
     public var gpsIndex: GPSIndex?
+    public var locationOverride: PhotoLocationOverride?
     public var captureDate: String
     public var sha256: String
     public var adjustments = Adjustments()
@@ -332,7 +333,10 @@ public struct Library: Codable {
             || albums.contains { $0.rule?.query?.criteria.contains { $0.field.isGPS } == true }
     }
 
+    fileprivate var hasLocationOverrides: Bool { photos.contains { $0.locationOverride != nil } }
+
     func validateSchema() throws {
+        if version < 16, hasLocationOverrides { throw LibraryError.unsupportedVersion }
         if version < 15, hasGPSSearch { throw LibraryError.unsupportedVersion }
         if version < 14, hasEXIFSearch { throw LibraryError.unsupportedVersion }
         if version < 12, hasIPTCRules { throw LibraryError.unsupportedVersion }
@@ -341,7 +345,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...15).contains(version) { return }
+        if (7...16).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -509,6 +513,7 @@ public final class LibraryRepository {
     func writeCatalogue(_ library: Library) throws -> Library {
         var normalized = library
         normalized.upgradeForKeywordPaths()
+        if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
         if normalized.version < 15, normalized.hasGPSSearch { normalized.version = 15 }
         if normalized.version < 14, normalized.hasEXIFSearch { normalized.version = 14 }
         if normalized.version < 12, normalized.hasIPTCRules { normalized.version = 12 }

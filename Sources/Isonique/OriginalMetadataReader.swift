@@ -29,7 +29,7 @@ enum OriginalMetadataReadout: Sendable {
         }
     }
 
-    private static func coordinate(_ value: Double) -> String {
+    static func coordinate(_ value: Double) -> String {
         value.formatted(.number.grouping(.never).precision(.fractionLength(0...6))) + "°"
     }
 

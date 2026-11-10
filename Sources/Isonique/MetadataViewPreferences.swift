@@ -47,7 +47,7 @@ enum MetadataViewField: String, CaseIterable, Codable, Identifiable {
         }
     }
 
-    var readsOriginal: Bool { isEXIF || self == .latitude || self == .longitude }
+    var isGPS: Bool { self == .latitude || self == .longitude }
 
     var isEXIF: Bool {
         switch self {

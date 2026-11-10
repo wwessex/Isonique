@@ -11,6 +11,25 @@ public struct GPSCoordinates: Codable, Hashable, Sendable {
         self.longitude = longitude == 0 ? 0 : longitude
     }
 
+    public init?(latitude: String, longitude: String) {
+        guard let north = Self.decimal(latitude, allowingDegrees: true),
+              let east = Self.decimal(longitude, allowingDegrees: true) else { return nil }
+        self.init(latitude: north, longitude: east)
+    }
+
+    static func decimal(_ input: String, allowingDegrees: Bool = false) -> Double? {
+        var number = input.trimmingCharacters(in: .whitespacesAndNewlines)
+        if allowingDegrees, number.hasSuffix("°") {
+            number.removeLast()
+            number = number.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        number = number.replacingOccurrences(of: ",", with: ".").replacingOccurrences(of: "−", with: "-")
+        let unsigned = number.dropFirst(number.hasPrefix("-") || number.hasPrefix("+") ? 1 : 0)
+        guard unsigned.allSatisfy({ "0123456789.".contains($0) }),
+              let value = Double(number), value.isFinite else { return nil }
+        return value
+    }
+
     private enum CodingKeys: String, CodingKey { case latitude, longitude }
 
     public init(from decoder: Decoder) throws {

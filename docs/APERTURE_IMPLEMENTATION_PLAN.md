@@ -195,9 +195,9 @@ Advanced Search and Smart Albums compare saved shutter speed, aperture, ISO, foc
 
 Imports read EXIF during the normal catalogue save. For older photos, Metadata → Catalogue EXIF from Originals verifies selected original fingerprints and records their capture values in one save. It skips unavailable or changed originals and supports cancellation. The catalogue preserves indexed values while originals are offline. Saved capture values and EXIF Smart Album rules use format 14. [Aperture 3.5 Help](https://aperture.skydocu.com/en/organize-and-sort-photos/search-for-photos/search-using-a-combination-of-criteria/)
 
-## Read-only GPS in Info
+## GPS readout in Info
 
-Choose GPS in the Info inspector’s Metadata View menu to see signed latitude and longitude in decimal degrees. The reader uses the primary image’s embedded GPS metadata, requires a complete pair with valid hemisphere references, and distinguishes missing or invalid coordinates, an offline original and an unreadable image. Latitude and Longitude can also be added to custom metadata views. The view reads locally and leaves original bytes and the catalogue unchanged. Aperture’s Info inspector also had a Map pane for viewing and assigning locations. [Aperture 3.5 Help](https://aperture.skydocu.com/en/organize-and-sort-photos/organize-photos-using-places/work-with-locations-in-the-info-inspector/)
+Choose GPS in the Info inspector’s Metadata View menu to see signed latitude and longitude in decimal degrees. The readout uses the effective catalogue location when available. For unindexed photos it reads the primary image’s embedded GPS metadata and distinguishes missing or invalid coordinates, an offline original and an unreadable image. Latitude and Longitude can also be added to custom metadata views. The view reads locally and leaves original bytes and the catalogue unchanged. Aperture’s Info inspector also had a Map pane for viewing and assigning locations. [Aperture 3.5 Help](https://aperture.skydocu.com/en/organize-and-sort-photos/organize-photos-using-places/work-with-locations-in-the-info-inspector/)
 
 ## Catalogue-backed GPS search
 
@@ -211,9 +211,15 @@ Choose View → Places, the map button beside Grid and List, or Control–M. Pla
 
 Map pins and selection use the catalogue, so offline originals still appear with an unavailable thumbnail. The Apple Maps basemap may require an internet connection. The app plots the catalogue’s coordinates without requesting the Mac’s location. [Aperture 3.5 Help](https://aperture.skydocu.com/en/organize-and-sort-photos/organize-photos-using-places/view-photo-locations/) [Apple MapKit](https://developer.apple.com/documentation/mapkit/mkmapview)
 
+## Assign, clear and restore photo locations
+
+Select a photo or use Select Photos for a batch. Choose Assign Location, Clear Location or Use Original Location in Metadata or in the Location menu under Info → GPS. Assign uses signed decimal degrees. Clear hides the location for those versions, and Use Original Location removes the override. The embedded GPS index remains available for unedited versions and can still be populated by Catalogue GPS from Originals. A batch records one Undo step. With persistent history enabled, Undo and Redo also work after reopening.
+
+Places, GPS search and Smart Albums use the effective location. The catalogue saves edits and their history in format 16. Original-file export copies the source bytes, and GPS on rendered exports continues to use the original location when enabled.
+
 ## Next checkpoint
 
-Add a non-destructive location assignment workflow. Verify editing and clearing coordinates, Undo/Redo, persistence and updates to Places and Smart Albums.
+Add map-based location assignment for selected versions. Verify coordinate picking, cancellation and updates to Places and Smart Albums.
 
 ## Pending physical camera checks
 

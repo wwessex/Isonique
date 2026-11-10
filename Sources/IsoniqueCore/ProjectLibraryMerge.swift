@@ -132,7 +132,8 @@ public extension LibraryRepository {
                 var merged = existing
                 var fields: [String] = []
                 if let record = membership?.originalsByPhoto[photo.id], record.matches(existing), let baseline = record.values {
-                    let values = baseline.merging(existing, with: photo, prefer: preference, representedAlbums: sourceRegularIDs)
+                    let values = baseline.merging(existing, with: photo, prefer: preference,
+                                                  representedAlbums: sourceRegularIDs, supportsLocationEdits: source.version >= 16)
                     merged = values.photo
                     fields = values.conflicts
                     let stack = resolveProjectValue(existing.stackID, photo.stackID, baseline: baseline.stackID, prefer: preference)
@@ -151,6 +152,7 @@ public extension LibraryRepository {
                     if preference == .incoming {
                         merged = photo
                         merged.useOriginal(from: existing)
+                        if merged.locationOverride == nil { merged.locationOverride = existing.locationOverride }
                         merged.albumIDs = existing.albumIDs.subtracting(sourceRegularIDs)
                             .union(photo.albumIDs.intersection(sourceRegularIDs))
                         if !permitsProjectGroupChange(existing.stackID, to: photo.stackID, protected: protectedStacks, known: knownStacks) {

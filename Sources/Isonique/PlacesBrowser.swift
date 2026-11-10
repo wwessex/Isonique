@@ -16,7 +16,7 @@ struct PhotoPlace: Identifiable {
         var groups: [GPSCoordinates: [Photo]] = [:]
         var order: [GPSCoordinates] = []
         for photo in photos {
-            guard let point = photo.gpsIndex?.coordinates else { continue }
+            guard let point = photo.cataloguedLocation else { continue }
             if groups[point] == nil { order.append(point) }
             groups[point, default: []].append(photo)
         }
@@ -26,8 +26,8 @@ struct PhotoPlace: Identifiable {
 
 extension Workspace {
     func selectPlace(_ point: GPSCoordinates) {
-        guard !busy, presentation == .places, selected?.gpsIndex?.coordinates != point,
-              let photo = photos.first(where: { $0.gpsIndex?.coordinates == point }) else { return }
+        guard !busy, presentation == .places, selected?.cataloguedLocation != point,
+              let photo = photos.first(where: { $0.cataloguedLocation == point }) else { return }
         selectBrowserPhoto(photo.id)
     }
 }
@@ -60,7 +60,7 @@ struct PlacesBrowser<PhotoCell: View>: View {
                         model.choosePresentation(.viewer)
                     }.disabled(model.selected == nil)
                 }.padding(.horizontal, 14).padding(.vertical, 8)
-                PlacesMap(places: places, scope: model.scope, selected: model.selected?.gpsIndex?.coordinates,
+                PlacesMap(places: places, scope: model.scope, selected: model.selected?.cataloguedLocation,
                           framing: framing, onSelect: model.selectPlace)
                 filmstrip(photos)
             }
@@ -74,7 +74,7 @@ struct PlacesBrowser<PhotoCell: View>: View {
                     ForEach(photos) { photo in
                         photoCell(photo) {
                             model.selectBrowserPhoto(photo.id)
-                            framing = PlacesMap.Framing(centre: photo.gpsIndex?.coordinates)
+                            framing = PlacesMap.Framing(centre: photo.cataloguedLocation)
                         }.id(photo.id)
                     }
                 }.padding(10)

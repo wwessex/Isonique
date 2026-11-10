@@ -230,6 +230,49 @@ extension LibraryTests {
         XCTAssertEqual(try repository.load().albums.first?.rule?.query, query)
     }
 
+    func testGPSBackfillLeavesAClearedVersionCleared() throws {
+        let tagged = try gpsImage("Tagged.jpg", type: .jpeg, properties: gpsProperties(51.5, "N", 0.125, "W"))
+        let repository = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repository.load()
+        XCTAssertTrue(try repository.importPhoto(tagged, projectID: nil, into: &library))
+        let id = library.photos[0].id
+        let index = try XCTUnwrap(library.photos[0].gpsIndex)
+        library.photos[0].gpsIndex = nil
+        let version = try XCTUnwrap(library.createVersion(of: id, from: .current))
+        XCTAssertNotNil(library.replaceLocations([PhotoLocationChange(photoID: id, location: .cleared)]))
+        XCTAssertEqual(try repository.catalogueGPS(for: [id], in: &library).indexed, 2)
+        XCTAssertEqual(library.photos.first { $0.id == id }?.gpsIndex, index)
+        XCTAssertNil(library.photos.first { $0.id == id }?.cataloguedLocation)
+        XCTAssertEqual(library.photos.first { $0.id == version.id }?.cataloguedLocation, index.coordinates)
+        XCTAssertEqual(try repository.save(library).version, 16)
+        XCTAssertEqual(try repository.load().photos.first { $0.id == id }?.locationOverride, .cleared)
+    }
+
+    func testMergingLocationEditsPreservesExplicitClearsAndProtectsAgainstOlderExports() throws {
+        let point = try XCTUnwrap(GPSCoordinates(latitude: 51.5, longitude: -0.125))
+        var photo = Photo(filename: "Tagged.jpg", originalName: "Tagged.jpg", projectID: nil,
+                          width: 32, height: 24, camera: "", captureDate: "", sha256: "fixture")
+        photo.locationOverride = .assigned(point)
+        let baseline = ProjectPhotoMergeValues(photo)
+        var changed = photo
+        changed.locationOverride = .cleared
+        let explicitClear = baseline.merging(photo, with: changed, prefer: .current, representedAlbums: [])
+        XCTAssertEqual(explicitClear.photo.locationOverride, .cleared)
+        XCTAssertTrue(explicitClear.conflicts.isEmpty)
+
+        var older = photo
+        older.locationOverride = nil
+        XCTAssertEqual(baseline.merging(photo, with: older, prefer: .incoming, representedAlbums: [])
+            .photo.locationOverride, photo.locationOverride)
+        let restored = baseline.merging(photo, with: older, prefer: .incoming, representedAlbums: [], supportsLocationEdits: true)
+        XCTAssertNil(restored.photo.locationOverride)
+        let conflicts = baseline.merging(changed, with: older, prefer: .current, representedAlbums: [], supportsLocationEdits: true)
+        XCTAssertEqual(conflicts.conflicts, ["Location"])
+        XCTAssertEqual(conflicts.photo.locationOverride, .cleared)
+        let incoming = baseline.merging(changed, with: older, prefer: .incoming, representedAlbums: [], supportsLocationEdits: true)
+        XCTAssertNil(incoming.photo.locationOverride)
+    }
+
     private func gpsProperties(_ latitude: Any?, _ latitudeRef: String?,
                                _ longitude: Any?, _ longitudeRef: String?) -> [String: Any] {
         let gps: [String: Any?] = [
