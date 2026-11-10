@@ -225,9 +225,13 @@ Open Assign Location for a selected photo version or batch, then expand Pick on 
 
 In Assign Location, enter an address or place name and choose Search Apple Maps or press Return in the search field. Choose a result to fill the coordinate fields and centre the preview map if it is open. Assign Location saves the resulting point to the selected versions. Stop Search cancels a request, and Cancel discards the location draft. Latitude and longitude remain editable when Apple Maps returns no matches or is unavailable. The catalogue stores the coordinates through the existing location edit. [Apple MapKit local search](https://developer.apple.com/documentation/mapkit/mklocalsearch)
 
+## Saved named places
+
+Open Assign Location, enter coordinates or choose them with Apple Maps search or Pick on Map, then use Saved Places → Save Current Coordinates. Saved places live in app preferences and are available offline across Isonique libraries. Choose a saved name to fill the draft coordinates and centre an open map. Use Assign Location to apply the coordinates. The Saved Places menu also lets you rename or remove an entry. Photos retain their assigned coordinates when the saved entry is renamed or removed.
+
 ## Next checkpoint
 
-Add saved named places to the location editor. Verify creating, reusing, renaming and removing a named place.
+Add GPX track matching to the location workflow. Verify timestamp matching, preview and cancellation.
 
 ## Pending physical camera checks
 

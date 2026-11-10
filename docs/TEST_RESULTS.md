@@ -520,3 +520,9 @@
 - Automated tests covered result selection, rejection of an outdated result, cancellation followed by a late response, no matches and a simulated unavailable connection. After the simulated connection failure, a manual coordinate edit saved and reloaded from the catalogue.
 - In the signed macOS test app, Apple Maps returned a named place and a street address. Selecting the named place filled both coordinates and updated the open preview map. Cancelling the sheet preserved the catalogue bytes and originals. Pressing Return in the search field with valid manual coordinates already entered submitted the address lookup. The address result saved on confirmation. After a separate no-results search, manually entered coordinates saved on the selected photo. All original hashes matched.
 - All 269 release tests passed, including four RAW fixtures and Finder Trash handoff. The branding check passed and the arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
+
+## Saved named places
+
+- Automated tests covered name validation and duplicates, persistence across preference instances, reuse across libraries, renaming with stable identity and coordinates, and removal. Creating a saved place kept the source catalogue byte-for-byte intact. The destination catalogue saved the assignment only on confirmation and retained it after the saved place was renamed and removed.
+- In the signed macOS test app, saved a place from one photo, cancelled the assignment sheet and verified the catalogue hash. After relaunch, selected the saved place and assigned it to a second photo. Renamed and removed the entry from the menu. The catalogue retained the second photo’s assigned coordinates and all original file hashes matched.
+- All 271 release tests passed, including four RAW fixtures and Finder Trash handoff. The branding check passed and the arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.

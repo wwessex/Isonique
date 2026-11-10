@@ -136,6 +136,11 @@ struct PhotoLocationEditor: View {
             switch edit.action {
             case .assign:
                 locationSearch
+                SavedPlacesMenu(coordinates: coordinates, suggestedName: matchingLookupResult?.title) { point in
+                    lookup.cancel()
+                    chosenResult = nil
+                    previewLocation(point)
+                }
                 Grid(alignment: .leading) {
                     GridRow {
                         Text("Latitude")
@@ -195,7 +200,7 @@ struct PhotoLocationEditor: View {
             }
             switch lookup.state {
             case .idle:
-                if let chosenResult, draft.coordinates == PhotoLocationDraft(chosenResult.coordinates).coordinates {
+                if let chosenResult = matchingLookupResult {
                     Label(chosenResult.title, systemImage: "mappin.circle")
                         .font(.caption).foregroundStyle(.secondary)
                 }
@@ -212,9 +217,7 @@ struct PhotoLocationEditor: View {
                             Button {
                                 guard let selected = lookup.choose(match.id) else { return }
                                 chosenResult = selected
-                                draft = PhotoLocationDraft(selected.coordinates)
-                                mapSelection = UUID()
-                                searchFocused = false
+                                previewLocation(selected.coordinates)
                             } label: {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(match.title)
@@ -235,6 +238,19 @@ struct PhotoLocationEditor: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
+    }
+
+    private var matchingLookupResult: PhotoLocationLookupResult? {
+        guard let chosenResult, draft.coordinates == PhotoLocationDraft(chosenResult.coordinates).coordinates else {
+            return nil
+        }
+        return chosenResult
+    }
+
+    private func previewLocation(_ point: GPSCoordinates) {
+        draft = PhotoLocationDraft(point)
+        mapSelection = UUID()
+        searchFocused = false
     }
 
     private func submitSearch() {
