@@ -16,8 +16,7 @@ if [ "$icon" != Isonique.icns ] || [ ! -s Resources/IsoniqueIcon.svg ]; then
     exit 1
 fi
 identifier=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' Info.plist)
-# Preserve the installed app's macOS preferences domain.
-if [ "$identifier" != local.craftanything.isonique ]; then
+if [ "$identifier" != io.github.wwessex.isonique ]; then
     printf 'Unexpected bundle identifier: %s\n' "$identifier" >&2
     exit 1
 fi
@@ -29,15 +28,15 @@ for obsolete in docs/APERTURE_FEATURE_PARITY.md docs/APERTURE_IMPLEMENTATION_PLA
     fi
 done
 
-# Match direct identity claims and obsolete names, leaving historical comparisons,
-# photo terminology, the bundle metadata above and the earlier library path available.
+# Keep the legacy preferences domain confined to the migration code.
+# Historical comparisons, photo terminology and the earlier library path are allowed.
 if git grep --untracked -IinE \
     -e 'craft[[:space:]_.-]*anything|APERTURE_(FEATURE_PARITY|IMPLEMENTATION_PLAN|TEST_RESULTS)\.md' \
     -e 'Aperture[ _-]+Native|ApertureNative([^/[:alnum:]]|$)' \
     -e 'Isonique[[:space:]]+is[[:space:]]+(the[[:space:]]+|an?[[:space:]]+)?(official[[:space:]]+)?(Apple[- ]developed|Apple[- ]owned|Apple photo editor|(Apple.?s?[[:space:]]+)?Aperture[[:space:]]+(clone|remake|replacement|resurrection|revival|fork|successor)|official[[:space:]]+(Apple[[:space:]]+)?Aperture)' \
     -e 'Isonique[[:space:]]+(is[[:space:]]+)?(developed|owned|maintained|endorsed)[[:space:]]+by[[:space:]]+Apple([^[:alnum:]_]|$)' \
     -e 'Isonique[[:space:]]+(is|was)[[:space:]]+((the|an?)[[:space:]]+)?reverse[- ]engineered[^.!?]*Aperture' \
-    -- . ':(exclude)Info.plist' ':(exclude)scripts/check-branding.sh'; then
+    -- . ':(exclude)Sources/Isonique/AppPreferencesMigration.swift' ':(exclude)scripts/check-branding.sh'; then
     printf 'Review the flagged product identity claims.\n' >&2
     exit 1
 else

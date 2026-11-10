@@ -3,7 +3,7 @@
 <plist version="1.0"><dict>
 <key>CFBundleDevelopmentRegion</key><string>en</string>
 <key>CFBundleExecutable</key><string>Isonique</string>
-<key>CFBundleIdentifier</key><string>local.craftanything.isonique</string>
+<key>CFBundleIdentifier</key><string>io.github.wwessex.isonique</string>
 <key>CFBundleName</key><string>Isonique</string>
 <key>CFBundleDisplayName</key><string>Isonique</string>
 <key>CFBundleIconFile</key><string>Isonique.icns</string>
