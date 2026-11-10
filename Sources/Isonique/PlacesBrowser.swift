@@ -104,21 +104,13 @@ private struct PlacesMap: NSViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    func makeNSView(context: Context) -> MapView {
-        let map = MapView()
-        let configuration = MKStandardMapConfiguration()
-        configuration.pointOfInterestFilter = .excludingAll
-        map.preferredConfiguration = configuration
-        map.isRotateEnabled = false
-        map.isPitchEnabled = false
-        map.showsZoomControls = true
-        map.showsScale = true
-        map.setAccessibilityLabel(String(localized: "Photo locations map"))
+    func makeNSView(context: Context) -> PhotoMapView {
+        let map = PhotoMapView(accessibilityLabel: String(localized: "Photo locations map"))
         map.delegate = context.coordinator
         return map
     }
 
-    func updateNSView(_ map: MapView, context: Context) {
+    func updateNSView(_ map: PhotoMapView, context: Context) {
         let coordinator = context.coordinator
         coordinator.onSelect = onSelect
         coordinator.selected = selected
@@ -143,33 +135,13 @@ private struct PlacesMap: NSViewRepresentable {
         }
 
         if coordinator.scope != scope || previous != points {
-            map.frame(PlacesMapFraming.bounds(for: points))
+            map.fit(PhotoMapFraming.bounds(for: points))
         } else if coordinator.framing != framing {
             let target: Set<GPSCoordinates> = framing.centre.map { [$0] } ?? points
-            map.frame(PlacesMapFraming.bounds(for: target))
+            map.fit(PhotoMapFraming.bounds(for: target))
         }
         coordinator.scope = scope
         coordinator.framing = framing
-    }
-
-    final class MapView: MKMapView {
-        private var pending: MKMapRect?
-
-        func frame(_ rect: MKMapRect?) {
-            pending = rect
-            applyPendingFrame()
-        }
-
-        override func layout() {
-            super.layout()
-            applyPendingFrame()
-        }
-
-        private func applyPendingFrame() {
-            guard let rect = pending, bounds.width > 0, bounds.height > 0 else { return }
-            pending = nil
-            setVisibleMapRect(rect, edgePadding: NSEdgeInsets(top: 32, left: 24, bottom: 24, right: 24), animated: false)
-        }
     }
 
     final class Pin: MKPointAnnotation {
@@ -205,33 +177,5 @@ private struct PlacesMap: NSViewRepresentable {
             guard let pin = view.annotation as? Pin, pin.point != selected else { return }
             onSelect?(pin.point)
         }
-    }
-}
-
-enum PlacesMapFraming {
-    static func bounds(for coordinates: Set<GPSCoordinates>) -> MKMapRect? {
-        let points = coordinates.map { MKMapPoint(CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)) }
-        let worldWidth = MKMapRect.world.width
-        let columns = points.map(\.x).sorted()
-        let rows = points.map(\.y)
-        guard let first = columns.first, let last = columns.last,
-              let north = rows.min(), let south = rows.max() else { return nil }
-
-        // Cut the wrapping map at its largest empty interval so nearby pins across the date line stay together.
-        var start = first
-        var largestGap = worldWidth - last + first
-        for (left, right) in zip(columns, columns.dropFirst()) where right - left > largestGap {
-            start = right
-            largestGap = right - left
-        }
-
-        let width = worldWidth - largestGap
-        let height = south - north
-        let minimum = worldWidth * 0.06 / 360
-        let paddedWidth = max(minimum, width * 1.001)
-        let paddedHeight = max(minimum, height * 1.001)
-        let left = (start + (width - paddedWidth) / 2 + worldWidth).truncatingRemainder(dividingBy: worldWidth)
-        let top = min(max(0, north + (height - paddedHeight) / 2), worldWidth - paddedHeight)
-        return MKMapRect(x: left, y: top, width: paddedWidth, height: paddedHeight)
     }
 }
