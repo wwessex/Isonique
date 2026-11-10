@@ -69,7 +69,7 @@ struct ProjectPhotoMergeValues: Codable {
         apply(\.versionName, \.versionName, "Version name")
         apply(\.rating, \.rating, "Rating")
         apply(\.flagged, \.flagged, "Flag")
-        apply(\.colorLabel, \.colorLabel, "Color label")
+        apply(\.colorLabel, \.colorLabel, String(localized: "Color label"))
         apply(\.caption, \.caption, "Caption")
         apply(\.keywords, \.keywords, "Keywords")
         apply(\.captureDate, \.captureDate, "Capture date")

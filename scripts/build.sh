@@ -15,6 +15,7 @@ mkdir -p "$bundle/Contents/MacOS" "$bundle/Contents/Resources" "$PWD/build"
 cp -X "$binpath/Isonique" "$bundle/Contents/MacOS/Isonique"
 cp -X Info.plist "$bundle/Contents/Info.plist"
 cp -X LICENSE "$bundle/Contents/Resources/LICENSE"
+ditto --norsrc Resources/en-GB.lproj "$bundle/Contents/Resources/en-GB.lproj"
 /bin/sh scripts/build-icon.sh Resources/IsoniqueIcon.svg "$bundle/Contents/Resources/Isonique.icns"
 xattr -cr "$bundle"
 # ImageCaptureCore requires Hardened Runtime and the Photos Library entitlement on macOS.

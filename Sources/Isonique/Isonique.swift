@@ -64,6 +64,8 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var showRelocationOptions = false
     var pendingRelocationOptions: OriginalRelocationOptions?
     @Published var showExportOptions = false
+    @Published var keywordVocabulary: KeywordVocabulary
+    @Published var showKeywordVocabulary = false
     @Published var keywordGroups: KeywordGroupPreferences
     @Published var showKeywordControls: Bool {
         didSet { preferences.set(showKeywordControls, forKey: KeywordGroupPreferences.controlsKey) }
@@ -122,6 +124,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         recentLibraryPaths = Array(storedRecents.filter { $0.hasPrefix("/") && seenPaths.insert($0).inserted }
             .prefix(Self.recentLibraryLimit))
         clipping = ClippingSettings(preferences: preferences)
+        keywordVocabulary = KeywordVocabularyPreferences.load(from: preferences)
         keywordGroups = KeywordGroupPreferences.load(from: preferences)
         showKeywordControls = preferences.bool(forKey: KeywordGroupPreferences.controlsKey)
         let layout = preferences.string(forKey: "browser.layout").flatMap(BrowserPresentation.init(rawValue:))
@@ -702,6 +705,7 @@ enum EditTool: String { case select, crop, straighten, brush }
                 }.disabled(!workspace.canToggleSelectedStack)
             }
             CommandMenu("Metadata") {
+                Button("Keyword Vocabulary…") { workspace.showKeywordVocabulary = true }
                 Button("Manage Keyword Groups…") { workspace.showKeywordGroupEditor = true }
                 if let group = workspace.keywordGroups.active {
                     Menu("Add Keyword") {
@@ -729,7 +733,7 @@ enum EditTool: String { case select, crop, straighten, brush }
                 Button("Clear Color Label") { workspace.setColorLabel(nil) }
                     .keyboardShortcut("0").disabled(!workspace.canReviewSelection)
                 ForEach(PhotoColorLabel.allCases) { label in
-                    Button("Set Color Label to " + workspace.name(for: label)) { workspace.setColorLabel(label) }
+                    Button("Set Color Label to \(workspace.name(for: label))") { workspace.setColorLabel(label) }
                         .keyboardShortcut(KeyEquivalent(Character(String(label.rawValue))))
                         .disabled(!workspace.canReviewSelection)
                 }
@@ -1164,6 +1168,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $model.showRelocationOptions, onDismiss: model.chooseRelocationDestination) {
             RelocationOptionsView().environmentObject(model)
+        }
+        .sheet(isPresented: $model.showKeywordVocabulary) {
+            KeywordVocabularyView().environmentObject(model)
         }
         .sheet(isPresented: $model.showKeywordGroupEditor) {
             KeywordGroupEditor().environmentObject(model)
@@ -1669,7 +1676,7 @@ struct Inspector: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Button("Choose RGB ICC Profile…", action: model.chooseProofProfile)
                     Toggle("Proof preview", isOn: $model.proofEnabled).disabled(model.proofProfile == nil)
-                    Text(model.proofName.isEmpty ? "Choose a profile to simulate RGB output color." : model.proofName).font(.caption2)
+                    Text(model.proofName.isEmpty ? String(localized: "Choose a profile to simulate RGB output color.") : model.proofName).font(.caption2)
                     Text("Proofing affects the viewer only. RGB profiles only; no paper/ink simulation.").font(.caption2).foregroundStyle(.secondary)
                     adjustment("Lens distortion", path: \.adjustments.lensDistortion, range: -1...1)
                     Text("Manual barrel/pincushion correction applies to preview and export; no automatic lens profiles. Edge pixels are extended.").font(.caption2).foregroundStyle(.secondary)
@@ -1689,7 +1696,7 @@ struct Inspector: View {
             DisclosureGroup("Lift & Stamp Options") {
                 VStack(alignment: .leading, spacing: 10) {
                     ForEach(AdjustmentGroup.allCases) { group in
-                        Toggle(group.rawValue, isOn: Binding(get: { model.stampGroups.contains(group) }, set: { included in
+                        Toggle(LocalizedStringKey(group.rawValue), isOn: Binding(get: { model.stampGroups.contains(group) }, set: { included in
                             if included { model.stampGroups.insert(group) } else { model.stampGroups.remove(group) }
                         }))
                     }

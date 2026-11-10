@@ -137,7 +137,11 @@ View → Show Keyword Controls displays a group picker, individual keyword butto
 
 The keyword controls support Shift-click removal and Metadata → Remove Keyword. With Keyword Controls visible and the Grid Browser, List Browser or Viewer focused, Option–1 through Option–8 add keywords by active group order. Add Shift to remove the corresponding keyword. Search and Inspector text fields keep their normal key input. The same catalogue history handles assignment and removal, so Undo restores the entire selection in one step. [Aperture shortcut reference](https://www.manualshelf.com/manual/apple/aperture-3-upgrade/operation-manual-english/page-298.html)
 
-The next slice is a reusable keyword vocabulary with import and export.
+## Reusable keyword vocabulary and regional English
+
+Metadata → Keyword Vocabulary lets you add, rename and remove branches, apply a term to selected photos, and exchange tab-indented UTF-8 text lists. The tree persists in app preferences and is shared across libraries. Import merges case-insensitive matches within each branch, keeping existing spelling and order. Invalid files are rejected before saving. Assigning a term uses its name in the existing photo keyword field. [Aperture keyword list reference](https://aperture.skydocu.com/en/organize-and-sort-photos/add-keywords-to-photos/export-and-import-keyword-lists/)
+
+The app bundle uses the macOS language preference to select British English resources and uses base English as the fallback. The translated labels cover regional spellings in the interface and app menus. [Apple bundle language reference](https://developer.apple.com/documentation/bundleresources/information-property-list/cfbundledevelopmentregion)
 
 ## Pending physical camera checks
 
