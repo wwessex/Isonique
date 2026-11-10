@@ -879,8 +879,8 @@ enum EditTool: String { case select, crop, straighten, brush }
                 Button("Reload Library") { Task { await workspace.reloadLibrary() } }
                     .disabled(workspace.busy || workspace.repository == nil)
                 Button("Export Project as Library…") {
-                    if let project = workspace.selectedProjectForExport { workspace.exportProjectPanel(project) }
-                }.disabled(workspace.busy || workspace.repository == nil || workspace.selectedProjectForExport == nil)
+                    if let project = workspace.selectedProject { workspace.exportProjectPanel(project) }
+                }.disabled(workspace.busy || workspace.repository == nil || workspace.selectedProject == nil)
                 if let task = workspace.projectExportTask {
                     Button("Cancel Project Export") { task.cancel() }
                 }

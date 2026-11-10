@@ -237,9 +237,15 @@ Matching uses exact fixes or interpolates between the surrounding points in one 
 
 Aperture imported GPX tracks into projects, drew tracks in Places and supported both timestamp matching and manual waypoint assignment. Isonique’s file picker opens a temporary review and saves the confirmed photo coordinates. [Aperture 3.5 Help](https://aperture.skydocu.com/en/organize-and-sort-photos/organize-photos-using-places/import-and-work-with-gps-track-file-data/)
 
+## Project GPX tracks in Places
+
+Select a project, open Places and choose GPX Tracks → Import GPX Track. A file can contain multiple track segments. Places draws each continuous segment separately, including tracks with untimed points, and splits the line at the antimeridian. Fit Map frames visible routes and photo pins. Project routes are available in an empty project and remain visible when a photo filter hides the pins. All Photos and album views continue to show photo pins from their own scope.
+
+Use the track’s submenu to show, hide or remove it. The library saves route geometry and visibility in catalogue format 17, so the project can reopen the route after the GPX source moves. A project library export includes its saved routes, and importing that library copies them into the imported project. Merging edits into an existing project keeps its current track list. Removing a route preserves photo assignments and photo edit history. Match GPX Track continues to use a GPX file for timestamp matching. [GPX 1.1 schema](https://www.topografix.com/GPX/1/1/) · [MapKit polyline rendering](https://developer.apple.com/documentation/mapkit/mkpolylinerenderer)
+
 ## Next checkpoint
 
-Add project-scoped GPS track overlays to Places. Verify track persistence, visibility and removal without changing assigned photo coordinates.
+Add manual GPX waypoint assignment in Places with a preview for the selected photo versions. Verify scope, cancellation and Undo/Redo.
 
 ## Pending physical camera checks
 

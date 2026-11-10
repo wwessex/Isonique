@@ -138,7 +138,7 @@ extension Workspace {
         return name
     }
 
-    var selectedProjectForExport: Collection? {
+    var selectedProject: Collection? {
         library.projects.first { scope == "project:\($0.id)" }
     }
 

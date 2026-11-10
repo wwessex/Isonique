@@ -215,6 +215,7 @@ public struct Collection: Codable, Identifiable, Equatable {
     public var id = UUID()
     public var name: String
     public var rule: SmartAlbumRule?
+    public internal(set) var gpxTracks: [ProjectGPXTrack]?
     public init(name: String) { self.name = name }
 }
 public struct Photo: Codable, Identifiable, Equatable {
@@ -334,8 +335,11 @@ public struct Library: Codable {
     }
 
     fileprivate var hasLocationOverrides: Bool { photos.contains { $0.locationOverride != nil } }
+    fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 17, hasProjectGPXTracks { throw LibraryError.unsupportedVersion }
+        try validateProjectGPXTracks()
         if version < 16, hasLocationOverrides { throw LibraryError.unsupportedVersion }
         if version < 15, hasGPSSearch { throw LibraryError.unsupportedVersion }
         if version < 14, hasEXIFSearch { throw LibraryError.unsupportedVersion }
@@ -345,7 +349,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...16).contains(version) { return }
+        if (7...17).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -513,6 +517,7 @@ public final class LibraryRepository {
     func writeCatalogue(_ library: Library) throws -> Library {
         var normalized = library
         normalized.upgradeForKeywordPaths()
+        if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
         if normalized.version < 15, normalized.hasGPSSearch { normalized.version = 15 }
         if normalized.version < 14, normalized.hasEXIFSearch { normalized.version = 14 }

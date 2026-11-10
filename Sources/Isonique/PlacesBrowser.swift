@@ -41,28 +41,52 @@ struct PlacesBrowser<PhotoCell: View>: View {
     var body: some View {
         let photos = model.photos
         let places = PhotoPlace.grouped(photos)
-        if places.isEmpty {
-            ContentUnavailableView {
-                Label("No catalogued locations in this view", systemImage: "map")
-            } description: {
-                Text("Choose Grid or List to select older photos, then choose Metadata → Catalogue GPS from Originals.")
-            }
-        } else {
-            VStack(spacing: 0) {
+        let project = model.placesProject
+        let tracks = model.visibleGPXTracks
+        let hasMapContent = !places.isEmpty || !tracks.isEmpty
+        VStack(spacing: 0) {
+            if hasMapContent || project != nil {
                 HStack(spacing: 12) {
-                    Text(places.count == 1 ? "1 location" : "\(places.count) locations")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Spacer()
-                    Button("Fit Locations", systemImage: "arrow.up.left.and.arrow.down.right") {
-                        framing = PlacesMap.Framing()
+                    if !places.isEmpty {
+                        Text(places.count == 1 ? "1 location" : "\(places.count) locations")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
-                    Button("Open Selected Photo", systemImage: "rectangle.bottomthird.inset.filled") {
-                        model.choosePresentation(.viewer)
-                    }.disabled(model.selected == nil)
+                    if !tracks.isEmpty {
+                        Text(tracks.count == 1 ? "1 visible GPX track" : "\(tracks.count) visible GPX tracks")
+                        .font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if let project {
+                        ProjectGPXTracksMenu(model: model, project: project).id(project.id)
+                    }
+                    if hasMapContent {
+                        Button(tracks.isEmpty ? "Fit Locations" : "Fit Map", systemImage: "arrow.up.left.and.arrow.down.right") {
+                            framing = PlacesMap.Framing()
+                        }
+                    }
+                    if !places.isEmpty {
+                        Button("Open Selected Photo", systemImage: "rectangle.bottomthird.inset.filled") {
+                            model.choosePresentation(.viewer)
+                        }.disabled(model.selected == nil)
+                    }
                 }.padding(.horizontal, 14).padding(.vertical, 8)
-                PlacesMap(places: places, scope: model.scope, selected: model.selected?.cataloguedLocation,
+            }
+            if hasMapContent {
+                PlacesMap(places: places, tracks: tracks, scope: model.scope, selected: model.selected?.cataloguedLocation,
                           framing: framing, onSelect: model.selectPlace)
-                filmstrip(photos)
+                if !photos.isEmpty { filmstrip(photos) }
+            } else {
+                ContentUnavailableView {
+                    Label("No catalogued locations in this view", systemImage: "map")
+                } description: {
+                    if project?.gpxTracks?.isEmpty == false {
+                        Text("Show a track from the GPX Tracks menu.")
+                    } else if project != nil {
+                        Text("Import a route from the GPX Tracks menu, or catalogue GPS from photos in Grid or List.")
+                    } else {
+                        Text("Choose Grid or List to select older photos, then choose Metadata → Catalogue GPS from Originals.")
+                    }
+                }
             }
         }
     }
@@ -90,13 +114,14 @@ struct PlacesBrowser<PhotoCell: View>: View {
 
 }
 
-private struct PlacesMap: NSViewRepresentable {
+struct PlacesMap: NSViewRepresentable {
     struct Framing: Equatable {
         var centre: GPSCoordinates?
         private let id = UUID()
     }
 
     let places: [PhotoPlace]
+    let tracks: [ProjectGPXTrack]
     let scope: String
     let selected: GPSCoordinates?
     let framing: Framing
@@ -114,6 +139,8 @@ private struct PlacesMap: NSViewRepresentable {
         let coordinator = context.coordinator
         coordinator.onSelect = onSelect
         coordinator.selected = selected
+        let scopeChanged = coordinator.scope != scope
+        let tracksChanged = coordinator.updateTrackOverlays(tracks, on: map, replacing: scopeChanged)
 
         let previous = Set(coordinator.pins.keys)
         let points = Set(places.map(\.id))
@@ -134,11 +161,14 @@ private struct PlacesMap: NSViewRepresentable {
             map.selectAnnotation(pin, animated: false)
         }
 
-        if coordinator.scope != scope || previous != points {
-            map.fit(PhotoMapFraming.bounds(for: points))
-        } else if coordinator.framing != framing {
-            let target: Set<GPSCoordinates> = framing.centre.map { [$0] } ?? points
-            map.fit(PhotoMapFraming.bounds(for: target))
+        let contentChanged = scopeChanged || previous != points || tracksChanged
+        if contentChanged || coordinator.framing != framing {
+            if !contentChanged, let centre = framing.centre {
+                map.fit(PhotoMapFraming.bounds(for: [centre]))
+            } else {
+                let trackPoints = tracks.lazy.flatMap { $0.segments.joined() }
+                map.fit(PhotoMapFraming.bounds(for: points.union(trackPoints)))
+            }
         }
         coordinator.scope = scope
         coordinator.framing = framing
@@ -161,6 +191,34 @@ private struct PlacesMap: NSViewRepresentable {
         var framing: Framing?
         var scope: String?
         var onSelect: ((GPSCoordinates) -> Void)?
+        private var trackOverlays: [UUID: [MKPolyline]] = [:]
+
+        @discardableResult
+        func updateTrackOverlays(_ tracks: [ProjectGPXTrack], on map: MKMapView, replacing: Bool = false) -> Bool {
+            let current = Set(trackOverlays.keys)
+            let incoming = Set(tracks.map(\.id))
+            guard replacing || current != incoming else { return false }
+            let removed = replacing ? current : current.subtracting(incoming)
+            for id in removed {
+                if let overlays = trackOverlays.removeValue(forKey: id) { map.removeOverlays(overlays) }
+            }
+            for track in tracks where trackOverlays[track.id] == nil {
+                let overlays = GPXTrackPolyline.overlays(for: track)
+                trackOverlays[track.id] = overlays
+                map.addOverlays(overlays, level: .aboveRoads)
+            }
+            return true
+        }
+
+        func mapView(_ mapView: MKMapView, rendererFor overlay: any MKOverlay) -> MKOverlayRenderer {
+            guard let line = overlay as? MKPolyline else { return MKOverlayRenderer(overlay: overlay) }
+            let renderer = MKPolylineRenderer(polyline: line)
+            renderer.strokeColor = .systemPurple
+            renderer.lineWidth = 3
+            renderer.lineCap = .round
+            renderer.lineJoin = .round
+            return renderer
+        }
 
         func mapView(_ mapView: MKMapView, viewFor annotation: any MKAnnotation) -> MKAnnotationView? {
             guard let pin = annotation as? Pin else { return nil }

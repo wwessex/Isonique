@@ -2,6 +2,16 @@ import IsoniqueCore
 import SwiftUI
 import UniformTypeIdentifiers
 
+@MainActor
+func chooseGPXTrackFile() -> URL? {
+    let panel = NSOpenPanel()
+    panel.title = String(localized: "Choose a GPX Track")
+    panel.allowedContentTypes = [UTType(filenameExtension: "gpx") ?? .xml]
+    panel.canChooseDirectories = false
+    panel.allowsMultipleSelection = false
+    return panel.runModal() == .OK ? panel.url : nil
+}
+
 struct GPXLocationEdit: Identifiable, Sendable {
     let id = UUID()
     let url: URL
@@ -99,13 +109,8 @@ struct GPXLocationEdit: Identifiable, Sendable {
 
 extension Workspace {
     func chooseGPXTrack() {
-        guard !metadataEditingTargets.isEmpty else { return }
-        let panel = NSOpenPanel()
-        panel.title = String(localized: "Choose a GPX Track")
-        panel.allowedContentTypes = [UTType(filenameExtension: "gpx") ?? .xml]
-        panel.canChooseDirectories = false
-        panel.allowsMultipleSelection = false
-        if panel.runModal() == .OK, let url = panel.url { openGPXLocationEditor(url: url) }
+        guard !metadataEditingTargets.isEmpty, let url = chooseGPXTrackFile() else { return }
+        openGPXLocationEditor(url: url)
     }
 
     func openGPXLocationEditor(url: URL) {

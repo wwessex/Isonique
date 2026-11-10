@@ -2,12 +2,13 @@ import Foundation
 
 public struct GPXTrack: Sendable {
     public enum ReadError: LocalizedError {
-        case invalidTrack, noTimedPoints
+        case invalidTrack, noTimedPoints, noDrawableSegments
 
         public var errorDescription: String? {
             switch self {
             case .invalidTrack: return "The file is not a readable GPX track."
             case .noTimedPoints: return "The GPX file has no track points with valid coordinates and timestamps."
+            case .noDrawableSegments: return "The GPX file has no track segment with two distinct, valid coordinates."
             }
         }
     }
@@ -27,9 +28,7 @@ public struct GPXTrack: Sendable {
     private let segments: [[Point]]
 
     public init(contentsOf url: URL) throws {
-        try Task.checkCancellation()
-        guard let stream = InputStream(url: url) else { throw ReadError.invalidTrack }
-        try self.init(parser: XMLParser(stream: stream))
+        try self.init(parser: GPXTrackReader.parser(for: url))
     }
 
     public init(data: Data) throws {
@@ -37,16 +36,15 @@ public struct GPXTrack: Sendable {
     }
 
     private init(parser: XMLParser) throws {
-        try Task.checkCancellation()
-        let reader = GPXTrackReader()
-        parser.delegate = reader
-        parser.shouldProcessNamespaces = true
-        parser.externalEntityResolvingPolicy = .never
-        let parsed = parser.parse()
-        try Task.checkCancellation()
-        guard parsed, reader.hasGPXRoot else { throw ReadError.invalidTrack }
-        guard !reader.segments.isEmpty else { throw ReadError.noTimedPoints }
-        segments = reader.segments
+        let reader = try GPXTrackReader.read(parser, purpose: .matching)
+        guard !reader.timedSegments.isEmpty else { throw ReadError.noTimedPoints }
+        segments = reader.timedSegments
+    }
+
+    static func overlaySegments(from url: URL) throws -> [[GPSCoordinates]] {
+        let reader = try GPXTrackReader.read(GPXTrackReader.parser(for: url), purpose: .overlay)
+        guard !reader.overlaySegments.isEmpty else { throw ReadError.noDrawableSegments }
+        return reader.overlaySegments
     }
 
     /// Match only within a continuous segment. Overlapping tracks must agree, with exact fixes taking precedence.
@@ -97,16 +95,40 @@ public struct GPXTrack: Sendable {
 }
 
 private final class GPXTrackReader: NSObject, XMLParserDelegate {
+    enum Purpose { case matching, overlay }
     private enum Element { case root, track, segment, point, time, ignored }
 
+    private let purpose: Purpose
     private var path: [Element] = []
     private var namespace = ""
     private var coordinates: GPSCoordinates?
     private var timeText = ""
     private var pointTime: Date?
-    private var segment: [GPXTrack.Point] = []
-    private(set) var hasGPXRoot = false
-    private(set) var segments: [[GPXTrack.Point]] = []
+    private var timedSegment: [GPXTrack.Point] = []
+    private var overlaySegment: [GPSCoordinates] = []
+    private var hasGPXRoot = false
+    private(set) var timedSegments: [[GPXTrack.Point]] = []
+    private(set) var overlaySegments: [[GPSCoordinates]] = []
+
+    private init(purpose: Purpose) { self.purpose = purpose }
+
+    static func parser(for url: URL) throws -> XMLParser {
+        try Task.checkCancellation()
+        guard let stream = InputStream(url: url) else { throw GPXTrack.ReadError.invalidTrack }
+        return XMLParser(stream: stream)
+    }
+
+    static func read(_ parser: XMLParser, purpose: Purpose) throws -> GPXTrackReader {
+        try Task.checkCancellation()
+        let reader = GPXTrackReader(purpose: purpose)
+        parser.delegate = reader
+        parser.shouldProcessNamespaces = true
+        parser.externalEntityResolvingPolicy = .never
+        let parsed = parser.parse()
+        try Task.checkCancellation()
+        guard parsed, reader.hasGPXRoot else { throw GPXTrack.ReadError.invalidTrack }
+        return reader
+    }
 
     func parser(_ parser: XMLParser, didStartElement name: String, namespaceURI: String?,
                 qualifiedName: String?, attributes: [String: String]) {
@@ -125,7 +147,7 @@ private final class GPXTrackReader: NSObject, XMLParserDelegate {
             coordinates = Self.coordinates(attributes)
             pointTime = nil
             element = .point
-        case (.point, "time") where uri == namespace:
+        case (.point, "time") where uri == namespace && purpose == .matching:
             timeText = ""
             element = .time
         default: element = .ignored
@@ -146,22 +168,32 @@ private final class GPXTrackReader: NSObject, XMLParserDelegate {
         case .time:
             pointTime = Self.timestamp(timeText)
         case .point:
-            guard let coordinates, let pointTime else { finishSegment(); return }
-            if let last = segment.last, last.time >= pointTime {
-                if last.time == pointTime, last.coordinates == coordinates { return }
-                finishSegment()
-            }
-            segment.append(.init(time: pointTime, coordinates: coordinates))
+            appendPoint()
         case .segment:
             finishSegment()
         default: break
         }
     }
 
+    private func appendPoint() {
+        guard let coordinates else { finishSegment(); return }
+        if purpose == .overlay {
+            if overlaySegment.last != coordinates { overlaySegment.append(coordinates) }
+            return
+        }
+        guard let pointTime else { finishSegment(); return }
+        if let last = timedSegment.last, last.time >= pointTime {
+            if last.time == pointTime, last.coordinates == coordinates { return }
+            finishSegment()
+        }
+        timedSegment.append(.init(time: pointTime, coordinates: coordinates))
+    }
+
     private func finishSegment() {
-        guard !segment.isEmpty else { return }
-        segments.append(segment)
-        segment = []
+        if !timedSegment.isEmpty { timedSegments.append(timedSegment) }
+        if overlaySegment.count > 1 { overlaySegments.append(overlaySegment) }
+        timedSegment = []
+        overlaySegment = []
     }
 
     private static func coordinates(_ attributes: [String: String]) -> GPSCoordinates? {
