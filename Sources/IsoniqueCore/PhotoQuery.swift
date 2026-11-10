@@ -18,8 +18,10 @@ public enum PhotoQueryOperator: String, CaseIterable, Codable, Identifiable {
     case until = "is on or before"
     case isPresent = "is present"
     case isMissing = "is missing"
+    case isUnindexed = "is unindexed"
+    case withinRadius = "is within radius"
     public var id: Self { self }
-    public var needsValue: Bool { self != .isPresent && self != .isMissing }
+    public var needsValue: Bool { self != .isPresent && self != .isMissing && self != .isUnindexed }
 }
 
 public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
@@ -37,6 +39,9 @@ public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
     case exifISO = "EXIF ISO"
     case exifFocalLength = "EXIF Focal Length"
     case exifLens = "EXIF Lens"
+    case gpsLocation = "GPS Location"
+    case gpsLatitude = "GPS Latitude"
+    case gpsLongitude = "GPS Longitude"
     case format = "File extension"
     case captured = "Capture date"
     case imported = "Import date"
@@ -65,6 +70,8 @@ public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
         }
     }
 
+    var isGPS: Bool { self == .gpsLocation || self == .gpsLatitude || self == .gpsLongitude }
+
     public var operators: [PhotoQueryOperator] {
         switch self {
         case .filename, .caption, .keyword, .camera, .iptcTitle, .iptcCreator, .iptcCopyright, .iptcCredit:
@@ -72,6 +79,8 @@ public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
         case .exifShutterSpeed, .exifAperture, .exifISO, .exifFocalLength:
             return [.equals, .minimum, .maximum, .differs, .isPresent, .isMissing]
         case .exifLens: return [.contains, .excludes, .equals, .differs, .isPresent, .isMissing]
+        case .gpsLocation: return [.withinRadius, .isPresent, .isMissing, .isUnindexed]
+        case .gpsLatitude, .gpsLongitude: return [.equals, .minimum, .maximum, .differs]
         case .keywordPath: return [.equals, .inBranch, .differs]
         case .format, .colorLabel: return [.equals, .differs]
         case .captured, .imported: return [.since, .until, .equals, .differs]
@@ -87,13 +96,15 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
     public var comparison: PhotoQueryOperator
     public var value: String
     public var keywordPath: KeywordPath?
+    public var gpsRadius: GPSRadiusRule?
 
     public init(field: PhotoQueryField = .filename, comparison: PhotoQueryOperator = .contains, value: String = "",
-                keywordPath: KeywordPath? = nil) {
+                keywordPath: KeywordPath? = nil, gpsRadius: GPSRadiusRule? = nil) {
         self.field = field
         self.comparison = comparison
         self.value = value
         self.keywordPath = keywordPath
+        self.gpsRadius = gpsRadius
     }
 
     private var term: String { value.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -102,10 +113,12 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
         guard field.operators.contains(comparison) else { return false }
         if !comparison.needsValue { return true }
         if field == .keywordPath { return keywordPath != nil }
+        if field == .gpsLocation { return gpsRadius?.isValid == true }
         guard !term.isEmpty else { return false }
         switch field {
         case .exifShutterSpeed, .exifAperture, .exifFocalLength: return exifNumber != nil
         case .exifISO: return exifISO != nil
+        case .gpsLatitude, .gpsLongitude: return gpsAxisValue != nil
         case .captured, .imported: return Self.dayNumber(term, separator: "-") != nil
         case .format: return !Self.normalizedExtension(term).isEmpty
         case .colorLabel: return term == "0" || Int(term).flatMap(PhotoColorLabel.init(rawValue:)) != nil
@@ -117,7 +130,7 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
 
     func includes(_ photo: Photo, originalAvailable: () -> Bool?) -> Bool {
         guard field.operators.contains(comparison),
-              !comparison.needsValue || field == .keywordPath || !term.isEmpty else { return false }
+              !comparison.needsValue || field == .keywordPath || field == .gpsLocation || !term.isEmpty else { return false }
         switch field {
         case .filename: return matchesText([photo.displayName, photo.originalName, photo.sourceName ?? photo.originalName])
         case .caption: return matchesText([photo.caption])
@@ -141,6 +154,18 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
                 return matchesOrder(order)
             }
         case .exifLens: return matchesEXIFValue(photo.cameraEXIF?.lens) { matchesText([$0]) }
+        case .gpsLocation:
+            switch comparison {
+            case .isPresent: return photo.gpsIndex?.coordinates != nil
+            case .isMissing: return photo.gpsIndex != nil && photo.gpsIndex?.coordinates == nil
+            case .isUnindexed: return photo.gpsIndex == nil
+            case .withinRadius:
+                guard let coordinates = photo.gpsIndex?.coordinates else { return false }
+                return gpsRadius?.includes(coordinates) == true
+            default: return false
+            }
+        case .gpsLatitude: return matchesGPSAxis(photo.gpsIndex?.coordinates?.latitude)
+        case .gpsLongitude: return matchesGPSAxis(photo.gpsIndex?.coordinates?.longitude)
         case .format:
             let extensionValue = Self.normalizedExtension((photo.filename as NSString).pathExtension)
             let expected = Self.normalizedExtension(term)
@@ -170,6 +195,19 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
         case .availability: return originalAvailable().map(matchesBool) ?? false
         case .adjusted: return matchesBool(photo.adjustments != Adjustments())
         }
+    }
+
+    private var gpsAxisValue: Double? {
+        let limit: Double = field == .gpsLatitude ? 90 : 180
+        guard let value = GPSRadiusRule.decimal(term, allowingDegrees: true), abs(value) <= limit else { return nil }
+        return value
+    }
+
+    private func matchesGPSAxis(_ actual: Double?) -> Bool {
+        guard let actual, let expected = gpsAxisValue else { return false }
+        // Match coordinates copied from the six-decimal readout in Info.
+        if abs(actual - expected) <= 0.0000005 { return matchesOrder(.orderedSame) }
+        return matchesOrder(actual < expected ? .orderedAscending : .orderedDescending)
     }
 
     private var exifISO: Int? {

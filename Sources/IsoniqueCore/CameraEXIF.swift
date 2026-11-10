@@ -53,8 +53,4 @@ public extension LibraryRepository {
     func cameraEXIF(for photo: Photo) throws -> CameraEXIF {
         CameraEXIF(properties: try originalImageProperties(for: photo))
     }
-
-    internal static func cameraEXIF(in source: CGImageSource, name: String) throws -> CameraEXIF {
-        CameraEXIF(properties: try primaryImageProperties(in: source, name: name))
-    }
 }

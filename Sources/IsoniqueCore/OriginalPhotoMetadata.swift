@@ -1,9 +1,27 @@
 import Foundation
 import ImageIO
 
-public struct GPSCoordinates: Equatable, Sendable {
+public struct GPSCoordinates: Codable, Equatable, Sendable {
     public let latitude: Double
     public let longitude: Double
+
+    public init?(latitude: Double, longitude: Double) {
+        guard (-90...90).contains(latitude), (-180...180).contains(longitude) else { return nil }
+        self.latitude = latitude == 0 ? 0 : latitude
+        self.longitude = longitude == 0 ? 0 : longitude
+    }
+
+    private enum CodingKeys: String, CodingKey { case latitude, longitude }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        let latitude = try values.decode(Double.self, forKey: .latitude)
+        let longitude = try values.decode(Double.self, forKey: .longitude)
+        guard let coordinates = Self(latitude: latitude, longitude: longitude) else {
+            throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Invalid GPS coordinates"))
+        }
+        self = coordinates
+    }
 
     init?(properties: [String: Any]) {
         guard let gps = properties[kCGImagePropertyGPSDictionary as String] as? [String: Any],
@@ -13,8 +31,7 @@ public struct GPSCoordinates: Equatable, Sendable {
               let longitude = Self.coordinate(in: gps, value: kCGImagePropertyGPSLongitude,
                                               reference: kCGImagePropertyGPSLongitudeRef,
                                               maximum: 180, positive: "E", negative: "W") else { return nil }
-        self.latitude = latitude
-        self.longitude = longitude
+        self.init(latitude: latitude, longitude: longitude)
     }
 
     private static func coordinate(in gps: [String: Any], value: CFString, reference: CFString,
@@ -29,6 +46,14 @@ public struct GPSCoordinates: Equatable, Sendable {
         guard degrees >= 0 || hemisphere == negative else { return nil }
         if degrees == 0 { return 0 }
         return hemisphere == negative ? -abs(degrees) : degrees
+    }
+}
+
+public struct GPSIndex: Codable, Equatable, Sendable {
+    public let coordinates: GPSCoordinates?
+
+    init(properties: [String: Any]) {
+        coordinates = GPSCoordinates(properties: properties)
     }
 }
 
