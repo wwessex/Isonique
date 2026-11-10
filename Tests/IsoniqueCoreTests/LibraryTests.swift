@@ -496,6 +496,101 @@ final class LibraryTests: XCTestCase {
         XCTAssertEqual(try repo.load().photos.map(\.originalName), ["Fresh.JPG"])
     }
 
+    @MainActor
+    func testTetheredShotEventsGroupSplitArrivalsAndImportMatchingCompanions() async throws {
+        let baseline = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Old.JPG"]))
+        let replay = try XCTUnwrap(CameraImportFile(components: baseline.components, byteCount: 123))
+        let lateCompanion = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Old.NEF"]))
+        let jpeg = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Shot.JPG"]))
+        let raw = try XCTUnwrap(CameraImportFile(components: ["DCIM", "SHOT.NEF"]))
+        let sidecar = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Shot.xmp"]))
+        let unrelated = try XCTUnwrap(CameraImportFile(components: ["Other", "Shot.NEF"]))
+        let group = TetheredShotEvents(baseline: [baseline], quietPeriod: .milliseconds(250))
+        let stream = group.stream
+        let shutter = expectation(description: "simulated shutter request")
+        let payloads = [
+            jpeg: try Data(contentsOf: fixture("native-jpeg.png", red: 0.3)),
+            raw: try Data(contentsOf: fixture("native-raw.png", red: 0.6)),
+            sidecar: Data("""
+                <x:xmpmeta xmlns:x="adobe:ns:meta/">
+                    <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+                        <rdf:Description xmlns:xmp="http://ns.adobe.com/xap/1.0/" xmp:Rating="4"/>
+                    </rdf:RDF>
+                </x:xmpmeta>
+                """.utf8)
+        ]
+        let session = TetheredCaptureSession()
+        try await session.connect(TetheredCameraConnection(initialCatalogue: [baseline], capture: {
+            shutter.fulfill()
+            return stream
+        }, download: { file, destination in
+            try XCTUnwrap(payloads[file]).write(to: destination)
+        }))
+        let repo = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        let initial = try repo.load()
+        var options = ImportOptions()
+        options.readSidecars = true
+        let capture = Task { try await session.capture(repository: repo, library: initial, options: options) }
+        await fulfillment(of: [shutter], timeout: 3)
+
+        group.receive([replay, lateCompanion, sidecar])
+        XCTAssertTrue(group.isCollecting)
+        group.receive([jpeg])
+        group.receive([jpeg, unrelated])
+        group.receive([raw])
+        XCTAssertTrue(group.isCollecting)
+        XCTAssertTrue(try repo.load().photos.isEmpty)
+
+        let result = try await capture.value
+        XCTAssertTrue(group.completed)
+        XCTAssertEqual(result.report.imported, 2)
+        XCTAssertEqual(result.report.duplicates, 0)
+        XCTAssertTrue(result.report.errors.isEmpty)
+        let saved = try repo.load()
+        XCTAssertEqual(Set(saved.photos.map(\.originalName)), ["Shot.JPG", "SHOT.NEF"])
+        let pair = try XCTUnwrap(saved.photos.first?.pairID)
+        XCTAssertTrue(saved.photos.allSatisfy { $0.pairID == pair && $0.rating == 4 })
+    }
+
+    @MainActor
+    func testTetheredShotEventsTimeOutWithOnlyReplaysAndSidecars() async throws {
+        let baseline = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Old.JPG"]))
+        let sidecar = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Shot.xmp"]))
+        let group = TetheredShotEvents(baseline: [baseline], quietPeriod: .milliseconds(20),
+                                      deadline: .milliseconds(150))
+        group.receive([sidecar, baseline, baseline])
+        var iterator = group.stream.makeAsyncIterator()
+        do {
+            let event = try await iterator.next()
+            XCTFail("Expected a timeout, got \(String(describing: event))")
+        } catch DeviceImportError.timedOut {}
+        XCTAssertFalse(group.isCollecting)
+        XCTAssertFalse(group.completed)
+    }
+
+    @MainActor
+    func testTetheredShotEventsCancelAndIgnoreLateArrivalsAfterReconnect() async throws {
+        let pending = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Pending.JPG"]))
+        let fresh = try XCTUnwrap(CameraImportFile(components: ["DCIM", "Fresh.JPG"]))
+        let previous = TetheredShotEvents(baseline: [CameraImportFile](), quietPeriod: .seconds(2))
+        previous.receive([pending])
+        previous.fail(CancellationError())
+        previous.receive([fresh])
+        var stopped = previous.stream.makeAsyncIterator()
+        do {
+            let event = try await stopped.next()
+            XCTFail("Expected cancellation, got \(String(describing: event))")
+        } catch is CancellationError {}
+        XCTAssertFalse(previous.completed)
+
+        let reconnected = TetheredShotEvents(baseline: [pending], quietPeriod: .milliseconds(50))
+        reconnected.receive([pending, fresh])
+        var received: [CameraImportFile] = []
+        for try await file in reconnected.stream { received.append(file) }
+        XCTAssertEqual(received, [fresh])
+        XCTAssertTrue(reconnected.completed)
+    }
+
     func testCameraIncompleteDownloadAndCancellationKeepCommittedPhoto() async throws {
         let bytes = try Data(contentsOf: fixture())
         let files = try ["A.png", "B.png", "C.png", "D.png"].map {

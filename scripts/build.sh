@@ -17,7 +17,8 @@ cp -X Info.plist "$bundle/Contents/Info.plist"
 cp -X LICENSE "$bundle/Contents/Resources/LICENSE"
 /bin/sh scripts/build-icon.sh Resources/IsoniqueIcon.svg "$bundle/Contents/Resources/Isonique.icns"
 xattr -cr "$bundle"
-codesign --force --sign - "$bundle"
+# ImageCaptureCore requires Hardened Runtime and the Photos Library entitlement on macOS.
+codesign --force --sign - --options runtime --entitlements Resources/Isonique.entitlements "$bundle"
 codesign --verify --deep --strict --verbose=2 "$bundle"
 # The archive keeps a clean signed deliverable even on a cloud-backed workspace.
 ditto -c -k --norsrc --keepParent "$bundle" "$PWD/build/Isonique.zip"

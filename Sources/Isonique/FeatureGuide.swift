@@ -20,7 +20,7 @@ struct FeatureGuide: View {
         Group(title: "Remaining missing features", symbol: "circle.dashed", features: [
             Feature(title: "1. Full Aperture library migration", detail: "Original recovery exists, but old edits, database-only metadata, project hierarchy and album relationships are not migrated."),
             Feature(title: "3. Retouching and advanced brushes", detail: "Clone, heal, red-eye removal, edge-aware brushes and general adjustment masks are pending."),
-            Feature(title: "8. Physical tethered capture", detail: "The opt-in tether prototype uses a simulated camera. Physical tethered capture is pending. Use File → Import from Camera or Card to browse and select photos on a connected device."),
+            Feature(title: "8. Physical tethered capture", detail: "File → Tethered Capture can request one shot at a time from a camera that reports remote shutter support. Physical camera testing is pending. Use File → Import from Camera or Card to check only the photos you want to import."),
             Feature(title: "9. Publishing and extensions", detail: "Books, printing tools, plug-ins, slideshow export and video workflows are missing. Review → Start Slideshow plays edited photos on this Mac."),
             Feature(title: "10. Cloud sync and other devices", detail: "Cloud sync and web, Windows, iPhone, iPad and Android apps are not included.")
         ]),

@@ -17,7 +17,7 @@ Use a disposable library and a physical USB camera in PTP or Photo Transfer mode
 
 1. Confirm the camera appears in macOS Image Capture, then close Image Capture before opening Isonique’s File → Import from Camera or Card. If Image Capture sees the camera and Isonique does not, record the app’s signing configuration and check Apple’s ImageCaptureCore import requirements. [Image Capture user guide](https://support.apple.com/guide/image-capture/imgcp1003/mac) · [ImageCaptureCore configuration](https://developer.apple.com/documentation/imagecapturecore/)
 2. Choose the camera and confirm the grid shows recognizable thumbnails for the test photos. The selection should start empty.
-3. Choose one photo and import it. Check the library count and filename, open the managed original, and confirm the other test photo was excluded.
+3. Select All, then uncheck at least one photo. Confirm the count changes and import the remaining selection. Check the library count and filenames, open the managed originals, and confirm the unchecked photo was excluded.
 4. Start another import and click Cancel Import while a transfer is active. Record how many files completed before cancellation. Reopen the disposable library and confirm it contains only complete imports. Check that the camera still lists the source photos.
 5. Reopen the camera browser, select a photo and disconnect the cable. Check that the grid and selection clear and Import Options becomes unavailable. Reconnect, choose the camera again, confirm thumbnails load with an empty selection, and import a photo that has not already been imported.
 
@@ -33,3 +33,12 @@ open -na "$tether_dir/Isonique.app" --args --library "$tether_dir/Library" --sim
 ```
 
 Open File → Simulated Tethered Capture. Capture a shot and check that one JPEG enters the library even though the simulator repeats the file notification. While a shot is active, Capture is disabled. Try Cancel Shot before transfer completes, then disconnect and reconnect. A new capture after reconnect should import one new photo. The XCTest simulator covers RAW/JPEG split arrivals and cancellation after a prior file commits.
+
+## Physical tethered capture
+
+Use a disposable library and record the camera model, firmware, USB mode, macOS version and capture format. Use the signed bundle from `make build`.
+
+1. Open File → Tethered Capture, choose the camera and connect. If the camera is import-only, confirm the panel reports that remote shutter is unavailable and Capture stays disabled.
+2. On a camera that supports the Mac-triggered shutter, set it to single-shot JPEG and click Capture. Verify the shutter fires once, then open the imported JPEG in the Viewer and confirm earlier files on the camera were excluded.
+3. Switch to RAW + JPEG and shoot. Verify both files arrive, link as one RAW/JPEG pair in the library and remain on the camera. Record the time between arrivals if a companion falls outside the grouping window. Repeat with two successive shots.
+4. Cancel while waiting for a shot or transferring its files. Check that complete imports remain readable and reconnect before issuing another shot. Repeat with a cable disconnect and verify that reconnect starts from the current camera catalogue.
