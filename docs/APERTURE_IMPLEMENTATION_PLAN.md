@@ -181,9 +181,13 @@ Use the edit strip, Adjustments → Lift & Stamp Options, or the Photos menu and
 
 Metadata → Catalogue IPTC from Originals reviews the current selection. It verifies each original’s SHA-256 and reads one original per shared identity. Offline, changed or unreadable originals appear in the review. Cancel IPTC Review stops the scan after the current original. Add to Catalogue fills only unset title, creator, copyright or credit fields and makes them searchable. A catalogue edit made during review requires a fresh review. Additions use one Undo step and preserve the original bytes.
 
+## Read-only EXIF in Info
+
+Expand Info → EXIF to inspect shutter speed, aperture, ISO, focal length and lens from the selected photo’s original. ImageIO reads the metadata in the background when the section is open. Changing photos or refreshing original availability updates the readout. The section distinguishes an absent field from an offline or unreadable original. It uses the actual focal length and displays subsecond exposures as fractions when they closely match a reciprocal. [ImageIO EXIF keys](https://developer.apple.com/documentation/imageio/exif-dictionary-keys)
+
 ## Next checkpoint
 
-Add a read-only EXIF view in Info for shutter speed, aperture, ISO, focal length and lens. Read metadata in the background from the selected photo’s available original and report missing values or offline originals. Verify selections, EXIF rational values, orientation, RAW and JPEG fixtures, and that browsing and exporting remain unchanged. Follow with configurable metadata views and catalogue-backed EXIF search.
+Add configurable metadata views in Info. Verify that selected fields and order persist and that the default views remain available. Follow with catalogue-backed EXIF search.
 
 ## Pending physical camera checks
 

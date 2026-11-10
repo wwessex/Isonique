@@ -8,16 +8,31 @@ final class RawWorkflowTests: XCTestCase {
     func testCameraRAWImportTonePreviewAndExport() throws {
         let path = try XCTUnwrapOrSkip(ProcessInfo.processInfo.environment["ISONIQUE_RAW_FIXTURES"])
         let directory = URL(fileURLWithPath: path, isDirectory: true)
-        for filename in ["Sony-a7III.ARW", "Canon-EOS-R.CR3", "Nikon-Z6.NEF", "Ricoh-GR-III.DNG"] {
+        let samples = [
+            CaptureSample(file: "Sony-a7III.ARW", seconds: 1.0 / 50, aperture: 4, iso: 400, focalLength: 32, hasLens: true),
+            CaptureSample(file: "Canon-EOS-R.CR3", seconds: 0.3, aperture: 11, iso: 100, focalLength: 85, hasLens: true),
+            CaptureSample(file: "Nikon-Z6.NEF", seconds: 1, aperture: 6.7, iso: 100, focalLength: 52, hasLens: true),
+            CaptureSample(file: "Ricoh-GR-III.DNG", seconds: 1.0 / 400, aperture: 5, iso: 100, focalLength: 18.3, hasLens: false)
+        ]
+        for sample in samples {
             do {
-                try autoreleasepool { try check(directory.appendingPathComponent(filename)) }
+                try autoreleasepool { try check(directory.appendingPathComponent(sample.file), sample: sample) }
             } catch {
-                XCTFail("\(filename): \(error.localizedDescription)")
+                XCTFail("\(sample.file): \(error.localizedDescription)")
             }
         }
     }
 
-    private func check(_ source: URL) throws {
+    private struct CaptureSample {
+        let file: String
+        let seconds: Double
+        let aperture: Double
+        let iso: Int
+        let focalLength: Double
+        let hasLens: Bool
+    }
+
+    private func check(_ source: URL, sample: CaptureSample) throws {
         let folder = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueRAW-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: false)
         defer { try? FileManager.default.removeItem(at: folder) }
@@ -36,6 +51,12 @@ final class RawWorkflowTests: XCTestCase {
         try repository.save(library)
         let saved = try XCTUnwrap(repository.load().photos.first)
         XCTAssertEqual(saved.adjustments, photo.adjustments)
+        let exif = try repository.cameraEXIF(for: saved)
+        XCTAssertEqual(try XCTUnwrap(exif.exposureSeconds), sample.seconds, accuracy: 0.000001, sample.file)
+        XCTAssertEqual(try XCTUnwrap(exif.fNumber), sample.aperture, accuracy: 0.001, sample.file)
+        XCTAssertEqual(exif.iso, sample.iso, sample.file)
+        XCTAssertEqual(try XCTUnwrap(exif.focalLengthMM), sample.focalLength, accuracy: 0.001, sample.file)
+        if sample.hasLens { XCTAssertFalse(try XCTUnwrap(exif.lens).isEmpty, sample.file) }
         let original = try repository.availableOriginalURL(saved)
         let previewStart = DispatchTime.now()
         let thumbnail = try Renderer.render(original, adjustments: saved.adjustments, maxDimension: 384)
