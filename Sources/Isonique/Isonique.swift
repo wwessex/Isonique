@@ -647,8 +647,14 @@ enum EditTool: String { case select, crop, straighten, brush }
 }
 
 @main struct IsoniqueApp: App {
-    @StateObject private var workspace = Workspace()
+    @StateObject private var workspace: Workspace
     @Environment(\.openWindow) private var openWindow
+
+    init() {
+        AppPreferencesMigration.migrateForCurrentApp()
+        _workspace = StateObject(wrappedValue: Workspace())
+    }
+
     var body: some Scene {
         WindowGroup("Isonique") {
             ContentView().environmentObject(workspace)
