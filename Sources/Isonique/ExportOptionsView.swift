@@ -23,7 +23,7 @@ struct ExportOptionsView: View {
             }
             Picker("Format", selection: $options.format) { ForEach(ExportFormat.allCases) { Text($0.rawValue).tag($0) } }
             if options.format == .original {
-                Text("Copies the original file byte for byte, including all original metadata and GPS. Adjustments and edited captions are not applied.").foregroundStyle(.secondary)
+                Text("Copies the original file byte for byte, including its embedded metadata and GPS.").foregroundStyle(.secondary)
             } else {
                 if options.format == .jpeg {
                     HStack { Text("JPEG quality"); Slider(value: $options.quality, in: 0.1...1); Text("\(Int(options.quality * 100))%").monospacedDigit().frame(width: 45) }
@@ -39,6 +39,12 @@ struct ExportOptionsView: View {
                 }
                 Text("Unchecked metadata is omitted. Original files always retain their embedded metadata.").font(.caption).foregroundStyle(.secondary)
             }
+            Toggle("Write matching XMP sidecar", isOn: Binding(
+                get: { options.xmpSidecar == true },
+                set: { options.xmpSidecar = $0 ? true : nil }
+            ))
+            Text("The separate .xmp file carries your current caption, rating, flat keywords and complete keyword paths.")
+                .font(.caption).foregroundStyle(.secondary)
             HStack {
                 TextField("Preset name", text: $name)
                 Button("Save preset") {

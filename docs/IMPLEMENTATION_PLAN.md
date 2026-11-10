@@ -151,6 +151,12 @@ Find Photos in the vocabulary searches for an exact path. Advanced Search and Sm
 
 The signed build displayed Centre and Minimise in the native Window menu using the Mac’s British English preference. The same bundle displayed Center and Minimize under a US English override. AppKit supplies these commands.
 
+## XMP keyword hierarchy exchange
+
+Export → Write matching XMP sidecar saves current metadata alongside a rendered image or a byte-for-byte original. The sidecar stores full keyword paths in Lightroom’s `lr:hierarchicalSubject` and flat tags in `dc:subject`. IPTC export continues to include flat tags and each assigned path’s leaf name. XMP uses `|` between levels. Export reports an error if a keyword name contains that character. [Adobe hierarchy format](https://github.com/adobe-dmeservices/custom-metadata#hierarchical-keywords-support) · [IPTC Keywords specification](https://www.iptc.org/std/photometadata/specification/IPTC-PhotoMetadata-2025.1.html#keywords)
+
+Import reads hierarchy paths from embedded XMP. Enable Read matching .xmp sidecars to apply adjacent sidecars during photo import. File → Import XML / XMP Metadata applies a sidecar to the selected photo. Fields present in a sidecar replace the corresponding fields, and omitted fields keep their current values. Flat tags and assigned paths remain separate in the catalogue.
+
 ## Pending physical camera checks
 
 1. Run the [physical PTP camera import checklist](../VALIDATION.md#physical-ptp-camera-import) when a camera is available. Record thumbnail, deselection, active transfer cancellation and reconnect results.

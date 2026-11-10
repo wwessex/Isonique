@@ -16,7 +16,7 @@ Isonique backups copy the saved catalogue and its managed originals, including p
 
 Allow space for a complete temporary copy. The recovery workflow is limited to embedded originals and supported metadata in those files. Database projects, albums, relationships, previews, referenced originals, legacy edits and vaults are outside its scope. Tests cover a synthetic `.aplibrary` fixture with a generated image and a mock database. A real legacy library has not been tested.
 
-Normal import can also read matching XMP sidecars. **File → Import XML / XMP Metadata** accepts XMP, Isonique photo records and supported `AlbumData.xml` metadata. This command imports selected photo metadata rather than converting a library database. [Historical workflow comparison](docs/WORKFLOW_COMPARISON.md)
+Normal import reads embedded Lightroom-style keyword paths when ImageIO exposes them and can apply matching XMP sidecars. **File → Import XML / XMP Metadata** accepts XMP, Isonique photo records and supported `AlbumData.xml` metadata. **Write matching XMP sidecar** in Export saves current keyword paths, flat keywords, caption and rating alongside rendered or original files. Keep each sidecar with its matching image when moving exports. [Historical workflow comparison](docs/WORKFLOW_COMPARISON.md)
 
 ## Platform and image processing
 

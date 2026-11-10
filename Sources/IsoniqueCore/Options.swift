@@ -17,6 +17,8 @@ public struct ExportOptions: Codable, Equatable {
     public var exif = false
     public var iptc = false
     public var gps = false
+    /// Optional so existing saved export presets still decode.
+    public var xmpSidecar: Bool?
     public init() {}
 }
 public struct ExportPreset: Codable, Identifiable {
