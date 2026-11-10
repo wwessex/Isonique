@@ -22,10 +22,16 @@ enum PhotoLocationAction {
 }
 
 struct PhotoLocationEdit: Identifiable {
+    struct Project {
+        let id: UUID
+        let name: String
+    }
+
     let id = UUID()
     let action: PhotoLocationAction
     let libraryRoot: URL
     let photos: [Photo]
+    var project: Project? = nil
 
     func changes(to coordinates: GPSCoordinates?, restrictedTo selection: Set<UUID>? = nil) -> [PhotoLocationChange] {
         photos.compactMap { photo in
@@ -55,18 +61,35 @@ extension Workspace {
     }
 
     @discardableResult
-    func applyLocationEdit(_ edit: PhotoLocationEdit, coordinates: GPSCoordinates?) -> Bool {
+    func applyLocationEdit(_ edit: PhotoLocationEdit, coordinates: GPSCoordinates?,
+                           projectReview: ProjectLocationReview? = nil) -> Bool {
         guard !busy else { return false }
-        let targets = metadataEditingTargets
+        let targets: [Photo]
+        let eligibleIDs: Set<UUID>?
+        if let project = edit.project {
+            guard locationEditor?.id == edit.id, let projectReview, projectReview.editID == edit.id else { return false }
+            guard placesProject?.id == project.id else {
+                error = "The project changed. Reopen Assign Project Location to review it."
+                return false
+            }
+            targets = activeVersions(in: project.id)
+            eligibleIDs = projectReview.eligibleIDs
+        } else {
+            targets = metadataEditingTargets
+            eligibleIDs = nil
+        }
         let previousPhotos = Dictionary(uniqueKeysWithValues: edit.photos.map { ($0.id, $0) })
         guard repository?.root == edit.libraryRoot, targets.count == previousPhotos.count, targets.allSatisfy({ photo in
-            guard let previous = previousPhotos[photo.id] else { return false }
-            return photo.locationOverride == previous.locationOverride && photo.gpsIndex == previous.gpsIndex
+            guard let previous = previousPhotos[photo.id], photo.locationOverride == previous.locationOverride,
+                  photo.gpsIndex == previous.gpsIndex else { return false }
+            guard edit.project != nil else { return true }
+            return photo.originalID == previous.originalID && photo.filename == previous.filename
+                && photo.referencedPath == previous.referencedPath && photo.sha256 == previous.sha256
         }) else {
             error = "The library, selection or location has changed. Reopen the location editor to review it."
             return false
         }
-        return commitLocationChanges(edit.changes(to: coordinates))
+        return commitLocationChanges(edit.changes(to: coordinates, restrictedTo: eligibleIDs))
     }
 
     func commitLocationChanges(_ changes: [PhotoLocationChange]) -> Bool {
@@ -120,75 +143,118 @@ struct PhotoLocationEditor: View {
     @State private var mapSelection = UUID()
     @State private var searchText = ""
     @State private var chosenResult: PhotoLocationLookupResult?
+    @State private var projectReview: ProjectLocationReview?
+    @State private var reviewError: String?
     @StateObject private var lookup = PhotoLocationLookup()
     @FocusState private var searchFocused: Bool
 
     init(edit: PhotoLocationEdit) {
         self.edit = edit
-        let current = edit.photos.count == 1 ? edit.photos.first?.cataloguedLocation : nil
+        let current = edit.project == nil && edit.photos.count == 1 ? edit.photos.first?.cataloguedLocation : nil
         _draft = State(initialValue: PhotoLocationDraft(current))
     }
 
     var body: some View {
         let coordinates = draft.coordinates
         let count = edit.photos.count
-        let changes = edit.changes(to: coordinates).count
+        let reviewed = edit.project == nil || projectReview != nil
+        let canChooseLocation = edit.project == nil || projectReview?.eligibleIDs.isEmpty == false
+        let changes = reviewed ? edit.changes(to: coordinates, restrictedTo: projectReview?.eligibleIDs).count : 0
+        let title: LocalizedStringKey = edit.project == nil ? edit.action.title : "Assign Project Location"
         VStack(alignment: .leading, spacing: 14) {
-            Text(edit.action.title).font(.title2.bold())
-            Text(count == 1 ? (edit.photos.first?.displayName ?? "") : "\(count) selected photos")
-                .foregroundStyle(.secondary)
+            Text(title).font(.title2.bold())
+            if let project = edit.project {
+                Text(project.name).foregroundStyle(.secondary)
+                if let projectReview {
+                    ProjectLocationPreview(photos: edit.photos, review: projectReview)
+                } else if let reviewError {
+                    Text(reviewError).foregroundStyle(.red)
+                } else {
+                    ProgressView("Checking project locations…").controlSize(.small)
+                }
+            } else {
+                Text(count == 1 ? (edit.photos.first?.displayName ?? "") : "\(count) selected photos")
+                    .foregroundStyle(.secondary)
+            }
             switch edit.action {
             case .assign:
-                locationSearch
-                SavedPlacesMenu(coordinates: coordinates, suggestedName: matchingLookupResult?.title) { point in
-                    lookup.cancel()
-                    chosenResult = nil
-                    previewLocation(point)
-                }
-                Grid(alignment: .leading) {
-                    GridRow {
-                        Text("Latitude")
-                        TextField("Latitude", text: $draft.latitude, prompt: Text("51.5"))
-                            .labelsHidden().accessibilityLabel("Latitude")
-                    }
-                    GridRow {
-                        Text("Longitude")
-                        TextField("Longitude", text: $draft.longitude, prompt: Text("-0.125"))
-                            .labelsHidden().accessibilityLabel("Longitude")
-                    }
-                }
-                Text("Enter signed decimal degrees. Latitude runs from −90 to 90 and longitude from −180 to 180.")
-                    .font(.caption).foregroundStyle(.secondary)
-                DisclosureGroup("Pick on Map", isExpanded: $showsMap) {
-                    if showsMap {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("Click a point to place the preview pin. Pan or zoom to refine it.")
-                                .font(.caption).foregroundStyle(.secondary)
-                            PhotoLocationMap(point: coordinates,
-                                             locations: Set(edit.photos.compactMap(\.cataloguedLocation))) {
-                                draft = PhotoLocationDraft($0)
-                            }.id(mapSelection).frame(height: 295).clipShape(.rect(cornerRadius: 8))
-                        }.padding(.top, 6)
-                    }
+                if canChooseLocation {
+                    assignmentInputs
                 }
             case .clear:
                 Text("Remove these locations from Places and GPS coordinate searches.")
             case .useOriginal:
                 Text("Remove the catalogue edits and use the original GPS where available.")
             }
-            Text("This changes the catalogue only. The original file and its embedded GPS are preserved.")
-                .font(.caption).foregroundStyle(.secondary)
-            Text(changes == 1 ? "1 photo will change" : "\(changes) photos will change")
-                .font(.caption).foregroundStyle(.secondary)
+            if canChooseLocation {
+                Text("This changes the catalogue only. The original file and its embedded GPS are preserved.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Text(changes == 1 ? "1 photo will change" : "\(changes) photos will change")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             HStack {
                 Spacer()
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
                 Button(edit.action.title) {
-                    if model.applyLocationEdit(edit, coordinates: coordinates) || model.error != nil { dismiss() }
+                    if model.applyLocationEdit(edit, coordinates: coordinates, projectReview: projectReview)
+                        || model.error != nil { dismiss() }
                 }.keyboardShortcut(searchFocused ? nil : .defaultAction).disabled(changes == 0)
             }
         }.padding(24).frame(width: showsMap ? 570 : 450)
+            .task { await loadProjectReview() }
             .onDisappear(perform: lookup.cancel)
+    }
+
+    @ViewBuilder
+    private var assignmentInputs: some View {
+        let coordinates = draft.coordinates
+        locationSearch
+        SavedPlacesMenu(coordinates: coordinates, suggestedName: matchingLookupResult?.title) { point in
+            lookup.cancel()
+            chosenResult = nil
+            previewLocation(point)
+        }
+        Grid(alignment: .leading) {
+            GridRow {
+                Text("Latitude")
+                TextField("Latitude", text: $draft.latitude, prompt: Text("51.5"))
+                    .labelsHidden().accessibilityLabel("Latitude")
+            }
+            GridRow {
+                Text("Longitude")
+                TextField("Longitude", text: $draft.longitude, prompt: Text("-0.125"))
+                    .labelsHidden().accessibilityLabel("Longitude")
+            }
+        }
+        Text("Enter signed decimal degrees. Latitude runs from −90 to 90 and longitude from −180 to 180.")
+            .font(.caption).foregroundStyle(.secondary)
+        DisclosureGroup("Pick on Map", isExpanded: $showsMap) {
+            if showsMap {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Click a point to place the preview pin. Pan or zoom to refine it.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    PhotoLocationMap(point: coordinates,
+                                     locations: Set(edit.photos.compactMap(\.cataloguedLocation))) {
+                        draft = PhotoLocationDraft($0)
+                    }.id(mapSelection).frame(height: 295).clipShape(.rect(cornerRadius: 8))
+                }.padding(.top, 6)
+            }
+        }
+    }
+
+    private func loadProjectReview() async {
+        guard edit.project != nil, let repository = model.repository, repository.root == edit.libraryRoot else { return }
+        let task = Task.detached(priority: .userInitiated) {
+            try ProjectLocationReview(edit: edit, repository: repository)
+        }
+        do {
+            let review = try await withTaskCancellationHandler {
+                try await task.value
+            } onCancel: { task.cancel() }
+            if !Task.isCancelled { projectReview = review }
+        } catch {
+            if !Task.isCancelled { reviewError = error.localizedDescription }
+        }
     }
 
     private var locationSearch: some View {

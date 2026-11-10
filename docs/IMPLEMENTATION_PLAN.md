@@ -249,9 +249,15 @@ Open a project in Places and import a GPX file containing waypoints. Files conta
 
 Assign Location saves the checked changes as one Undo step. Cancel closes the preview without saving. The catalogue stores waypoints in format 18 and includes them in project library exports. Reimport files saved with the earlier GPX overlay feature to add their waypoints. [GPX 1.1 schema](https://www.topografix.com/GPX/1/1/)
 
+## Project location assignment
+
+Select a project in Places and choose Assign Project Location. The preview covers every active version in that project, including versions hidden by the current browser filters. It lists versions eligible for assignment and counts versions with existing locations, explicitly cleared locations, or GPS that could not be verified. For versions with no GPS index, the preview reads verified originals to distinguish embedded GPS from missing GPS.
+
+Choose a destination by searching Apple Maps, using a saved place, picking on the map or entering coordinates. Assign Location fills the reviewed missing locations in one Undo step using the existing catalogue format. Cancel discards the preview. Aperture also offered project location assignment through its Project Info HUD. [Aperture 3.5 Help](https://aperture.skydocu.com/en/organize-and-sort-photos/organize-photos-using-places/assign-location-information-to-projects/)
+
 ## Next checkpoint
 
-Add project location assignment for versions without a location. Verify the preview, preservation of existing assignments and Undo/Redo.
+Use assigned catalogue GPS in edited exports when GPS metadata is enabled. Verify assigned, cleared and embedded locations, and confirm that GPS removal and original export still work.
 
 ## Pending physical camera checks
 

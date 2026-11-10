@@ -60,6 +60,7 @@ struct FeatureGuide: View {
             Feature(title: "Undo and Redo", detail: "Session Undo/Redo is always available. Optional persistent history retains the latest 100 photo edits in the catalogue.")
         ]),
         Group(title: "Available now", symbol: "checkmark.circle", features: [
+            Feature(title: "Project location assignment", detail: "Select a project in Places and choose Assign Project Location to review and fill missing locations in one Undo step. The review preserves existing locations, including embedded GPS in older originals, and skips explicitly cleared locations and originals it cannot verify."),
             Feature(title: "Export format, quality, size and metadata", detail: "Choose JPEG, PNG, TIFF or unchanged original; set JPEG quality and longest-edge size; save reusable presets; choose EXIF, IPTC and GPS for edited exports."),
             Feature(title: "Precise crop and selective metadata Stamp", detail: "Move and resize crops, lock aspect, switch portrait/landscape, enter exact pixels, and Stamp selected captions, keywords and ratings."),
             Feature(title: "Multiple Isonique libraries", detail: "Create a separate folder using File → New Isonique Library and switch using File → Open Isonique Library."),

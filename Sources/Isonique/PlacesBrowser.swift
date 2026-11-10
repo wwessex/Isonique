@@ -57,6 +57,9 @@ struct PlacesBrowser<PhotoCell: View>: View {
                     }
                     Spacer()
                     if let project {
+                        Button("Assign Project Location…", systemImage: "mappin") {
+                            model.openProjectLocationEditor()
+                        }
                         ProjectGPXTracksMenu(model: model, project: project).id(project.id)
                     }
                     if hasMapContent {
@@ -84,7 +87,7 @@ struct PlacesBrowser<PhotoCell: View>: View {
                     if project?.gpxTracks?.isEmpty == false {
                         Text("Show a track from the GPX Tracks menu.")
                     } else if project != nil {
-                        Text("Import a GPX file from the GPX Tracks menu, or catalogue GPS from photos in Grid or List.")
+                        Text("Assign a project location or import a GPX file.")
                     } else {
                         Text("Choose Grid or List to select older photos, then choose Metadata → Catalogue GPS from Originals.")
                     }
