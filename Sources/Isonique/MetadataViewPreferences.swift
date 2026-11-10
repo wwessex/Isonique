@@ -4,7 +4,7 @@ import IsoniqueCore
 enum MetadataViewField: String, CaseIterable, Codable, Identifiable {
     case name, dimensions, camera, captured, imported, rating, flag, colorLabel
     case caption, keywords, keywordPaths, title, creator, copyright, credit
-    case shutterSpeed, aperture, iso, focalLength, lens, originalStorage, linkedOriginal
+    case shutterSpeed, aperture, iso, focalLength, lens, latitude, longitude, originalStorage, linkedOriginal
 
     var id: Self { self }
 
@@ -30,6 +30,8 @@ enum MetadataViewField: String, CaseIterable, Codable, Identifiable {
         case .iso: return String(localized: "ISO")
         case .focalLength: return String(localized: "Focal length")
         case .lens: return String(localized: "Lens")
+        case .latitude: return String(localized: "Latitude")
+        case .longitude: return String(localized: "Longitude")
         case .originalStorage: return String(localized: "Original storage")
         case .linkedOriginal: return String(localized: "Linked RAW + JPEG")
         }
@@ -45,6 +47,8 @@ enum MetadataViewField: String, CaseIterable, Codable, Identifiable {
         }
     }
 
+    var readsOriginal: Bool { isEXIF || self == .latitude || self == .longitude }
+
     var isEXIF: Bool {
         switch self {
         case .shutterSpeed, .aperture, .iso, .focalLength, .lens: return true
@@ -54,13 +58,14 @@ enum MetadataViewField: String, CaseIterable, Codable, Identifiable {
 }
 
 enum BuiltInMetadataView: String, CaseIterable, Codable, Identifiable {
-    case general, exif, iptc, captionAndKeywords
+    case general, exif, gps, iptc, captionAndKeywords
     var id: Self { self }
 
     var name: String {
         switch self {
         case .general: return String(localized: "General")
         case .exif: return String(localized: "EXIF Info")
+        case .gps: return String(localized: "GPS")
         case .iptc: return String(localized: "IPTC Core")
         case .captionAndKeywords: return String(localized: "Caption & Keywords")
         }
@@ -73,6 +78,7 @@ enum BuiltInMetadataView: String, CaseIterable, Codable, Identifiable {
                     .rating, .flag, .linkedOriginal, .colorLabel, .caption, .keywords, .keywordPaths,
                     .title, .creator, .copyright, .credit, .originalStorage]
         case .exif: return [.camera, .captured, .shutterSpeed, .aperture, .iso, .focalLength, .lens]
+        case .gps: return [.latitude, .longitude]
         case .iptc: return [.title, .creator, .copyright, .credit]
         case .captionAndKeywords: return [.caption, .keywords, .keywordPaths]
         }

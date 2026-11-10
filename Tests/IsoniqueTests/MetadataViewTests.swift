@@ -31,7 +31,7 @@ final class MetadataViewTests: XCTestCase {
         XCTAssertEqual(selected.name, "Publication")
         XCTAssertEqual(selected.fields, [.lens, .caption, .iso, .creator])
 
-        let fields: [MetadataViewField] = [.creator, .lens, .caption]
+        let fields: [MetadataViewField] = [.creator, .longitude, .lens, .latitude, .caption]
         XCTAssertTrue(reopened.saveMetadataView(CustomMetadataView(id: selected.id, name: "Press", fields: fields)))
         let reread = Workspace(libraryRoot: firstLibrary, preferences: preferences)
         XCTAssertEqual(reread.metadataViews.customViews.count, 1)
@@ -43,6 +43,8 @@ final class MetadataViewTests: XCTestCase {
             XCTAssertFalse(builtIn.fields.isEmpty)
         }
         XCTAssertEqual(BuiltInMetadataView.exif.fields.filter(\.isEXIF), [.shutterSpeed, .aperture, .iso, .focalLength, .lens])
+        XCTAssertEqual(BuiltInMetadataView.gps.fields, [.latitude, .longitude])
+        XCTAssertTrue(BuiltInMetadataView.gps.fields.allSatisfy(\.readsOriginal))
         XCTAssertEqual(BuiltInMetadataView.iptc.fields, [.title, .creator, .copyright, .credit])
         XCTAssertEqual(BuiltInMetadataView.captionAndKeywords.fields, [.caption, .keywords, .keywordPaths])
         reread.selectMetadataView(.custom(view.id))

@@ -51,18 +51,10 @@ public struct CameraEXIF: Codable, Equatable, Sendable {
 
 public extension LibraryRepository {
     func cameraEXIF(for photo: Photo) throws -> CameraEXIF {
-        let url = try availableOriginalURL(photo)
-        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
-            throw LibraryError.unsupportedImage(photo.originalName)
-        }
-        return try Self.cameraEXIF(in: source, name: photo.originalName)
+        CameraEXIF(properties: try originalImageProperties(for: photo))
     }
 
     internal static func cameraEXIF(in source: CGImageSource, name: String) throws -> CameraEXIF {
-        guard let properties = CGImageSourceCopyPropertiesAtIndex(source, CGImageSourceGetPrimaryImageIndex(source), nil)
-                as? [String: Any] else {
-            throw LibraryError.unsupportedImage(name)
-        }
-        return CameraEXIF(properties: properties)
+        CameraEXIF(properties: try primaryImageProperties(in: source, name: name))
     }
 }
