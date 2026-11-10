@@ -980,7 +980,15 @@ public enum Renderer {
             currentIPTC.writing(to: &iptc)
             properties[kCGImagePropertyIPTCDictionary as String] = iptc
         }
-        if options.gps { properties[kCGImagePropertyGPSDictionary as String] = embedded[kCGImagePropertyGPSDictionary as String] }
+        if options.gps {
+            let originalGPSProperties: [String: Any]
+            if let source, CGImageSourceGetPrimaryImageIndex(source) != 0 {
+                originalGPSProperties = (try? LibraryRepository.primaryImageProperties(in: source, name: photo.originalName)) ?? [:]
+            } else {
+                originalGPSProperties = embedded
+            }
+            properties[kCGImagePropertyGPSDictionary as String] = photo.exportGPSProperties(from: originalGPSProperties)
+        }
         properties[kCGImagePropertyOrientation as String] = 1
         properties[kCGImageDestinationLossyCompressionQuality as String] = options.quality.isFinite ? min(1, max(0, options.quality)) : 0.95
         let data = NSMutableData()

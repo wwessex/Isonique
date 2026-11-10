@@ -215,7 +215,7 @@ Map pins and selection use the catalogue, so offline originals still appear with
 
 Select a photo or use Select Photos for a batch. Choose Assign Location, Clear Location or Use Original Location in Metadata or in the Location menu under Info → GPS. Assign uses signed decimal degrees. Clear hides the location for those versions, and Use Original Location removes the override. The embedded GPS index remains available for unedited versions and can still be populated by Catalogue GPS from Originals. A batch records one Undo step. With persistent history enabled, Undo and Redo also work after reopening.
 
-Places, GPS search and Smart Albums use the effective location. The catalogue saves edits and their history in format 16. Original-file export copies the source bytes, and GPS on rendered exports continues to use the original location when enabled.
+Places, GPS search and Smart Albums use the effective location. The catalogue saves edits and their history in format 16. Edited exports can include the effective location. Original-file export copies the source bytes.
 
 ## Map-based location assignment
 
@@ -255,9 +255,15 @@ Select a project in Places and choose Assign Project Location. The preview cover
 
 Choose a destination by searching Apple Maps, using a saved place, picking on the map or entering coordinates. Assign Location fills the reviewed missing locations in one Undo step using the existing catalogue format. Cancel discards the preview. Aperture also offered project location assignment through its Project Info HUD. [Aperture 3.5 Help](https://aperture.skydocu.com/en/organize-and-sort-photos/organize-photos-using-places/assign-location-information-to-projects/)
 
+## GPS in edited exports
+
+Enable GPS — current photo location when exporting edited JPEG, PNG or TIFF files. Assigned coordinates are written with the appropriate hemisphere references. The export keeps additional GPS fields such as altitude when the embedded coordinates match the catalogue and the location comes from the original. A newly assigned location writes its coordinates without carrying measurement data from the original location. Unindexed photos fall back to the GPS embedded in the primary image.
+
+Cleared locations and exports with GPS disabled omit GPS. Original-file export remains a byte-for-byte copy with its embedded metadata. [Apple Image I/O GPS dictionary](https://developer.apple.com/documentation/imageio/gps-dictionary-keys)
+
 ## Next checkpoint
 
-Use assigned catalogue GPS in edited exports when GPS metadata is enabled. Verify assigned, cleared and embedded locations, and confirm that GPS removal and original export still work.
+Add naming templates to batch export with a filename preview. Verify collision handling and compatibility with existing export presets.
 
 ## Pending physical camera checks
 

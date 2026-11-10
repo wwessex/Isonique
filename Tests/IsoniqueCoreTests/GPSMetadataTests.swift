@@ -4,6 +4,99 @@ import XCTest
 @testable import IsoniqueCore
 
 extension LibraryTests {
+    func testEditedExportsUseCatalogueGPSAndOriginalExportsPreserveBytes() throws {
+        let gpsKey = kCGImagePropertyGPSDictionary as String
+        let altitudeKey = kCGImagePropertyGPSAltitude as String
+        var metadata = gpsProperties(51.5, "N", 0.125, "W")
+        var originalGPS = try XCTUnwrap(metadata[gpsKey] as? [String: Any])
+        originalGPS[altitudeKey] = 45.0
+        originalGPS[kCGImagePropertyGPSAltitudeRef as String] = 0
+        metadata[gpsKey] = originalGPS
+        let tagged = try gpsImage("Embedded GPS.jpg", type: .jpeg, properties: metadata)
+        let untagged = try gpsImage("Untagged GPS test.jpg", type: .jpeg, properties: [:])
+        let repository = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("GPS export library"))
+        var library = try repository.load()
+        XCTAssertTrue(try repository.importPhoto(tagged, projectID: nil, into: &library))
+        XCTAssertTrue(try repository.importPhoto(untagged, projectID: nil, into: &library))
+        let embedded = library.photos[0]
+        let noGPS = library.photos[1]
+        let assigned = try XCTUnwrap(library.createVersion(of: embedded.id, from: .current))
+        let cleared = try XCTUnwrap(library.createVersion(of: embedded.id, from: .current))
+        let assignedWithoutEmbeddedGPS = try XCTUnwrap(library.createVersion(of: noGPS.id, from: .current))
+        let destination = try XCTUnwrap(GPSCoordinates(latitude: -33.875, longitude: 151.25))
+        XCTAssertNotNil(library.replaceLocations([
+            PhotoLocationChange(photoID: assigned.id, location: .assigned(destination)),
+            PhotoLocationChange(photoID: cleared.id, location: .cleared),
+            PhotoLocationChange(photoID: assignedWithoutEmbeddedGPS.id, location: .assigned(destination))
+        ]))
+        try repository.save(library)
+        let saved = Dictionary(uniqueKeysWithValues: try repository.load().photos.map { ($0.id, $0) })
+        var legacy = embedded
+        legacy.gpsIndex = nil
+        var indexed = noGPS
+        indexed.gpsIndex = GPSIndex(properties: gpsProperties(33.875, "S", 151.25, "E"))
+        var indexedMissing = embedded
+        indexedMissing.gpsIndex = GPSIndex(properties: [:])
+        let embeddedPoint = try XCTUnwrap(embedded.cataloguedLocation)
+        let variants: [(name: String, photo: Photo, expected: GPSCoordinates?, altitude: Double?)] = [
+            ("assigned", try XCTUnwrap(saved[assigned.id]), destination, nil),
+            ("assigned-untagged", try XCTUnwrap(saved[assignedWithoutEmbeddedGPS.id]), destination, nil),
+            ("cleared", try XCTUnwrap(saved[cleared.id]), nil, nil),
+            ("embedded", embedded, embeddedPoint, 45),
+            ("legacy", legacy, embeddedPoint, 45),
+            ("indexed-only", indexed, destination, nil),
+            ("indexed-missing", indexedMissing, nil, nil)
+        ]
+        for format in [ExportFormat.jpeg, .png, .tiff] {
+            var options = ExportOptions()
+            options.format = format
+            options.gps = true
+            options.exif = true
+            options.iptc = true
+            for variant in variants {
+                let output = temporary.appendingPathComponent("\(variant.name).\(format.suffix)")
+                try Renderer.export(variant.photo, repository: repository, to: output, options: options)
+                let properties = try exportProperties(at: output)
+                if let expected = variant.expected {
+                    let coordinates = try XCTUnwrap(GPSCoordinates(properties: properties), output.lastPathComponent)
+                    XCTAssertEqual(coordinates.latitude, expected.latitude, accuracy: 0.000001, output.lastPathComponent)
+                    XCTAssertEqual(coordinates.longitude, expected.longitude, accuracy: 0.000001, output.lastPathComponent)
+                    let gps = try XCTUnwrap(properties[gpsKey] as? [String: Any])
+                    XCTAssertEqual(gps[altitudeKey] as? Double, variant.altitude, output.lastPathComponent)
+                } else {
+                    XCTAssertNil(properties[gpsKey], output.lastPathComponent)
+                }
+            }
+
+            options.gps = false
+            for variant in variants where variant.name == "assigned" || variant.name == "embedded" {
+                let output = temporary.appendingPathComponent("\(variant.name)-gps-off.\(format.suffix)")
+                try Renderer.export(variant.photo, repository: repository, to: output, options: options)
+                XCTAssertNil(try exportProperties(at: output)[gpsKey], output.lastPathComponent)
+            }
+        }
+
+        let originalBytes = try Data(contentsOf: tagged)
+        for photoID in [assigned.id, cleared.id] {
+            let photo = try XCTUnwrap(saved[photoID])
+            for includeGPS in [true, false] {
+                var options = ExportOptions()
+                options.format = .original
+                options.gps = includeGPS
+                let copy = temporary.appendingPathComponent("\(photo.id)-\(includeGPS).jpg")
+                try Renderer.export(photo, repository: repository, to: copy, options: options)
+                XCTAssertEqual(try Data(contentsOf: copy), originalBytes)
+            }
+        }
+        XCTAssertEqual(try Data(contentsOf: tagged), originalBytes)
+        XCTAssertEqual(try Data(contentsOf: repository.originalURL(embedded)), originalBytes)
+    }
+
+    private func exportProperties(at url: URL) throws -> [String: Any] {
+        let source = try XCTUnwrap(CGImageSourceCreateWithURL(url as CFURL, nil))
+        return try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any])
+    }
+
     func testGPSParsesDecimalDegreesAndHemisphereReferences() throws {
         let northWest = try XCTUnwrap(GPSCoordinates(properties: gpsProperties(51.5, "N", 0.125, "W")))
         XCTAssertEqual(northWest.latitude, 51.5)

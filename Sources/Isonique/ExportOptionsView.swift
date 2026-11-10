@@ -34,7 +34,7 @@ struct ExportOptionsView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Toggle("EXIF — camera and capture information", isOn: $options.exif)
                         Toggle("IPTC — current metadata and keywords", isOn: $options.iptc)
-                        Toggle("GPS — original location", isOn: $options.gps)
+                        Toggle("GPS — current photo location", isOn: $options.gps)
                     }.frame(maxWidth: .infinity, alignment: .leading).padding(8)
                 }
                 Text("Unchecked metadata is omitted. Original files always retain their embedded metadata.").font(.caption).foregroundStyle(.secondary)
