@@ -44,7 +44,7 @@ final class MetadataViewTests: XCTestCase {
         }
         XCTAssertEqual(BuiltInMetadataView.exif.fields.filter(\.isEXIF), [.shutterSpeed, .aperture, .iso, .focalLength, .lens])
         XCTAssertEqual(BuiltInMetadataView.gps.fields, [.latitude, .longitude])
-        XCTAssertTrue(BuiltInMetadataView.gps.fields.allSatisfy(\.readsOriginal))
+        XCTAssertTrue(BuiltInMetadataView.gps.fields.allSatisfy(\.isGPS))
         XCTAssertEqual(BuiltInMetadataView.iptc.fields, [.title, .creator, .copyright, .credit])
         XCTAssertEqual(BuiltInMetadataView.captionAndKeywords.fields, [.caption, .keywords, .keywordPaths])
         reread.selectMetadataView(.custom(view.id))

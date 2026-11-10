@@ -156,16 +156,16 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
         case .exifLens: return matchesEXIFValue(photo.cameraEXIF?.lens) { matchesText([$0]) }
         case .gpsLocation:
             switch comparison {
-            case .isPresent: return photo.gpsIndex?.coordinates != nil
-            case .isMissing: return photo.gpsIndex != nil && photo.gpsIndex?.coordinates == nil
-            case .isUnindexed: return photo.gpsIndex == nil
+            case .isPresent: return photo.cataloguedLocation != nil
+            case .isMissing: return photo.hasCataloguedLocation && photo.cataloguedLocation == nil
+            case .isUnindexed: return !photo.hasCataloguedLocation
             case .withinRadius:
-                guard let coordinates = photo.gpsIndex?.coordinates else { return false }
+                guard let coordinates = photo.cataloguedLocation else { return false }
                 return gpsRadius?.includes(coordinates) == true
             default: return false
             }
-        case .gpsLatitude: return matchesGPSAxis(photo.gpsIndex?.coordinates?.latitude)
-        case .gpsLongitude: return matchesGPSAxis(photo.gpsIndex?.coordinates?.longitude)
+        case .gpsLatitude: return matchesGPSAxis(photo.cataloguedLocation?.latitude)
+        case .gpsLongitude: return matchesGPSAxis(photo.cataloguedLocation?.longitude)
         case .format:
             let extensionValue = Self.normalizedExtension((photo.filename as NSString).pathExtension)
             let expected = Self.normalizedExtension(term)
@@ -199,7 +199,7 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
 
     private var gpsAxisValue: Double? {
         let limit: Double = field == .gpsLatitude ? 90 : 180
-        guard let value = GPSRadiusRule.decimal(term, allowingDegrees: true), abs(value) <= limit else { return nil }
+        guard let value = GPSCoordinates.decimal(term, allowingDegrees: true), abs(value) <= limit else { return nil }
         return value
     }
 

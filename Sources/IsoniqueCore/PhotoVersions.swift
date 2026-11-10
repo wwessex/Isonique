@@ -110,6 +110,7 @@ public extension Library {
             return replaceCaptureDates(changes).map(PhotoHistoryEntry.captureDates)
         case .batchMetadata(let changes):
             return replaceBatchMetadata(changes).map(PhotoHistoryEntry.batchMetadata)
+        case .locations(let changes): return replaceLocations(changes).map(PhotoHistoryEntry.locations)
         case .stamp(let changes):
             return applyPhotoFieldChanges(changes, photoID: \.photoID) { photo, change in
                 change.applying(to: &photo)
@@ -126,11 +127,12 @@ public enum PhotoHistoryEntry: Codable, Equatable {
     case captureDates([CaptureDateChange])
     case batchMetadata([BatchMetadataChange])
     case stamp([PhotoStampChange])
+    case locations([PhotoLocationChange])
 
     public var photo: Photo? {
         switch self {
         case .edit(let photo), .removeVersion(let photo), .restoreVersion(let photo): return photo
-        case .stackPick, .captureDates, .batchMetadata, .stamp: return nil
+        case .stackPick, .captureDates, .batchMetadata, .stamp, .locations: return nil
         }
     }
 
@@ -144,6 +146,7 @@ public enum PhotoHistoryEntry: Codable, Equatable {
         case .captureDates(let changes): return changes.map(\.photoID)
         case .batchMetadata(let changes): return changes.map(\.photoID)
         case .stamp(let changes): return changes.map(\.photoID)
+        case .locations(let changes): return changes.map(\.photoID)
         default: return []
         }
     }
@@ -151,11 +154,13 @@ public enum PhotoHistoryEntry: Codable, Equatable {
     var requiredCatalogueVersion: Int? {
         switch self {
         case .captureDates: return 8
+        case .locations: return 16
         case .stamp: return 13
         case .batchMetadata(let changes):
             if changes.contains(where: { $0.iptc?.isEmpty == false }) { return 11 }
             return changes.contains { $0.keywordPaths != nil } ? 10 : 9
         default:
+            if photo?.locationOverride != nil { return 16 }
             if photo?.gpsIndex?.coordinates != nil { return 15 }
             if photo?.cameraEXIF?.isEmpty == false { return 14 }
             if photo?.iptc?.isEmpty == false { return 11 }
@@ -211,6 +216,10 @@ public struct EditHistory: Codable {
             if case .stamp(let changes) = entry {
                 let kept = changes.filter { !photoIDs.contains($0.photoID) }
                 return kept.isEmpty ? nil : .stamp(kept)
+            }
+            if case .locations(let changes) = entry {
+                let kept = changes.filter { !photoIDs.contains($0.photoID) }
+                return kept.isEmpty ? nil : .locations(kept)
             }
             return isRemoved(entry) ? nil : entry
         }
