@@ -1,6 +1,6 @@
 # Isonique library compatibility
 
-Isonique stores its catalogue and edit recipes in `catalog.json` and uses its own backup format. Its macOS bundle identifier is `io.github.wwessex.isonique`. A library cannot be created inside an application bundle or a legacy photo library.
+Isonique stores its catalogue and edit recipes in `catalog.json` and uses its own backup format. A library cannot be created inside an application bundle or a legacy photo library.
 
 ## Isonique catalogues
 
@@ -16,8 +16,8 @@ Isonique backups copy the saved catalogue and its managed originals, including p
 
 Allow space for a complete temporary copy. The recovery workflow is limited to embedded originals and supported metadata in those files. Database projects, albums, relationships, previews, referenced originals, legacy edits and vaults are outside its scope. Tests cover a synthetic `.aplibrary` fixture with a generated image and a mock database. A real legacy library has not been tested.
 
-Normal import reads embedded Lightroom-style keyword paths when ImageIO exposes them and can apply matching XMP sidecars. **File → Import XML / XMP Metadata** accepts XMP, Isonique photo records and supported `AlbumData.xml` metadata. **Write matching XMP sidecar** in Export saves current keyword paths, flat keywords, caption, rating, title, creator, copyright and credit alongside rendered or original files. Keep each sidecar with its matching image when moving exports. [Historical workflow comparison](docs/APERTURE_FEATURE_PARITY.md)
+Normal import reads embedded Lightroom-style keyword paths when ImageIO exposes them and can apply matching XMP sidecars. **File → Import XML / XMP Metadata** accepts XMP, Isonique photo records and supported `AlbumData.xml` metadata. **Write matching XMP sidecar** in Export saves current keyword paths, flat keywords, caption, rating, title, creator, copyright and credit alongside rendered or original files. Keep each sidecar with its matching image when moving exports. [Historical workflow comparison](docs/WORKFLOW_COMPARISON.md)
 
 ## Platform and image processing
 
-The maintained app targets Apple Silicon and macOS 14 or later. Camera RAW support depends on system ImageIO codecs. Edited output uses 8-bit sRGB. The rendering notes describe the processing choices and the test record identifies the camera samples and OS tested. [Processing notes](PROCESSING_ALTERNATIVES.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
+The maintained app targets Apple Silicon and macOS 14 or later. Camera RAW support depends on system ImageIO codecs. Edited output uses 8-bit sRGB. The rendering notes describe the processing choices and the test record identifies the camera samples and OS tested. [Processing notes](PROCESSING_ALTERNATIVES.md) · [Test results](docs/TEST_RESULTS.md)
