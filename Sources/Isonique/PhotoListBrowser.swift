@@ -5,6 +5,7 @@ import IsoniqueCore
 enum BrowserPresentation: String, CaseIterable, Identifiable {
     case grid = "Grid Browser"
     case list = "List Browser"
+    case places = "Places"
     case viewer = "Photo Viewer"
 
     var id: Self { self }
@@ -12,6 +13,7 @@ enum BrowserPresentation: String, CaseIterable, Identifiable {
         switch self {
         case .grid: return KeyboardShortcut("g", modifiers: [.control])
         case .list: return KeyboardShortcut("l", modifiers: [.control])
+        case .places: return KeyboardShortcut("m", modifiers: [.control])
         case .viewer: return nil
         }
     }
@@ -20,6 +22,7 @@ enum BrowserPresentation: String, CaseIterable, Identifiable {
         switch self {
         case .grid: return "square.grid.2x2"
         case .list: return "list.bullet.rectangle"
+        case .places: return "map"
         case .viewer: return "rectangle.bottomthird.inset.filled"
         }
     }
@@ -71,22 +74,45 @@ struct GridThumbnailSizePicker: View {
 }
 
 extension Workspace {
-    var presentation: BrowserPresentation { viewer ? .viewer : browserLayout }
+    var usesPlacesPhotos: Bool { places && !batchMode && !isViewingTrash }
+
+    var presentation: BrowserPresentation {
+        if viewer { return .viewer }
+        return usesPlacesPhotos ? .places : browserLayout
+    }
+
+    func canChoosePresentation(_ presentation: BrowserPresentation) -> Bool {
+        guard !busy, repository != nil else { return false }
+        switch presentation {
+        case .places: return !batchMode && !isViewingTrash
+        case .viewer: return !batchMode
+        case .grid, .list: return true
+        }
+    }
 
     func setBrowserLayout(_ layout: BrowserPresentation) {
-        guard layout != .viewer else { return }
+        guard layout == .grid || layout == .list else { return }
         browserLayout = layout
         preferences.set(layout.rawValue, forKey: "browser.layout")
     }
 
     func choosePresentation(_ presentation: BrowserPresentation) {
-        if presentation == .viewer {
-            guard !batchMode, !photos.isEmpty else { return }
+        guard canChoosePresentation(presentation) else { return }
+        switch presentation {
+        case .viewer:
+            guard !photos.isEmpty else { return }
             if selected == nil { selection = photos.first?.id }
             viewer = true
-        } else {
+        case .places:
+            showBrowser()
+            places = true
+            selectAfterChange(preferred: selection)
+        case .grid, .list:
+            let wasInPlaces = usesPlacesPhotos
+            places = false
             setBrowserLayout(presentation)
             showBrowser()
+            if wasInPlaces { selectAfterChange(preferred: selection) }
         }
     }
 

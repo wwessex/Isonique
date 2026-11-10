@@ -494,3 +494,10 @@
 - Query tests covered signed comparisons, bounds, coordinate entry with a decimal comma and degree symbol, distinct missing and unindexed states, and a radius crossing the date line. After the indexed original was moved offline and the catalogue reopened, the saved rule matched both versions without checking original availability.
 - In the signed macOS app, Metadata → Catalogue GPS from Originals indexed one selected reference. Advanced Search saved a ten-kilometre Smart Album. After removing the reference and reloading, the Smart Album retained its match. A separate longitude search still returned the offline photo. All disposable originals matched their initial hashes after the run.
 - All 256 release tests passed, including the four RAW fixtures and Finder Trash handoff. The branding check passed and the arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
+
+## Places map browsing
+
+- Workspace tests verified library and project membership, shared-coordinate pins, preservation of the selected version, rejection of an out-of-scope pin, and filtering in Places versus Grid. After removing a referenced original and reloading, both versions retained their map location and the selected version could still open in the Viewer. The catalogue bytes matched after browsing.
+- Framing tests covered widely separated points and a wrapped bounding rectangle across the date line.
+- In the signed macOS test app, Control–M opened Places with the London and Sydney pins visible together. Selecting the Sydney pin updated the Inspector. After moving the London original offline and reloading, selecting its pin updated the Inspector and the thumbnail showed that the original was unavailable. Each project displayed its own pin, Back returned from the Viewer to Places, and All Photos restored both pins. The catalogue and original hashes matched after inspection.
+- All 258 release tests passed, including four RAW fixtures and Finder Trash handoff. The branding check passed and the arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.

@@ -1,7 +1,7 @@
 import Foundation
 import ImageIO
 
-public struct GPSCoordinates: Codable, Equatable, Sendable {
+public struct GPSCoordinates: Codable, Hashable, Sendable {
     public let latitude: Double
     public let longitude: Double
 
