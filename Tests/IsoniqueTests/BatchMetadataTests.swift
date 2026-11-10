@@ -170,9 +170,11 @@ final class BatchMetadataTests: XCTestCase {
         let fields = IPTCMetadata(title: "New title", creators: ["Pat, Jr.", "Róisín"], credit: "")
         let preview = review.preview(caption: nil, keywordMode: .unchanged, keywords: "", iptc: fields)
         XCTAssertEqual(preview.rows.count, 2)
-        XCTAssertEqual(preview.rows.first?.after.iptc?.map(\.field), [.title, .creator, .credit])
-        XCTAssertNil(preview.rows.last?.before.iptc?.first { $0.field == .title }?.text)
-        XCTAssertEqual(preview.rows.first?.after.iptc?.first { $0.field == .credit }?.text, "")
+        let firstRow = try XCTUnwrap(preview.rows.first { $0.id == first.id })
+        let secondRow = try XCTUnwrap(preview.rows.first { $0.id == second.id })
+        XCTAssertEqual(firstRow.after.iptc?.map(\.field), [.title, .creator, .credit])
+        XCTAssertNil(secondRow.before.iptc?.first { $0.field == .title }?.text)
+        XCTAssertEqual(firstRow.after.iptc?.first { $0.field == .credit }?.text, "")
 
         second.iptc?.copyright = "Newer copyright"
         draft = workspace.library

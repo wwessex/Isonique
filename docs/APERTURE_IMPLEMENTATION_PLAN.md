@@ -185,9 +185,13 @@ Metadata → Catalogue IPTC from Originals reviews the current selection. It ver
 
 Expand Info → EXIF to inspect shutter speed, aperture, ISO, focal length and lens from the selected photo’s original. ImageIO reads the metadata in the background when the section is open. Changing photos or refreshing original availability updates the readout. The section distinguishes an absent field from an offline or unreadable original. It uses the actual focal length and displays subsecond exposures as fractions when they closely match a reciprocal. [ImageIO EXIF keys](https://developer.apple.com/documentation/imageio/exif-dictionary-keys)
 
+## Configurable metadata views in Info
+
+The Metadata View picker includes General, EXIF Info, IPTC Core and Caption & Keywords. General uses the existing Info layout. Manage Metadata Views creates a view from selected fields or duplicates the current view as a starting point. Use the move buttons to set the display order. Custom views can be renamed, edited and deleted. The active view and custom definitions are stored in app preferences and shared across libraries. Deleting the active custom view returns Info to General. Editable fields use the existing photo edit controls. [Aperture 3.5 Help](https://aperture.skydocu.com/en/work-with-metadata/work-with-metadata-views/create-modify-and-manage-metadata-views/)
+
 ## Next checkpoint
 
-Add configurable metadata views in Info. Verify that selected fields and order persist and that the default views remain available. Follow with catalogue-backed EXIF search.
+Add catalogue-backed EXIF search for the five capture fields. Verify typed comparisons, missing values, and search of offline originals with previously catalogued metadata.
 
 ## Pending physical camera checks
 

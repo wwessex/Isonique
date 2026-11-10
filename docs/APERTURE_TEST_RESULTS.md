@@ -467,3 +467,9 @@
 - The RAW workflow checked capture settings on Sony ARW, Canon CR3, Nikon NEF and Ricoh DNG files alongside the existing preview and export checks.
 - In the signed app, Info → EXIF stayed open across selection changes. It showed the rotated JPEG and Sony RAW values, displayed unavailable fields for a partial JPEG and showed a distinct message for an offline reference. The catalogue bytes and original fingerprints matched after inspection.
 - All 244 release tests passed, including four RAW fixtures and Finder Trash handoff. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
+
+## Configurable metadata views in Info
+
+- Preference tests verified custom fields and order, renaming, active view restoration across libraries, duplicate-name validation, access to every built-in view, and fallback to General after deleting the active view. Customising the views left the catalogue bytes unchanged.
+- In the signed app, created Shoot Notes and reordered its fields to ISO, Caption and Lens. After quitting and reopening, Info restored the custom view and the same order. A caption edited from that view persisted. General, EXIF Info, IPTC Core and Caption & Keywords were all available. Collapsing and reopening General’s IPTC section retained an unsaved draft.
+- All 246 release tests passed, including the four RAW fixtures and Finder Trash handoff. An older IPTC batch assertion now identifies its preview rows by photo ID to handle tied import times. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
