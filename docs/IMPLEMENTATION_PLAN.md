@@ -221,9 +221,13 @@ Places, GPS search and Smart Albums use the effective location. The catalogue sa
 
 Open Assign Location for a selected photo version or batch, then expand Pick on Map. Click a point to move the preview pin and fill the signed coordinate fields. Pan or zoom to refine the pick, or edit either coordinate directly. The picker opens around the current coordinates or the selected photos’ known locations when available. Assign Location saves the point through the existing location editor. Cancel discards the draft. The confirmed location updates Places and GPS Smart Albums in the same Undo step. [Apple MapKit coordinate conversion](https://developer.apple.com/documentation/mapkit/mkmapview/convert(_:tocoordinatefrom:))
 
+## Address and place-name lookup
+
+In Assign Location, enter an address or place name and choose Search Apple Maps or press Return in the search field. Choose a result to fill the coordinate fields and centre the preview map if it is open. Assign Location saves the resulting point to the selected versions. Stop Search cancels a request, and Cancel discards the location draft. Latitude and longitude remain editable when Apple Maps returns no matches or is unavailable. The catalogue stores the coordinates through the existing location edit. [Apple MapKit local search](https://developer.apple.com/documentation/mapkit/mklocalsearch)
+
 ## Next checkpoint
 
-Add address and place-name lookup to the location editor. Verify selection of a result, cancellation and coordinate entry when lookup is unavailable.
+Add saved named places to the location editor. Verify creating, reusing, renaming and removing a named place.
 
 ## Pending physical camera checks
 

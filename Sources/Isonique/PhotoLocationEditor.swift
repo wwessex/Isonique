@@ -113,6 +113,11 @@ struct PhotoLocationEditor: View {
     let edit: PhotoLocationEdit
     @State private var draft: PhotoLocationDraft
     @State private var showsMap = false
+    @State private var mapSelection = UUID()
+    @State private var searchText = ""
+    @State private var chosenResult: PhotoLocationLookupResult?
+    @StateObject private var lookup = PhotoLocationLookup()
+    @FocusState private var searchFocused: Bool
 
     init(edit: PhotoLocationEdit) {
         self.edit = edit
@@ -130,6 +135,7 @@ struct PhotoLocationEditor: View {
                 .foregroundStyle(.secondary)
             switch edit.action {
             case .assign:
+                locationSearch
                 Grid(alignment: .leading) {
                     GridRow {
                         Text("Latitude")
@@ -152,7 +158,7 @@ struct PhotoLocationEditor: View {
                             PhotoLocationMap(point: coordinates,
                                              locations: Set(edit.photos.compactMap(\.cataloguedLocation))) {
                                 draft = PhotoLocationDraft($0)
-                            }.frame(height: 295).clipShape(.rect(cornerRadius: 8))
+                            }.id(mapSelection).frame(height: 295).clipShape(.rect(cornerRadius: 8))
                         }.padding(.top, 6)
                     }
                 }
@@ -170,8 +176,70 @@ struct PhotoLocationEditor: View {
                 Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction)
                 Button(edit.action.title) {
                     if model.applyLocationEdit(edit, coordinates: coordinates) || model.error != nil { dismiss() }
-                }.keyboardShortcut(.defaultAction).disabled(changes == 0)
+                }.keyboardShortcut(searchFocused ? nil : .defaultAction).disabled(changes == 0)
             }
         }.padding(24).frame(width: showsMap ? 570 : 450)
+            .onDisappear(perform: lookup.cancel)
+    }
+
+    private var locationSearch: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                TextField("Address or place name", text: $searchText, prompt: Text("Address or place name"))
+                    .labelsHidden().accessibilityLabel("Address or place name")
+                    .focused($searchFocused)
+                    .onSubmit(submitSearch)
+                    .onChange(of: searchText) { _, _ in lookup.cancel() }
+                Button("Search Apple Maps", action: submitSearch)
+                    .disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || lookup.state == .searching)
+            }
+            switch lookup.state {
+            case .idle:
+                if let chosenResult, draft.coordinates == PhotoLocationDraft(chosenResult.coordinates).coordinates {
+                    Label(chosenResult.title, systemImage: "mappin.circle")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            case .searching:
+                HStack {
+                    ProgressView("Searching Apple Maps…").controlSize(.small)
+                    Spacer()
+                    Button("Stop Search", action: lookup.cancel)
+                }
+            case .results(let matches):
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(matches) { match in
+                            Button {
+                                guard let selected = lookup.choose(match.id) else { return }
+                                chosenResult = selected
+                                draft = PhotoLocationDraft(selected.coordinates)
+                                mapSelection = UUID()
+                                searchFocused = false
+                            } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(match.title)
+                                    if let address = match.address {
+                                        Text(address).font(.caption).foregroundStyle(.secondary)
+                                    }
+                                }.frame(maxWidth: .infinity, alignment: .leading)
+                            }.buttonStyle(.bordered)
+                        }
+                    }
+                }.frame(maxHeight: showsMap ? 84 : 145)
+                    .accessibilityLabel("Apple Maps results")
+            case .noResults:
+                Text("No places found. Try another search or enter coordinates below.")
+                    .font(.caption).foregroundStyle(.secondary)
+            case .unavailable:
+                Text("Apple Maps lookup is unavailable. Enter coordinates below or try again.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+    }
+
+    private func submitSearch() {
+        guard lookup.state != .searching else { return }
+        chosenResult = nil
+        lookup.submit(searchText)
     }
 }
