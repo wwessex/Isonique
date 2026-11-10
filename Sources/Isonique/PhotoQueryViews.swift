@@ -152,6 +152,7 @@ private struct PhotoQueryRow: View {
             .onChange(of: criterion.field) { _, field in
                 if let operation = field.operators.first { criterion.comparison = operation }
                 criterion.keywordPath = nil
+                criterion.gpsRadius = nil
                 switch field {
                 case .rating: criterion.value = "3"
                 case .colorLabel: criterion.value = "1"
@@ -176,6 +177,14 @@ private struct PhotoQueryRow: View {
         case .exifISO: TextField("e.g. 400", text: $criterion.value).accessibilityLabel("Rule ISO")
         case .exifFocalLength: TextField("e.g. 35 mm", text: $criterion.value).accessibilityLabel("Rule focal length")
         case .exifLens: TextField("Lens name", text: $criterion.value).accessibilityLabel("Rule lens name")
+        case .gpsLatitude: TextField("e.g. 51.5", text: $criterion.value).accessibilityLabel("Rule latitude")
+        case .gpsLongitude: TextField("e.g. -0.125", text: $criterion.value).accessibilityLabel("Rule longitude")
+        case .gpsLocation:
+            HStack(spacing: 6) {
+                TextField("Latitude", text: radiusInput(\.latitude)).accessibilityLabel("Radius centre latitude")
+                TextField("Longitude", text: radiusInput(\.longitude)).accessibilityLabel("Radius centre longitude")
+                TextField("km", text: radiusInput(\.kilometres)).accessibilityLabel("Radius in kilometres")
+            }
         case .flag: booleanPicker("Flagged", "Unflagged")
         case .storage: booleanPicker("Referenced", "Managed")
         case .availability: booleanPicker("Available", "Unavailable")
@@ -206,6 +215,14 @@ private struct PhotoQueryRow: View {
         case .format: TextField("Extension, e.g. jpg", text: $criterion.value).accessibilityLabel("Rule file extension")
         default: TextField("Value", text: $criterion.value).accessibilityLabel("Rule value")
         }
+    }
+
+    private func radiusInput(_ field: WritableKeyPath<GPSRadiusRule, String>) -> Binding<String> {
+        Binding(get: { criterion.gpsRadius?[keyPath: field] ?? "" }, set: { value in
+            var radius = criterion.gpsRadius ?? GPSRadiusRule()
+            radius[keyPath: field] = value
+            criterion.gpsRadius = radius
+        })
     }
 
     private func booleanPicker(_ affirmative: String, _ negative: String) -> some View {

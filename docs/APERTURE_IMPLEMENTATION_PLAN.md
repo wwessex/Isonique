@@ -199,9 +199,15 @@ Imports read EXIF during the normal catalogue save. For older photos, Metadata �
 
 Choose GPS in the Info inspector’s Metadata View menu to see signed latitude and longitude in decimal degrees. The reader uses the primary image’s embedded GPS metadata, requires a complete pair with valid hemisphere references, and distinguishes missing or invalid coordinates, an offline original and an unreadable image. Latitude and Longitude can also be added to custom metadata views. The view reads locally and leaves original bytes and the catalogue unchanged. Aperture’s Info inspector also had a Map pane for viewing and assigning locations. [Aperture 3.5 Help](https://aperture.skydocu.com/en/organize-and-sort-photos/organize-photos-using-places/work-with-locations-in-the-info-inspector/)
 
+## Catalogue-backed GPS search
+
+New imports index the primary image’s embedded GPS. In an older library, select photos and choose Metadata → Catalogue GPS from Originals. It verifies each original’s fingerprint once, indexes its versions together and skips offline, unreadable or changed originals. Advanced Search and Smart Albums can compare signed latitude or longitude, or match a radius in kilometres around a coordinate pair. Coordinate comparisons accept the six-decimal values shown in Info. GPS Location presence rules distinguish photos with coordinates, photos checked without valid coordinates and photos yet to be checked.
+
+Search uses the saved catalogue values, including while an indexed original is offline. Coordinates and saved GPS rules require catalogue format 15. An index entry that only records a completed check without coordinates does not require an upgrade.
+
 ## Next checkpoint
 
-Add catalogue-backed GPS indexing and location search for Advanced Search and Smart Albums. Verify that indexed coordinates remain usable with offline originals. Follow with map browsing.
+Add map browsing for photos with catalogued coordinates. Verify offline originals, map selection and the library and project scopes.
 
 ## Pending physical camera checks
 

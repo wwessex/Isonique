@@ -77,7 +77,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var batchMetadataReview: BatchMetadataReview?
     @Published var inheritedIPTCReview: InheritedIPTCReview?
     @Published var inheritedIPTCScan: Task<InheritedIPTCReview, Error>?
-    @Published var exifCatalogueTask: Task<(Library, EXIFCatalogueResult), Error>?
+    @Published var originalMetadataCatalogueTask: Task<(Library, MetadataCatalogueResult), Error>?
     @Published var captureDateCorrection: CaptureDateCorrection?
     @Published var showImportOptions = false
     @Published var pendingImport: [URL] = []
@@ -776,10 +776,12 @@ enum EditTool: String { case select, crop, straighten, brush }
                 if let scan = workspace.inheritedIPTCScan {
                     Button("Cancel IPTC Review") { scan.cancel() }.disabled(scan.isCancelled)
                 }
-                Button("Catalogue EXIF from Originals", action: workspace.catalogueSelectedEXIF)
-                    .disabled(!workspace.canCatalogueSelectedEXIF)
-                if let scan = workspace.exifCatalogueTask {
-                    Button("Cancel EXIF Cataloguing") { scan.cancel() }.disabled(scan.isCancelled)
+                Button("Catalogue EXIF from Originals") { workspace.catalogueSelected(.exif) }
+                    .disabled(!workspace.canCatalogueSelected(.exif))
+                Button("Catalogue GPS from Originals") { workspace.catalogueSelected(.gps) }
+                    .disabled(!workspace.canCatalogueSelected(.gps))
+                if let scan = workspace.originalMetadataCatalogueTask {
+                    Button("Cancel Metadata Cataloguing") { scan.cancel() }.disabled(scan.isCancelled)
                 }
                 Button("Adjust Date and Time…", action: workspace.openCaptureDateCorrection)
                     .disabled(!workspace.canAdjustCaptureDate)

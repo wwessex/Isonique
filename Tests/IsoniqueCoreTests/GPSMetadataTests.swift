@@ -99,6 +99,137 @@ extension LibraryTests {
         XCTAssertEqual(try [taggedJPEG, managed, untaggedJPEG].map(LibraryRepository.digest), originalHashes)
     }
 
+    func testGPSIndexBackfillsSelectedOriginalsAndSearchesOfflineAfterReopening() throws {
+        let sydney = try gpsImage("Sydney.jpg", type: .jpeg, properties: gpsProperties(33.875, "S", 151.25, "E"))
+        let untagged = try gpsImage("Untagged.jpg", type: .jpeg, properties: [:])
+        let replaced = try gpsImage("Replaced.jpg", type: .jpeg, properties: gpsProperties(30, "N", 31, "E"))
+        let unselected = try gpsImage("Unselected.jpg", type: .jpeg, properties: gpsProperties(45, "N", 73, "W"))
+        let repository = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repository.load()
+        var options = ImportOptions()
+        options.storage = .referenced
+        for original in [sydney, untagged, replaced, unselected] {
+            XCTAssertTrue(try repository.importPhoto(original, projectID: nil, into: &library, options: options))
+        }
+        let id = library.photos[0].id
+        let imported = try XCTUnwrap(library.photos[0].gpsIndex?.coordinates)
+        XCTAssertEqual(try repository.load().version, 15)
+        XCTAssertEqual(try repository.originalMetadata(for: library.photos[0]).gps, imported)
+        XCTAssertNotNil(library.photos[1].gpsIndex)
+        XCTAssertNil(library.photos[1].gpsIndex?.coordinates)
+
+        for index in library.photos.indices { library.photos[index].gpsIndex = nil }
+        library.version = 14
+        let sibling = try XCTUnwrap(library.createVersion(of: id, from: .current))
+        var history = EditHistory()
+        history.record(library.photos[0])
+        library.photos[0].caption = "Edited before indexing"
+        library.history = history
+        library = try repository.save(library)
+        XCTAssertEqual(try repository.load().version, 14)
+        let oldFingerprint = try LibraryRepository.digest(sydney)
+        try Data(contentsOf: unselected).write(to: replaced)
+
+        let targets: Set<UUID> = [id, library.photos[1].id, library.photos[2].id]
+        let indexed = try repository.catalogueGPS(for: targets, in: &library)
+        XCTAssertEqual(indexed.indexed, 3)
+        XCTAssertEqual(indexed.withValues, 2)
+        XCTAssertEqual(indexed.issues.count, 1)
+        XCTAssertTrue(indexed.issues.first?.contains("Replaced.jpg") == true)
+        XCTAssertEqual(library.photos.first { $0.id == sibling.id }?.gpsIndex?.coordinates, imported)
+        XCTAssertNotNil(library.photos[1].gpsIndex)
+        XCTAssertNil(library.photos[2].gpsIndex)
+        XCTAssertNil(library.photos[3].gpsIndex)
+        XCTAssertEqual(try repository.catalogueGPS(for: [id], in: &library).indexed, 0)
+
+        var query = PhotoQuery()
+        query.criteria = [
+            PhotoQueryCriterion(field: .gpsLocation, comparison: .withinRadius,
+                                gpsRadius: GPSRadiusRule(latitude: "-33.875", longitude: "151.25", kilometres: "5")),
+            PhotoQueryCriterion(field: .gpsLatitude, comparison: .maximum, value: "-30")
+        ]
+        var rule = SmartAlbumRule()
+        rule.query = query
+        var album = Collection(name: "Sydney area")
+        album.rule = rule
+        library.albums = [album]
+        XCTAssertEqual(try repository.save(library).version, 15)
+
+        let parked = temporary.appendingPathComponent("Offline.jpg")
+        try FileManager.default.moveItem(at: sydney, to: parked)
+        var reopened = try repository.load()
+        XCTAssertThrowsError(try repository.availableOriginalURL(reopened.photos[0]))
+        let savedRule = try XCTUnwrap(reopened.albums.first?.rule)
+        XCTAssertEqual(savedRule.query, query)
+        XCTAssertEqual(Set(reopened.activePhotos.filter { photo in
+            savedRule.includes(photo, originalAvailable: {
+                XCTFail("A GPS rule checked original availability")
+                return false
+            })
+        }.map(\.id)), [id, sibling.id])
+        let missing = PhotoQueryCriterion(field: .gpsLocation, comparison: .isMissing)
+        let unindexed = PhotoQueryCriterion(field: .gpsLocation, comparison: .isUnindexed)
+        XCTAssertTrue(missing.includes(reopened.photos[1], originalAvailable: { false }))
+        XCTAssertFalse(unindexed.includes(reopened.photos[1], originalAvailable: { false }))
+        XCTAssertFalse(missing.includes(reopened.photos[2], originalAvailable: { false }))
+        XCTAssertTrue(unindexed.includes(reopened.photos[2], originalAvailable: { false }))
+        var reopenedHistory = try XCTUnwrap(reopened.history)
+        XCTAssertNotNil(reopenedHistory.step(in: &reopened, redoing: false))
+        XCTAssertEqual(reopened.photos[0].caption, "")
+        XCTAssertEqual(reopened.photos[0].gpsIndex?.coordinates, imported)
+        XCTAssertEqual(try LibraryRepository.digest(parked), oldFingerprint)
+    }
+
+    func testGPSRulesValidateCoordinatesAndMatchAcrossTheDateLine() throws {
+        let west = GPSIndex(properties: gpsProperties(0, "N", 179.9, "W"))
+        var photo = Photo(filename: "Dateline.jpg", originalName: "Dateline.jpg", projectID: nil,
+                          width: 32, height: 24, camera: "", captureDate: "", sha256: "original")
+        photo.gpsIndex = west
+
+        var radius = PhotoQueryCriterion(field: .gpsLocation, comparison: .withinRadius,
+                                        gpsRadius: GPSRadiusRule(latitude: "0", longitude: "179,9°", kilometres: "23"))
+        XCTAssertTrue(radius.isValid)
+        XCTAssertTrue(radius.includes(photo, originalAvailable: { nil }))
+        radius.gpsRadius?.kilometres = "22"
+        XCTAssertFalse(radius.includes(photo, originalAvailable: { nil }))
+        radius.gpsRadius?.kilometres = "0"
+        XCTAssertFalse(radius.isValid)
+        XCTAssertFalse(radius.includes(photo, originalAvailable: { nil }))
+        radius.gpsRadius = GPSRadiusRule(latitude: "91", longitude: "179.9", kilometres: "23")
+        XCTAssertFalse(radius.isValid)
+
+        let longitude = PhotoQueryCriterion(field: .gpsLongitude, comparison: .equals, value: "−179,900000°")
+        XCTAssertTrue(longitude.isValid)
+        XCTAssertTrue(longitude.includes(photo, originalAvailable: { nil }))
+        XCTAssertTrue(PhotoQueryCriterion(field: .gpsLongitude, comparison: .minimum, value: "-180")
+            .includes(photo, originalAvailable: { nil }))
+        XCTAssertFalse(PhotoQueryCriterion(field: .gpsLongitude, comparison: .maximum, value: "-180")
+            .includes(photo, originalAvailable: { nil }))
+        XCTAssertFalse(PhotoQueryCriterion(field: .gpsLongitude, comparison: .maximum, value: "-180.00001").isValid)
+        XCTAssertFalse(PhotoQueryCriterion(field: .gpsLatitude, comparison: .equals, value: "NaN").isValid)
+        let hasGPS = PhotoQueryCriterion(field: .gpsLocation, comparison: .isPresent)
+        XCTAssertTrue(hasGPS.includes(photo, originalAvailable: { nil }))
+        photo.gpsIndex = nil
+        XCTAssertFalse(hasGPS.includes(photo, originalAvailable: { nil }))
+        XCTAssertFalse(PhotoQueryCriterion(field: .gpsLongitude, comparison: .differs, value: "0")
+            .includes(photo, originalAvailable: { nil }))
+        let invalid = Data(#"{"latitude": 91, "longitude": 0}"#.utf8)
+        XCTAssertThrowsError(try JSONDecoder().decode(GPSCoordinates.self, from: invalid))
+    }
+
+    func testSavedGPSRuleRequiresNewCatalogueFormatWithoutCoordinates() throws {
+        let repository = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("Library"))
+        var library = try repository.load()
+        var query = PhotoQuery()
+        query.criteria = [PhotoQueryCriterion(field: .gpsLocation, comparison: .isUnindexed)]
+        var album = Collection(name: "GPS to check")
+        album.rule = SmartAlbumRule()
+        album.rule?.query = query
+        library.albums = [album]
+        XCTAssertEqual(try repository.save(library).version, 15)
+        XCTAssertEqual(try repository.load().albums.first?.rule?.query, query)
+    }
+
     private func gpsProperties(_ latitude: Any?, _ latitudeRef: String?,
                                _ longitude: Any?, _ longitudeRef: String?) -> [String: Any] {
         let gps: [String: Any?] = [

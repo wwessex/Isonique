@@ -115,7 +115,7 @@ extension LibraryTests {
         let ids = Set(draft.photos.map(\.id))
         let indexed = try repo.catalogueEXIF(for: ids, in: &draft)
         XCTAssertEqual(indexed.indexed, 3)
-        XCTAssertEqual(indexed.withCaptureSettings, 2)
+        XCTAssertEqual(indexed.withValues, 2)
         XCTAssertEqual(indexed.issues.count, 1)
         XCTAssertTrue(indexed.issues.first?.contains("Offline.jpg") == true)
         XCTAssertNil(draft.photos.first { $0.id == offlineID }?.cameraEXIF)
