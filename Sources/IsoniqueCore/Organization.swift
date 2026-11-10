@@ -38,7 +38,7 @@ public struct SmartAlbumRule: Codable, Equatable {
             matchesRatingAndFlag = photo.rating >= minimumRating && (!flaggedOnly || photo.flagged)
         }
         return matchesRatingAndFlag &&
-            (text.isEmpty || [photo.displayName, photo.originalName, photo.caption, photo.keywordSearchText, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(text)) &&
+            photo.matchesSearchText(text) &&
             (query?.includes(photo, originalAvailable: originalAvailable) ?? true)
     }
     public var selectedRatingFilter: RatingFilter {
@@ -53,6 +53,18 @@ public struct SmartAlbumRule: Codable, Equatable {
         case .unrated: minimumRating = RatingRules.unrated
         default: minimumRating = filter.rawValue
         }
+    }
+}
+
+public extension Photo {
+    func matchesSearchText(_ text: String) -> Bool {
+        guard !text.isEmpty else { return true }
+        var values = [displayName, originalName, caption, keywordSearchText, camera]
+        if let iptc {
+            values += [iptc.title, iptc.copyright, iptc.credit].compactMap { $0 }
+            values += iptc.creators ?? []
+        }
+        return values.joined(separator: " ").localizedCaseInsensitiveContains(text)
     }
 }
 

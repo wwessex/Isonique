@@ -94,4 +94,46 @@ final class PhotoQueryTests: XCTestCase {
         XCTAssertNil(old.projectID)
         XCTAssertTrue(old.includes(photo))
     }
+
+    func testIPTCRulesMatchEachFieldAndCreatorIndividually() throws {
+        var photo = fixture()
+        photo.iptc = IPTCMetadata(title: "Harbour", creators: ["Jo Weiß", "Alex Ng"],
+                                  copyright: "© 2026 Róisín", credit: "News Desk")
+        var query = PhotoQuery()
+        query.criteria = [
+            PhotoQueryCriterion(field: .iptcTitle, comparison: .equals, value: " harbour "),
+            PhotoQueryCriterion(field: .iptcCreator, comparison: .equals, value: "alex ng"),
+            PhotoQueryCriterion(field: .iptcCopyright, comparison: .contains, value: "roisin"),
+            PhotoQueryCriterion(field: .iptcCredit, comparison: .excludes, value: "wire")
+        ]
+        XCTAssertTrue(query.criteria.allSatisfy(\.isValid))
+        let decoded = try JSONDecoder().decode(PhotoQuery.self, from: JSONEncoder().encode(query))
+        XCTAssertTrue(decoded.includes(photo))
+        query.criteria[1].value = "Jo Weiß Alex Ng"
+        XCTAssertFalse(query.includes(photo))
+        query.criteria[1] = PhotoQueryCriterion(field: .iptcCreator, comparison: .differs, value: "Alex Ng")
+        XCTAssertFalse(query.includes(photo))
+        query.match = .any
+        XCTAssertTrue(query.includes(photo))
+        photo.iptc = nil
+        XCTAssertTrue(query.includes(photo))
+        query.match = .all
+        XCTAssertFalse(query.includes(photo))
+    }
+
+    func testSavedIPTCRuleUpgradesEvenWithoutIPTCPhotos() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueIPTCRules-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let repository = try LibraryRepository.createEmpty(at: root)
+        var library = try repository.load()
+        var query = PhotoQuery()
+        query.criteria = [PhotoQueryCriterion(field: .iptcCredit, comparison: .equals, value: "Desk")]
+        var rule = SmartAlbumRule()
+        rule.query = query
+        var album = Collection(name: "News")
+        album.rule = rule
+        library.albums = [album]
+        XCTAssertEqual(try repository.save(library).version, 12)
+        XCTAssertEqual(try repository.load().albums.first?.rule, rule)
+    }
 }

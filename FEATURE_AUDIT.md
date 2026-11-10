@@ -1,6 +1,6 @@
 # Isonique editing and Inspector comparison — 8 November 2026
 
-This is a historical development record. For current coverage, see the [workflow comparison](docs/WORKFLOW_COMPARISON.md) and [test results](docs/TEST_RESULTS.md). The maintained application is the SwiftUI/AppKit macOS app. There are no independent web/PWA, Windows, iOS or Android variants in this repository.
+This is a historical development record. For current coverage, see the [workflow comparison](docs/APERTURE_FEATURE_PARITY.md) and [test results](docs/APERTURE_TEST_RESULTS.md). The maintained application is the SwiftUI/AppKit macOS app. There are no independent web/PWA, Windows, iOS or Android variants in this repository.
 
 ## References checked
 

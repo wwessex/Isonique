@@ -67,6 +67,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var keywordVocabulary: KeywordVocabulary
     @Published var showKeywordVocabulary = false
     @Published var keywordGroups: KeywordGroupPreferences
+    @Published var metadataPresets: [MetadataPreset]
     @Published var showKeywordControls: Bool {
         didSet { preferences.set(showKeywordControls, forKey: KeywordGroupPreferences.controlsKey) }
     }
@@ -126,6 +127,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         clipping = ClippingSettings(preferences: preferences)
         keywordVocabulary = KeywordVocabularyPreferences.load(from: preferences)
         keywordGroups = KeywordGroupPreferences.load(from: preferences)
+        metadataPresets = MetadataPresetPreferences.load(from: preferences)
         showKeywordControls = preferences.bool(forKey: KeywordGroupPreferences.controlsKey)
         let layout = preferences.string(forKey: "browser.layout").flatMap(BrowserPresentation.init(rawValue:))
         browserLayout = layout == .list ? .list : .grid
@@ -205,7 +207,7 @@ enum EditTool: String { case select, crop, straighten, brush }
                 originalFilter.includes(photo, repository: repository) &&
                 colorFilter.includes(photo) &&
                 BrowserFilterRules.includes(rating: photo.rating, flagged: photo.flagged, ratingFilter: ratingFilter, flaggedOnly: scope == "flagged") &&
-                (search.isEmpty || [photo.displayName, photo.originalName, photo.caption, photo.keywordSearchText, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(search)) &&
+                photo.matchesSearchText(search) &&
                 (advancedQuery?.includes(photo, originalAvailable: { self.isOriginalAvailable(photo) }) ?? true)
         }.sorted { lhs, rhs in sortDescending ? orderedBefore(rhs, lhs) : orderedBefore(lhs, rhs) }
         guard !includingCollapsed, !isViewingTrash, !isViewingStack, let state = library.stackBrowser else { return filtered }
@@ -1110,7 +1112,7 @@ struct ContentView: View {
             }
         }
         .disabled(model.busy || model.repository == nil)
-        .searchable(text: $model.search, prompt: "Search names, keywords, cameras")
+        .searchable(text: $model.search, prompt: "Search photos and metadata")
         .toolbar {
             ToolbarItem { Toggle("Select Photos", isOn: $model.batchMode).onChange(of: model.batchMode) { _, active in
                 model.batchSelection = []; if active { model.showBrowser() }

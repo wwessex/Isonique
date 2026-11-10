@@ -16,7 +16,7 @@ Use **Help → Features & Limits** for available commands and their limits.
 
 ## Design and compatibility
 
-The workspace pairs library navigation with a photo Viewer and an adjustment inspector. Isonique stores recipes and organisation in its own catalogue and uses the same source-defined editing pipeline for preview and export. RAW decoding and metadata support depend on the system ImageIO codecs. Four camera RAW samples were validated on macOS 27.3. [Processing notes](PROCESSING_ALTERNATIVES.md) · [Test results](docs/TEST_RESULTS.md)
+The workspace pairs library navigation with a photo Viewer and an adjustment inspector. Isonique stores recipes and organisation in its own catalogue and uses the same source-defined editing pipeline for preview and export. RAW decoding and metadata support depend on the system ImageIO codecs. Four camera RAW samples were validated on macOS 27.3. [Processing notes](PROCESSING_ALTERNATIVES.md) · [Test results](docs/APERTURE_TEST_RESULTS.md)
 
 **File → Recover Aperture Originals** can recover files stored inside a legacy library, plus supported metadata embedded in those files, from a verified temporary copy. Allow space for that copy. Legacy catalogue relationships, stored edits, referenced originals and vaults are outside the recovery workflow. [Library compatibility](COMPATIBILITY.md)
 
@@ -61,7 +61,7 @@ Screenshot mode captures the app window and exits. It requires Screen Recording 
 
 ## Contributing
 
-Open an issue to report a bug or propose a change. Include the macOS version, steps to reproduce and the expected result. For a pull request, include the tests you ran and use disposable libraries or fixtures cleared for redistribution. Keep user catalogues, proprietary binaries and artwork, and raw binary analysis output outside the repository. [Implementation plan](docs/IMPLEMENTATION_PLAN.md) · [Development provenance](MECHANICS.md)
+Open an issue to report a bug or propose a change. Include the macOS version, steps to reproduce and the expected result. For a pull request, include the tests you ran and use disposable libraries or fixtures cleared for redistribution. Keep user catalogues, proprietary binaries and artwork, and raw binary analysis output outside the repository. [Implementation plan](docs/APERTURE_IMPLEMENTATION_PLAN.md) · [Development provenance](MECHANICS.md)
 
 ## Licence and trademarks
 

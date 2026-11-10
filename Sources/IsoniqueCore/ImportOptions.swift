@@ -24,6 +24,7 @@ public struct ImportOptions: Codable, Equatable {
     public var rating = 0
     public var applyMetadata = false
     public var readSidecars = false
+    public var reusableMetadata: MetadataPreset?
     public init() {}
     public static let rawExtensions: Set<String> = ["dng", "raw", "cr2", "cr3", "crw", "nef", "nrw", "arw", "srf", "sr2", "orf", "raf", "rw2", "pef", "ptx", "rwl", "3fr", "fff", "iiq", "mos", "mrw", "x3f", "erf", "kdc", "dcr", "srw"]
     static let imageExtensions = rawExtensions.union(["jpg", "jpeg", "png", "heic", "heif", "tif", "tiff", "gif", "bmp", "webp", "avif"])
@@ -49,7 +50,7 @@ public struct ImportOptions: Codable, Equatable {
         let clean = prefix.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
         if !clean.isEmpty { photo.originalName = clean + "-" + photo.originalName }
         if applyMetadata { photo.caption = caption; photo.keywords = keywords; photo.rating = RatingRules.clamp(rating) }
-        return photo
+        return reusableMetadata?.values.applying(to: photo) ?? photo
     }
 }
 public struct ImportPreset: Codable, Identifiable {

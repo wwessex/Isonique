@@ -39,18 +39,40 @@ struct BatchMetadataView: View {
     @State private var keywords = ""
     @State private var iptcFields: Set<IPTCField> = []
     @State private var iptcText: [IPTCField: String] = [:]
+    @State private var showIPTC = false
+    @State private var presetName = ""
+    @State private var presetError = false
+    @State private var pendingDeletion: MetadataPreset?
 
-    private var iptcChanges: IPTCMetadata {
+    private var values: MetadataPresetValues {
         var metadata = IPTCMetadata()
         for field in iptcFields { metadata[field] = field.values(from: iptcText[field, default: ""]) }
-        return metadata
+        return MetadataPresetValues(caption: changeCaption ? caption : nil, keywordMode: keywordMode,
+                                    keywords: keywords, iptc: metadata)
     }
 
     var body: some View {
-        let preview = review.preview(caption: changeCaption ? caption : nil, keywordMode: keywordMode,
-                                     keywords: keywords, iptc: iptcChanges)
+        let preview = review.preview(values)
         VStack(alignment: .leading, spacing: 12) {
             Text("Batch Change Metadata").font(.title2.bold())
+            DisclosureGroup("Reusable Metadata Presets") {
+                HStack {
+                    Menu("Load Metadata Preset") {
+                        ForEach(model.metadataPresets) { preset in Button(preset.name) { load(preset.values) } }
+                    }.disabled(model.metadataPresets.isEmpty)
+                    Menu("Delete Metadata Preset") {
+                        ForEach(model.metadataPresets) { preset in Button(preset.name) { pendingDeletion = preset } }
+                    }.disabled(model.metadataPresets.isEmpty)
+                }.padding(.top, 4)
+                HStack {
+                    TextField("Metadata preset name", text: $presetName)
+                    Button("Save Metadata Preset") {
+                        if model.saveMetadataPreset(named: presetName, values: values) { presetName = "" }
+                        else { presetError = true }
+                    }
+                    .disabled(presetName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || !values.hasChanges)
+                }
+            }
             Toggle("Replace caption", isOn: $changeCaption)
             if changeCaption {
                 TextField("New caption", text: $caption, axis: .vertical)
@@ -70,7 +92,7 @@ struct BatchMetadataView: View {
                     Text("Leave the new keywords empty to clear them.").font(.caption).foregroundStyle(.secondary)
                 }
             }
-            DisclosureGroup("IPTC Metadata") {
+            DisclosureGroup("IPTC Metadata", isExpanded: $showIPTC) {
                 Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 6) {
                     ForEach(IPTCField.allCases) { field in
                         GridRow(alignment: .top) {
@@ -129,6 +151,27 @@ struct BatchMetadataView: View {
         }
         .padding(24)
         .frame(width: 620)
+        .alert("Metadata Preset Already Exists", isPresented: $presetError) {
+            Button("OK", role: .cancel) {}
+        } message: { Text("Choose a different name for the preset.") }
+        .confirmationDialog("Delete Metadata Preset?", isPresented: Binding(
+            get: { pendingDeletion != nil }, set: { if !$0 { pendingDeletion = nil } }
+        ), presenting: pendingDeletion) { preset in
+            Button("Delete", role: .destructive) { model.deleteMetadataPreset(preset.id) }
+        } message: { preset in Text(preset.name) }
+    }
+
+    private func load(_ values: MetadataPresetValues) {
+        changeCaption = values.caption != nil
+        caption = values.caption ?? ""
+        keywordMode = values.keywordMode
+        keywords = values.keywords
+        iptcText = [:]
+        for field in IPTCField.allCases {
+            iptcText[field] = values.iptc[field]?.joined(separator: "\n")
+        }
+        iptcFields = Set(iptcText.keys)
+        showIPTC = !iptcFields.isEmpty
     }
 
     private func fieldPreview(_ name: String, before: String, after: String) -> some View {
