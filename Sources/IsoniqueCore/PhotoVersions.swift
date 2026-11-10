@@ -140,8 +140,10 @@ public enum PhotoHistoryEntry: Codable, Equatable {
         switch self {
         case .captureDates: return 8
         case .batchMetadata(let changes):
+            if changes.contains(where: { $0.iptc?.isEmpty == false }) { return 11 }
             return changes.contains { $0.keywordPaths != nil } ? 10 : 9
         default:
+            if photo?.iptc?.isEmpty == false { return 11 }
             return photo?.keywordPaths?.isEmpty == false ? 10 : nil
         }
     }

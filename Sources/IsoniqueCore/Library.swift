@@ -236,6 +236,7 @@ public struct Photo: Codable, Identifiable, Equatable {
     public var flagged = false
     public var colorLabel: PhotoColorLabel?
     public var caption = ""
+    public var iptc: IPTCMetadata?
     public var keywords = ""
     public var keywordPaths: [KeywordPath]?
     public var width: Int
@@ -311,12 +312,17 @@ public struct Library: Codable {
         if version < 10, hasKeywordPaths { version = 10 }
     }
 
+    fileprivate var hasIPTCMetadata: Bool {
+        photos.contains { $0.iptc?.isEmpty == false }
+    }
+
     func validateSchema() throws {
+        if version < 11, hasIPTCMetadata { throw LibraryError.unsupportedVersion }
         if version < 10, hasKeywordPaths { throw LibraryError.unsupportedVersion }
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...10).contains(version) { return }
+        if (7...11).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -484,6 +490,7 @@ public final class LibraryRepository {
     func writeCatalogue(_ library: Library) throws -> Library {
         var normalized = library
         normalized.upgradeForKeywordPaths()
+        if normalized.version < 11, normalized.hasIPTCMetadata { normalized.version = 11 }
         if let requiredVersion = normalized.history?.requiredCatalogueVersion {
             normalized.version = max(normalized.version, requiredVersion)
         }
@@ -570,7 +577,10 @@ public final class LibraryRepository {
             photo.keywords = keywords.joined(separator: ", ")
         }
         var rating = (iptc[kCGImagePropertyIPTCStarRating as String] as? NSNumber)?.intValue
-        if let embedded = CGImageSourceCopyMetadataAtIndex(imageSource, 0, nil) {
+        let embedded = CGImageSourceCopyMetadataAtIndex(imageSource, 0, nil)
+        let iptcMetadata = IPTCMetadata(embedded: iptc, xmp: embedded)
+        if !iptcMetadata.isEmpty { photo.iptc = iptcMetadata }
+        if let embedded {
             if let paths = try? XMPMetadata.keywordPaths(from: embedded), !paths.isEmpty { photo.keywordPaths = paths }
             if let value = CGImageMetadataCopyStringValueWithPath(embedded, nil, "xmp:Rating" as CFString) as String?,
                let embeddedRating = Int(value) { rating = embeddedRating }
@@ -596,6 +606,18 @@ public final class LibraryRepository {
         committed = true
         return true
     }
+    public func embeddedIPTC(for photo: Photo) -> IPTCMetadata {
+        guard let url = try? availableOriginalURL(photo),
+              let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return IPTCMetadata() }
+        return Self.embeddedIPTC(in: source)
+    }
+
+    fileprivate static func embeddedIPTC(in source: CGImageSource) -> IPTCMetadata {
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any]
+        let iptc = properties?[kCGImagePropertyIPTCDictionary as String] as? [String: Any] ?? [:]
+        return IPTCMetadata(embedded: iptc, xmp: CGImageSourceCopyMetadataAtIndex(source, 0, nil))
+    }
+
     public static func imageFiles(in folder: URL, shouldContinue: () -> Bool = { true }) -> [URL] {
         guard let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.isRegularFileKey, .isSymbolicLinkKey], options: [.skipsHiddenFiles, .skipsPackageDescendants]) else { return [] }
         var files: [URL] = []
@@ -859,6 +881,14 @@ public enum Renderer {
         guard extensions.contains(target.pathExtension.lowercased()),
               !target.path.hasPrefix(repository.root.path + "/"), !FileManager.default.fileExists(atPath: target.path),
               !target.pathComponents.contains(where: { ["aplibrary", "aperturelibrary", "photoslibrary", "photolibrary", "app"].contains(URL(fileURLWithPath: $0).pathExtension.lowercased()) }) else { throw LibraryError.unsafePath }
+        let source = CGImageSourceCreateWithURL(original as CFURL, nil)
+        let currentIPTC: IPTCMetadata
+        if options.xmpSidecar == true || (options.format != .original && options.iptc) {
+            let embedded = source.map(LibraryRepository.embeddedIPTC(in:)) ?? IPTCMetadata()
+            currentIPTC = photo.iptc?.overriding(embedded) ?? embedded
+        } else {
+            currentIPTC = IPTCMetadata()
+        }
         let sidecar: (url: URL, data: Data)?
         if options.xmpSidecar == true {
             let url = target.deletingPathExtension().appendingPathExtension("xmp")
@@ -867,7 +897,7 @@ public enum Renderer {
                   (try? fm.destinationOfSymbolicLink(atPath: url.path)) == nil else {
                 throw XMPMetadata.Failure.sidecarExists(url.lastPathComponent)
             }
-            sidecar = (url, try XMPMetadata.encode(photo))
+            sidecar = (url, try XMPMetadata.encode(photo, iptc: currentIPTC))
         } else {
             sidecar = nil
         }
@@ -884,7 +914,6 @@ public enum Renderer {
             image = resized
         }
         var properties: [String: Any] = [:]
-        let source = CGImageSourceCreateWithURL(original as CFURL, nil)
         let embedded = source.flatMap { CGImageSourceCopyPropertiesAtIndex($0, 0, nil) as? [String: Any] } ?? [:]
         if options.exif {
             var exif = embedded[kCGImagePropertyExifDictionary as String] as? [String: Any] ?? [:]
@@ -908,6 +937,7 @@ public enum Renderer {
             iptc[kCGImagePropertyIPTCCaptionAbstract as String] = photo.caption
             iptc[kCGImagePropertyIPTCKeywords as String] = photo.keywordNames
             iptc[kCGImagePropertyIPTCStarRating as String] = RatingRules.clamp(photo.rating)
+            currentIPTC.writing(to: &iptc)
             properties[kCGImagePropertyIPTCDictionary as String] = iptc
         }
         if options.gps { properties[kCGImagePropertyGPSDictionary as String] = embedded[kCGImagePropertyGPSDictionary as String] }

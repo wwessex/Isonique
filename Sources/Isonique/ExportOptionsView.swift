@@ -33,7 +33,7 @@ struct ExportOptionsView: View {
                 GroupBox("Include metadata") {
                     VStack(alignment: .leading, spacing: 10) {
                         Toggle("EXIF — camera and capture information", isOn: $options.exif)
-                        Toggle("IPTC — current caption, keywords and rating", isOn: $options.iptc)
+                        Toggle("IPTC — current metadata and keywords", isOn: $options.iptc)
                         Toggle("GPS — original location", isOn: $options.gps)
                     }.frame(maxWidth: .infinity, alignment: .leading).padding(8)
                 }
@@ -43,7 +43,7 @@ struct ExportOptionsView: View {
                 get: { options.xmpSidecar == true },
                 set: { options.xmpSidecar = $0 ? true : nil }
             ))
-            Text("The separate .xmp file carries your current caption, rating, flat keywords and complete keyword paths.")
+            Text("The separate .xmp file carries your current IPTC fields, caption, rating and keyword paths.")
                 .font(.caption).foregroundStyle(.secondary)
             HStack {
                 TextField("Preset name", text: $name)
