@@ -17,6 +17,9 @@ public extension Photo {
     mutating func useOriginal(from source: Photo) {
         filename = source.filename
         referencedPath = source.referencedPath
+        if sha256 != source.sha256 || source.cameraEXIF?.isEmpty == false || cameraEXIF == nil {
+            cameraEXIF = source.cameraEXIF
+        }
         sha256 = source.sha256
     }
 }
@@ -150,6 +153,7 @@ public enum PhotoHistoryEntry: Codable, Equatable {
             if changes.contains(where: { $0.iptc?.isEmpty == false }) { return 11 }
             return changes.contains { $0.keywordPaths != nil } ? 10 : 9
         default:
+            if photo?.cameraEXIF?.isEmpty == false { return 14 }
             if photo?.iptc?.isEmpty == false { return 11 }
             return photo?.keywordPaths?.isEmpty == false ? 10 : nil
         }

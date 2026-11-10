@@ -162,7 +162,20 @@ private struct PhotoQueryRow: View {
     }
 
     @ViewBuilder private var valueField: some View {
+        if !criterion.comparison.needsValue {
+            Spacer(minLength: 0)
+        } else {
+            comparisonValueField
+        }
+    }
+
+    @ViewBuilder private var comparisonValueField: some View {
         switch criterion.field {
+        case .exifShutterSpeed: TextField("1/125 or 0.008 s", text: $criterion.value).accessibilityLabel("Rule shutter speed")
+        case .exifAperture: TextField("e.g. f/2.8", text: $criterion.value).accessibilityLabel("Rule aperture")
+        case .exifISO: TextField("e.g. 400", text: $criterion.value).accessibilityLabel("Rule ISO")
+        case .exifFocalLength: TextField("e.g. 35 mm", text: $criterion.value).accessibilityLabel("Rule focal length")
+        case .exifLens: TextField("Lens name", text: $criterion.value).accessibilityLabel("Rule lens name")
         case .flag: booleanPicker("Flagged", "Unflagged")
         case .storage: booleanPicker("Referenced", "Managed")
         case .availability: booleanPicker("Available", "Unavailable")
