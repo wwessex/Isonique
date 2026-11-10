@@ -143,7 +143,7 @@ public struct Adjustments: Codable, Equatable {
     }
 }
 /// Independent editing groups; selective stamping preserves every unselected group.
-public enum AdjustmentGroup: String, CaseIterable, Identifiable {
+public enum AdjustmentGroup: String, CaseIterable, Codable, Identifiable {
     case basic = "Exposure & color", whiteBalance = "White balance", tone = "Highlights & shadows", geometry = "Crop, rotation & lens"
     case localBrush = "Local brush masks"
     public var id: String { rawValue }
@@ -327,7 +327,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...12).contains(version) { return }
+        if (7...13).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -618,7 +618,7 @@ public final class LibraryRepository {
         return Self.embeddedIPTC(in: source)
     }
 
-    fileprivate static func embeddedIPTC(in source: CGImageSource) -> IPTCMetadata {
+    static func embeddedIPTC(in source: CGImageSource) -> IPTCMetadata {
         let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any]
         let iptc = properties?[kCGImagePropertyIPTCDictionary as String] as? [String: Any] ?? [:]
         return IPTCMetadata(embedded: iptc, xmp: CGImageSourceCopyMetadataAtIndex(source, 0, nil))

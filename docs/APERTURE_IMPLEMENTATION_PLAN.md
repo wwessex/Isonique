@@ -165,7 +165,7 @@ Import reads the four fields from embedded IPTC and XMP, with matching sidecar f
 
 ## IPTC search and saved rules
 
-Quick Search finds catalogue IPTC title, creator, copyright and credit. Advanced Search and Smart Albums offer field-specific substring and exact comparisons with their negations. Each creator is compared separately. An IPTC Smart Album rule requires catalogue format 12. Search reads the catalogue so results work with offline originals. Values inherited only from an older library’s originals remain available in Info and export.
+Quick Search finds catalogue IPTC title, creator, copyright and credit. Advanced Search and Smart Albums offer field-specific substring and exact comparisons with their negations. Each creator is compared separately. An IPTC Smart Album rule requires catalogue format 12. Search reads the catalogue so results work with offline originals. Values inherited only from an older library’s originals can be brought into search with Catalogue IPTC from Originals.
 
 ## Reusable metadata presets
 
@@ -173,9 +173,17 @@ Metadata → Batch Change → Reusable Metadata Presets saves checked caption an
 
 Import Options offers the same presets independently of storage, pairing and filename choices. A chosen preset applies after the import caption, keyword and rating defaults. Matching XMP fields take precedence. Saved import options and full import presets keep their chosen metadata values as a snapshot. Removing a reusable preset leaves saved import snapshots and previously edited photos intact.
 
+## Selective IPTC Lift and Stamp
+
+Use the edit strip, Adjustments → Lift & Stamp Options, or the Photos menu and Shift-Command-C / Shift-Command-V. Lift reads missing IPTC fields from an available original in the background. The inspector shows the lifted source and its IPTC values. Stamp copies the checked fields and adjustment groups to the selected photo or visible batch selection. An explicit IPTC clear replaces the destination value. Missing fields are skipped. Mixed stamps are one Undo step and affect only changed fields and adjustment groups. Catalogue format 13 stores persistent stamp history. [Aperture 3.5 Help](https://aperture.skydocu.com/en/make-image-adjustments/ways-to-perform-adjustments/apply-standard-adjustments/)
+
+## Catalogue inherited IPTC from originals
+
+Metadata → Catalogue IPTC from Originals reviews the current selection. It verifies each original’s SHA-256 and reads one original per shared identity. Offline, changed or unreadable originals appear in the review. Cancel IPTC Review stops the scan after the current original. Add to Catalogue fills only unset title, creator, copyright or credit fields and makes them searchable. A catalogue edit made during review requires a fresh review. Additions use one Undo step and preserve the original bytes.
+
 ## Next checkpoint
 
-Add IPTC metadata fields to selective Lift and Stamp. Reuse existing per-field merge rules and grouped history so a Stamp applies only checked fields and preserves the rest. Verify single and visible batch selection, explicit clears, ordered creators, Undo/Redo after reopening and legacy catalogues. After that, add a reviewed way to catalogue inherited IPTC fields on older originals so they become searchable without reimport.
+Add a read-only EXIF view in Info for shutter speed, aperture, ISO, focal length and lens. Read metadata in the background from the selected photo’s available original and report missing values or offline originals. Verify selections, EXIF rational values, orientation, RAW and JPEG fixtures, and that browsing and exporting remain unchanged. Follow with configurable metadata views and catalogue-backed EXIF search.
 
 ## Pending physical camera checks
 

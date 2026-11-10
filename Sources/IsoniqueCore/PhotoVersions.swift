@@ -104,6 +104,10 @@ public extension Library {
             return replaceCaptureDates(changes).map(PhotoHistoryEntry.captureDates)
         case .batchMetadata(let changes):
             return replaceBatchMetadata(changes).map(PhotoHistoryEntry.batchMetadata)
+        case .stamp(let changes):
+            return applyPhotoFieldChanges(changes, photoID: \.photoID) { photo, change in
+                change.applying(to: &photo)
+            }.map(PhotoHistoryEntry.stamp)
         }
     }
 }
@@ -115,11 +119,12 @@ public enum PhotoHistoryEntry: Codable, Equatable {
     case stackPick(StackPickChange)
     case captureDates([CaptureDateChange])
     case batchMetadata([BatchMetadataChange])
+    case stamp([PhotoStampChange])
 
     public var photo: Photo? {
         switch self {
         case .edit(let photo), .removeVersion(let photo), .restoreVersion(let photo): return photo
-        case .stackPick, .captureDates, .batchMetadata: return nil
+        case .stackPick, .captureDates, .batchMetadata, .stamp: return nil
         }
     }
 
@@ -132,6 +137,7 @@ public enum PhotoHistoryEntry: Codable, Equatable {
         switch self {
         case .captureDates(let changes): return changes.map(\.photoID)
         case .batchMetadata(let changes): return changes.map(\.photoID)
+        case .stamp(let changes): return changes.map(\.photoID)
         default: return []
         }
     }
@@ -139,6 +145,7 @@ public enum PhotoHistoryEntry: Codable, Equatable {
     var requiredCatalogueVersion: Int? {
         switch self {
         case .captureDates: return 8
+        case .stamp: return 13
         case .batchMetadata(let changes):
             if changes.contains(where: { $0.iptc?.isEmpty == false }) { return 11 }
             return changes.contains { $0.keywordPaths != nil } ? 10 : 9
@@ -192,6 +199,10 @@ public struct EditHistory: Codable {
             if case .batchMetadata(let changes) = entry {
                 let kept = changes.filter { !photoIDs.contains($0.photoID) }
                 return kept.isEmpty ? nil : .batchMetadata(kept)
+            }
+            if case .stamp(let changes) = entry {
+                let kept = changes.filter { !photoIDs.contains($0.photoID) }
+                return kept.isEmpty ? nil : .stamp(kept)
             }
             return isRemoved(entry) ? nil : entry
         }

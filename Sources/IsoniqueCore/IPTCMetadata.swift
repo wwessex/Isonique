@@ -111,6 +111,8 @@ public struct IPTCFieldEdit: Codable, Equatable, Identifiable {
 }
 
 extension Photo {
+    public var hasUncataloguedIPTC: Bool { IPTCField.allCases.contains { iptc?[$0] == nil } }
+
     @discardableResult
     public mutating func applyIPTC(_ changes: [IPTCFieldEdit]) -> [IPTCFieldEdit] {
         var metadata = iptc ?? IPTCMetadata()

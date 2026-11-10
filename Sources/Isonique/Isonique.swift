@@ -60,6 +60,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var tool = EditTool.select
     @Published var brushAdjustment = LocalBrushAdjustment.dodge
     @Published var liftedAdjustments: LiftedSettings?
+    @Published var liftLookupID: UUID?
     @Published var stampMetadata = Set<StampMetadata>()
     @Published var showRelocationOptions = false
     var pendingRelocationOptions: OriginalRelocationOptions?
@@ -73,6 +74,8 @@ enum EditTool: String { case select, crop, straighten, brush }
     }
     @Published var showKeywordGroupEditor = false
     @Published var batchMetadataReview: BatchMetadataReview?
+    @Published var inheritedIPTCReview: InheritedIPTCReview?
+    @Published var inheritedIPTCScan: Task<InheritedIPTCReview, Error>?
     @Published var captureDateCorrection: CaptureDateCorrection?
     @Published var showImportOptions = false
     @Published var pendingImport: [URL] = []
@@ -297,6 +300,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         case .stackPick: status = redo ? "Pick change redone" : "Pick change undone"
         case .captureDates: status = redo ? "Capture date adjustment redone" : "Capture date adjustment undone"
         case .batchMetadata: status = redo ? "Batch metadata change redone" : "Batch metadata change undone"
+        case .stamp: status = redo ? "Stamp redone" : "Stamp undone"
         }
     }
     func selectAfterChange(preferred: UUID?) {
@@ -413,11 +417,25 @@ enum EditTool: String { case select, crop, straighten, brush }
             $0.adjustments.crop = nil
         }
     }
+    var canLift: Bool { !busy && !isViewingTrash && selected != nil }
+
     func lift() {
-        // Original lift returns before resetting its clipboard if there is no version.
-        guard !isViewingTrash, let selected else { return }
-        liftedAdjustments = LiftedSettings(selected)
+        guard canLift, let source = selected else { return }
+        liftedAdjustments = LiftedSettings(source)
+        liftLookupID = nil
         status = "Settings lifted · select another photo and Stamp"
+        guard let repository, source.hasUncataloguedIPTC else { return }
+
+        let request = UUID()
+        liftLookupID = request
+        Task { [weak self] in
+            let embedded = await Task.detached(priority: .userInitiated) {
+                repository.embeddedIPTC(for: source)
+            }.value
+            guard let self, self.liftLookupID == request, self.repository === repository else { return }
+            self.liftedAdjustments = LiftedSettings(source, embeddedIPTC: embedded)
+            self.liftLookupID = nil
+        }
     }
     var batchPhotos: [Photo] { library.photos.filter { $0.trashedAt == nil && batchSelection.contains($0.id) } }
     func editBatch(_ change: (inout Photo) -> Void) {
@@ -437,12 +455,27 @@ enum EditTool: String { case select, crop, straighten, brush }
         if let pick { draft.applyStackPick(StackPickChange(stackID: id, photoID: pick.id, selectionID: pick.id)) }
         if commitPhotoChanges(draft, previous: previous) { status = "Created photo stack" }
     }
+    var canStamp: Bool {
+        guard let liftedAdjustments, !metadataEditingTargets.isEmpty else { return false }
+        if liftLookupID != nil && stampMetadata.contains(where: { $0.iptcField != nil }) { return false }
+        return !stampGroups.isEmpty || stampMetadata.contains(where: liftedAdjustments.includesMetadata)
+    }
+
     func stamp() {
-        guard !isViewingTrash, let liftedAdjustments, !stampGroups.isEmpty || !stampMetadata.isEmpty else { return }
+        guard canStamp, let liftedAdjustments else { return }
+        let targets = Set(metadataEditingTargets.map(\.id))
+        var draft = library
+        let previous = draft.stamp(liftedAdjustments, groups: stampGroups, metadata: stampMetadata, onto: targets)
+        guard !previous.isEmpty else {
+            status = "Selected photos already match the lifted settings"
+            return
+        }
+        var nextHistory = history
+        nextHistory.record(.stamp(previous))
+        guard commit(draft, history: nextHistory) else { return }
         compareOriginal = false; tool = .select
-        if batchMode { editBatch { $0 = liftedAdjustments.applying(to: $0, groups: stampGroups, metadata: stampMetadata) } }
-        else { edit { $0 = liftedAdjustments.applying(to: $0, groups: stampGroups, metadata: stampMetadata) } }
-        status = "Selected settings stamped · original preserved"
+        if selected == nil { selectAfterChange(preferred: selection) }
+        status = previous.count == 1 ? "Stamped settings on 1 photo" : "Stamped settings on \(previous.count) photos"
     }
     func binding<T>(_ path: WritableKeyPath<Photo, T>, fallback: T) -> Binding<T> {
         Binding(get: { self.selected?[keyPath: path] ?? fallback }, set: { value in self.edit { $0[keyPath: path] = value } })
@@ -683,6 +716,11 @@ enum EditTool: String { case select, crop, straighten, brush }
                 Button("Dodge Brush") { workspace.chooseBrush(.dodge) }.disabled(!workspace.canBrush)
                 Button("Burn Brush") { workspace.chooseBrush(.burn) }.disabled(!workspace.canBrush)
                 Divider()
+                Button("Lift Settings", action: workspace.lift)
+                    .keyboardShortcut("c", modifiers: [.command, .shift]).disabled(!workspace.canLift)
+                Button("Stamp Selected Settings", action: workspace.stamp)
+                    .keyboardShortcut("v", modifiers: [.command, .shift]).disabled(!workspace.canStamp)
+                Divider()
                 Button("New Version from Original") { workspace.createVersion(from: .original) }
                     .keyboardShortcut("g", modifiers: [.option]).disabled(!workspace.canCreateVersion)
                 Button("Duplicate Version") { workspace.createVersion(from: .current) }
@@ -730,6 +768,11 @@ enum EditTool: String { case select, crop, straighten, brush }
                 Button("Batch Change…", action: workspace.openBatchMetadata)
                     .keyboardShortcut("b", modifiers: [.command, .shift])
                     .disabled(!workspace.canOpenBatchMetadata)
+                Button("Catalogue IPTC from Originals…", action: workspace.openInheritedIPTCReview)
+                    .disabled(!workspace.canReviewInheritedIPTC)
+                if let scan = workspace.inheritedIPTCScan {
+                    Button("Cancel IPTC Review") { scan.cancel() }.disabled(scan.isCancelled)
+                }
                 Button("Adjust Date and Time…", action: workspace.openCaptureDateCorrection)
                     .disabled(!workspace.canAdjustCaptureDate)
                 Divider()
@@ -1181,6 +1224,9 @@ struct ContentView: View {
         .sheet(item: $model.batchMetadataReview) { review in
             BatchMetadataView(review: review).environmentObject(model)
         }
+        .sheet(item: $model.inheritedIPTCReview) { review in
+            InheritedIPTCReviewView(review: review).environmentObject(model)
+        }
         .sheet(item: $model.captureDateCorrection) { correction in
             CaptureDateView(correction: correction).environmentObject(model)
         }
@@ -1308,8 +1354,9 @@ struct EditBar: View {
                         .foregroundStyle(model.tool == .brush ? Color.accentColor : .primary)
                 }.disabled(!model.canBrush)
                 Divider().frame(height: 20)
-                Button(action: model.lift) { Label("Lift", systemImage: "eyedropper") }.help("Copy adjustments from this photo")
-                Button(action: model.stamp) { Label("Stamp", systemImage: "eyedropper.full") }.disabled(model.liftedAdjustments == nil || (model.stampGroups.isEmpty && model.stampMetadata.isEmpty)).help("Apply the adjustments and metadata selected in Inspector")
+                Button(action: model.lift) { Label("Lift", systemImage: "eyedropper") }
+                    .disabled(!model.canLift).help("Copy adjustments and metadata from this photo")
+                Button(action: model.stamp) { Label("Stamp", systemImage: "eyedropper.full") }.disabled(!model.canStamp).help("Apply the adjustments and metadata selected in Inspector")
                 Divider().frame(height: 20)
                 Toggle(isOn: $model.compareOriginal) { Label("Original", systemImage: "square.on.square") }.toggleStyle(.button).disabled(model.tool != .select).help("Compare with the untouched original")
             }.disabled(model.selected == nil)
@@ -1722,12 +1769,35 @@ struct Inspector: View {
                     Divider()
                     Text("Metadata (replaces selected fields)").font(.caption)
                     ForEach(StampMetadata.allCases) { field in
-                        Toggle(field.rawValue, isOn: Binding(get: { model.stampMetadata.contains(field) }, set: { included in
+                        Toggle(isOn: Binding(get: { model.stampMetadata.contains(field) }, set: { included in
                             if included { model.stampMetadata.insert(field) } else { model.stampMetadata.remove(field) }
-                        }))
+                        })) {
+                            HStack {
+                                Text(LocalizedStringKey(field.rawValue))
+                                if let iptcField = field.iptcField, let source = model.liftedAdjustments?.source {
+                                    Spacer()
+                                    if let values = source.iptc?[iptcField] {
+                                        Text(values.isEmpty ? String(localized: "Empty") : values.joined(separator: " · "))
+                                            .lineLimit(1).foregroundStyle(.secondary)
+                                    } else if model.liftLookupID == nil {
+                                        Text("Unavailable").foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                        }
                     }
-                    HStack { Button("Lift", action: model.lift); Button("Stamp", action: model.stamp).disabled(model.liftedAdjustments == nil || (model.stampGroups.isEmpty && model.stampMetadata.isEmpty)) }
-                    Text("Lift captures adjustments, caption, keywords and rating. Stamp replaces only checked fields, including empty values. Metadata is unchecked by default.").font(.caption2).foregroundStyle(.secondary)
+                    HStack {
+                        Button("Lift", action: model.lift).disabled(!model.canLift)
+                        Button("Stamp", action: model.stamp).disabled(!model.canStamp)
+                    }
+                    if let source = model.liftedAdjustments?.source {
+                        LabeledContent("Lifted from", value: source.displayName).font(.caption)
+                    }
+                    if model.liftLookupID != nil {
+                        ProgressView("Reading inherited IPTC…").controlSize(.small)
+                    }
+                    Text("Stamp applies checked settings. Empty IPTC values clear a field. Unavailable IPTC fields are skipped.")
+                        .font(.caption2).foregroundStyle(.secondary)
                 }.padding(.top, 10)
             }
             Toggle("Show original", isOn: $model.compareOriginal).disabled(model.tool != .select)
