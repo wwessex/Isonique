@@ -18,6 +18,7 @@ struct ProjectPhotoMergeValues: Codable {
     let colorLabel: PhotoColorLabel?
     let caption: String
     let keywords: String
+    let keywordPaths: [KeywordPath]?
     let captureDate: String
     let albumIDs: Set<UUID>
     let stackID: UUID?
@@ -33,6 +34,7 @@ struct ProjectPhotoMergeValues: Codable {
         colorLabel = photo.colorLabel
         caption = photo.caption
         keywords = photo.keywords
+        keywordPaths = photo.keywordPaths
         captureDate = photo.captureDate
         albumIDs = photo.albumIDs
         stackID = photo.stackID
@@ -72,6 +74,7 @@ struct ProjectPhotoMergeValues: Codable {
         apply(\.colorLabel, \.colorLabel, String(localized: "Color label"))
         apply(\.caption, \.caption, "Caption")
         apply(\.keywords, \.keywords, "Keywords")
+        apply(\.keywordPaths, \.keywordPaths, "Keyword paths")
         apply(\.captureDate, \.captureDate, "Capture date")
         return (photo, conflicts)
     }

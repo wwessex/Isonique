@@ -151,6 +151,7 @@ private struct PhotoQueryRow: View {
         valueField
             .onChange(of: criterion.field) { _, field in
                 if let operation = field.operators.first { criterion.comparison = operation }
+                criterion.keywordPath = nil
                 switch field {
                 case .rating: criterion.value = "3"
                 case .colorLabel: criterion.value = "1"
@@ -172,6 +173,17 @@ private struct PhotoQueryRow: View {
                 Text("Unrated").tag("0")
                 ForEach(1...5, id: \.self) { Text("\($0) stars").tag(String($0)) }
             }.labelsHidden().accessibilityLabel("Rule rating")
+        case .keywordPath:
+            let choices = model.keywordPathChoices
+            Picker("Keyword path", selection: $criterion.keywordPath) {
+                Text("Choose a keyword path").tag(nil as KeywordPath?)
+                if let saved = criterion.keywordPath, !choices.contains(saved) {
+                    Text(saved.title).tag(Optional(saved))
+                }
+                ForEach(choices, id: \.self) { path in
+                    Text(path.title).tag(Optional(path))
+                }
+            }.labelsHidden().accessibilityLabel("Rule keyword path")
         case .colorLabel:
             Picker("Color label", selection: $criterion.value) {
                 Text("No label").tag("0")

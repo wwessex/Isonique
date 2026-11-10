@@ -237,6 +237,7 @@ public struct Photo: Codable, Identifiable, Equatable {
     public var colorLabel: PhotoColorLabel?
     public var caption = ""
     public var keywords = ""
+    public var keywordPaths: [KeywordPath]?
     public var width: Int
     public var height: Int
     public var camera: String
@@ -301,11 +302,21 @@ public struct Library: Codable {
         if version < 7, hasRecipe(where: \.hasLevelQuarterTones) { version = 7 }
     }
 
+    private var hasKeywordPaths: Bool {
+        photos.contains { $0.keywordPaths?.isEmpty == false }
+            || albums.contains { $0.rule?.query?.criteria.contains { $0.field == .keywordPath } == true }
+    }
+
+    fileprivate mutating func upgradeForKeywordPaths() {
+        if version < 10, hasKeywordPaths { version = 10 }
+    }
+
     func validateSchema() throws {
+        if version < 10, hasKeywordPaths { throw LibraryError.unsupportedVersion }
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...9).contains(version) { return }
+        if (7...10).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -472,6 +483,7 @@ public final class LibraryRepository {
     // The caller holds the catalogue write lock through this atomic replacement.
     func writeCatalogue(_ library: Library) throws -> Library {
         var normalized = library
+        normalized.upgradeForKeywordPaths()
         if let requiredVersion = normalized.history?.requiredCatalogueVersion {
             normalized.version = max(normalized.version, requiredVersion)
         }
@@ -881,7 +893,7 @@ public enum Renderer {
         if options.iptc {
             var iptc = embedded[kCGImagePropertyIPTCDictionary as String] as? [String: Any] ?? [:]
             iptc[kCGImagePropertyIPTCCaptionAbstract as String] = photo.caption
-            iptc[kCGImagePropertyIPTCKeywords as String] = photo.keywords.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+            iptc[kCGImagePropertyIPTCKeywords as String] = photo.keywordNames
             iptc[kCGImagePropertyIPTCStarRating as String] = RatingRules.clamp(photo.rating)
             properties[kCGImagePropertyIPTCDictionary as String] = iptc
         }

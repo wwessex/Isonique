@@ -9,6 +9,7 @@ public enum PhotoQueryMatch: String, CaseIterable, Codable, Identifiable {
 public enum PhotoQueryOperator: String, CaseIterable, Codable, Identifiable {
     case contains = "contains"
     case excludes = "does not contain"
+    case inBranch = "is in branch"
     case equals = "is"
     case differs = "is not"
     case minimum = "is at least"
@@ -22,6 +23,7 @@ public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
     case filename = "Filename"
     case caption = "Caption"
     case keyword = "Keyword"
+    case keywordPath = "Keyword path"
     case camera = "Camera"
     case format = "File extension"
     case captured = "Capture date"
@@ -37,6 +39,7 @@ public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
     public var operators: [PhotoQueryOperator] {
         switch self {
         case .filename, .caption, .keyword, .camera: return [.contains, .excludes, .equals, .differs]
+        case .keywordPath: return [.equals, .inBranch, .differs]
         case .format, .colorLabel: return [.equals, .differs]
         case .captured, .imported: return [.since, .until, .equals, .differs]
         case .rating: return [.minimum, .maximum, .equals, .differs]
@@ -50,17 +53,22 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
     public var field: PhotoQueryField
     public var comparison: PhotoQueryOperator
     public var value: String
+    public var keywordPath: KeywordPath?
 
-    public init(field: PhotoQueryField = .filename, comparison: PhotoQueryOperator = .contains, value: String = "") {
+    public init(field: PhotoQueryField = .filename, comparison: PhotoQueryOperator = .contains, value: String = "",
+                keywordPath: KeywordPath? = nil) {
         self.field = field
         self.comparison = comparison
         self.value = value
+        self.keywordPath = keywordPath
     }
 
     private var term: String { value.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     public var isValid: Bool {
-        guard field.operators.contains(comparison), !term.isEmpty else { return false }
+        guard field.operators.contains(comparison) else { return false }
+        if field == .keywordPath { return keywordPath != nil }
+        guard !term.isEmpty else { return false }
         switch field {
         case .captured, .imported: return Self.dayNumber(term, separator: "-") != nil
         case .format: return !Self.normalizedExtension(term).isEmpty
@@ -72,13 +80,17 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
     }
 
     func includes(_ photo: Photo, originalAvailable: () -> Bool?) -> Bool {
-        guard field.operators.contains(comparison), !term.isEmpty else { return false }
+        guard field.operators.contains(comparison), field == .keywordPath || !term.isEmpty else { return false }
         switch field {
         case .filename: return matchesText([photo.displayName, photo.originalName, photo.sourceName ?? photo.originalName])
         case .caption: return matchesText([photo.caption])
-        case .keyword:
-            let keywords = photo.keywords.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            return matchesText(keywords)
+        case .keyword: return matchesText(photo.keywordNames)
+        case .keywordPath:
+            guard let keywordPath else { return false }
+            let paths = photo.keywordPaths ?? []
+            if comparison == .inBranch { return paths.contains { $0.isWithin(keywordPath) } }
+            let found = paths.contains(keywordPath)
+            return comparison == .equals ? found : !found
         case .camera: return matchesText([photo.camera])
         case .format:
             let extensionValue = Self.normalizedExtension((photo.filename as NSString).pathExtension)

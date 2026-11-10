@@ -205,7 +205,7 @@ enum EditTool: String { case select, crop, straighten, brush }
                 originalFilter.includes(photo, repository: repository) &&
                 colorFilter.includes(photo) &&
                 BrowserFilterRules.includes(rating: photo.rating, flagged: photo.flagged, ratingFilter: ratingFilter, flaggedOnly: scope == "flagged") &&
-                (search.isEmpty || [photo.displayName, photo.originalName, photo.caption, photo.keywords, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(search)) &&
+                (search.isEmpty || [photo.displayName, photo.originalName, photo.caption, photo.keywordSearchText, photo.camera].joined(separator: " ").localizedCaseInsensitiveContains(search)) &&
                 (advancedQuery?.includes(photo, originalAvailable: { self.isOriginalAvailable(photo) }) ?? true)
         }.sorted { lhs, rhs in sortDescending ? orderedBefore(rhs, lhs) : orderedBefore(lhs, rhs) }
         guard !includingCollapsed, !isViewingTrash, !isViewingStack, let state = library.stackBrowser else { return filtered }
@@ -1587,6 +1587,21 @@ struct Inspector: View {
             TextField("Caption", text: model.binding(\.caption, fallback: ""), axis: .vertical)
             Text("Keywords").font(.caption).foregroundStyle(.secondary)
             TextField("Keywords, separated by commas", text: model.binding(\.keywords, fallback: ""))
+            if let paths = photo.keywordPaths, !paths.isEmpty {
+                Text("Vocabulary Keywords").font(.caption).foregroundStyle(.secondary)
+                ForEach(paths, id: \.self) { path in
+                    HStack {
+                        Text(path.title).font(.caption)
+                        Spacer()
+                        Button("Remove \(path.title)", systemImage: "xmark.circle") {
+                            model.changeKeywordPath(path, adding: false)
+                        }
+                        .labelStyle(.iconOnly)
+                        .buttonStyle(.borderless)
+                        .disabled(model.batchMode)
+                    }
+                }
+            }
             OriginalInfoView(photo: photo)
         }.font(.caption)
     }
