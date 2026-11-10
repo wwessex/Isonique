@@ -217,9 +217,13 @@ Select a photo or use Select Photos for a batch. Choose Assign Location, Clear L
 
 Places, GPS search and Smart Albums use the effective location. The catalogue saves edits and their history in format 16. Original-file export copies the source bytes, and GPS on rendered exports continues to use the original location when enabled.
 
+## Map-based location assignment
+
+Open Assign Location for a selected photo version or batch, then expand Pick on Map. Click a point to move the preview pin and fill the signed coordinate fields. Pan or zoom to refine the pick, or edit either coordinate directly. The picker opens around the current coordinates or the selected photos’ known locations when available. Assign Location saves the point through the existing location editor. Cancel discards the draft. The confirmed location updates Places and GPS Smart Albums in the same Undo step. [Apple MapKit coordinate conversion](https://developer.apple.com/documentation/mapkit/mkmapview/convert(_:tocoordinatefrom:))
+
 ## Next checkpoint
 
-Add map-based location assignment for selected versions. Verify coordinate picking, cancellation and updates to Places and Smart Albums.
+Add address and place-name lookup to the location editor. Verify selection of a result, cancellation and coordinate entry when lookup is unavailable.
 
 ## Pending physical camera checks
 

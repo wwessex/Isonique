@@ -83,14 +83,14 @@ final class PlacesBrowserTests: XCTestCase {
     func testMapFramingKeepsDistantPinsAndWrapsAtTheDateLine() throws {
         let london = try XCTUnwrap(GPSCoordinates(latitude: 51.5, longitude: -0.125))
         let sydney = try XCTUnwrap(GPSCoordinates(latitude: -33.875, longitude: 151.25))
-        let global = try XCTUnwrap(PlacesMapFraming.bounds(for: [london, sydney]))
+        let global = try XCTUnwrap(PhotoMapFraming.bounds(for: [london, sydney]))
         for point in [london, sydney] {
             XCTAssertTrue(global.contains(MKMapPoint(.init(latitude: point.latitude, longitude: point.longitude))))
         }
 
         let east = try XCTUnwrap(GPSCoordinates(latitude: 0, longitude: 179.9))
         let west = try XCTUnwrap(GPSCoordinates(latitude: 0, longitude: -179.9))
-        let wrapped = try XCTUnwrap(PlacesMapFraming.bounds(for: [east, west]))
+        let wrapped = try XCTUnwrap(PhotoMapFraming.bounds(for: [east, west]))
         XCTAssertTrue(wrapped.spans180thMeridian)
         XCTAssertLessThan(wrapped.width, MKMapRect.world.width / 360)
     }

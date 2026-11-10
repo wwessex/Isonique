@@ -93,23 +93,35 @@ struct PhotoLocationCommands: View {
     }
 }
 
+struct PhotoLocationDraft {
+    var latitude: String
+    var longitude: String
+
+    var coordinates: GPSCoordinates? { GPSCoordinates(latitude: latitude, longitude: longitude) }
+
+    init(_ point: GPSCoordinates? = nil) {
+        let format = FloatingPointFormatStyle<Double>.number.locale(Locale(identifier: "en_US_POSIX"))
+            .grouping(.never).precision(.fractionLength(0...16))
+        latitude = point?.latitude.formatted(format) ?? ""
+        longitude = point?.longitude.formatted(format) ?? ""
+    }
+}
+
 struct PhotoLocationEditor: View {
     @EnvironmentObject private var model: Workspace
     @Environment(\.dismiss) private var dismiss
     let edit: PhotoLocationEdit
-    @State private var latitude: String
-    @State private var longitude: String
+    @State private var draft: PhotoLocationDraft
+    @State private var showsMap = false
 
     init(edit: PhotoLocationEdit) {
         self.edit = edit
         let current = edit.photos.count == 1 ? edit.photos.first?.cataloguedLocation : nil
-        let format = FloatingPointFormatStyle<Double>.number.grouping(.never).precision(.fractionLength(0...16))
-        _latitude = State(initialValue: current?.latitude.formatted(format) ?? "")
-        _longitude = State(initialValue: current?.longitude.formatted(format) ?? "")
+        _draft = State(initialValue: PhotoLocationDraft(current))
     }
 
     var body: some View {
-        let coordinates = GPSCoordinates(latitude: latitude, longitude: longitude)
+        let coordinates = draft.coordinates
         let count = edit.photos.count
         let changes = edit.changes(to: coordinates).count
         VStack(alignment: .leading, spacing: 14) {
@@ -121,17 +133,29 @@ struct PhotoLocationEditor: View {
                 Grid(alignment: .leading) {
                     GridRow {
                         Text("Latitude")
-                        TextField("Latitude", text: $latitude, prompt: Text("51.5"))
+                        TextField("Latitude", text: $draft.latitude, prompt: Text("51.5"))
                             .labelsHidden().accessibilityLabel("Latitude")
                     }
                     GridRow {
                         Text("Longitude")
-                        TextField("Longitude", text: $longitude, prompt: Text("-0.125"))
+                        TextField("Longitude", text: $draft.longitude, prompt: Text("-0.125"))
                             .labelsHidden().accessibilityLabel("Longitude")
                     }
                 }
                 Text("Enter signed decimal degrees. Latitude runs from −90 to 90 and longitude from −180 to 180.")
                     .font(.caption).foregroundStyle(.secondary)
+                DisclosureGroup("Pick on Map", isExpanded: $showsMap) {
+                    if showsMap {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Click a point to place the preview pin. Pan or zoom to refine it.")
+                                .font(.caption).foregroundStyle(.secondary)
+                            PhotoLocationMap(point: coordinates,
+                                             locations: Set(edit.photos.compactMap(\.cataloguedLocation))) {
+                                draft = PhotoLocationDraft($0)
+                            }.frame(height: 295).clipShape(.rect(cornerRadius: 8))
+                        }.padding(.top, 6)
+                    }
+                }
             case .clear:
                 Text("Remove these locations from Places and GPS coordinate searches.")
             case .useOriginal:
@@ -148,6 +172,6 @@ struct PhotoLocationEditor: View {
                     if model.applyLocationEdit(edit, coordinates: coordinates) || model.error != nil { dismiss() }
                 }.keyboardShortcut(.defaultAction).disabled(changes == 0)
             }
-        }.padding(24).frame(width: 450)
+        }.padding(24).frame(width: showsMap ? 570 : 450)
     }
 }

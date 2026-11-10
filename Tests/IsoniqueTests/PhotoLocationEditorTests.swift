@@ -1,4 +1,5 @@
 import IsoniqueCore
+import MapKit
 import XCTest
 @testable import Isonique
 
@@ -116,6 +117,63 @@ final class PhotoLocationEditorTests: XCTestCase {
         XCTAssertEqual(workspace.history.undo.count, 1)
         XCTAssertNil(GPSCoordinates(latitude: "90.0001", longitude: "0"))
         XCTAssertNil(GPSCoordinates(latitude: "0", longitude: "nan"))
+    }
+
+    @MainActor
+    func testMapPointPreviewsWithoutSavingAndUpdatesOnlySelectedVersionsOnConfirm() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueLocationMap-\(UUID())")
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: root.lastPathComponent))
+        defer {
+            preferences.removePersistentDomain(forName: root.lastPathComponent)
+            try? FileManager.default.removeItem(at: root)
+        }
+        let workspace = Workspace(libraryRoot: root, preferences: preferences)
+        let original = makePhoto("Original.jpg")
+        let unrelated = makePhoto("Unrelated.jpg")
+        let smart = album("Map location", PhotoQueryCriterion(field: .gpsLocation, comparison: .withinRadius,
+                                                              gpsRadius: GPSRadiusRule(latitude: "-33.875", longitude: "151.25", kilometres: "1")))
+        var library = workspace.library
+        library.photos = [original, unrelated]
+        library.albums = [smart]
+        let version = try XCTUnwrap(library.createVersion(of: original.id, from: .current))
+        XCTAssertTrue(workspace.commit(library))
+        workspace.selection = version.id
+        workspace.openLocationEditor(.assign)
+        let preview = try XCTUnwrap(workspace.locationEditor)
+
+        let map = PhotoMapView(accessibilityLabel: "Test map")
+        map.frame = CGRect(x: 0, y: 0, width: 500, height: 300)
+        let expected = CLLocationCoordinate2D(latitude: -33.875, longitude: 151.25)
+        map.setRegion(MKCoordinateRegion(center: expected,
+                                         span: MKCoordinateSpan(latitudeDelta: 0.3, longitudeDelta: 0.3)), animated: false)
+        let screenPoint = map.convert(expected, toPointTo: map)
+        let picked = try XCTUnwrap(map.coordinate(at: screenPoint))
+        XCTAssertEqual(picked.latitude, expected.latitude, accuracy: 0.000001)
+        XCTAssertEqual(picked.longitude, expected.longitude, accuracy: 0.000001)
+        XCTAssertNil(map.coordinate(at: CGPoint(x: -1, y: -1)))
+
+        let catalogue = root.appendingPathComponent("catalog.json")
+        let before = try Data(contentsOf: catalogue)
+        let draft = PhotoLocationDraft(picked)
+        let coordinates = try XCTUnwrap(draft.coordinates)
+        XCTAssertEqual(preview.changes(to: coordinates).map(\.photoID), [version.id])
+        workspace.locationEditor = nil
+        XCTAssertEqual(try Data(contentsOf: catalogue), before)
+        XCTAssertTrue(workspace.history.undo.isEmpty)
+        XCTAssertNil(workspace.selected?.cataloguedLocation)
+
+        workspace.openLocationEditor(.assign)
+        XCTAssertTrue(workspace.applyLocationEdit(try XCTUnwrap(workspace.locationEditor), coordinates: coordinates))
+        workspace.choosePresentation(.places)
+        XCTAssertEqual(PhotoPlace.grouped(workspace.photos).map(\.id), [coordinates])
+        XCTAssertEqual(workspace.photos.map(\.id), [version.id])
+        workspace.scope = "album:\(smart.id)"
+        XCTAssertEqual(workspace.photos.map(\.id), [version.id])
+        workspace.undoEdit()
+        XCTAssertTrue(workspace.photos.isEmpty)
+        workspace.redoEdit()
+        XCTAssertEqual(workspace.photos.map(\.id), [version.id])
+        XCTAssertNil(workspace.library.photos.first { $0.id == original.id }?.cataloguedLocation)
     }
 
     private func makePhoto(_ name: String) -> Photo {
