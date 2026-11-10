@@ -330,7 +330,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     func importMetadataPanel() {
         guard !busy, !isViewingTrash else { return }
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.xml, UTType(filenameExtension: "xmp") ?? .xml]
-        panel.message = "Import XMP into the selected photo, or match XML records by unique source filename. Supported XML: Isonique photo records and AlbumData.xml metadata."
+        panel.message = "Import XMP, including keyword paths, into the selected photo or match XML records by unique source filename. Supported XML: Isonique photo records and AlbumData.xml metadata."
         guard panel.runModal() == .OK, let url = panel.url else { return }
         do {
             let records = try MetadataXML.read(url)
@@ -589,7 +589,8 @@ enum EditTool: String { case select, crop, straighten, brush }
         panel.allowedContentTypes = options.format == .original ? [UTType(filenameExtension: suffix) ?? .data] : [options.format.type]
         let base = photo.exportBaseName + (options.format == .original ? "-original" : "-edited")
         panel.nameFieldStringValue = suffix.isEmpty ? base : base + "." + suffix
-        panel.message = options.format == .original ? "Copies the unchanged original, including all embedded metadata. Edits and metadata choices do not apply." : "Exports with adjustments and your selected metadata. Existing files are never overwritten."
+        panel.message = options.format == .original ? "Copies the unchanged original with its embedded metadata." : "Exports with adjustments and your selected metadata."
+        if options.xmpSidecar == true { panel.message += " A matching XMP sidecar will be saved alongside the image." }
         guard panel.runModal() == .OK, let url = panel.url else { return }
         busy = true; status = "Rendering full-resolution export…"
         Task {

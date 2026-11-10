@@ -570,9 +570,11 @@ public final class LibraryRepository {
             photo.keywords = keywords.joined(separator: ", ")
         }
         var rating = (iptc[kCGImagePropertyIPTCStarRating as String] as? NSNumber)?.intValue
-        if let embedded = CGImageSourceCopyMetadataAtIndex(imageSource, 0, nil),
-           let value = CGImageMetadataCopyStringValueWithPath(embedded, nil, "xmp:Rating" as CFString) as String?,
-           let embeddedRating = Int(value) { rating = embeddedRating }
+        if let embedded = CGImageSourceCopyMetadataAtIndex(imageSource, 0, nil) {
+            if let paths = try? XMPMetadata.keywordPaths(from: embedded), !paths.isEmpty { photo.keywordPaths = paths }
+            if let value = CGImageMetadataCopyStringValueWithPath(embedded, nil, "xmp:Rating" as CFString) as String?,
+               let embeddedRating = Int(value) { rating = embeddedRating }
+        }
         if let rating { photo.rating = RatingRules.clamp(rating) }
         if let options {
             photo.sourceName = source.lastPathComponent
@@ -857,9 +859,20 @@ public enum Renderer {
         guard extensions.contains(target.pathExtension.lowercased()),
               !target.path.hasPrefix(repository.root.path + "/"), !FileManager.default.fileExists(atPath: target.path),
               !target.pathComponents.contains(where: { ["aplibrary", "aperturelibrary", "photoslibrary", "photolibrary", "app"].contains(URL(fileURLWithPath: $0).pathExtension.lowercased()) }) else { throw LibraryError.unsafePath }
+        let sidecar: (url: URL, data: Data)?
+        if options.xmpSidecar == true {
+            let url = target.deletingPathExtension().appendingPathExtension("xmp")
+            let fm = FileManager.default
+            guard target.pathExtension.lowercased() != "xmp", !fm.fileExists(atPath: url.path),
+                  (try? fm.destinationOfSymbolicLink(atPath: url.path)) == nil else {
+                throw XMPMetadata.Failure.sidecarExists(url.lastPathComponent)
+            }
+            sidecar = (url, try XMPMetadata.encode(photo))
+        } else {
+            sidecar = nil
+        }
         if options.format == .original {
-            let data = try Data(contentsOf: original)
-            try data.write(to: target, options: .withoutOverwriting)
+            try writeExport(Data(contentsOf: original), to: target, sidecar: sidecar)
             return
         }
         var image = try render(original, adjustments: photo.adjustments)
@@ -904,6 +917,16 @@ public enum Renderer {
         guard let writer = CGImageDestinationCreateWithData(data, options.format.type.identifier as CFString, 1, nil) else { throw LibraryError.unsupportedImage(photo.originalName) }
         CGImageDestinationAddImage(writer, image, properties as CFDictionary)
         guard CGImageDestinationFinalize(writer) else { throw LibraryError.unsupportedImage(photo.originalName) }
-        try (data as Data).write(to: target, options: .withoutOverwriting)
+        try writeExport(data as Data, to: target, sidecar: sidecar)
+    }
+
+    private static func writeExport(_ data: Data, to target: URL, sidecar: (url: URL, data: Data)?) throws {
+        if let sidecar { try sidecar.data.write(to: sidecar.url, options: .withoutOverwriting) }
+        do {
+            try data.write(to: target, options: .withoutOverwriting)
+        } catch {
+            if let sidecar { try? FileManager.default.removeItem(at: sidecar.url) }
+            throw error
+        }
     }
 }

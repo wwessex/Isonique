@@ -432,3 +432,10 @@
 - In the signed app, applying Places › London to one photo and People › London to another produced separate results in Find Photos. Advanced Search matched the Places branch. A plain London search also found the third photo, which had an existing flat London tag. The catalogue stored both paths separately and retained the flat tag.
 - The native Window menu showed Centre and Minimise under the Mac’s British English preference, and Center and Minimize with a US English override on the disposable test copy.
 - All 226 release tests passed, including RAW fixtures and Finder Trash handoff. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
+
+## XMP keyword hierarchy exchange
+
+- Exported a rendered JPEG and a byte-for-byte original with XMP sidecars, imported both into separate libraries and reopened the catalogues. The two London paths, independently assigned flat keywords, caption and rating survived. ImageIO confirmed that the JPEG still carried flat IPTC keywords, including one London entry for both paths. An older preset decoded and exported IPTC without a sidecar.
+- Tests covered embedded TIFF XMP, bare RDF with alternate namespace prefixes, duplicate path handling, absent and explicitly empty fields, invalid hierarchy data, literal pipes in names and existing sidecar collisions. An image write failure removed its newly created sidecar.
+- In the signed macOS app, exported a JPEG with IPTC and an XMP sidecar. File → Import XML / XMP Metadata applied the sidecar to a second photo. Info and the saved catalogue showed Places › London and People › London alongside the original flat tags from the sidecar.
+- All 229 release tests passed, including RAW fixtures and Finder Trash handoff. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.

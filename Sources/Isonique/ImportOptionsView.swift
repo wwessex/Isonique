@@ -48,7 +48,7 @@ struct ImportOptionsView: View {
                     }
                 }.disabled(!options.applyMetadata)
                 Toggle("Read matching .xmp sidecars", isOn: $options.readSidecars)
-                Text("Sidecar caption, keywords and rating override the preset. Invalid sidecars are reported. Use File → Import XML / XMP Metadata for existing photos.").font(.caption).foregroundStyle(.secondary)
+                Text("Caption, flat keywords, keyword paths and rating in sidecars take precedence when present. Invalid sidecars are reported. Use File → Import XML / XMP Metadata for existing photos.").font(.caption).foregroundStyle(.secondary)
                 Toggle("Keep Undo/Redo history after closing", isOn: $persistHistory).onChange(of: persistHistory) { _, _ in model.save() }
                 Text("Remembers the latest 100 edits per library. Turning this off removes saved history; session Undo still works.").font(.caption).foregroundStyle(.secondary)
             }
