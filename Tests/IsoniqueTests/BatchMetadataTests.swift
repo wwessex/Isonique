@@ -149,6 +149,62 @@ final class BatchMetadataTests: XCTestCase {
         XCTAssertEqual(library.photos[0].keywords, "New")
     }
 
+    @MainActor
+    func testIPTCBatchPreviewRejectsStaleValuesAndUndoRedoSurviveReopen() throws {
+        let (root, preferences) = try fixture()
+        defer { cleanUp(root, preferences) }
+        preferences.set(true, forKey: "history.persist")
+        let workspace = Workspace(libraryRoot: root, preferences: preferences)
+        var first = photo("First", caption: "Caption", keywords: "Keyword")
+        var second = photo("Second", caption: "Caption 2", keywords: "Keyword 2")
+        first.iptc = IPTCMetadata(title: "First title", credit: "Credit 1")
+        second.iptc = IPTCMetadata(copyright: "Keep me", credit: "Credit 2")
+        let third = photo("Third", caption: "", keywords: "")
+        var draft = workspace.library
+        draft.photos = [first, second, third]
+        XCTAssertTrue(workspace.commit(draft))
+        workspace.batchMode = true
+        workspace.batchSelection = [first.id, second.id]
+        workspace.openBatchMetadata()
+        let review = try XCTUnwrap(workspace.batchMetadataReview)
+        let fields = IPTCMetadata(title: "New title", creators: ["Pat, Jr.", "Róisín"], credit: "")
+        let preview = review.preview(caption: nil, keywordMode: .unchanged, keywords: "", iptc: fields)
+        XCTAssertEqual(preview.rows.count, 2)
+        XCTAssertEqual(preview.rows.first?.after.iptc?.map(\.field), [.title, .creator, .credit])
+        XCTAssertNil(preview.rows.last?.before.iptc?.first { $0.field == .title }?.text)
+        XCTAssertEqual(preview.rows.first?.after.iptc?.first { $0.field == .credit }?.text, "")
+
+        second.iptc?.copyright = "Newer copyright"
+        draft = workspace.library
+        draft.photos[1] = second
+        XCTAssertTrue(workspace.commit(draft))
+        XCTAssertFalse(workspace.applyBatchMetadata(preview, for: review))
+        XCTAssertEqual(workspace.library.photos, draft.photos)
+        XCTAssertTrue(workspace.history.undo.isEmpty)
+
+        workspace.openBatchMetadata()
+        let current = try XCTUnwrap(workspace.batchMetadataReview)
+        XCTAssertTrue(workspace.applyBatchMetadata(
+            current.preview(caption: nil, keywordMode: .unchanged, keywords: "", iptc: fields), for: current))
+        XCTAssertEqual(workspace.history.undo.count, 1)
+        let applied = workspace.library.photos
+        XCTAssertEqual(applied[0].iptc, fields)
+        XCTAssertEqual(applied[1].iptc?.copyright, "Newer copyright")
+        XCTAssertEqual(applied[0].caption, first.caption)
+        XCTAssertEqual(applied[1].keywords, second.keywords)
+        XCTAssertEqual(applied[2], third)
+
+        let reopened = Workspace(libraryRoot: root, preferences: preferences)
+        XCTAssertEqual(reopened.library.version, 11)
+        XCTAssertEqual(reopened.library.photos, applied)
+        reopened.undoEdit()
+        XCTAssertEqual(reopened.library.photos, draft.photos)
+        let reopenedAgain = Workspace(libraryRoot: root, preferences: preferences)
+        reopenedAgain.redoEdit()
+        XCTAssertEqual(reopenedAgain.library.photos, applied)
+        XCTAssertEqual(try reopenedAgain.repository?.load().photos, applied)
+    }
+
     private func photo(_ name: String, caption: String, keywords: String, projectID: UUID? = nil) -> Photo {
         var photo = Photo(filename: name + ".jpg", originalName: name + ".jpg", projectID: projectID,
                           width: 20, height: 16, camera: "", captureDate: "", sha256: name)

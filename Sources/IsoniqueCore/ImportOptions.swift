@@ -64,11 +64,13 @@ public struct MetadataRecord {
     public var keywords: String?
     public var rating: Int?
     public var keywordPaths: [KeywordPath]?
+    public var iptc: IPTCMetadata?
     public func applying(to source: Photo) -> Photo {
         var result = source
         if let caption { result.caption = caption }
         if let keywords { result.keywords = keywords }
         if let keywordPaths { result.keywordPaths = keywordPaths.isEmpty ? nil : keywordPaths }
+        if let iptc { result.iptc = iptc.overriding(result.iptc ?? IPTCMetadata()) }
         if let rating { result.rating = RatingRules.clamp(rating) }
         return result
     }

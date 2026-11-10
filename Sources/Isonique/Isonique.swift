@@ -1603,6 +1603,7 @@ struct Inspector: View {
                     }
                 }
             }
+            IPTCInspectorView(photo: photo).id(photo.id)
             OriginalInfoView(photo: photo)
         }.font(.caption)
     }

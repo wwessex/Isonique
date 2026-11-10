@@ -4,6 +4,7 @@ import ImageIO
 enum XMPMetadata {
     private static let lightroom = "http://ns.adobe.com/lightroom/1.0/"
     private static let dublinCore = "http://purl.org/dc/elements/1.1/"
+    private static let photoshop = "http://ns.adobe.com/photoshop/1.0/"
     private static let rdf = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
 
     enum Failure: LocalizedError {
@@ -21,15 +22,16 @@ enum XMPMetadata {
 
     static func read(_ data: Data) throws -> MetadataRecord? {
         guard let metadata = packet(from: data) else { return nil }
-        let description = CGImageMetadataCopyTagWithPath(metadata, nil, "dc:description" as CFString)
-        let caption = string(metadata, at: "dc:description[x-default]")
-            ?? description.flatMap { strings($0)?.first ?? CGImageMetadataTagCopyValue($0) as? String }
+        let caption = localizedText(metadata, at: "dc:description")
         let keywords = CGImageMetadataCopyTagWithPath(metadata, nil, "dc:subject" as CFString)
             .flatMap(strings)?.joined(separator: ", ")
         let paths = try keywordPaths(from: metadata)
         let rating = string(metadata, at: "xmp:Rating").flatMap(Int.init)
-        guard caption != nil || keywords != nil || paths != nil || rating != nil else { return nil }
-        return MetadataRecord(caption: caption, keywords: keywords, rating: rating, keywordPaths: paths)
+        var iptc = iptc(from: metadata)
+        if iptc.credit == nil, hasEmptyCredit(in: data) { iptc.credit = "" }
+        guard caption != nil || keywords != nil || paths != nil || rating != nil || !iptc.isEmpty else { return nil }
+        return MetadataRecord(caption: caption, keywords: keywords, rating: rating, keywordPaths: paths,
+                              iptc: iptc.isEmpty ? nil : iptc)
     }
 
     private static func packet(from data: Data) -> CGImageMetadata? {
@@ -41,6 +43,27 @@ enum XMPMetadata {
               root.localName == "RDF", root.uri == rdf else { return nil }
         let wrapped = "<x:xmpmeta xmlns:x=\"adobe:ns:meta/\">" + root.xmlString + "</x:xmpmeta>"
         return CGImageMetadataCreateFromXMPData(Data(wrapped.utf8) as CFData)
+    }
+
+    private static func hasEmptyCredit(in data: Data) -> Bool {
+        // ImageIO drops empty simple text properties. Check the XML so an explicit clear survives reimport.
+        guard let document = try? XMLDocument(data: data, options: [.nodeLoadExternalEntitiesNever]),
+              document.dtd == nil, let root = document.rootElement(),
+              let graph = ([root] + (root.children ?? [])).first(where: { $0.localName == "RDF" && $0.uri == rdf })
+        else { return false }
+
+        func isEmptyCredit(_ node: XMLNode) -> Bool {
+            node.localName == "Credit" && node.uri == photoshop && node.stringValue == ""
+        }
+
+        for case let description as XMLElement in graph.children ?? [] {
+            if (description.attributes ?? []).contains(where: isEmptyCredit) { return true }
+            for case let element as XMLElement in description.children ?? []
+                where isEmptyCredit(element) && (element.attributes ?? []).isEmpty {
+                if !(element.children ?? []).contains(where: { $0.kind == .element }) { return true }
+            }
+        }
+        return false
     }
 
     static func keywordPaths(from metadata: CGImageMetadata) throws -> [KeywordPath]? {
@@ -62,18 +85,38 @@ enum XMPMetadata {
         return paths
     }
 
-    static func encode(_ photo: Photo) throws -> Data {
+    static func iptc(from metadata: CGImageMetadata) -> IPTCMetadata {
+        let creators = CGImageMetadataCopyTagWithPath(metadata, nil, "dc:creator" as CFString)
+            .flatMap(strings)
+        return IPTCMetadata(title: localizedText(metadata, at: "dc:title"),
+                            creators: creators,
+                            copyright: localizedText(metadata, at: "dc:rights"),
+                            credit: string(metadata, at: "photoshop:Credit"))
+    }
+
+    static func encode(_ photo: Photo, iptc: IPTCMetadata) throws -> Data {
         let paths = try (photo.keywordPaths ?? []).map { path in
             guard path.components.allSatisfy(isRepresentableLevel) else { throw Failure.unrepresentablePath(path.title) }
             return path.components.joined(separator: "|")
         }
         let metadata = CGImageMetadataCreateMutable()
         guard CGImageMetadataRegisterNamespaceForPrefix(metadata, lightroom as CFString, "lr" as CFString, nil),
-              setBag(paths, name: "hierarchicalSubject", prefix: "lr", namespace: lightroom, on: metadata),
-              setBag(KeywordList.values(photo.keywords), name: "subject", prefix: "dc", namespace: dublinCore, on: metadata),
+              setArray(paths, name: "hierarchicalSubject", prefix: "lr", namespace: lightroom, on: metadata),
+              setArray(KeywordList.values(photo.keywords), name: "subject", prefix: "dc", namespace: dublinCore, on: metadata),
               CGImageMetadataSetValueWithPath(metadata, nil, "dc:description[x-default]" as CFString, photo.caption as CFString),
-              CGImageMetadataSetValueWithPath(metadata, nil, "xmp:Rating" as CFString, String(RatingRules.clamp(photo.rating)) as CFString),
-              let data = CGImageMetadataCreateXMPData(metadata, nil) else { throw Failure.encoding }
+              CGImageMetadataSetValueWithPath(metadata, nil, "xmp:Rating" as CFString, String(RatingRules.clamp(photo.rating)) as CFString)
+        else { throw Failure.encoding }
+        for (path, value) in [("dc:title[x-default]", iptc.title), ("dc:rights[x-default]", iptc.copyright),
+                              ("photoshop:Credit", iptc.credit)] {
+            if let value, !CGImageMetadataSetValueWithPath(metadata, nil, path as CFString, value as CFString) {
+                throw Failure.encoding
+            }
+        }
+        if let creators = iptc.creators,
+           !setArray(creators, name: "creator", prefix: "dc", namespace: dublinCore, type: .arrayOrdered, on: metadata) {
+            throw Failure.encoding
+        }
+        guard let data = CGImageMetadataCreateXMPData(metadata, nil) else { throw Failure.encoding }
         return data as Data
     }
 
@@ -81,10 +124,10 @@ enum XMPMetadata {
         !name.contains("|") && !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    private static func setBag(_ values: [String], name: String, prefix: String, namespace: String,
-                               on metadata: CGMutableImageMetadata) -> Bool {
+    private static func setArray(_ values: [String], name: String, prefix: String, namespace: String,
+                                 type: CGImageMetadataType = .arrayUnordered, on metadata: CGMutableImageMetadata) -> Bool {
         guard let tag = CGImageMetadataTagCreate(namespace as CFString, prefix as CFString, name as CFString,
-                                                .arrayUnordered, values as CFArray) else { return false }
+                                                type, values as CFArray) else { return false }
         return CGImageMetadataSetTagWithPath(metadata, nil, "\(prefix):\(name)" as CFString, tag)
     }
 
@@ -92,6 +135,13 @@ enum XMPMetadata {
         guard let tags = CGImageMetadataTagCopyValue(tag) as? [CGImageMetadataTag] else { return nil }
         let values = tags.compactMap { CGImageMetadataTagCopyValue($0) as? String }
         return tags.count == values.count ? values : nil
+    }
+
+    private static func localizedText(_ metadata: CGImageMetadata, at path: String) -> String? {
+        if let value = string(metadata, at: path + "[x-default]") { return value }
+        guard let tag = CGImageMetadataCopyTagWithPath(metadata, nil, path as CFString) else { return nil }
+        if let translations = strings(tag) { return translations.first ?? "" }
+        return CGImageMetadataTagCopyValue(tag) as? String
     }
 
     private static func string(_ metadata: CGImageMetadata, at path: String) -> String? {

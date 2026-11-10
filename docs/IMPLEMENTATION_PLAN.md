@@ -157,6 +157,12 @@ Export → Write matching XMP sidecar saves current metadata alongside a rendere
 
 Import reads hierarchy paths from embedded XMP. Enable Read matching .xmp sidecars to apply adjacent sidecars during photo import. File → Import XML / XMP Metadata applies a sidecar to the selected photo. Fields present in a sidecar replace the corresponding fields, and omitted fields keep their current values. Flat tags and assigned paths remain separate in the catalogue.
 
+## IPTC title, creator, copyright and credit
+
+Info → IPTC Metadata edits the selected version. Enter one creator per line to retain the byline order. Save IPTC Metadata commits the edited fields together. Metadata → Batch Change previews per-field replacements for the visible selection. Check a field and leave its input blank to clear it. “From original” in the preview means the catalogue has no saved value for that field. Each Apply is one Undo step, and catalogue format 11 supports these fields and their persistent history.
+
+Import reads the four fields from embedded IPTC and XMP, with matching sidecar fields taking precedence when present. Older catalogues can read inherited fields from available originals in Info and during export. Edited image export can embed the current IPTC values. XMP sidecars work with both edited images and byte-for-byte originals. Title and copyright use the default XMP language value, or the first supplied translation when no default is present. Creator uses an ordered list. [IPTC Photo Metadata Standard](https://www.iptc.org/std/photometadata/specification/IPTC-PhotoMetadata-2025.1.html#metadata-properties)
+
 ## Pending physical camera checks
 
 1. Run the [physical PTP camera import checklist](../VALIDATION.md#physical-ptp-camera-import) when a camera is available. Record thumbnail, deselection, active transfer cancellation and reconnect results.

@@ -13,6 +13,7 @@ public struct BatchMetadataChange: Codable, Equatable {
     public let caption: String?
     public let keywords: String?
     public let keywordPaths: [KeywordPath]?
+    public let iptc: [IPTCFieldEdit]?
 }
 
 public struct BatchMetadataReview: Identifiable {
@@ -25,12 +26,13 @@ public struct BatchMetadataReview: Identifiable {
         let caption: String
         let keywords: String
         let keywordPaths: [KeywordPath]
+        let iptc: IPTCMetadata?
     }
 
     public init(photos: [Photo]) {
         targets = photos.map {
             Target(id: $0.id, name: $0.displayName, caption: $0.caption,
-                   keywords: $0.keywords, keywordPaths: $0.keywordPaths ?? [])
+                   keywords: $0.keywords, keywordPaths: $0.keywordPaths ?? [], iptc: $0.iptc)
         }
     }
 
@@ -48,10 +50,11 @@ public struct BatchMetadataReview: Identifiable {
         public let rows: [Row]
     }
 
-    public func preview(caption: String?, keywordMode: BatchKeywordMode, keywords: String) -> Preview {
+    public func preview(caption: String?, keywordMode: BatchKeywordMode, keywords: String,
+                        iptc: IPTCMetadata = IPTCMetadata()) -> Preview {
         let input = KeywordList.uniqueValues(keywords)
         let replacement = input.joined(separator: ", ")
-        return preview(caption: caption, keywordChange: { keywords in
+        return preview(caption: caption, iptc: iptc, keywordChange: { keywords in
             switch keywordMode {
             case .unchanged:
                 return nil
@@ -83,20 +86,26 @@ public struct BatchMetadataReview: Identifiable {
         })
     }
 
-    private func preview(caption: String?, keywordChange: (String) -> String? = { _ in nil },
+    private func preview(caption: String?, iptc: IPTCMetadata = IPTCMetadata(), keywordChange: (String) -> String? = { _ in nil },
                          keywordPathChange: ([KeywordPath]) -> [KeywordPath]? = { _ in nil }) -> Preview {
         let rows = targets.compactMap { target -> Row? in
             let newCaption = caption != target.caption ? caption : nil
             let newKeywords = keywordChange(target.keywords)
             let newPaths = keywordPathChange(target.keywordPaths)
-            guard newCaption != nil || newKeywords != nil || newPaths != nil else { return nil }
+            let iptcEdits = IPTCField.allCases.compactMap { field -> IPTCFieldEdit? in
+                guard let values = iptc[field], values != target.iptc?[field] else { return nil }
+                return IPTCFieldEdit(field: field, values: values)
+            }
+            let previousIPTC = iptcEdits.map { IPTCFieldEdit(field: $0.field, values: target.iptc?[$0.field]) }
+            guard newCaption != nil || newKeywords != nil || newPaths != nil || !iptcEdits.isEmpty else { return nil }
             return Row(name: target.name,
                        before: BatchMetadataChange(photoID: target.id,
                                                    caption: newCaption.map { _ in target.caption },
                                                    keywords: newKeywords.map { _ in target.keywords },
-                                                   keywordPaths: newPaths.map { _ in target.keywordPaths }),
+                                                   keywordPaths: newPaths.map { _ in target.keywordPaths },
+                                                   iptc: previousIPTC.isEmpty ? nil : previousIPTC),
                        after: BatchMetadataChange(photoID: target.id, caption: newCaption, keywords: newKeywords,
-                                                  keywordPaths: newPaths))
+                                                  keywordPaths: newPaths, iptc: iptcEdits.isEmpty ? nil : iptcEdits))
         }
         return Preview(reviewID: id, rows: rows)
     }
@@ -110,7 +119,7 @@ public struct BatchMetadataReview: Identifiable {
               current.allSatisfy({ photo in
                   let target = expected[photo.id]
                   return photo.caption == target?.caption && photo.keywords == target?.keywords
-                      && (photo.keywordPaths ?? []) == target?.keywordPaths
+                      && (photo.keywordPaths ?? []) == target?.keywordPaths && photo.iptc == target?.iptc
               }) else { return nil }
         return library.replaceBatchMetadata(preview.rows.map(\.after))
     }
@@ -155,7 +164,8 @@ extension Library {
             let previous = BatchMetadataChange(photoID: photo.id,
                                                caption: change.caption.map { _ in photo.caption },
                                                keywords: change.keywords.map { _ in photo.keywords },
-                                               keywordPaths: change.keywordPaths.map { _ in photo.keywordPaths ?? [] })
+                                               keywordPaths: change.keywordPaths.map { _ in photo.keywordPaths ?? [] },
+                                               iptc: change.iptc.map { photo.applyIPTC($0) })
             if let caption = change.caption { photo.caption = caption }
             if let keywords = change.keywords { photo.keywords = keywords }
             if let paths = change.keywordPaths { photo.keywordPaths = paths.isEmpty ? nil : paths }

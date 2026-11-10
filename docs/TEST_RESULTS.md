@@ -439,3 +439,10 @@
 - Tests covered embedded TIFF XMP, bare RDF with alternate namespace prefixes, duplicate path handling, absent and explicitly empty fields, invalid hierarchy data, literal pipes in names and existing sidecar collisions. An image write failure removed its newly created sidecar.
 - In the signed macOS app, exported a JPEG with IPTC and an XMP sidecar. File → Import XML / XMP Metadata applied the sidecar to a second photo. Info and the saved catalogue showed Places › London and People › London alongside the original flat tags from the sidecar.
 - All 229 release tests passed, including RAW fixtures and Finder Trash handoff. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
+
+## IPTC title, creator, copyright and credit
+
+- The batch test verified field-by-field preview and clearing, rejection of a stale preview, selection scoping, and one-step Undo and Redo after separate catalogue reopens. Project merge tests verified independent field changes and the preservation of current values when an older source has no IPTC fields.
+- Embedded IPTC import, legacy export inheritance and edited JPEG IPTC were verified against ImageIO. Rendered JPEG and byte-for-byte original exports round-tripped the four fields through XMP sidecars. Tests covered ordered creators, Unicode, omitted fields and explicit clears, including empty XMP credit in both element and attribute form.
+- In the signed macOS app, saved an individual title edit from Info, then previewed and applied a title replacement and credit clear to two of three selected-library fixtures. Undo restored the prior title and credit, and Redo reapplied both changes. The saved catalogue retained both creators and copyright on all three photos. The unselected photo and original file hashes were unchanged.
+- All 233 release tests passed, including four checksum-verified RAW fixtures and Finder Trash handoff. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.

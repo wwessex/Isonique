@@ -37,9 +37,18 @@ struct BatchMetadataView: View {
     @State private var caption = ""
     @State private var keywordMode = BatchKeywordMode.unchanged
     @State private var keywords = ""
+    @State private var iptcFields: Set<IPTCField> = []
+    @State private var iptcText: [IPTCField: String] = [:]
+
+    private var iptcChanges: IPTCMetadata {
+        var metadata = IPTCMetadata()
+        for field in iptcFields { metadata[field] = field.values(from: iptcText[field, default: ""]) }
+        return metadata
+    }
 
     var body: some View {
-        let preview = review.preview(caption: changeCaption ? caption : nil, keywordMode: keywordMode, keywords: keywords)
+        let preview = review.preview(caption: changeCaption ? caption : nil, keywordMode: keywordMode,
+                                     keywords: keywords, iptc: iptcChanges)
         VStack(alignment: .leading, spacing: 12) {
             Text("Batch Change Metadata").font(.title2.bold())
             Toggle("Replace caption", isOn: $changeCaption)
@@ -61,6 +70,26 @@ struct BatchMetadataView: View {
                     Text("Leave the new keywords empty to clear them.").font(.caption).foregroundStyle(.secondary)
                 }
             }
+            DisclosureGroup("IPTC Metadata") {
+                Grid(alignment: .leading, horizontalSpacing: 14, verticalSpacing: 6) {
+                    ForEach(IPTCField.allCases) { field in
+                        GridRow(alignment: .top) {
+                            Toggle(field.title, isOn: Binding(get: { iptcFields.contains(field) }, set: { enabled in
+                                if enabled { iptcFields.insert(field) } else { iptcFields.remove(field) }
+                            }))
+                            TextField(field == .creator ? String(localized: "One creator per line") : field.title,
+                                      text: Binding(get: { iptcText[field, default: ""] }, set: { iptcText[field] = $0 }),
+                                      axis: field == .creator ? .vertical : .horizontal)
+                                .lineLimit(1...3)
+                                .accessibilityLabel(field.title)
+                                .accessibilityIdentifier("BatchIPTC-\(field.rawValue)")
+                                .disabled(!iptcFields.contains(field))
+                        }
+                    }
+                }
+                .padding(.top, 4)
+                Text("Checked fields are replaced. Leave one empty to clear it.").font(.caption).foregroundStyle(.secondary)
+            }
             Divider()
             Text("Preview").font(.headline)
             Text("\(preview.rows.count) of \(review.photoCount) selected photos will change")
@@ -76,6 +105,11 @@ struct BatchMetadataView: View {
                             }
                             if let keywords = row.after.keywords {
                                 fieldPreview("Keywords", before: row.before.keywords ?? "", after: keywords)
+                            }
+                            ForEach(row.after.iptc ?? []) { edit in
+                                let previous = row.before.iptc?.first { $0.field == edit.field }
+                                fieldPreview(edit.field.title, before: previous?.text ?? String(localized: "From original"),
+                                             after: edit.text ?? "")
                             }
                             Divider()
                         }

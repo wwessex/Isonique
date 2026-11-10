@@ -17,6 +17,7 @@ struct ProjectPhotoMergeValues: Codable {
     let flagged: Bool
     let colorLabel: PhotoColorLabel?
     let caption: String
+    let iptc: IPTCMetadata?
     let keywords: String
     let keywordPaths: [KeywordPath]?
     let captureDate: String
@@ -33,6 +34,7 @@ struct ProjectPhotoMergeValues: Codable {
         flagged = photo.flagged
         colorLabel = photo.colorLabel
         caption = photo.caption
+        iptc = photo.iptc
         keywords = photo.keywords
         keywordPaths = photo.keywordPaths
         captureDate = photo.captureDate
@@ -73,6 +75,16 @@ struct ProjectPhotoMergeValues: Codable {
         apply(\.flagged, \.flagged, "Flag")
         apply(\.colorLabel, \.colorLabel, String(localized: "Color label"))
         apply(\.caption, \.caption, "Caption")
+        let iptcChanges = IPTCField.allCases.compactMap { field -> IPTCFieldEdit? in
+            let old = current.iptc?[field]
+            let new = incoming.iptc?[field]
+            // An incoming catalogue without this field cannot explicitly clear it.
+            if baseline == nil, new == nil { return nil }
+            let choice = resolveEditableValue(old, new, baseline: baseline.map { $0.iptc?[field] }, prefer: preference)
+            if choice.conflict { conflicts.append(field.title) }
+            return choice.value == old ? nil : IPTCFieldEdit(field: field, values: choice.value)
+        }
+        if !iptcChanges.isEmpty { photo.applyIPTC(iptcChanges) }
         apply(\.keywords, \.keywords, "Keywords")
         apply(\.keywordPaths, \.keywordPaths, "Keyword paths")
         apply(\.captureDate, \.captureDate, "Capture date")
