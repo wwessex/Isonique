@@ -18,6 +18,35 @@ enum KeywordVocabularyPreferences {
 }
 
 extension Workspace {
+    var keywordPathChoices: [KeywordPath] {
+        var seen: Set<KeywordPath> = []
+        var choices = keywordVocabulary.paths.filter { seen.insert($0).inserted }
+        for photo in library.photos {
+            for path in photo.keywordPaths ?? [] where !seen.contains(path) {
+                // Keep saved branches searchable even after their vocabulary entries are removed.
+                for depth in 1...path.components.count {
+                    if let prefix = KeywordPath(Array(path.components.prefix(depth))), seen.insert(prefix).inserted {
+                        choices.append(prefix)
+                    }
+                }
+            }
+        }
+        return choices
+    }
+
+    @discardableResult
+    func changeKeywordPath(_ path: KeywordPath, adding: Bool) -> Bool {
+        let review = BatchMetadataReview(photos: metadataEditingTargets)
+        return applyBatchMetadata(review.previewKeywordPath(path, adding: adding), for: review)
+    }
+
+    func findPhotos(with path: KeywordPath) {
+        showBrowser(allPhotos: true)
+        var query = PhotoQuery()
+        query.criteria = [PhotoQueryCriterion(field: .keywordPath, comparison: .equals, keywordPath: path)]
+        advancedSearch = query
+    }
+
     func updateKeywordVocabulary(_ update: (inout KeywordVocabulary) throws -> Void) throws {
         var vocabulary = KeywordVocabularyPreferences.load(from: preferences)
         try update(&vocabulary)
@@ -55,6 +84,7 @@ struct KeywordVocabularyView: View {
     }
 
     private var selected: KeywordVocabulary.Entry? { selectedID.flatMap(model.keywordVocabulary.entry) }
+    private var selectedPath: KeywordPath? { selectedID.flatMap(model.keywordVocabulary.path(to:)) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -73,6 +103,10 @@ struct KeywordVocabularyView: View {
             .frame(minHeight: 220)
             .disabled(editor != nil)
 
+            if let selectedPath {
+                Text(selectedPath.title).font(.caption).foregroundStyle(.secondary)
+            }
+
             if let editor {
                 HStack {
                     TextField("Keyword name", text: $name)
@@ -90,12 +124,18 @@ struct KeywordVocabularyView: View {
                     }.disabled(selected == nil)
                     Button("Delete…") { confirmingDelete = true }.disabled(selected == nil)
                     Spacer()
+                    Button("Find Photos") {
+                        if let selectedPath {
+                            model.findPhotos(with: selectedPath)
+                            dismiss()
+                        }
+                    }.disabled(selectedPath == nil)
                     Button("Apply Keyword") {
-                        if let selected, model.addKeywords(selected.name) {
+                        if let selectedPath, model.changeKeywordPath(selectedPath, adding: true) {
                             message = model.status
                             error = nil
                         }
-                    }.disabled(selected == nil || !model.canOpenBatchMetadata)
+                    }.disabled(selectedPath == nil || !model.canOpenBatchMetadata)
                 }
             }
             if let error { Text(error).foregroundStyle(.orange) }
@@ -109,7 +149,7 @@ struct KeywordVocabularyView: View {
             }
         }
         .padding(24)
-        .frame(width: 620, height: 435)
+        .frame(width: 690, height: 460)
         .alert("Delete Keyword Branch?", isPresented: $confirmingDelete, presenting: selected) { entry in
             Button("Delete Branch", role: .destructive) {
                 perform {

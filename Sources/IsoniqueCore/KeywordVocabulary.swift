@@ -1,5 +1,38 @@
 import Foundation
 
+/// A vocabulary term qualified by its ancestors, independent of a particular vocabulary file.
+public struct KeywordPath: Codable, Hashable {
+    public let components: [String]
+
+    public init?(_ components: [String]) {
+        guard (1...32).contains(components.count), components.allSatisfy(KeywordVocabulary.validName) else { return nil }
+        self.components = components
+    }
+
+    public var name: String { components[components.count - 1] }
+    public var title: String { components.joined(separator: " › ") }
+    private var key: [String] { components.map(KeywordList.key) }
+
+    public static func == (lhs: Self, rhs: Self) -> Bool { lhs.key == rhs.key }
+    public func hash(into hasher: inout Hasher) { hasher.combine(key) }
+
+    public func isWithin(_ branch: Self) -> Bool { key.starts(with: branch.key) }
+
+    public init(from decoder: Decoder) throws {
+        let value = try decoder.singleValueContainer()
+        let components = try value.decode([String].self)
+        guard let path = Self(components) else {
+            throw DecodingError.dataCorruptedError(in: value, debugDescription: "Invalid vocabulary keyword path")
+        }
+        self = path
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var value = encoder.singleValueContainer()
+        try value.encode(components)
+    }
+}
+
 public struct KeywordVocabulary: Codable, Equatable {
     public struct Entry: Codable, Equatable, Identifiable {
         public let id: UUID
@@ -70,6 +103,29 @@ public struct KeywordVocabulary: Codable, Equatable {
         return find(in: roots)
     }
 
+    public func path(to id: UUID) -> KeywordPath? {
+        func find(in entries: [Entry], ancestors: [String]) -> KeywordPath? {
+            for entry in entries {
+                let components = ancestors + [entry.name]
+                if entry.id == id { return KeywordPath(components) }
+                if let child = find(in: entry.children, ancestors: components) { return child }
+            }
+            return nil
+        }
+        return find(in: roots, ancestors: [])
+    }
+
+    public var paths: [KeywordPath] {
+        func collect(_ entries: [Entry], ancestors: [String]) -> [KeywordPath] {
+            entries.flatMap { entry -> [KeywordPath] in
+                let components = ancestors + [entry.name]
+                guard let path = KeywordPath(components) else { return [] }
+                return [path] + collect(entry.children, ancestors: components)
+            }
+        }
+        return collect(roots, ancestors: [])
+    }
+
     @discardableResult
     public mutating func add(_ name: String, under parentID: UUID? = nil) throws -> UUID {
         let entry = Entry(name: try Self.checkedName(name))
@@ -135,7 +191,7 @@ public struct KeywordVocabulary: Codable, Equatable {
         return false
     }
 
-    private static func validName(_ name: String) -> Bool {
+    fileprivate static func validName(_ name: String) -> Bool {
         !name.isEmpty && !name.contains(",") && name.rangeOfCharacter(from: .newlines) == nil
             && !name.unicodeScalars.contains { $0.properties.generalCategory == .control }
     }

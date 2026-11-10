@@ -36,7 +36,10 @@ public struct LiftedSettings {
         var result = target
         result.adjustments = source.adjustments.stamping(onto: target.adjustments, groups: groups)
         if metadata.contains(.caption) { result.caption = source.caption }
-        if metadata.contains(.keywords) { result.keywords = source.keywords }
+        if metadata.contains(.keywords) {
+            result.keywords = source.keywords
+            result.keywordPaths = source.keywordPaths
+        }
         if metadata.contains(.rating) { result.rating = RatingRules.clamp(source.rating) }
         return result
     }

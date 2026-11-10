@@ -139,9 +139,17 @@ The keyword controls support Shift-click removal and Metadata → Remove Keyword
 
 ## Reusable keyword vocabulary and regional English
 
-Metadata → Keyword Vocabulary lets you add, rename and remove branches, apply a term to selected photos, and exchange tab-indented UTF-8 text lists. The tree persists in app preferences and is shared across libraries. Import merges case-insensitive matches within each branch, keeping existing spelling and order. Invalid files are rejected before saving. Assigning a term uses its name in the existing photo keyword field. [Aperture keyword list reference](https://aperture.skydocu.com/en/organize-and-sort-photos/add-keywords-to-photos/export-and-import-keyword-lists/)
+Metadata → Keyword Vocabulary lets you add, rename and remove branches, apply a term to selected photos, and exchange tab-indented UTF-8 text lists. The tree persists in app preferences and is shared across libraries. Import merges case-insensitive matches within each branch, keeping existing spelling and order. Invalid files are rejected before saving. Photo assignments retain their full vocabulary path alongside the existing flat keyword field. [Aperture keyword list reference](https://aperture.skydocu.com/en/organize-and-sort-photos/add-keywords-to-photos/export-and-import-keyword-lists/)
 
 The app bundle uses the macOS language preference to select British English resources and uses base English as the fallback. The translated labels cover regional spellings in the interface and app menus. [Apple bundle language reference](https://developer.apple.com/documentation/bundleresources/information-property-list/cfbundledevelopmentregion)
+
+## Hierarchy-aware keyword assignment and search
+
+Apply Keyword in the vocabulary stores the selected term with its ancestors. The Info inspector lists and removes assigned paths independently. A vocabulary rename or deletion leaves the saved path available for search. Existing flat tags keep their meaning and can be edited separately. Ordinary keyword search and IPTC export use the term name.
+
+Find Photos in the vocabulary searches for an exact path. Advanced Search and Smart Albums also support an entire branch, including its descendants. Catalogues with path assignments or saved path rules use format 10. Earlier catalogues open with their existing flat tags.
+
+The signed build displayed Centre and Minimise in the native Window menu using the Mac’s British English preference. The same bundle displayed Center and Minimize under a US English override. AppKit supplies these commands.
 
 ## Pending physical camera checks
 

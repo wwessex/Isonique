@@ -425,3 +425,10 @@
 - In the signed app with isolated preferences, a text list with duplicate branches imported as one branch. The exported list matched the expected tab-indented text, and importing it again added zero keywords. A child term applied to the selected photo. The vocabulary survived relaunch, and child creation and renaming worked in the editor.
 - With macOS set to British English, the signed app displayed “Colour” and “Grey” in the Metadata menu and “Colour Proofing & Lens” in the Inspector. A US English override for the test app displayed the corresponding US spellings. The system language setting was left at British English.
 - All 223 release tests passed, including the RAW fixtures and Finder Trash handoff. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
+
+## Hierarchy-aware keyword assignment and search
+
+- Tests covered duplicate prevention, same-name terms in separate branches, precise removal, persistent Undo/Redo, exact and branch rules, and flat keyword compatibility. Removing a vocabulary branch kept its assigned paths and ancestors available for search. A path rule saved without any assigned photos upgraded the catalogue to format 10 and reopened with its path intact.
+- In the signed app, applying Places › London to one photo and People › London to another produced separate results in Find Photos. Advanced Search matched the Places branch. A plain London search also found the third photo, which had an existing flat London tag. The catalogue stored both paths separately and retained the flat tag.
+- The native Window menu showed Centre and Minimise under the Mac’s British English preference, and Center and Minimize with a US English override on the disposable test copy.
+- All 226 release tests passed, including RAW fixtures and Finder Trash handoff. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.

@@ -12,6 +12,7 @@ public struct BatchMetadataChange: Codable, Equatable {
     public let photoID: UUID
     public let caption: String?
     public let keywords: String?
+    public let keywordPaths: [KeywordPath]?
 }
 
 public struct BatchMetadataReview: Identifiable {
@@ -23,10 +24,14 @@ public struct BatchMetadataReview: Identifiable {
         let name: String
         let caption: String
         let keywords: String
+        let keywordPaths: [KeywordPath]
     }
 
     public init(photos: [Photo]) {
-        targets = photos.map { Target(id: $0.id, name: $0.displayName, caption: $0.caption, keywords: $0.keywords) }
+        targets = photos.map {
+            Target(id: $0.id, name: $0.displayName, caption: $0.caption,
+                   keywords: $0.keywords, keywordPaths: $0.keywordPaths ?? [])
+        }
     }
 
     public var photoCount: Int { targets.count }
@@ -46,7 +51,7 @@ public struct BatchMetadataReview: Identifiable {
     public func preview(caption: String?, keywordMode: BatchKeywordMode, keywords: String) -> Preview {
         let input = KeywordList.uniqueValues(keywords)
         let replacement = input.joined(separator: ", ")
-        return preview(caption: caption) { keywords in
+        return preview(caption: caption, keywordChange: { keywords in
             switch keywordMode {
             case .unchanged:
                 return nil
@@ -58,28 +63,40 @@ public struct BatchMetadataReview: Identifiable {
             case .replace:
                 return replacement == keywords ? nil : replacement
             }
-        }
+        })
     }
 
     public func previewRemovingKeywords(_ keywords: String) -> Preview {
         let removedKeys = Set(KeywordList.values(keywords).map(KeywordList.key))
-        return preview(caption: nil) { keywords in
+        return preview(caption: nil, keywordChange: { keywords in
             let existing = KeywordList.values(keywords)
             let kept = existing.filter { !removedKeys.contains(KeywordList.key($0)) }
             return kept.count == existing.count ? nil : kept.joined(separator: ", ")
-        }
+        })
     }
 
-    private func preview(caption: String?, keywordChange: (String) -> String?) -> Preview {
+    public func previewKeywordPath(_ path: KeywordPath, adding: Bool) -> Preview {
+        preview(caption: nil, keywordPathChange: { current in
+            if adding { return current.contains(path) ? nil : current + [path] }
+            let remaining = current.filter { $0 != path }
+            return remaining.count == current.count ? nil : remaining
+        })
+    }
+
+    private func preview(caption: String?, keywordChange: (String) -> String? = { _ in nil },
+                         keywordPathChange: ([KeywordPath]) -> [KeywordPath]? = { _ in nil }) -> Preview {
         let rows = targets.compactMap { target -> Row? in
             let newCaption = caption != target.caption ? caption : nil
             let newKeywords = keywordChange(target.keywords)
-            guard newCaption != nil || newKeywords != nil else { return nil }
+            let newPaths = keywordPathChange(target.keywordPaths)
+            guard newCaption != nil || newKeywords != nil || newPaths != nil else { return nil }
             return Row(name: target.name,
                        before: BatchMetadataChange(photoID: target.id,
                                                    caption: newCaption.map { _ in target.caption },
-                                                   keywords: newKeywords.map { _ in target.keywords }),
-                       after: BatchMetadataChange(photoID: target.id, caption: newCaption, keywords: newKeywords))
+                                                   keywords: newKeywords.map { _ in target.keywords },
+                                                   keywordPaths: newPaths.map { _ in target.keywordPaths }),
+                       after: BatchMetadataChange(photoID: target.id, caption: newCaption, keywords: newKeywords,
+                                                  keywordPaths: newPaths))
         }
         return Preview(reviewID: id, rows: rows)
     }
@@ -93,6 +110,7 @@ public struct BatchMetadataReview: Identifiable {
               current.allSatisfy({ photo in
                   let target = expected[photo.id]
                   return photo.caption == target?.caption && photo.keywords == target?.keywords
+                      && (photo.keywordPaths ?? []) == target?.keywordPaths
               }) else { return nil }
         return library.replaceBatchMetadata(preview.rows.map(\.after))
     }
@@ -114,14 +132,33 @@ public enum KeywordList {
     }
 }
 
+extension Photo {
+    var keywordNames: [String] {
+        var names = KeywordList.values(keywords)
+        guard let keywordPaths, !keywordPaths.isEmpty else { return names }
+        var seen = Set(names.map(KeywordList.key))
+        for path in keywordPaths where seen.insert(KeywordList.key(path.name)).inserted {
+            names.append(path.name)
+        }
+        return names
+    }
+
+    public var keywordSearchText: String {
+        guard let keywordPaths, !keywordPaths.isEmpty else { return keywords }
+        return ([keywords] + keywordPaths.map(\.title)).joined(separator: " ")
+    }
+}
+
 extension Library {
     mutating func replaceBatchMetadata(_ changes: [BatchMetadataChange]) -> [BatchMetadataChange]? {
         applyPhotoFieldChanges(changes, photoID: \.photoID) { photo, change in
             let previous = BatchMetadataChange(photoID: photo.id,
                                                caption: change.caption.map { _ in photo.caption },
-                                               keywords: change.keywords.map { _ in photo.keywords })
+                                               keywords: change.keywords.map { _ in photo.keywords },
+                                               keywordPaths: change.keywordPaths.map { _ in photo.keywordPaths ?? [] })
             if let caption = change.caption { photo.caption = caption }
             if let keywords = change.keywords { photo.keywords = keywords }
+            if let paths = change.keywordPaths { photo.keywordPaths = paths.isEmpty ? nil : paths }
             return previous
         }
     }

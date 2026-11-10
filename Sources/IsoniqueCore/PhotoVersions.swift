@@ -139,8 +139,10 @@ public enum PhotoHistoryEntry: Codable, Equatable {
     var requiredCatalogueVersion: Int? {
         switch self {
         case .captureDates: return 8
-        case .batchMetadata: return 9
-        default: return nil
+        case .batchMetadata(let changes):
+            return changes.contains { $0.keywordPaths != nil } ? 10 : 9
+        default:
+            return photo?.keywordPaths?.isEmpty == false ? 10 : nil
         }
     }
 
