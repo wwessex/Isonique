@@ -16,6 +16,8 @@ enum ColorLabelFilter: Hashable {
 }
 
 extension PhotoColorLabel {
+    var localizedTitle: String { Bundle.main.localizedString(forKey: title, value: nil, table: nil) }
+
     var tint: Color {
         switch self {
         case .red: return .red
@@ -100,7 +102,7 @@ extension Workspace {
 
     func name(for label: PhotoColorLabel) -> String {
         let name = customName(for: label).trimmingCharacters(in: .whitespacesAndNewlines)
-        return name.isEmpty ? label.title : name
+        return name.isEmpty ? label.localizedTitle : name
     }
 
     func rename(_ label: PhotoColorLabel, to value: String) {
@@ -133,8 +135,8 @@ struct ReviewSettingsView: View {
             AutoLevelsSettingsSection()
             Section("Color Labels") {
                 ForEach(PhotoColorLabel.allCases) { label in
-                    TextField(label.title, text: Binding(get: { model.customName(for: label) }, set: { model.rename(label, to: $0) }),
-                              prompt: Text(label.title))
+                    TextField(label.localizedTitle, text: Binding(get: { model.customName(for: label) }, set: { model.rename(label, to: $0) }),
+                              prompt: Text(label.localizedTitle))
                 }
                 Text("Names apply across your Isonique libraries. The photo retains its color when you rename a label.")
                     .font(.caption).foregroundStyle(.secondary)

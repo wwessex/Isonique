@@ -418,3 +418,10 @@
 - Shortcut tests checked active group order, missing slots, hidden controls, empty selections and unrelated modifiers.
 - In a signed app copy with isolated preferences, Option–1 and Option–Shift–1 worked in the Grid Browser, List Browser and Viewer. The Grid batch used one Undo and Redo for both selected photos. Caption and Search received their normal Option-key characters, and clicking the Viewer image restored shortcut focus. Shift-click removed the keyword. The final catalogue values and all three original file hashes matched their baselines.
 - All 220 release tests passed, including the RAW fixtures and Finder Trash handoff. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
+
+## Reusable keyword vocabulary and regional English
+
+- Tests verified persistence across libraries, sibling deduplication by case and equivalent Unicode spelling, duplicate names in separate branches, merge order, editing and invalid file handling. Export and import into fresh preferences preserved the hierarchy and term spelling.
+- In the signed app with isolated preferences, a text list with duplicate branches imported as one branch. The exported list matched the expected tab-indented text, and importing it again added zero keywords. A child term applied to the selected photo. The vocabulary survived relaunch, and child creation and renaming worked in the editor.
+- With macOS set to British English, the signed app displayed “Colour” and “Grey” in the Metadata menu and “Colour Proofing & Lens” in the Inspector. A US English override for the test app displayed the corresponding US spellings. The system language setting was left at British English.
+- All 223 release tests passed, including the RAW fixtures and Finder Trash handoff. The arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.

@@ -143,7 +143,7 @@ private struct PhotoQueryRow: View {
 
     var body: some View {
         Picker("Field", selection: $criterion.field) {
-            ForEach(PhotoQueryField.allCases) { field in Text(field.rawValue).tag(field) }
+            ForEach(PhotoQueryField.allCases) { field in Text(LocalizedStringKey(field.rawValue)).tag(field) }
         }.labelsHidden().accessibilityLabel("Rule field").frame(width: 155)
         Picker("Comparison", selection: $criterion.comparison) {
             ForEach(criterion.field.operators) { comparison in Text(comparison.rawValue).tag(comparison) }
