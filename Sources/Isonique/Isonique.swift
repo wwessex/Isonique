@@ -69,6 +69,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var showKeywordVocabulary = false
     @Published var keywordGroups: KeywordGroupPreferences
     @Published var metadataPresets: [MetadataPreset]
+    @Published var metadataViews: MetadataViewPreferences
     @Published var showKeywordControls: Bool {
         didSet { preferences.set(showKeywordControls, forKey: KeywordGroupPreferences.controlsKey) }
     }
@@ -131,6 +132,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         keywordVocabulary = KeywordVocabularyPreferences.load(from: preferences)
         keywordGroups = KeywordGroupPreferences.load(from: preferences)
         metadataPresets = MetadataPresetPreferences.load(from: preferences)
+        metadataViews = MetadataViewPreferences.load(from: preferences)
         showKeywordControls = preferences.bool(forKey: KeywordGroupPreferences.controlsKey)
         let layout = preferences.string(forKey: "browser.layout").flatMap(BrowserPresentation.init(rawValue:))
         browserLayout = layout == .list ? .list : .grid
@@ -1573,7 +1575,7 @@ struct Inspector: View {
                         Text("Adjustments").tag("Adjustments")
                         Text("Library").tag("Library")
                     }.pickerStyle(.segmented).labelsHidden()
-                    if tab == "Info" { info(photo) }
+                    if tab == "Info" { PhotoMetadataInspector(photo: photo) }
                     if tab == "Adjustments" {
                         VersionFamilyView(photo: photo).id(photo.id)
                         adjustments(photo)
@@ -1591,71 +1593,6 @@ struct Inspector: View {
                 }
             }.padding(18)
         }.scrollIndicators(.hidden)
-    }
-    func info(_ photo: Photo) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("\(photo.width) × \(photo.height) · \((photo.originalName as NSString).pathExtension.uppercased())").font(.caption).foregroundStyle(.secondary)
-            if !photo.camera.isEmpty { LabeledContent("Camera", value: photo.camera) }
-            LabeledContent("Captured", value: photo.captureDate.isEmpty ? "Unknown" : photo.captureDate)
-            if !model.batchMode {
-                Button("Adjust Date and Time…", action: model.openCaptureDateCorrection)
-                    .disabled(!model.canAdjustCaptureDate)
-            }
-            LabeledContent("Imported", value: photo.importedAt.formatted(date: .abbreviated, time: .shortened))
-            EXIFInspectorView(photo: photo)
-            HStack(spacing: 6) {
-                ForEach(1...RatingRules.maximum, id: \.self) { rating in Button { model.edit { $0.rating = rating } } label: { Image(systemName: photo.rating >= rating ? "star.fill" : "star").foregroundStyle(.orange) }.buttonStyle(.plain).help("Rate \(rating) stars") }
-                Spacer()
-                Toggle(isOn: model.binding(\.flagged, fallback: false)) { Image(systemName: "flag.fill") }.toggleStyle(.button).help("Flag photograph")
-            }
-            HStack {
-                Toggle("Rejected", isOn: Binding(get: { photo.rating == RatingRules.rejected }, set: { model.setRejected($0) }))
-                Button("Unrated") { model.edit { $0.rating = RatingRules.unrated } }
-            }
-            HStack {
-                Button("Lower Rating") { model.adjustRating(by: -1) }
-                    .disabled(photo.rating <= RatingRules.rejected)
-                Button("Raise Rating") { model.adjustRating(by: 1) }
-                    .disabled(photo.rating >= RatingRules.maximum)
-            }
-            if let pair = photo.pairID {
-                Text("Linked RAW + JPEG").foregroundStyle(.secondary)
-                let companions = model.library.activePhotos.filter { $0.pairID == pair && $0.originalID != photo.originalID }
-                ForEach(companions.filter { candidate in
-                    candidate.id == (companions.first { $0.originalID == candidate.originalID && $0.id == $0.originalID }
-                                     ?? companions.first { $0.originalID == candidate.originalID })?.id
-                }) { companion in
-                    Button("View " + companion.displayName) { model.revealVersion(companion.id) }
-                }
-            }
-            Picker("Color label", selection: model.binding(\.colorLabel, fallback: nil)) {
-                Text("No label").tag(nil as PhotoColorLabel?)
-                ForEach(PhotoColorLabel.allCases) { label in
-                    Label(model.name(for: label), systemImage: "circle.fill").foregroundStyle(label.tint).tag(Optional(label))
-                }
-            }
-            Text("Caption").font(.caption).foregroundStyle(.secondary)
-            TextField("Caption", text: model.binding(\.caption, fallback: ""), axis: .vertical)
-            Text("Keywords").font(.caption).foregroundStyle(.secondary)
-            TextField("Keywords, separated by commas", text: model.binding(\.keywords, fallback: ""))
-            if let paths = photo.keywordPaths, !paths.isEmpty {
-                Text("Vocabulary Keywords").font(.caption).foregroundStyle(.secondary)
-                ForEach(paths, id: \.self) { path in
-                    HStack {
-                        Text(path.title).font(.caption)
-                        Spacer()
-                        Button("Remove \(path.title)", systemImage: "xmark.circle") {
-                            model.changeKeywordPath(path, adding: false)
-                        }
-                        .labelStyle(.iconOnly)
-                        .buttonStyle(.borderless)
-                        .disabled(model.batchMode)
-                    }
-                }
-            }
-            IPTCInspectorView(photo: photo).id(photo.id)
-            OriginalInfoView(photo: photo)
-        }.font(.caption)
     }
     func adjustments(_ photo: Photo) -> some View {
         let showsInputs = levelsExpanded || channelLevelsExpanded || masterCurveExpanded || channelCurvesExpanded
