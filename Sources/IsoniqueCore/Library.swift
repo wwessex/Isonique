@@ -99,6 +99,7 @@ public struct Adjustments: Codable, Equatable {
     public var blackAndWhiteBlue: Double = BlackAndWhiteRules.neutralBlue
     public var monochromeTintHue: Double = BlackAndWhiteRules.neutralTintHue
     public var monochromeTintStrength: Double = 0
+    public var redEyeCorrections: [RedEyeCorrection] = []
     public var shadows: Double = 0
     public var highlights: Double = 0
     public var quarterTurns: Int = 0
@@ -126,7 +127,7 @@ public struct Adjustments: Codable, Equatable {
     public var vignette: Double = 0
     public var devignette: Double = 0
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, temperatureKelvin, tint, targetedColors, blackAndWhiteEnabled, blackAndWhiteRed, blackAndWhiteGreen, blackAndWhiteBlue, monochromeTintHue, monochromeTintStrength, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction, chromaticAberrationRedCyan, chromaticAberrationBlueYellow, vignette, devignette }
+    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, temperatureKelvin, tint, targetedColors, blackAndWhiteEnabled, blackAndWhiteRed, blackAndWhiteGreen, blackAndWhiteBlue, monochromeTintHue, monochromeTintStrength, redEyeCorrections, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction, chromaticAberrationRedCyan, chromaticAberrationBlueYellow, vignette, devignette }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
@@ -146,6 +147,7 @@ public struct Adjustments: Codable, Equatable {
         blackAndWhiteBlue = try values.decodeIfPresent(Double.self, forKey: .blackAndWhiteBlue) ?? BlackAndWhiteRules.neutralBlue
         monochromeTintHue = try values.decodeIfPresent(Double.self, forKey: .monochromeTintHue) ?? BlackAndWhiteRules.neutralTintHue
         monochromeTintStrength = try values.decodeIfPresent(Double.self, forKey: .monochromeTintStrength) ?? 0
+        redEyeCorrections = try values.decodeIfPresent([RedEyeCorrection].self, forKey: .redEyeCorrections) ?? []
         shadows = try values.decodeIfPresent(Double.self, forKey: .shadows) ?? 0
         highlights = try values.decodeIfPresent(Double.self, forKey: .highlights) ?? 0
         quarterTurns = try values.decodeIfPresent(Int.self, forKey: .quarterTurns) ?? 0
@@ -184,6 +186,7 @@ public enum AdjustmentGroup: String, CaseIterable, Codable, Identifiable {
     case lensEffects = "Lens & vignette"
     case targetedColor = "Targeted color"
     case blackAndWhite = "Black & white"
+    case redEye = "Red-eye"
     public var id: String { rawValue }
 }
 public enum FlipAxis: String, CaseIterable, Identifiable {
@@ -213,6 +216,8 @@ public extension Adjustments {
             blackAndWhiteBlue != BlackAndWhiteRules.neutralBlue ||
             monochromeTintHue != BlackAndWhiteRules.neutralTintHue || monochromeTintStrength != 0
     }
+
+    var hasRedEyeCorrections: Bool { !redEyeCorrections.isEmpty }
 
     mutating func toggleFlip(_ axis: FlipAxis) {
         switch axis {
@@ -251,6 +256,7 @@ public extension Adjustments {
             result.monochromeTintHue = monochromeTintHue
             result.monochromeTintStrength = monochromeTintStrength
         }
+        if groups.contains(.redEye) { result.redEyeCorrections = redEyeCorrections }
         if groups.contains(.tone) {
             result.shadows = shadows; result.highlights = highlights
             result.blackPoint = blackPoint; result.whitePoint = whitePoint; result.gamma = gamma
@@ -403,6 +409,10 @@ public struct Library: Codable {
         if version < 24, hasRecipe(where: \.hasBlackAndWhiteRecipe) { version = 24 }
     }
 
+    public mutating func upgradeForRedEye() {
+        if version < 25, hasRecipe(where: \.hasRedEyeCorrections) { version = 25 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -446,6 +456,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 25, hasRecipe(where: \.hasRedEyeCorrections) { throw LibraryError.unsupportedVersion }
         if version < 24, hasRecipe(where: \.hasBlackAndWhiteRecipe) { throw LibraryError.unsupportedVersion }
         if version < 23, hasRecipe(where: \.hasTargetedColors) { throw LibraryError.unsupportedVersion }
         if version < 22, hasRecipe(where: \.hasKelvinWhiteBalance) { throw LibraryError.unsupportedVersion }
@@ -464,7 +475,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...24).contains(version) { return }
+        if (7...25).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -638,6 +649,7 @@ public final class LibraryRepository {
         normalized.upgradeForKelvinWhiteBalance()
         normalized.upgradeForTargetedColors()
         normalized.upgradeForBlackAndWhite()
+        normalized.upgradeForRedEye()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
@@ -863,7 +875,8 @@ public enum Renderer {
     public static func renderWithGeometry(_ url: URL, adjustments: Adjustments,
                                           maxDimension: CGFloat? = nil) throws -> (image: CGImage, geometry: PhotoGeometry) {
         let (toned, geometry) = try renderToneInput(url, adjustments: adjustments, maxDimension: maxDimension)
-        let colored = try applyTargetedColors(toned, targets: adjustments.targetedColors)
+        let corrected = try applyRedEyeCorrections(toned, corrections: adjustments.redEyeCorrections)
+        let colored = try applyTargetedColors(corrected, targets: adjustments.targetedColors)
         let monochrome = try applyBlackAndWhite(colored, enabled: adjustments.blackAndWhiteEnabled,
             red: adjustments.blackAndWhiteRed, green: adjustments.blackAndWhiteGreen,
             blue: adjustments.blackAndWhiteBlue, tintHue: adjustments.monochromeTintHue,
@@ -886,7 +899,8 @@ public enum Renderer {
 
     public static func adjustmentHistograms(_ url: URL, adjustments: Adjustments) throws -> AdjustmentHistograms {
         let (toned, _) = try renderToneInput(url, adjustments: adjustments, maxDimension: 384)
-        let colored = try applyTargetedColors(toned, targets: adjustments.targetedColors)
+        let corrected = try applyRedEyeCorrections(toned, corrections: adjustments.redEyeCorrections)
+        let colored = try applyTargetedColors(corrected, targets: adjustments.targetedColors)
         let monochrome = try applyBlackAndWhite(colored, enabled: adjustments.blackAndWhiteEnabled,
             red: adjustments.blackAndWhiteRed, green: adjustments.blackAndWhiteGreen,
             blue: adjustments.blackAndWhiteBlue, tintHue: adjustments.monochromeTintHue,
@@ -903,7 +917,8 @@ public enum Renderer {
         let source = geometry.sourcePoint(x: viewerPoint.x, y: viewerPoint.y)
         let x = min(toned.width - 1, Int(source.x * Double(toned.width)))
         let y = min(toned.height - 1, Int(source.y * Double(toned.height)))
-        let colored = try applyTargetedColors(toned, targets: adjustments.targetedColors)
+        let corrected = try applyRedEyeCorrections(toned, corrections: adjustments.redEyeCorrections)
+        let colored = try applyTargetedColors(corrected, targets: adjustments.targetedColors)
         let monochrome = try applyBlackAndWhite(colored, enabled: adjustments.blackAndWhiteEnabled,
             red: adjustments.blackAndWhiteRed, green: adjustments.blackAndWhiteGreen,
             blue: adjustments.blackAndWhiteBlue, tintHue: adjustments.monochromeTintHue,

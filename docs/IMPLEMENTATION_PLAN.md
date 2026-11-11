@@ -327,9 +327,17 @@ Black & White in Adjustments converts the targeted-colour result before Levels a
 
 Format 24 protects the enable state, channel contributions and tint in photos, versions, the separate Black & white Lift and Stamp group and optional persistent history. Project merge compares all six controls independently. Older recipes decode disabled neutral values. The Black & White preset now enables the mixer instead of discarding channel information with global desaturation; existing saved saturation-zero recipes keep their historical rendering.
 
+## Manual red-eye correction
+
+Choose Manual Red-Eye from Photos, the Viewer Retouch menu or the Adjustments inspector. Clicking a pupil creates a source-space correction; choose any saved eye to reposition it or change its pupil size and darkness. Multiple regions are ordered and independently editable. Their dashed Viewer outlines are editing aids and never enter exported pixels.
+
+The shared full-resolution renderer runs red-eye correction after basic tone and white balance and before Targeted Color, Black & White, Levels and Curves. A feathered circular mask affects only pixels whose red channel is measurably dominant over both other channels. Darkness can further lower the corrected pupil while neutral, green, blue and non-dominant skin pixels remain byte-identical. Regions clamp to image bounds, including pupils centred on an edge.
+
+Format 25 protects eye records in photos, versions, the separate Red-eye Lift and Stamp group and optional persistent history. Project merge compares the complete region list. Older recipes decode an empty list and keep their previous rendering and catalogue version. Automatic face or eye detection is intentionally still pending.
+
 ## Next checkpoint
 
-Add non-destructive manual red-eye correction with multiple editable eye regions, pupil size and darkness controls in the Viewer. Test edge clipping, neutral non-red pixels, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
+Add a non-destructive Definition adjustment for local contrast with strength and radius controls. Test flat fields, fine texture, halo bounds, neutral settings, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
 
 ## Pending physical camera checks
 

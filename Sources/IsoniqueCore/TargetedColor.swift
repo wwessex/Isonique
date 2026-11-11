@@ -182,7 +182,8 @@ public extension Renderer {
         let x = min(image.width - 1, max(0, Int(source.x * Double(image.width))))
         let y = min(image.height - 1, max(0, Int(source.y * Double(image.height))))
         let info = CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
-        guard let pixel = image.cropping(to: CGRect(x: x, y: y, width: 1, height: 1)),
+        let corrected = try applyRedEyeCorrections(image, corrections: adjustments.redEyeCorrections)
+        guard let pixel = corrected.cropping(to: CGRect(x: x, y: y, width: 1, height: 1)),
               let space = CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(data: nil, width: 1, height: 1, bitsPerComponent: 8,
                                       bytesPerRow: 4, space: space, bitmapInfo: info),

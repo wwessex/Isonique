@@ -8,7 +8,7 @@ enum PhotoSort: String, CaseIterable, Identifiable {
     case imported = "Import date", name = "Filename", rating = "Rating", captured = "Capture date"
     var id: String { rawValue }
 }
-enum EditTool: String { case select, crop, straighten, brush, spot }
+enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
 @MainActor final class Workspace: ObservableObject {
     @Published var library = Library() {
         didSet { browserSnapshot = nil }
@@ -27,7 +27,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
     @Published var search = ""
     @Published var sort = PhotoSort.imported
     @Published var sortDescending = false
-    @Published var stampGroups = Set(AdjustmentGroup.allCases.filter { $0 != .localBrush && $0 != .retouch })
+    @Published var stampGroups = Set(AdjustmentGroup.allCases.filter { $0 != .localBrush && $0 != .retouch && $0 != .redEye })
     @Published var ratingFilter = RatingFilter.all
     @Published var originalFilter = OriginalFilter.all
     @Published var colorFilter = ColorLabelFilter.all
@@ -67,6 +67,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
     @Published var selectedSpotID: UUID?
     @Published var spotDraftSource: BrushPoint?
     @Published var spotPlacement = SpotPointKind.source
+    @Published var selectedRedEyeID: UUID?
     @Published var liftedAdjustments: LiftedSettings?
     @Published var liftLookupID: UUID?
     @Published var stampMetadata = Set<StampMetadata>()
@@ -297,6 +298,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
         saved.upgradeForKelvinWhiteBalance()
         saved.upgradeForTargetedColors()
         saved.upgradeForBlackAndWhite()
+        saved.upgradeForRedEye()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -314,7 +316,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
         var draft = library
         guard let entry = nextHistory.step(in: &draft, redoing: redo),
               commit(draft, history: nextHistory) else { return }
-        let continuedTool = viewer && selection == entry.selectionID && (tool == .brush || tool == .spot) ? tool : nil
+        let continuedTool = viewer && selection == entry.selectionID && (tool == .brush || tool == .spot || tool == .redEye) ? tool : nil
         selectAfterChange(preferred: entry.selectionID)
         if let continuedTool, selection == entry.selectionID { tool = continuedTool }
         switch entry {
@@ -436,6 +438,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
     func chooseTool(_ next: EditTool) {
         if next != .select { stopComparison() }
         if next != .spot { spotDraftSource = nil; selectedSpotID = nil; spotPlacement = .source }
+        if next != .redEye { selectedRedEyeID = nil }
         viewer = true; compareOriginal = false; tool = next
     }
     func nudgeStraighten(_ delta: Double) {
@@ -752,6 +755,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
                 Button("Burn Brush") { workspace.chooseBrush(.burn) }.disabled(!workspace.canBrush)
                 Button("Repair Spot") { workspace.chooseSpotRemoval(.repair) }.disabled(!workspace.canSpotRemove)
                 Button("Clone Spot") { workspace.chooseSpotRemoval(.clone) }.disabled(!workspace.canSpotRemove)
+                Button("Manual Red-Eye") { workspace.chooseRedEyeCorrection() }.disabled(!workspace.canCorrectRedEye)
                 Divider()
                 Button("Lift Settings", action: workspace.lift)
                     .keyboardShortcut("c", modifiers: [.command, .shift]).disabled(!workspace.canLift)
@@ -1446,10 +1450,11 @@ struct EditBar: View {
                 Menu {
                     Button("Repair Spot") { model.chooseSpotRemoval(.repair) }
                     Button("Clone Spot") { model.chooseSpotRemoval(.clone) }
+                    Button("Manual Red-Eye") { model.chooseRedEyeCorrection() }
                 } label: {
                     Label("Retouch", systemImage: "bandage")
-                        .foregroundStyle(model.tool == .spot ? Color.accentColor : .primary)
-                }.disabled(!model.canSpotRemove)
+                        .foregroundStyle(model.tool == .spot || model.tool == .redEye ? Color.accentColor : .primary)
+                }.disabled(!model.canSpotRemove && !model.canCorrectRedEye)
                 Divider().frame(height: 20)
                 Button(action: model.lift) { Label("Lift", systemImage: "eyedropper") }
                     .disabled(!model.canLift).help("Copy adjustments and metadata from this photo")
@@ -1482,6 +1487,8 @@ struct PhotoViewer: View {
     @AppStorage("brush.softness") private var brushSoftness = 70.0
     @AppStorage("brush.strength") private var brushStrength = 50.0
     @AppStorage("spot.size") private var spotSize = 12.0
+    @AppStorage("redEye.size") private var redEyeSize = 8.0
+    @AppStorage("redEye.darkness") private var redEyeDarkness = 55.0
     @State private var failure: String?
     @State private var zoom = false
     @State private var cropSize = CGSize(width: 1, height: 1)
@@ -1517,6 +1524,11 @@ struct PhotoViewer: View {
                 }
                 else if model.tool == .spot, let geometry, geometry.matches(photo.adjustments) {
                     SpotRemovalCanvas(image: image, geometry: geometry, photo: photo, radius: spotSize / 200)
+                        .padding(16)
+                }
+                else if model.tool == .redEye, let geometry, geometry.matches(photo.adjustments) {
+                    RedEyeCanvas(image: image, geometry: geometry, photo: photo,
+                                 radius: redEyeSize / 200, darkness: redEyeDarkness / 100)
                         .padding(16)
                 }
                 else if zoom && model.tool == .select {
@@ -1622,6 +1634,9 @@ struct PhotoViewer: View {
             } else if model.tool == .spot {
                 SpotRemovalControls(photo: photo, size: $spotSize)
                     .padding(12).workspaceGlass().padding(8)
+            } else if model.tool == .redEye {
+                RedEyeControls(photo: photo, size: $redEyeSize, darkness: $redEyeDarkness)
+                    .padding(12).workspaceGlass().padding(8)
             }
         }.padding(.top, 8)
         .onChange(of: model.tool) { _, tool in
@@ -1721,7 +1736,8 @@ struct PhotoViewer: View {
         if model.tool == .crop { settings.crop = nil }
         return RenderRequest(url: url, originalStatus: model.originalStatusRevision, isCropping: model.tool == .crop,
                              adjustments: settings,
-                             maximum: (model.tool == .spot || (model.tool == .select && (zoom || model.loupeActive))) ? nil : 2400,
+                             maximum: (model.tool == .spot || model.tool == .redEye ||
+                                 (model.tool == .select && (zoom || model.loupeActive))) ? nil : 2400,
                              profile: model.proofEnabled ? model.proofProfile : nil)
     }
 }
@@ -1926,6 +1942,17 @@ struct Inspector: View {
                     Button("Reset All Spots", action: model.clearSpots)
                         .disabled(photo.adjustments.spotRemovals.isEmpty)
                     Text("Repair blends source texture into the destination; Clone copies it directly. Source and destination stay editable in the Viewer.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }.padding(.top, 8)
+            }
+            DisclosureGroup("Red-Eye Correction") {
+                VStack(alignment: .leading, spacing: 8) {
+                    Button("Manual Red-Eye") { model.chooseRedEyeCorrection() }
+                        .disabled(!model.canCorrectRedEye)
+                    LabeledContent("Editable eyes", value: "\(photo.adjustments.redEyeCorrections.count)")
+                    Button("Reset All Red-Eye Corrections", action: model.clearRedEyes)
+                        .disabled(photo.adjustments.redEyeCorrections.isEmpty)
+                    Text("Click each red pupil in the Viewer, then adjust its size and darkness. Non-red pixels are preserved.")
                         .font(.caption2).foregroundStyle(.secondary)
                 }.padding(.top, 8)
             }
