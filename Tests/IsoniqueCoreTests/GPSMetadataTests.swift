@@ -47,7 +47,7 @@ extension LibraryTests {
             ("indexed-only", indexed, destination, nil),
             ("indexed-missing", indexedMissing, nil, nil)
         ]
-        for format in [ExportFormat.jpeg, .png, .tiff] {
+        for format in [ExportFormat.jpeg, .png, .tiff, .heif] {
             var options = ExportOptions()
             options.format = format
             options.gps = true

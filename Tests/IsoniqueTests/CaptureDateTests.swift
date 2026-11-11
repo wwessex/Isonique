@@ -136,7 +136,7 @@ final class CaptureDateTests: XCTestCase {
         XCTAssertTrue(workspace.applyCaptureDateCorrection(
             try request.preview(newDate, preservingIntervals: false), for: request))
         for (index, photo) in workspace.library.photos.enumerated() {
-            for format in [ExportFormat.jpeg, .png, .tiff] {
+            for format in [ExportFormat.jpeg, .png, .tiff, .heif] {
                 for includeEXIF in [true, false] {
                     var options = ExportOptions()
                     options.format = format

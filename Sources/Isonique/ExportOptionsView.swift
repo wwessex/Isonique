@@ -31,8 +31,8 @@ struct ExportOptionsView: View {
             if options.format == .original {
                 Text("Copies the original file byte for byte, including its embedded metadata and GPS.").foregroundStyle(.secondary)
             } else {
-                if options.format == .jpeg {
-                    HStack { Text("JPEG quality"); Slider(value: $options.quality, in: 0.1...1); Text("\(Int(options.quality * 100))%").monospacedDigit().frame(width: 45) }
+                if options.format == .jpeg || options.format == .heif {
+                    HStack { Text("\(options.format.rawValue) quality"); Slider(value: $options.quality, in: 0.1...1); Text("\(Int(options.quality * 100))%").monospacedDigit().frame(width: 45) }
                 }
                 if options.format == .tiff {
                     Picker("TIFF compression", selection: Binding(

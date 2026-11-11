@@ -917,7 +917,9 @@ public enum Renderer {
     public static func export(_ photo: Photo, repository: LibraryRepository, to destination: URL, options: ExportOptions = ExportOptions()) throws {
         let original = try repository.availableOriginalURL(photo)
         let target = destination.standardizedFileURL.resolvingSymlinksInPath()
-        let extensions: [String] = options.format == .original ? [(photo.filename as NSString).pathExtension.lowercased()] : (options.format == .jpeg ? ["jpg", "jpeg"] : (options.format == .tiff ? ["tif", "tiff"] : ["png"]))
+        let extensions = options.format == .original
+            ? [(photo.filename as NSString).pathExtension.lowercased()]
+            : options.format.fileExtensions
         guard extensions.contains(target.pathExtension.lowercased()),
               !target.path.hasPrefix(repository.root.path + "/"), !FileManager.default.fileExists(atPath: target.path),
               !target.pathComponents.contains(where: { ["aplibrary", "aperturelibrary", "photoslibrary", "photolibrary", "app"].contains(URL(fileURLWithPath: $0).pathExtension.lowercased()) }) else { throw LibraryError.unsafePath }

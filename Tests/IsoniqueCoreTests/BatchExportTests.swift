@@ -145,6 +145,49 @@ extension LibraryTests {
         XCTAssertEqual(try Data(contentsOf: originalURL), originalData)
     }
 
+    func testHEIFPresetBatchNameAndFullSizePreviewConsistency() throws {
+        let source = temporary.appendingPathComponent("HEIF Source.png")
+        try writePattern(to: source)
+        let repository = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("HEIF Library"))
+        var library = try repository.load()
+        XCTAssertTrue(try repository.importPhoto(source, projectID: nil, into: &library))
+        var photo = try XCTUnwrap(library.photos.first)
+        photo.adjustments.brightness = 0.08
+        let originalURL = try repository.availableOriginalURL(photo)
+        let originalData = try Data(contentsOf: originalURL)
+
+        var options = ExportOptions()
+        options.format = .heif
+        options.quality = 1
+        options.filenameTemplate = "{version}"
+        let preset = ExportPreset(name: "HEIF Full Quality", options: options)
+        let reopened = try JSONDecoder().decode(ExportPreset.self, from: JSONEncoder().encode(preset))
+        XCTAssertEqual(reopened.options, options)
+        let plan = try BatchExport.plan(photos: [photo], projects: [], options: reopened.options)
+        XCTAssertEqual(plan.entries.map(\.filename), ["HEIF Source.heic"])
+
+        let folder = temporary.appendingPathComponent("HEIF Export")
+        try plan.write(to: folder, repository: repository)
+        let output = folder.appendingPathComponent("HEIF Source.heic")
+        let exported = try XCTUnwrap(CGImageSourceCreateWithURL(output as CFURL, nil))
+        XCTAssertEqual(CGImageSourceGetType(exported) as String?, UTType.heic.identifier)
+        let decoded = try XCTUnwrap(CGImageSourceCreateImageAtIndex(exported, 0, nil))
+        let preview = try Renderer.render(originalURL, adjustments: photo.adjustments)
+        XCTAssertEqual(decoded.width, preview.width)
+        XCTAssertEqual(decoded.height, preview.height)
+        let differences = zip(try rgba8Pixels(decoded), try rgba8Pixels(preview)).map {
+            abs(Int($0.0) - Int($0.1))
+        }
+        XCTAssertLessThan(Double(differences.reduce(0, +)) / Double(differences.count), 4)
+        XCTAssertLessThanOrEqual(try XCTUnwrap(differences.max()), 48)
+
+        options.quality = 0.2
+        let lowQuality = temporary.appendingPathComponent("HEIF Low Quality.heic")
+        try Renderer.export(photo, repository: repository, to: lowQuality, options: options)
+        XCTAssertNotEqual(try Data(contentsOf: lowQuality), try Data(contentsOf: output))
+        XCTAssertEqual(try Data(contentsOf: originalURL), originalData)
+    }
+
     func testBatchExportRejectsUnsafeAndOverlongFilenamesDuringPreview() throws {
         var photo = Photo(filename: "camera.jpg", originalName: "Camera.jpg", projectID: nil,
                           width: 32, height: 24, camera: "", captureDate: "", sha256: "image")
@@ -177,4 +220,29 @@ private func rgba8Pixels(_ image: CGImage) throws -> [UInt8] {
     ))
     context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
     return pixels
+}
+
+private func writePattern(to url: URL) throws {
+    let context = try XCTUnwrap(CGContext(
+        data: nil,
+        width: 64,
+        height: 48,
+        bitsPerComponent: 8,
+        bytesPerRow: 64 * 4,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+    ))
+    let colours: [CGColor] = [
+        CGColor(red: 0.12, green: 0.25, blue: 0.82, alpha: 1),
+        CGColor(red: 0.88, green: 0.18, blue: 0.22, alpha: 1),
+        CGColor(red: 0.16, green: 0.76, blue: 0.32, alpha: 1),
+        CGColor(red: 0.74, green: 0.68, blue: 0.12, alpha: 1)
+    ]
+    for (index, colour) in colours.enumerated() {
+        context.setFillColor(colour)
+        context.fill(CGRect(x: CGFloat(index % 2) * 32, y: CGFloat(index / 2) * 24, width: 32, height: 24))
+    }
+    let writer = try XCTUnwrap(CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil))
+    CGImageDestinationAddImage(writer, try XCTUnwrap(context.makeImage()), nil)
+    XCTAssertTrue(CGImageDestinationFinalize(writer))
 }

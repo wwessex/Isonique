@@ -1464,7 +1464,7 @@ final class LibraryTests: XCTestCase {
         photo.caption = "Updated caption"; photo.keywords = "Travel, Family"; photo.rating = 4
         photo.adjustments.quarterTurns = 1
         let sourceHash = try LibraryRepository.digest(source)
-        for format in [ExportFormat.jpeg, .png, .tiff] {
+        for format in [ExportFormat.jpeg, .png, .tiff, .heif] {
             for include in [false, true] {
                 var options = ExportOptions(); options.format = format; options.maxDimension = 16
                 options.exif = include; options.iptc = include; options.gps = include

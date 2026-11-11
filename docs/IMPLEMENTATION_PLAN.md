@@ -271,9 +271,13 @@ Review the final image and optional XMP sidecar names before choosing a destinat
 
 Select TIFF as the export format, then choose None, LZW, ZIP or PackBits compression. All four modes are lossless and saved as part of the export preset. Presets created before this setting was introduced continue to use uncompressed TIFF output.
 
+## HEIF export
+
+Select HEIF to export an edited `.heic` file with the system Image I/O encoder. HEIF uses the same full-size renderer, longest-edge sizing, quality control, batch filename templates, metadata switches and optional XMP sidecars as the other edited formats. Export presets retain HEIF and its quality setting. The output remains 8-bit sRGB.
+
 ## Next checkpoint
 
-Add HEIF export using the system Image I/O encoder. Verify metadata controls, export preset compatibility and preview-to-export pixel consistency.
+Add watermarking to edited exports with position, opacity and scale controls saved in export presets. Verify batch output, preview consistency and original-file protection.
 
 ## Pending physical camera checks
 

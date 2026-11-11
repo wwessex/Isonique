@@ -4,10 +4,35 @@ import ImageIO
 import UniformTypeIdentifiers
 
 public enum ExportFormat: String, Codable, CaseIterable, Identifiable {
-    case jpeg = "JPEG", png = "PNG", tiff = "TIFF", original = "Original file"
+    case jpeg = "JPEG", png = "PNG", tiff = "TIFF", heif = "HEIF", original = "Original file"
     public var id: String { rawValue }
-    public var type: UTType { switch self { case .jpeg: return .jpeg; case .png: return .png; case .tiff: return .tiff; case .original: return .data } }
-    public var suffix: String { switch self { case .jpeg: return "jpg"; case .png: return "png"; case .tiff: return "tiff"; case .original: return "" } }
+    public var type: UTType {
+        switch self {
+        case .jpeg: return .jpeg
+        case .png: return .png
+        case .tiff: return .tiff
+        case .heif: return .heic
+        case .original: return .data
+        }
+    }
+    public var suffix: String {
+        switch self {
+        case .jpeg: return "jpg"
+        case .png: return "png"
+        case .tiff: return "tiff"
+        case .heif: return "heic"
+        case .original: return ""
+        }
+    }
+    var fileExtensions: [String] {
+        switch self {
+        case .jpeg: return ["jpg", "jpeg"]
+        case .png: return ["png"]
+        case .tiff: return ["tif", "tiff"]
+        case .heif: return ["heic", "heif"]
+        case .original: return []
+        }
+    }
 }
 public enum TIFFCompression: String, Codable, CaseIterable, Identifiable {
     case uncompressed = "None"

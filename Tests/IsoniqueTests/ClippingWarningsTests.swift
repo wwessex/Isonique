@@ -109,7 +109,7 @@ final class ClippingWarningsTests: XCTestCase {
         XCTAssertFalse(proofedPreview.display === rendered)
 
         var options = ExportOptions()
-        for format in [ExportFormat.png, .jpeg, .tiff, .original] {
+        for format in [ExportFormat.png, .jpeg, .tiff, .heif, .original] {
             workspace.clipping.both = false
             options.format = format
             let suffix = format == .original ? "png" : format.suffix

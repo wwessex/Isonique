@@ -572,3 +572,10 @@
 - Exported the same rendered image with None, LZW, ZIP and PackBits compression. Image I/O reported the requested compression tag for every file, and decoded RGBA pixels matched the render byte for byte.
 - Decoded a preset created before the compression field existed and verified that it exported an uncompressed TIFF. New presets preserved their selected compression through JSON encoding and decoding. Exporting every compression mode left the managed original byte for byte unchanged.
 - All 291 release tests passed, including four RAW fixtures and Finder Trash handoff. The branding check passed and the arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
+
+## HEIF export
+
+- Confirmed that the installed Image I/O encoder advertises `public.heic`. Single and batch exports produced `.heic` files that reopened as HEIC images, and changing the HEIF quality changed the encoded output.
+- HEIF passed the existing metadata controls with EXIF, IPTC and GPS enabled and disabled. Corrected capture dates, catalogue GPS, explicit location clears and clipping-warning isolation use the same behavior as JPEG, PNG and TIFF.
+- A full-quality HEIF export kept the full-size renderer dimensions. Its decoded 8-bit RGBA pixels stayed within an average difference of four levels and a maximum difference of 48 levels from the full-size preview. The export preset and batch filename survived encoding and decoding, and the managed original remained byte for byte unchanged.
+- All 292 release tests passed, including four RAW fixtures and Finder Trash handoff. The branding check passed and the arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
