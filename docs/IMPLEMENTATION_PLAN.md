@@ -335,9 +335,17 @@ The shared full-resolution renderer runs red-eye correction after basic tone and
 
 Format 25 protects eye records in photos, versions, the separate Red-eye Lift and Stamp group and optional persistent history. Project merge compares the complete region list. Older recipes decode an empty list and keep their previous rendering and catalogue version. Automatic face or eye detection is intentionally still pending.
 
+## Definition local contrast
+
+Open Detail in the Adjustments inspector for Definition strength and Definition radius. Strength runs from neutral to full; radius is stored as 0.25%–8% of the image's shorter side so the spatial scale remains consistent between preview sizes and full-resolution output. Reset Detail restores neutral strength and the 2% default radius.
+
+The shared CPU renderer builds a separable local luminance mean, adds a bounded high-pass delta and leaves channel differences intact. Constant fields bypass without pixel changes. A full-strength correction can alter luminance by no more than 0.12, preventing hard transitions from creating unbounded bright or dark halos. Definition runs after luminance noise reduction and before Repair, Clone and sharpening.
+
+Format 26 protects strength and radius in photos, versions, the Detail Lift and Stamp group and optional persistent history. Project merge compares both fields independently. Older recipes decode neutral strength and the default radius without upgrading.
+
 ## Next checkpoint
 
-Add a non-destructive Definition adjustment for local contrast with strength and radius controls. Test flat fields, fine texture, halo bounds, neutral settings, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
+Add reusable custom adjustment presets with selectable adjustment groups, create, update, rename and delete actions, and a before-apply summary. Test preset persistence, older settings compatibility, Undo/Redo, batch application and preservation of spatial adjustments unless explicitly selected.
 
 ## Pending physical camera checks
 

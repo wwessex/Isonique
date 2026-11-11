@@ -122,12 +122,14 @@ public struct Adjustments: Codable, Equatable {
     public var sharpening: Double = 0
     public var edgeSharpening: Double = 0
     public var luminanceNoiseReduction: Double = 0
+    public var definition: Double = 0
+    public var definitionRadius: Double = DefinitionRules.neutralRadius
     public var chromaticAberrationRedCyan: Double = 0
     public var chromaticAberrationBlueYellow: Double = 0
     public var vignette: Double = 0
     public var devignette: Double = 0
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, temperatureKelvin, tint, targetedColors, blackAndWhiteEnabled, blackAndWhiteRed, blackAndWhiteGreen, blackAndWhiteBlue, monochromeTintHue, monochromeTintStrength, redEyeCorrections, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction, chromaticAberrationRedCyan, chromaticAberrationBlueYellow, vignette, devignette }
+    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, temperatureKelvin, tint, targetedColors, blackAndWhiteEnabled, blackAndWhiteRed, blackAndWhiteGreen, blackAndWhiteBlue, monochromeTintHue, monochromeTintStrength, redEyeCorrections, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction, definition, definitionRadius, chromaticAberrationRedCyan, chromaticAberrationBlueYellow, vignette, devignette }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
@@ -171,6 +173,8 @@ public struct Adjustments: Codable, Equatable {
         sharpening = try values.decodeIfPresent(Double.self, forKey: .sharpening) ?? 0
         edgeSharpening = try values.decodeIfPresent(Double.self, forKey: .edgeSharpening) ?? 0
         luminanceNoiseReduction = try values.decodeIfPresent(Double.self, forKey: .luminanceNoiseReduction) ?? 0
+        definition = try values.decodeIfPresent(Double.self, forKey: .definition) ?? 0
+        definitionRadius = try values.decodeIfPresent(Double.self, forKey: .definitionRadius) ?? DefinitionRules.neutralRadius
         chromaticAberrationRedCyan = try values.decodeIfPresent(Double.self, forKey: .chromaticAberrationRedCyan) ?? 0
         chromaticAberrationBlueYellow = try values.decodeIfPresent(Double.self, forKey: .chromaticAberrationBlueYellow) ?? 0
         vignette = try values.decodeIfPresent(Double.self, forKey: .vignette) ?? 0
@@ -197,7 +201,11 @@ public enum FlipAxis: String, CaseIterable, Identifiable {
 
 public extension Adjustments {
     var hasDetailAdjustments: Bool {
-        sharpening != 0 || edgeSharpening != 0 || luminanceNoiseReduction != 0
+        sharpening != 0 || edgeSharpening != 0 || luminanceNoiseReduction != 0 || hasDefinitionRecipe
+    }
+
+    var hasDefinitionRecipe: Bool {
+        definition != 0 || definitionRadius != DefinitionRules.neutralRadius
     }
 
     var hasLensEffects: Bool {
@@ -276,6 +284,8 @@ public extension Adjustments {
             result.sharpening = sharpening
             result.edgeSharpening = edgeSharpening
             result.luminanceNoiseReduction = luminanceNoiseReduction
+            result.definition = definition
+            result.definitionRadius = definitionRadius
         }
         if groups.contains(.lensEffects) {
             result.chromaticAberrationRedCyan = chromaticAberrationRedCyan
@@ -413,6 +423,10 @@ public struct Library: Codable {
         if version < 25, hasRecipe(where: \.hasRedEyeCorrections) { version = 25 }
     }
 
+    public mutating func upgradeForDefinition() {
+        if version < 26, hasRecipe(where: \.hasDefinitionRecipe) { version = 26 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -456,6 +470,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 26, hasRecipe(where: \.hasDefinitionRecipe) { throw LibraryError.unsupportedVersion }
         if version < 25, hasRecipe(where: \.hasRedEyeCorrections) { throw LibraryError.unsupportedVersion }
         if version < 24, hasRecipe(where: \.hasBlackAndWhiteRecipe) { throw LibraryError.unsupportedVersion }
         if version < 23, hasRecipe(where: \.hasTargetedColors) { throw LibraryError.unsupportedVersion }
@@ -475,7 +490,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...25).contains(version) { return }
+        if (7...26).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -650,6 +665,7 @@ public final class LibraryRepository {
         normalized.upgradeForTargetedColors()
         normalized.upgradeForBlackAndWhite()
         normalized.upgradeForRedEye()
+        normalized.upgradeForDefinition()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
@@ -889,7 +905,9 @@ public enum Renderer {
             blueYellow: adjustments.chromaticAberrationBlueYellow)
         let illuminated = try applyDevignette(aberration, amount: adjustments.devignette)
         let reduced = try applyLuminanceNoiseReduction(illuminated, amount: adjustments.luminanceNoiseReduction)
-        let retouched = try applySpotRemovals(reduced, spots: adjustments.spotRemovals)
+        let defined = try applyDefinition(reduced, strength: adjustments.definition,
+                                          radius: adjustments.definitionRadius)
+        let retouched = try applySpotRemovals(defined, spots: adjustments.spotRemovals)
         let detailed = try applySharpening(retouched, sharpening: adjustments.sharpening,
                                           edgeSharpening: adjustments.edgeSharpening)
         let image = try applyGeometry(applyLens(detailed, amount: geometry.lensAmount), geometry: geometry)

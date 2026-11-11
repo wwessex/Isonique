@@ -299,6 +299,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         saved.upgradeForTargetedColors()
         saved.upgradeForBlackAndWhite()
         saved.upgradeForRedEye()
+        saved.upgradeForDefinition()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -1911,14 +1912,20 @@ struct Inspector: View {
                     adjustment("Sharpening", path: \.adjustments.sharpening, range: 0...1)
                     adjustment("Edge sharpening", path: \.adjustments.edgeSharpening, range: 0...1)
                     adjustment("Luminance noise reduction", path: \.adjustments.luminanceNoiseReduction, range: 0...1)
+                    adjustment("Definition", path: \.adjustments.definition,
+                               range: DefinitionRules.strengthRange)
+                    adjustment("Definition radius (%)", path: \.adjustments.definitionRadius,
+                               range: DefinitionRules.radiusRange, neutral: DefinitionRules.neutralRadius)
                     Button("Reset Detail") {
                         model.edit {
                             $0.adjustments.sharpening = 0
                             $0.adjustments.edgeSharpening = 0
                             $0.adjustments.luminanceNoiseReduction = 0
+                            $0.adjustments.definition = 0
+                            $0.adjustments.definitionRadius = DefinitionRules.neutralRadius
                         }
                     }.disabled(!photo.adjustments.hasDetailAdjustments)
-                    Text("Noise reduction smooths luminance before retouching. Sharpening restores luminance detail after Repair and Clone without shifting colour.")
+                    Text("Noise reduction smooths luminance. Definition adds bounded local contrast at the selected percentage radius. Sharpening restores fine detail after Repair and Clone without shifting colour.")
                         .font(.caption2).foregroundStyle(.secondary)
                 }.padding(.top, 8)
             }

@@ -176,6 +176,8 @@ private extension Adjustments {
         apply(\.sharpening, "Sharpening")
         apply(\.edgeSharpening, "Edge Sharpening")
         apply(\.luminanceNoiseReduction, "Luminance Noise Reduction")
+        apply(\.definition, "Definition")
+        apply(\.definitionRadius, "Definition Radius")
         apply(\.chromaticAberrationRedCyan, "Red/Cyan Aberration")
         apply(\.chromaticAberrationBlueYellow, "Blue/Yellow Aberration")
         apply(\.vignette, "Vignette")
