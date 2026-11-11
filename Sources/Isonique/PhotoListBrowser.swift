@@ -211,6 +211,8 @@ struct PhotoContextActions: View {
             StackContextActions(model: model, photo: photo)
             Button("New Version from Original") { model.createVersion(from: .original, of: photo.id) }.disabled(model.batchMode)
             Button("Duplicate Version") { model.createVersion(from: .current, of: photo.id) }.disabled(model.batchMode)
+            Button("Edit with External Editor…") { model.editWithExternalEditor(photoID: photo.id) }
+                .disabled(model.batchMode || model.busy || model.externalEditHandoff != nil || url == nil)
             if model.selection != photo.id {
                 Button("Compare with Selected") { model.showComparison(reference: photo.id) }.disabled(!model.canCreateVersion)
             }

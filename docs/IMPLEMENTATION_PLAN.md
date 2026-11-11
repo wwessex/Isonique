@@ -279,9 +279,15 @@ Select HEIF to export an edited `.heic` file with the system Image I/O encoder. 
 
 Enter text in the export sheet to enable a watermark on edited output. Choose a corner or the centre, then set opacity and relative scale while reviewing the first selected photo. The shared Core Graphics and Core Text renderer applies the same watermark after resizing and before JPEG, PNG, TIFF or HEIF encoding. Export presets retain the text and controls, batch export applies them to every selected version, and original-file export ignores watermark settings to preserve the source bytes.
 
+## External editor round trip
+
+Choose Photos → Edit with External Editor or use a photo's context menu. The first use asks for a macOS application; Settings can change or clear that persistent choice. Isonique renders the selected version at full size as a ZIP-compressed TIFF containing enabled EXIF, IPTC and GPS metadata, then opens that isolated file in the editor. Save over the TIFF and choose Import Edited Version in Isonique.
+
+The verified return becomes a new managed derivative with a neutral Isonique recipe and the source photo's project, albums and catalogue metadata. It owns its TIFF master because ordinary Isonique versions must share exactly the same original bytes. The source master and recipe are not modified. Missing, unchanged, non-TIFF and duplicate returns are refused. Cancellation and launch failure remove the temporary handoff. A stale or failed catalogue save removes the installed copy before reporting the error.
+
 ## Next checkpoint
 
-Add external-editor handoff with a rendered TIFF derivative and a verified return path as a new non-destructive version. Preserve the source original and test cancellation, missing returns and editor failures.
+Add a printable contact-sheet and proof layout with page, margin, caption and colour-managed output controls. Preview pagination, preserve print presets and verify PDF and native print output without changing originals.
 
 ## Pending physical camera checks
 

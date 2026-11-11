@@ -148,6 +148,17 @@ struct ReviewSettingsView: View {
                 }
                 GridThumbnailSizePicker(model: model)
             }
+            Section("External Editor") {
+                LabeledContent("Application", value: model.externalEditorName)
+                HStack {
+                    Button("Choose Application…", action: model.chooseExternalEditor)
+                    if model.externalEditorURL != nil {
+                        Button("Clear") { model.setExternalEditor(nil) }
+                    }
+                }
+                Text("Isonique sends a rendered TIFF and imports the saved return as a new managed derivative. The source original remains unchanged.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("Photo Review Keys") {
                 LabeledContent("Rating", value: "0–5")
                 LabeledContent("Reject", value: "9")
@@ -157,6 +168,6 @@ struct ReviewSettingsView: View {
                 Text("Click a photo to focus the Browser or Viewer before using the review keys.")
                     .font(.caption).foregroundStyle(.secondary)
             }
-        }.formStyle(.grouped).frame(width: 470, height: 500)
+        }.formStyle(.grouped).frame(width: 470, height: 600)
     }
 }

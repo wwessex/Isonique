@@ -586,3 +586,9 @@
 - Saved and reopened watermark text, position, opacity and scale in an export preset. A preset created before the watermark field still decoded with watermarking disabled.
 - JPEG, PNG, TIFF and HEIF exports contained the watermark. PNG output matched the shared preview renderer pixel for pixel. A two-version batch produced the same previewed pixels for both files, while edited and original exports left the managed original byte for byte unchanged.
 - All 294 release tests passed, including four verified RAW fixtures and Finder Trash handoff. The branding check passed and the arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
+
+## External editor round trip
+
+- Five repository tests rendered the current recipe into the staged TIFF, replaced it with a simulated editor return and reopened the saved library. The imported derivative retained project, album, caption and keyword context, while its own managed TIFF and neutral recipe kept full-size PNG export pixels identical to the preview renderer. The source original stayed byte for byte unchanged.
+- Cancellation removed only the isolated handoff. Missing, unchanged and non-TIFF returns left the catalogue unchanged. A competing catalogue save rejected the stale import and removed its installed copy. A simulated editor-launch failure removed the handoff, persisted no photo and reported the failure. The external-editor application choice survived a fresh workspace.
+- All 300 debug tests passed with two environment-dependent skips: verified camera RAW fixtures and the native Finder Trash handoff were not configured in this run. The branding check passed. The native Apple Silicon release app built and its archive passed strict signature verification. No third-party editor was driven interactively, so the real application's save-in-place behaviour remains a manual compatibility check.

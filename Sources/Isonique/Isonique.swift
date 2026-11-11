@@ -66,6 +66,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var showRelocationOptions = false
     var pendingRelocationOptions: OriginalRelocationOptions?
     @Published var showExportOptions = false
+    @Published var externalEditHandoff: ExternalEditHandoff?
     @Published var keywordVocabulary: KeywordVocabulary
     @Published var showKeywordVocabulary = false
     @Published var keywordGroups: KeywordGroupPreferences
@@ -741,6 +742,8 @@ enum EditTool: String { case select, crop, straighten, brush }
                     .keyboardShortcut("g", modifiers: [.option]).disabled(!workspace.canCreateVersion)
                 Button("Duplicate Version") { workspace.createVersion(from: .current) }
                     .keyboardShortcut("v", modifiers: [.option]).disabled(!workspace.canCreateVersion)
+                Button("Edit with External Editor…") { workspace.editWithExternalEditor() }
+                    .disabled(!workspace.canEditExternally)
                 Divider()
                 ForEach(FlipAxis.allCases) { axis in
                     Button(axis.rawValue) { workspace.flip(axis) }
@@ -1279,6 +1282,9 @@ struct ContentView: View {
         }
         .sheet(item: $model.captureDateCorrection) { correction in
             CaptureDateView(correction: correction).environmentObject(model)
+        }
+        .sheet(item: $model.externalEditHandoff) { handoff in
+            ExternalEditReturnView(handoff: handoff).environmentObject(model)
         }
         .sheet(isPresented: $model.showExportOptions) { ExportOptionsView().environmentObject(model) }
         .sheet(item: $collectionEditor) { CollectionNameSheet($0).environmentObject(model) }
