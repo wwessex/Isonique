@@ -109,8 +109,9 @@ public struct Adjustments: Codable, Equatable {
     public internal(set) var levelQuarterTones: LevelQuarterTones?
     public var lensDistortion: Double = 0
     public var localBrushes: [LocalBrushStroke] = []
+    public var spotRemovals: [SpotRemoval] = []
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes }
+    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, spotRemovals }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
@@ -140,12 +141,14 @@ public struct Adjustments: Codable, Equatable {
         levelQuarterTones = try values.decodeIfPresent(LevelQuarterTones.self, forKey: .levelQuarterTones)
         lensDistortion = try values.decodeIfPresent(Double.self, forKey: .lensDistortion) ?? 0
         localBrushes = try values.decodeIfPresent([LocalBrushStroke].self, forKey: .localBrushes) ?? []
+        spotRemovals = try values.decodeIfPresent([SpotRemoval].self, forKey: .spotRemovals) ?? []
     }
 }
 /// Independent editing groups; selective stamping preserves every unselected group.
 public enum AdjustmentGroup: String, CaseIterable, Codable, Identifiable {
     case basic = "Exposure & color", whiteBalance = "White balance", tone = "Highlights & shadows", geometry = "Crop, rotation & lens"
     case localBrush = "Local brush masks"
+    case retouch = "Spot removal"
     public var id: String { rawValue }
 }
 public enum FlipAxis: String, CaseIterable, Identifiable {
@@ -193,6 +196,7 @@ public extension Adjustments {
             result.flipHorizontal = flipHorizontal; result.flipVertical = flipVertical
         }
         if groups.contains(.localBrush) { result.localBrushes = localBrushes }
+        if groups.contains(.retouch) { result.spotRemovals = spotRemovals }
         return result
     }
 }
@@ -295,6 +299,10 @@ public struct Library: Codable {
         if version < 4, hasRecipe(where: { !$0.localBrushes.isEmpty }) { version = 4 }
     }
 
+    public mutating func upgradeForSpotRemoval() {
+        if version < 19, hasRecipe(where: { !$0.spotRemovals.isEmpty }) { version = 19 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -338,6 +346,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 19, hasRecipe(where: { !$0.spotRemovals.isEmpty }) { throw LibraryError.unsupportedVersion }
         if version < 18, hasProjectGPXWaypoints { throw LibraryError.unsupportedVersion }
         if version < 17, hasProjectGPXTracks { throw LibraryError.unsupportedVersion }
         try validateProjectGPXTracks()
@@ -350,7 +359,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...18).contains(version) { return }
+        if (7...19).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -518,6 +527,7 @@ public final class LibraryRepository {
     func writeCatalogue(_ library: Library) throws -> Library {
         var normalized = library
         normalized.upgradeForKeywordPaths()
+        normalized.upgradeForSpotRemoval()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
@@ -746,7 +756,8 @@ public enum Renderer {
         let toneTable = (0...255).map { TonalTools.map(Double($0) / 255, adjustments: adjustments) }
         let levels = try TonalTools.applying(toned, table: toneTable, curves: adjustments.channelCurves,
                                              channelLevels: adjustments.channelLevels)
-        let image = try applyGeometry(applyLens(levels, amount: geometry.lensAmount), geometry: geometry)
+        let retouched = try applySpotRemovals(levels, spots: adjustments.spotRemovals)
+        let image = try applyGeometry(applyLens(retouched, amount: geometry.lensAmount), geometry: geometry)
         return (image, geometry)
     }
 

@@ -8,7 +8,7 @@ enum PhotoSort: String, CaseIterable, Identifiable {
     case imported = "Import date", name = "Filename", rating = "Rating", captured = "Capture date"
     var id: String { rawValue }
 }
-enum EditTool: String { case select, crop, straighten, brush }
+enum EditTool: String { case select, crop, straighten, brush, spot }
 @MainActor final class Workspace: ObservableObject {
     @Published var library = Library() {
         didSet { browserSnapshot = nil }
@@ -27,7 +27,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var search = ""
     @Published var sort = PhotoSort.imported
     @Published var sortDescending = false
-    @Published var stampGroups = Set(AdjustmentGroup.allCases.filter { $0 != .localBrush })
+    @Published var stampGroups = Set(AdjustmentGroup.allCases.filter { $0 != .localBrush && $0 != .retouch })
     @Published var ratingFilter = RatingFilter.all
     @Published var originalFilter = OriginalFilter.all
     @Published var colorFilter = ColorLabelFilter.all
@@ -60,6 +60,10 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var comparisonID: UUID?
     @Published var tool = EditTool.select
     @Published var brushAdjustment = LocalBrushAdjustment.dodge
+    @Published var spotMode = SpotRemovalMode.repair
+    @Published var selectedSpotID: UUID?
+    @Published var spotDraftSource: BrushPoint?
+    @Published var spotPlacement = SpotPointKind.source
     @Published var liftedAdjustments: LiftedSettings?
     @Published var liftLookupID: UUID?
     @Published var stampMetadata = Set<StampMetadata>()
@@ -284,6 +288,7 @@ enum EditTool: String { case select, crop, straighten, brush }
         saved.upgradeForChannelLevels()
         saved.upgradeForChannelCurves()
         saved.upgradeForBrushRecipes()
+        saved.upgradeForSpotRemoval()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -301,9 +306,9 @@ enum EditTool: String { case select, crop, straighten, brush }
         var draft = library
         guard let entry = nextHistory.step(in: &draft, redoing: redo),
               commit(draft, history: nextHistory) else { return }
-        let continueBrushing = tool == .brush && viewer && selection == entry.selectionID
+        let continuedTool = viewer && selection == entry.selectionID && (tool == .brush || tool == .spot) ? tool : nil
         selectAfterChange(preferred: entry.selectionID)
-        if continueBrushing && selection == entry.selectionID { tool = .brush }
+        if let continuedTool, selection == entry.selectionID { tool = continuedTool }
         switch entry {
         case .edit: status = redo ? "Photo edit redone" : "Photo edit undone"
         case .removeVersion: status = "Version creation undone"
@@ -419,6 +424,7 @@ enum EditTool: String { case select, crop, straighten, brush }
 
     func chooseTool(_ next: EditTool) {
         if next != .select { stopComparison() }
+        if next != .spot { spotDraftSource = nil; selectedSpotID = nil; spotPlacement = .source }
         viewer = true; compareOriginal = false; tool = next
     }
     func nudgeStraighten(_ delta: Double) {
@@ -733,6 +739,8 @@ enum EditTool: String { case select, crop, straighten, brush }
             CommandMenu("Photos") {
                 Button("Dodge Brush") { workspace.chooseBrush(.dodge) }.disabled(!workspace.canBrush)
                 Button("Burn Brush") { workspace.chooseBrush(.burn) }.disabled(!workspace.canBrush)
+                Button("Repair Spot") { workspace.chooseSpotRemoval(.repair) }.disabled(!workspace.canSpotRemove)
+                Button("Clone Spot") { workspace.chooseSpotRemoval(.clone) }.disabled(!workspace.canSpotRemove)
                 Divider()
                 Button("Lift Settings", action: workspace.lift)
                     .keyboardShortcut("c", modifiers: [.command, .shift]).disabled(!workspace.canLift)
@@ -1418,6 +1426,13 @@ struct EditBar: View {
                     Label("Brush", systemImage: "paintbrush.pointed")
                         .foregroundStyle(model.tool == .brush ? Color.accentColor : .primary)
                 }.disabled(!model.canBrush)
+                Menu {
+                    Button("Repair Spot") { model.chooseSpotRemoval(.repair) }
+                    Button("Clone Spot") { model.chooseSpotRemoval(.clone) }
+                } label: {
+                    Label("Retouch", systemImage: "bandage")
+                        .foregroundStyle(model.tool == .spot ? Color.accentColor : .primary)
+                }.disabled(!model.canSpotRemove)
                 Divider().frame(height: 20)
                 Button(action: model.lift) { Label("Lift", systemImage: "eyedropper") }
                     .disabled(!model.canLift).help("Copy adjustments and metadata from this photo")
@@ -1447,6 +1462,7 @@ struct PhotoViewer: View {
     @AppStorage("brush.size") private var brushSize = 12.0
     @AppStorage("brush.softness") private var brushSoftness = 70.0
     @AppStorage("brush.strength") private var brushStrength = 50.0
+    @AppStorage("spot.size") private var spotSize = 12.0
     @State private var failure: String?
     @State private var zoom = false
     @State private var cropSize = CGSize(width: 1, height: 1)
@@ -1474,6 +1490,10 @@ struct PhotoViewer: View {
                     BrushCanvas(image: image, geometry: geometry, adjustment: model.brushAdjustment,
                                 erasing: erasingBrush, radius: brushSize / 200, softness: brushSoftness / 100,
                                 strength: brushStrength / 100) { model.applyBrushStroke($0, to: photo.id) }
+                        .padding(16)
+                }
+                else if model.tool == .spot, let geometry, geometry.matches(photo.adjustments) {
+                    SpotRemovalCanvas(image: image, geometry: geometry, photo: photo, radius: spotSize / 200)
                         .padding(16)
                 }
                 else if zoom && model.tool == .select {
@@ -1552,6 +1572,9 @@ struct PhotoViewer: View {
                               reset: { model.clearBrushMask(model.brushAdjustment) },
                               done: { model.tool = .select })
                     .padding(12).workspaceGlass().padding(8)
+            } else if model.tool == .spot {
+                SpotRemovalControls(photo: photo, size: $spotSize)
+                    .padding(12).workspaceGlass().padding(8)
             }
         }.padding(.top, 8)
         .onChange(of: model.tool) { _, tool in
@@ -1613,7 +1636,7 @@ struct PhotoViewer: View {
         if model.tool == .crop { settings.crop = nil }
         return RenderRequest(url: url, originalStatus: model.originalStatusRevision, isCropping: model.tool == .crop,
                              adjustments: settings,
-                             maximum: model.tool == .select && (zoom || model.loupeActive) ? nil : 2400,
+                             maximum: (model.tool == .spot || (model.tool == .select && (zoom || model.loupeActive))) ? nil : 2400,
                              profile: model.proofEnabled ? model.proofProfile : nil)
     }
 }
@@ -1736,6 +1759,19 @@ struct Inspector: View {
                         Button("Burn Brush") { model.chooseBrush(.burn) }
                     }.disabled(!model.canBrush)
                     Text("Paint in the Viewer. Each stroke is one undo step.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }.padding(.top, 8)
+            }
+            DisclosureGroup("Spot Removal") {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Button("Repair Spot") { model.chooseSpotRemoval(.repair) }
+                        Button("Clone Spot") { model.chooseSpotRemoval(.clone) }
+                    }.disabled(!model.canSpotRemove)
+                    LabeledContent("Editable spots", value: "\(photo.adjustments.spotRemovals.count)")
+                    Button("Reset All Spots", action: model.clearSpots)
+                        .disabled(photo.adjustments.spotRemovals.isEmpty)
+                    Text("Repair blends source texture into the destination; Clone copies it directly. Source and destination stay editable in the Viewer.")
                         .font(.caption2).foregroundStyle(.secondary)
                 }.padding(.top, 8)
             }

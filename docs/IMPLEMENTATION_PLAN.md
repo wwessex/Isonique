@@ -291,9 +291,15 @@ Use File → Print Contact Sheet or Command-P for the current filtered Browser p
 
 Output Colour supports sRGB, Display P3 and Black and White. RGB modes convert each rendered image with relative-colorimetric intent into the selected image colour space; Black and White converts only the print copy. Reusable presets retain every layout and colour choice. Save PDF writes a self-contained document. Print sends those same PDF pages to the native macOS print panel without modifying the catalogue or originals.
 
+## Non-destructive spot removal
+
+Choose Repair Spot or Clone Spot from Photos, the Viewer editing strip or the Adjustments inspector. New spots are created by clicking a clean source and then the destination blemish. Every stored spot retains an editable source, destination, mode and size; the Viewer draws their source-to-destination relationship and renders the editing canvas at full source resolution.
+
+Clone copies the sampled patch directly. Repair transfers its texture with a local colour offset so it blends into the destination. Ordered spots render after global tone, Levels and Curves and before lens and geometric transforms, using the same source-space recipe for the Viewer and export. Circular feathering and clamped source sampling keep patches safe at image edges. Format 19 protects spot recipes, versions and persistent Undo/Redo history. Lift and Stamp expose Spot Removal as a separate opt-in group.
+
 ## Next checkpoint
 
-Add non-destructive spot removal with separate repair and clone modes. Provide source and destination controls, multiple editable spots and full-resolution Viewer/export rendering. Test edge clipping, Undo/Redo, persistence and preservation of originals.
+Add non-destructive global sharpening, edge sharpening and luminance noise reduction. Use shared full-resolution preview/export rendering, keep older recipes neutral, and test flat fields, high-contrast edges, Undo/Redo, persistence and preservation of originals.
 
 ## Pending physical camera checks
 

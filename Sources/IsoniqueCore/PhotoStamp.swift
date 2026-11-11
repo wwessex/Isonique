@@ -8,6 +8,7 @@ public struct PhotoStampChange: Codable, Equatable {
     private let rating: Int?
 
     public var photoID: UUID { metadata.photoID }
+    var containsSpotRemoval: Bool { adjustments?.spotRemovals.isEmpty == false }
 
     fileprivate init(previous: Photo, current: Photo, groups: Set<AdjustmentGroup>) {
         let iptc = IPTCField.allCases.compactMap { field -> IPTCFieldEdit? in

@@ -68,9 +68,56 @@ public struct PhotoGeometry: Equatable {
         return BrushPoint(x: min(1, max(0, x)), y: min(1, max(0, y)))
     }
 
+    /// Map a source-space brush coordinate into normalized Viewer coordinates.
+    /// Returns `nil` when a crop hides the point.
+    public func viewerPoint(_ point: BrushPoint) -> CGPoint? {
+        guard [point.x, point.y].allSatisfy(\.isFinite) else { return nil }
+        var x = min(1, max(0, point.x))
+        var y = min(1, max(0, point.y))
+        if lensAmount != 0 {
+            let point = Self.lensViewerPoint(x: x, y: y, coefficient: min(1, max(-1, lensAmount)) * 0.35)
+            (x, y) = (point.x, point.y)
+        }
+        x *= sourceSize.width
+        y *= sourceSize.height
+        switch turns {
+        case 1: (x, y) = (sourceSize.height - y, x)
+        case 2: (x, y) = (sourceSize.width - x, sourceSize.height - y)
+        case 3: (x, y) = (y, sourceSize.width - x)
+        default: break
+        }
+        if angle != 0 {
+            let dx = x - rotatedSize.width / 2, dy = y - rotatedSize.height / 2
+            x = straightenedSize.width / 2 + cos(angle) * dx - sin(angle) * dy
+            y = straightenedSize.height / 2 + sin(angle) * dx + cos(angle) * dy
+        }
+        if flipHorizontal { x = straightenedSize.width - x }
+        if flipVertical { y = straightenedSize.height - y }
+        let rect = cropRect ?? CGRect(origin: .zero, size: straightenedSize)
+        guard x >= rect.minX - 0.001, x <= rect.maxX + 0.001,
+              y >= rect.minY - 0.001, y <= rect.maxY + 0.001 else { return nil }
+        return CGPoint(x: min(1, max(0, (x - rect.minX) / rect.width)),
+                       y: min(1, max(0, (y - rect.minY) / rect.height)))
+    }
+
     static func lensSourcePoint(x: Double, y: Double, coefficient: Double) -> CGPoint {
         let nx = x * 2 - 1, ny = y * 2 - 1
         let factor = 1 + coefficient * (nx * nx + ny * ny)
         return CGPoint(x: (nx * factor + 1) / 2, y: (ny * factor + 1) / 2)
+    }
+
+    static func lensViewerPoint(x: Double, y: Double, coefficient: Double) -> CGPoint {
+        let targetX = x * 2 - 1, targetY = y * 2 - 1
+        let targetRadius = hypot(targetX, targetY)
+        guard targetRadius > 0 else { return CGPoint(x: x, y: y) }
+        var radius = min(2, targetRadius)
+        for _ in 0..<12 {
+            let function = radius + coefficient * radius * radius * radius - targetRadius
+            let derivative = 1 + 3 * coefficient * radius * radius
+            guard abs(derivative) > 0.000_001 else { break }
+            radius = max(0, min(2, radius - function / derivative))
+        }
+        let scale = radius / targetRadius
+        return CGPoint(x: (targetX * scale + 1) / 2, y: (targetY * scale + 1) / 2)
     }
 }
