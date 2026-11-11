@@ -26,7 +26,7 @@ struct FeatureGuide: View {
             Feature(title: "1. Full Aperture library migration", detail: "Original recovery exists, but old edits, database-only metadata, project hierarchy and album relationships are not migrated."),
             Feature(title: "3. Retouching and advanced brushes", detail: "Clone, heal, red-eye removal, edge-aware brushes and general adjustment masks are pending."),
             Feature(title: "8. Physical tethered capture", detail: "File → Tethered Capture can request one shot at a time from a camera that reports remote shutter support. Physical camera testing is pending. Use File → Import from Camera or Card to check only the photos you want to import."),
-            Feature(title: "9. Publishing and extensions", detail: "Books, printing tools, plug-ins, slideshow export and video workflows are missing. External-editor TIFF round trips and local slideshow playback are available."),
+            Feature(title: "9. Publishing and extensions", detail: "Book authoring, plug-ins, slideshow export and video workflows are missing. Contact-sheet and proof printing, external-editor TIFF round trips and local slideshow playback are available."),
             Feature(title: "10. Cloud sync and other devices", detail: "Cloud sync and web, Windows, iPhone, iPad and Android apps are not included.")
         ]),
         Group(title: "New options (6–10)", symbol: "slider.horizontal.3", features: [
@@ -60,6 +60,7 @@ struct FeatureGuide: View {
             Feature(title: "Undo and Redo", detail: "Session Undo/Redo is always available. Optional persistent history retains the latest 100 photo edits in the catalogue.")
         ]),
         Group(title: "Available now", symbol: "checkmark.circle", features: [
+            Feature(title: "Contact sheets and printable proofs", detail: "Use File → Print Contact Sheet or Command-P for the filtered Browser view, or Print Selected in batch mode. Preview A4, A3 or US Letter pages with margins, captions and grid controls. Save reusable presets, choose sRGB, Display P3 or Black and White, then save PDF or use the macOS print panel."),
             Feature(title: "External editor round trip", detail: "Choose Photos → Edit with External Editor to send the selected recipe as a full-size TIFF. Save over the TIFF, then import it as a new managed derivative. Settings remembers the chosen editor. Isonique verifies the return and preserves the source master."),
             Feature(title: "Project location assignment", detail: "Select a project in Places and choose Assign Project Location to review and fill missing locations in one Undo step. The review preserves existing locations, including embedded GPS in older originals, and skips explicitly cleared locations and originals it cannot verify."),
             Feature(title: "Export format, quality, size and metadata", detail: "Choose JPEG, PNG, TIFF, HEIF or unchanged original; set JPEG or HEIF quality, TIFF compression, longest-edge size and an optional text watermark; save reusable presets; choose EXIF, IPTC and GPS for edited exports."),

@@ -66,6 +66,7 @@ enum EditTool: String { case select, crop, straighten, brush }
     @Published var showRelocationOptions = false
     var pendingRelocationOptions: OriginalRelocationOptions?
     @Published var showExportOptions = false
+    @Published var showPrintOptions = false
     @Published var externalEditHandoff: ExternalEditHandoff?
     @Published var keywordVocabulary: KeywordVocabulary
     @Published var showKeywordVocabulary = false
@@ -828,6 +829,11 @@ enum EditTool: String { case select, crop, straighten, brush }
             CommandGroup(replacing: .help) {
                 Button("Features & Limits…") { openWindow(id: "features") }
             }
+            CommandGroup(replacing: .printItem) {
+                Button("Print Contact Sheet…", action: workspace.openPrintLayout)
+                    .keyboardShortcut("p")
+                    .disabled(!workspace.canPrintPhotos)
+            }
             CommandGroup(replacing: .undoRedo) {
                 Button("Undo Photo Edit") { workspace.undoEdit() }.keyboardShortcut("z").disabled(!workspace.canUndo || workspace.busy)
                 Button("Redo Photo Edit") { workspace.redoEdit() }.keyboardShortcut("z", modifiers: [.command, .shift]).disabled(!workspace.canRedo || workspace.busy)
@@ -1286,6 +1292,7 @@ struct ContentView: View {
         .sheet(item: $model.externalEditHandoff) { handoff in
             ExternalEditReturnView(handoff: handoff).environmentObject(model)
         }
+        .sheet(isPresented: $model.showPrintOptions) { PrintLayoutView().environmentObject(model) }
         .sheet(isPresented: $model.showExportOptions) { ExportOptionsView().environmentObject(model) }
         .sheet(item: $collectionEditor) { CollectionNameSheet($0).environmentObject(model) }
         .alert("Isonique", isPresented: Binding(get: { model.error != nil }, set: { if !$0 { model.error = nil } })) { Button("OK") { model.error = nil } } message: { Text(model.error ?? "") }

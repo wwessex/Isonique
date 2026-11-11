@@ -46,6 +46,7 @@ struct BatchBar: View {
                             Button("Remove Selected from Stacks") { model.editBatch { $0.stackID = nil } }
                         }
                         Button("Export Selected…", action: model.exportPanel)
+                        Button("Print Selected…", action: model.openPrintLayout)
                         Button("Move to Trash") { model.setPhotosTrashed(model.selectedTrashActionIDs, trashed: true) }
                             .disabled(model.selectedTrashActionIDs.isEmpty)
                     }.disabled(model.batchSelection.isEmpty)

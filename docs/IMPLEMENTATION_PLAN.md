@@ -285,9 +285,15 @@ Choose Photos → Edit with External Editor or use a photo's context menu. The f
 
 The verified return becomes a new managed derivative with a neutral Isonique recipe and the source photo's project, albums and catalogue metadata. It owns its TIFF master because ordinary Isonique versions must share exactly the same original bytes. The source master and recipe are not modified. Missing, unchanged, non-TIFF and duplicate returns are refused. Cancellation and launch failure remove the temporary handoff. A stale or failed catalogue save removes the installed copy before reporting the error.
 
+## Contact sheets and printable proofs
+
+Use File → Print Contact Sheet or Command-P for the current filtered Browser photos. In Select Photos mode, only the explicit batch selection is included. Contact Sheet arranges 1–10 rows and columns per page; Single-Photo Proof uses one adjusted photo per page. Choose A4, A3 or US Letter paper, orientation, margins and captions from the version name, source filename, catalogue caption or name and caption together. The preview pages use cached thumbnails while Save PDF and Print render the saved full-resolution recipes.
+
+Output Colour supports sRGB, Display P3 and Black and White. RGB modes convert each rendered image with relative-colorimetric intent into the selected image colour space; Black and White converts only the print copy. Reusable presets retain every layout and colour choice. Save PDF writes a self-contained document. Print sends those same PDF pages to the native macOS print panel without modifying the catalogue or originals.
+
 ## Next checkpoint
 
-Add a printable contact-sheet and proof layout with page, margin, caption and colour-managed output controls. Preview pagination, preserve print presets and verify PDF and native print output without changing originals.
+Add non-destructive spot removal with separate repair and clone modes. Provide source and destination controls, multiple editable spots and full-resolution Viewer/export rendering. Test edge clipping, Undo/Redo, persistence and preservation of originals.
 
 ## Pending physical camera checks
 
