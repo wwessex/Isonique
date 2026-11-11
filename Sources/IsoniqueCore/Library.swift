@@ -92,6 +92,7 @@ public struct Adjustments: Codable, Equatable {
     public var warmth: Double = 0
     public var temperatureKelvin: Double = WhiteBalanceRules.neutralKelvin
     public var tint: Double = 0
+    public var targetedColors: [TargetedColorAdjustment] = []
     public var shadows: Double = 0
     public var highlights: Double = 0
     public var quarterTurns: Int = 0
@@ -119,7 +120,7 @@ public struct Adjustments: Codable, Equatable {
     public var vignette: Double = 0
     public var devignette: Double = 0
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, temperatureKelvin, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction, chromaticAberrationRedCyan, chromaticAberrationBlueYellow, vignette, devignette }
+    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, temperatureKelvin, tint, targetedColors, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction, chromaticAberrationRedCyan, chromaticAberrationBlueYellow, vignette, devignette }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
@@ -132,6 +133,7 @@ public struct Adjustments: Codable, Equatable {
         temperatureKelvin = WhiteBalanceRules.clamp(kelvin:
             try values.decodeIfPresent(Double.self, forKey: .temperatureKelvin) ?? WhiteBalanceRules.neutralKelvin)
         tint = try values.decodeIfPresent(Double.self, forKey: .tint) ?? 0
+        targetedColors = try values.decodeIfPresent([TargetedColorAdjustment].self, forKey: .targetedColors) ?? []
         shadows = try values.decodeIfPresent(Double.self, forKey: .shadows) ?? 0
         highlights = try values.decodeIfPresent(Double.self, forKey: .highlights) ?? 0
         quarterTurns = try values.decodeIfPresent(Int.self, forKey: .quarterTurns) ?? 0
@@ -168,6 +170,7 @@ public enum AdjustmentGroup: String, CaseIterable, Codable, Identifiable {
     case retouch = "Spot removal"
     case detail = "Detail"
     case lensEffects = "Lens & vignette"
+    case targetedColor = "Targeted color"
     public var id: String { rawValue }
 }
 public enum FlipAxis: String, CaseIterable, Identifiable {
@@ -188,6 +191,8 @@ public extension Adjustments {
     var hasKelvinWhiteBalance: Bool {
         WhiteBalanceRules.clamp(kelvin: temperatureKelvin) != WhiteBalanceRules.neutralKelvin
     }
+
+    var hasTargetedColors: Bool { !targetedColors.isEmpty }
 
     mutating func toggleFlip(_ axis: FlipAxis) {
         switch axis {
@@ -217,6 +222,7 @@ public extension Adjustments {
             result.temperatureKelvin = temperatureKelvin
             result.tint = tint
         }
+        if groups.contains(.targetedColor) { result.targetedColors = targetedColors }
         if groups.contains(.tone) {
             result.shadows = shadows; result.highlights = highlights
             result.blackPoint = blackPoint; result.whitePoint = whitePoint; result.gamma = gamma
@@ -361,6 +367,10 @@ public struct Library: Codable {
         if version < 22, hasRecipe(where: \.hasKelvinWhiteBalance) { version = 22 }
     }
 
+    public mutating func upgradeForTargetedColors() {
+        if version < 23, hasRecipe(where: \.hasTargetedColors) { version = 23 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -404,6 +414,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 23, hasRecipe(where: \.hasTargetedColors) { throw LibraryError.unsupportedVersion }
         if version < 22, hasRecipe(where: \.hasKelvinWhiteBalance) { throw LibraryError.unsupportedVersion }
         if version < 21, hasRecipe(where: \.hasLensEffects) { throw LibraryError.unsupportedVersion }
         if version < 20, hasRecipe(where: \.hasDetailAdjustments) { throw LibraryError.unsupportedVersion }
@@ -420,7 +431,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...22).contains(version) { return }
+        if (7...23).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -592,6 +603,7 @@ public final class LibraryRepository {
         normalized.upgradeForDetailAdjustments()
         normalized.upgradeForLensEffects()
         normalized.upgradeForKelvinWhiteBalance()
+        normalized.upgradeForTargetedColors()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
@@ -817,8 +829,9 @@ public enum Renderer {
     public static func renderWithGeometry(_ url: URL, adjustments: Adjustments,
                                           maxDimension: CGFloat? = nil) throws -> (image: CGImage, geometry: PhotoGeometry) {
         let (toned, geometry) = try renderToneInput(url, adjustments: adjustments, maxDimension: maxDimension)
+        let colored = try applyTargetedColors(toned, targets: adjustments.targetedColors)
         let toneTable = (0...255).map { TonalTools.map(Double($0) / 255, adjustments: adjustments) }
-        let levels = try TonalTools.applying(toned, table: toneTable, curves: adjustments.channelCurves,
+        let levels = try TonalTools.applying(colored, table: toneTable, curves: adjustments.channelCurves,
                                              channelLevels: adjustments.channelLevels)
         let aberration = try applyChromaticAberration(levels,
             redCyan: adjustments.chromaticAberrationRedCyan,
@@ -835,7 +848,8 @@ public enum Renderer {
 
     public static func adjustmentHistograms(_ url: URL, adjustments: Adjustments) throws -> AdjustmentHistograms {
         let (toned, _) = try renderToneInput(url, adjustments: adjustments, maxDimension: 384)
-        return try TonalTools.adjustmentHistograms(toned, adjustments: adjustments)
+        return try TonalTools.adjustmentHistograms(applyTargetedColors(toned, targets: adjustments.targetedColors),
+                                                   adjustments: adjustments)
     }
 
     /// Sample the nearest oriented source pixel under a normalized point in the full-size Viewer.
@@ -847,7 +861,8 @@ public enum Renderer {
         let source = geometry.sourcePoint(x: viewerPoint.x, y: viewerPoint.y)
         let x = min(toned.width - 1, Int(source.x * Double(toned.width)))
         let y = min(toned.height - 1, Int(source.y * Double(toned.height)))
-        return try TonalTools.curveInput(toned, pixel: CGRect(x: x, y: y, width: 1, height: 1),
+        let colored = try applyTargetedColors(toned, targets: adjustments.targetedColors)
+        return try TonalTools.curveInput(colored, pixel: CGRect(x: x, y: y, width: 1, height: 1),
                                          adjustments: adjustments, channel: channel)
     }
 

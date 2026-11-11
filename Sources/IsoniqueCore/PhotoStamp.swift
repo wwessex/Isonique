@@ -10,6 +10,7 @@ public struct PhotoStampChange: Codable, Equatable {
     public var photoID: UUID { metadata.photoID }
     var requiredCatalogueVersion: Int? {
         guard let adjustments else { return nil }
+        if adjustments.hasTargetedColors { return 23 }
         if adjustments.hasKelvinWhiteBalance { return 22 }
         if adjustments.hasLensEffects { return 21 }
         if adjustments.hasDetailAdjustments { return 20 }

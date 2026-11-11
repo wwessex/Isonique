@@ -51,6 +51,8 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
     @Published var showLoupe = false
     @Published var curveSampling: CurveSamplingRequest?
     @Published var whiteBalanceSampling: WhiteBalanceSamplingRequest?
+    @Published var targetedColorSampling: TargetedColorSamplingRequest?
+    @Published var targetedColorSelection: UUID?
     @Published var curvePointSelection: CurvePointSelection?
     @Published var browserLayout: BrowserPresentation
     @Published var gridThumbnailSize: GridThumbnailSize {
@@ -293,6 +295,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
         saved.upgradeForDetailAdjustments()
         saved.upgradeForLensEffects()
         saved.upgradeForKelvinWhiteBalance()
+        saved.upgradeForTargetedColors()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -413,15 +416,16 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
     }
     func showBrowser(allPhotos: Bool = false) {
         viewer = false; tool = .select; compareOriginal = false; stopComparison()
-        curveSampling = nil; whiteBalanceSampling = nil
+        curveSampling = nil; whiteBalanceSampling = nil; targetedColorSampling = nil
         if allPhotos {
             scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all; colorFilter = .all; advancedSearch = nil
         }
     }
     func exitViewer() {
-        if curveSampling != nil || whiteBalanceSampling != nil {
+        if curveSampling != nil || whiteBalanceSampling != nil || targetedColorSampling != nil {
             curveSampling = nil
             whiteBalanceSampling = nil
+            targetedColorSampling = nil
             return
         }
         if comparisonID != nil { stopComparison() }
@@ -1337,6 +1341,9 @@ struct ContentView: View {
         .onChange(of: model.activeWhiteBalanceSampling) { _, active in
             if active == nil, model.whiteBalanceSampling != nil { model.whiteBalanceSampling = nil }
         }
+        .onChange(of: model.activeTargetedColorSampling) { _, active in
+            if active == nil, model.targetedColorSampling != nil { model.targetedColorSampling = nil }
+        }
         .onChange(of: model.search) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onChange(of: model.ratingFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onChange(of: model.originalFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
@@ -1467,6 +1474,7 @@ struct PhotoViewer: View {
     @State private var loupePoint = CGPoint(x: 0.5, y: 0.5)
     @State private var pendingSample: CurveSampleWork?
     @State private var pendingWhiteBalanceSample: WhiteBalanceSampleWork?
+    @State private var pendingTargetedColorSample: TargetedColorSampleWork?
     @State private var geometry: PhotoGeometry?
     @State private var erasingBrush = false
     @AppStorage("brush.size") private var brushSize = 12.0
@@ -1494,6 +1502,8 @@ struct PhotoViewer: View {
         let sampleWork = pendingSample.flatMap { $0.request == sampler ? $0 : nil }
         let whiteBalanceSampler = model.activeWhiteBalanceSampling
         let whiteBalanceSampleWork = pendingWhiteBalanceSample.flatMap { $0.request == whiteBalanceSampler ? $0 : nil }
+        let targetedColorSampler = model.activeTargetedColorSampling
+        let targetedColorSampleWork = pendingTargetedColorSample.flatMap { $0.request == targetedColorSampler ? $0 : nil }
         VStack(spacing: 10) {
             
             if let image {
@@ -1578,6 +1588,18 @@ struct PhotoViewer: View {
                                 }
                                 Button("Cancel Sampling") { model.whiteBalanceSampling = nil }
                             }.font(.caption).frame(width: 156).padding([.horizontal, .bottom], 10)
+                        } else if targetedColorSampler != nil {
+                            VStack(spacing: 6) {
+                                Text("Targeted Color").font(.caption.weight(.semibold))
+                                if targetedColorSampleWork != nil {
+                                    ProgressView("Sampling color").controlSize(.small)
+                                } else {
+                                    Text("Target a colored pixel to create a reusable range.")
+                                        .multilineTextAlignment(.center).foregroundStyle(.secondary)
+                                    Button("Add Color Range") { queueSample(at: loupePoint) }
+                                }
+                                Button("Cancel Sampling") { model.targetedColorSampling = nil }
+                            }.font(.caption).frame(width: 156).padding([.horizontal, .bottom], 10)
                         }
                     }.workspaceGlass().padding(16)
                 } else if failure == nil {
@@ -1634,6 +1656,20 @@ struct PhotoViewer: View {
                 model.error = error.localizedDescription
             }
         }
+        .task(id: targetedColorSampleWork) {
+            guard let targetedColorSampleWork else { return }
+            do {
+                let sample = try await targetedColorSampleWork.load(from: url)
+                guard !Task.isCancelled, model.activeTargetedColorSampling == targetedColorSampleWork.request else { return }
+                pendingTargetedColorSample = nil
+                model.finishTargetedColorSampling(targetedColorSampleWork.request, sample: sample)
+            } catch {
+                guard !Task.isCancelled, model.activeTargetedColorSampling == targetedColorSampleWork.request else { return }
+                pendingTargetedColorSample = nil
+                model.targetedColorSampling = nil
+                model.error = error.localizedDescription
+            }
+        }
         .task(id: request) {
             if request.isCropping, let size = try? Renderer.dimensions(url, adjustments: request.adjustments) { cropSize = size }
             do {
@@ -1657,7 +1693,8 @@ struct PhotoViewer: View {
 
     private var loupeTarget: some View {
         LoupeTarget(point: $loupePoint,
-                    sample: model.activeCurveSampling == nil && model.activeWhiteBalanceSampling == nil ? nil : queueSample)
+                    sample: model.activeCurveSampling == nil && model.activeWhiteBalanceSampling == nil &&
+                        model.activeTargetedColorSampling == nil ? nil : queueSample)
     }
 
     private func queueSample(at point: CGPoint) {
@@ -1672,6 +1709,9 @@ struct PhotoViewer: View {
         } else if let request = model.activeWhiteBalanceSampling, request.photoID == photo.id,
                   pendingWhiteBalanceSample?.request != request {
             pendingWhiteBalanceSample = WhiteBalanceSampleWork(request: request, point: center)
+        } else if let request = model.activeTargetedColorSampling, request.photoID == photo.id,
+                  pendingTargetedColorSample?.request != request {
+            pendingTargetedColorSample = TargetedColorSampleWork(request: request, point: center)
         }
     }
 
@@ -1767,6 +1807,7 @@ struct Inspector: View {
             }
             Text("Sample an opaque, unclipped neutral grey or white pixel with the full-resolution Viewer Loupe.")
                 .font(.caption2).foregroundStyle(.secondary)
+            TargetedColorEditor(photo: photo)
             Divider()
             HistogramView(photo: photo)
             if showsInputs && inputHistogramError && inputs == nil {

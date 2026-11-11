@@ -16,3 +16,13 @@
 "RAW and color processing" = "RAW and colour processing";
 "Rule color label" = "Rule colour label";
 "Set Color Label to %@" = "Set Colour Label to %@";
+"Targeted Color" = "Targeted Colour";
+"Targeted color" = "Targeted colour";
+"Targeted Color · choose an opaque pixel with visible color" = "Targeted Colour · choose an opaque pixel with visible colour";
+"Add Color Range" = "Add Colour Range";
+"Target a colored pixel to create a reusable range." = "Target a coloured pixel to create a reusable range.";
+"Add a reusable color range or sample one with the Viewer Loupe." = "Add a reusable colour range or sample one with the Viewer Loupe.";
+"Core width is fully affected; Falloff feathers to unchanged color. Overlapping ranges combine from the original hue." = "Core width is fully affected; Falloff feathers to unchanged colour. Overlapping ranges combine from the original hue.";
+"Center" = "Centre";
+"Sampling color" = "Sampling colour";
+"Open Targeted Color in Adjustments to add reusable red, orange, yellow, green, cyan, blue or magenta ranges, or sample a custom range with the full-resolution Viewer Loupe. Each range has a fully affected core, feathered falloff and independent Hue, Saturation and Luminance. Duplicate ranges or copy the complete group with Lift and Stamp. Automatic skin protection and color wheels are unavailable." = "Open Targeted Colour in Adjustments to add reusable red, orange, yellow, green, cyan, blue or magenta ranges, or sample a custom range with the full-resolution Viewer Loupe. Each range has a fully affected core, feathered falloff and independent Hue, Saturation and Luminance. Duplicate ranges or copy the complete group with Lift and Stamp. Automatic skin protection and colour wheels are unavailable.";

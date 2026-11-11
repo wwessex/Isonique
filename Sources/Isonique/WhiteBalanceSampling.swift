@@ -38,6 +38,7 @@ extension Workspace {
     func startWhiteBalanceSampling(photoID: UUID) {
         guard !busy, canShowLoupe, let photo = selected, photo.id == photoID else { return }
         curveSampling = nil
+        targetedColorSampling = nil
         stopComparison()
         chooseTool(.select)
         showLoupe = true

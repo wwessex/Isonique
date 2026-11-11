@@ -143,6 +143,7 @@ private extension Adjustments {
         apply(\.warmth, "Temperature")
         apply(\.temperatureKelvin, "Temperature (K)")
         apply(\.tint, "Tint")
+        apply(\.targetedColors, AdjustmentGroup.targetedColor.rawValue)
         apply(\.shadows, "Shadows")
         apply(\.highlights, "Highlights")
 

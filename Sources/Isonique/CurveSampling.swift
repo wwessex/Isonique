@@ -68,6 +68,7 @@ extension Workspace {
     func startCurveSampling(_ channel: CurveChannel, photoID: UUID) {
         guard !busy, canShowLoupe, let photo = selected, photo.id == photoID else { return }
         whiteBalanceSampling = nil
+        targetedColorSampling = nil
         stopComparison()
         chooseTool(.select)
         showLoupe = true

@@ -315,9 +315,15 @@ The Adjustments inspector exposes a 2000 K–12000 K Temperature control and the
 
 Format 22 protects non-neutral Kelvin values in photos, versions, Lift and Stamp data and optional persistent history. Project merge compares Kelvin independently. Older recipes decode to neutral 6500 K and retain the existing normalized Warmth rendering; changing Kelvin or using the eyedropper clears that legacy offset. The Viewer cache and edited export share the same full-resolution sRGB renderer. RAW camera-neutral metadata, adjustable sample areas, automatic skin-tone or natural-grey modes and extended-range processing remain open.
 
+## Targeted Hue, Saturation and Luminance
+
+Targeted Color in the Adjustments inspector stores multiple named colour ranges. Add built-in red, orange, yellow, green, cyan, blue or magenta ranges, duplicate an existing range, or sample a custom source hue through the full-resolution Viewer Loupe. Each record has a circular hue centre, fully affected core width, smooth falloff and independent Hue, Saturation and Luminance values. Achromatic or transparent Loupe targets are rejected.
+
+The shared renderer evaluates every range from the pixel's original hue, combines overlapping weights, then applies one bounded HSL conversion before Levels and Curves. Neutral or empty records bypass conversion exactly. Adjustment-input histograms and sampled curve points therefore see the targeted-colour result. Format 23 protects range records in photos, versions, targeted-colour Lift and Stamp data and optional persistent history; project merge compares the group independently. Older recipes decode an empty list and remain unchanged.
+
 ## Next checkpoint
 
-Add non-destructive targeted Hue, Saturation and Luminance colour controls with reusable colour ranges and a Viewer Loupe sampler. Test hue wraparound, range falloff, neutral settings, multiple targets, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
+Add a non-destructive black-and-white channel mixer with red, green and blue contributions plus an optional monochrome tint. Test neutral luminance, channel isolation, bounded mixing, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
 
 ## Pending physical camera checks
 

@@ -119,6 +119,7 @@ extension Workspace {
                 batchSelection.formIntersection(photos.map(\.id))
                 curveSampling = nil
                 whiteBalanceSampling = nil
+                targetedColorSampling = nil
                 curvePointSelection = nil
             }
             refreshOriginalStatus()
