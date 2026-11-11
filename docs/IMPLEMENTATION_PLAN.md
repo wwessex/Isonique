@@ -343,9 +343,17 @@ The shared CPU renderer builds a separable local luminance mean, adds a bounded 
 
 Format 26 protects strength and radius in photos, versions, the Detail Lift and Stamp group and optional persistent history. Project merge compares both fields independently. Older recipes decode neutral strength and the default radius without upgrading.
 
+## Reusable custom adjustment presets
+
+Manage Custom Presets is available from the Inspector's Apply Preset menu and the Photos menu. A preset stores the current photo's recipe plus an explicit set of adjustment groups. Create starts with every non-spatial group selected; Update replaces the saved recipe and group selection from the current photo, while Rename and Delete do not touch photographs. Presets live in application preferences and are available across Isonique libraries.
+
+Geometry, Local Brush, Spot Removal and Red-eye are classified as spatial. They are excluded by default so applying a preset preserves crop, rotation, photo-specific masks, Repair/Clone points and pupil regions. Users can deliberately select those groups, with a warning in both the manager and application review. Before Apply, the review lists target versions, selected groups, each version's groups that actually differ and the number that will change.
+
+Single-photo and batch application use normal catalogue history and stale-write protection. Batch history follows the established photo-edit model: each changed version is one Undo/Redo step. Older preset payloads using `recipe` instead of `adjustments`, or omitting identifiers and groups, decode with the safe non-spatial group set. Existing built-in, import, export, print, metadata and relocation presets remain independent.
+
 ## Next checkpoint
 
-Add reusable custom adjustment presets with selectable adjustment groups, create, update, rename and delete actions, and a before-apply summary. Test preset persistence, older settings compatibility, Undo/Redo, batch application and preservation of spatial adjustments unless explicitly selected.
+Add edge-aware local adjustment brushing with a mask overlay, invert-mask action and adjustable post-stroke mask opacity. Test high-contrast boundaries, erase and invert behavior, mask visibility, pixel-zoom coordinates, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
 
 ## Pending physical camera checks
 

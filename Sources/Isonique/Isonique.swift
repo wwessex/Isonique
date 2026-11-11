@@ -80,6 +80,9 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var showKeywordVocabulary = false
     @Published var keywordGroups: KeywordGroupPreferences
     @Published var metadataPresets: [MetadataPreset]
+    @Published var adjustmentPresets: [CustomAdjustmentPreset]
+    @Published var showAdjustmentPresetManager = false
+    @Published var adjustmentPresetReview: AdjustmentPresetApplicationReview? = nil
     @Published var metadataViews: MetadataViewPreferences
     @Published var showKeywordControls: Bool {
         didSet { preferences.set(showKeywordControls, forKey: KeywordGroupPreferences.controlsKey) }
@@ -148,6 +151,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         keywordVocabulary = KeywordVocabularyPreferences.load(from: preferences)
         keywordGroups = KeywordGroupPreferences.load(from: preferences)
         metadataPresets = MetadataPresetPreferences.load(from: preferences)
+        adjustmentPresets = AdjustmentPresetPreferences.load(from: preferences)
         metadataViews = MetadataViewPreferences.load(from: preferences)
         showKeywordControls = preferences.bool(forKey: KeywordGroupPreferences.controlsKey)
         let layout = preferences.string(forKey: "browser.layout").flatMap(BrowserPresentation.init(rawValue:))
@@ -758,6 +762,14 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 Button("Clone Spot") { workspace.chooseSpotRemoval(.clone) }.disabled(!workspace.canSpotRemove)
                 Button("Manual Red-Eye") { workspace.chooseRedEyeCorrection() }.disabled(!workspace.canCorrectRedEye)
                 Divider()
+                Menu("Apply Custom Adjustment Preset") {
+                    ForEach(workspace.adjustmentPresets) { preset in
+                        Button(preset.name) { workspace.previewAdjustmentPreset(preset) }
+                    }
+                }.disabled(workspace.adjustmentPresets.isEmpty || workspace.selected == nil)
+                Button("Manage Adjustment Presets…") { workspace.showAdjustmentPresetManager = true }
+                    .disabled(workspace.selected == nil)
+                Divider()
                 Button("Lift Settings", action: workspace.lift)
                     .keyboardShortcut("c", modifiers: [.command, .shift]).disabled(!workspace.canLift)
                 Button("Stamp Selected Settings", action: workspace.stamp)
@@ -1295,6 +1307,12 @@ struct ContentView: View {
         .sheet(isPresented: $model.showKeywordGroupEditor) {
             KeywordGroupEditor().environmentObject(model)
         }
+        .sheet(isPresented: $model.showAdjustmentPresetManager) {
+            AdjustmentPresetManagerView().environmentObject(model)
+        }
+        .sheet(item: $model.adjustmentPresetReview) { review in
+            AdjustmentPresetReviewView(review: review).environmentObject(model)
+        }
         .sheet(item: $model.batchMetadataReview) { review in
             BatchMetadataView(review: review).environmentObject(model)
         }
@@ -1795,8 +1813,16 @@ struct Inspector: View {
                         model.edit { $0.adjustments = preset.applying(to: $0.adjustments) }
                     }
                 }
+                if !model.adjustmentPresets.isEmpty {
+                    Divider()
+                    ForEach(model.adjustmentPresets) { preset in
+                        Button(preset.name) { model.previewAdjustmentPreset(preset) }
+                    }
+                }
+                Divider()
+                Button("Manage Custom Presets…") { model.showAdjustmentPresetManager = true }
             } label: { Label("Apply Preset", systemImage: "slider.horizontal.3") }
-            Text("Presets replace color and tone settings; crop and rotation are kept.").font(.caption2).foregroundStyle(.secondary)
+            Text("Built-in presets replace colour and tone settings. Custom presets preview selected groups before applying.").font(.caption2).foregroundStyle(.secondary)
             adjustment("Exposure", path: \.adjustments.exposure, range: -4...4)
             adjustment("Brightness", path: \.adjustments.brightness, range: -1...1)
             adjustment("Contrast", path: \.adjustments.contrast, range: 0.5...1.5, neutral: 1)

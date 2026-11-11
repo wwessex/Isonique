@@ -26,6 +26,14 @@ struct BatchBar: View {
                             ForEach(AdjustmentPreset.allCases) { preset in
                                 Button(preset.rawValue) { model.editBatch { $0.adjustments = preset.applying(to: $0.adjustments) } }
                             }
+                            if !model.adjustmentPresets.isEmpty {
+                                Divider()
+                                ForEach(model.adjustmentPresets) { preset in
+                                    Button(preset.name) { model.previewAdjustmentPreset(preset) }
+                                }
+                            }
+                            Divider()
+                            Button("Manage Custom Presets…") { model.showAdjustmentPresetManager = true }
                         }
                         Button("Batch Change…", action: model.openBatchMetadata)
                             .disabled(!model.canOpenBatchMetadata)
