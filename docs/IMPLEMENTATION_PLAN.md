@@ -351,9 +351,17 @@ Geometry, Local Brush, Spot Removal and Red-eye are classified as spatial. They 
 
 Single-photo and batch application use normal catalogue history and stale-write protection. Batch history follows the established photo-edit model: each changed version is one Undo/Redo step. Older preset payloads using `recipe` instead of `adjustments`, or omitting identifiers and groups, decode with the safe non-spatial group set. Existing built-in, import, export, print, metadata and relocation presets remain independent.
 
+## Edge-aware local brush masks
+
+Dodge and Burn now offer Edge Aware painting in both Fit and 100% Viewer modes. Each stroke stores whether edge protection was enabled. The source-space raster samples straight sRGB luminance at the first stroke point, keeps close tones fully affected and applies a smooth falloff before rejecting a high-contrast boundary. Normal and erase strokes share the same edge rule, size, softness and strength model.
+
+Show Mask asks the shared source and geometry pipeline for a yellow Dodge or blue Burn overlay. The overlay applies crop, rotation, flip, straighten and lens geometry but remains a separate Viewer layer, so edited exports contain only the adjustment. Invert Mask and Mask Opacity are persistent settings for each Dodge or Burn mask. Opacity commits after a slider gesture as one history entry. An adjustment with no positive stroke remains inactive even if malformed saved settings request inversion.
+
+Format 27 protects the per-stroke edge flag and per-mask opacity and inversion in photos, versions, Lift and Stamp, custom presets, project merge and optional persistent history. Existing strokes decode with edge protection off and default mask settings preserve their exact earlier rendering.
+
 ## Next checkpoint
 
-Add edge-aware local adjustment brushing with a mask overlay, invert-mask action and adjustable post-stroke mask opacity. Test high-contrast boundaries, erase and invert behavior, mask visibility, pixel-zoom coordinates, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
+Add non-destructive local Saturation and Definition brush modes using the shared edge-aware mask infrastructure. Test neutral settings, independent and overlapping masks, edge protection, erase/invert/opacity, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
 
 ## Pending physical camera checks
 

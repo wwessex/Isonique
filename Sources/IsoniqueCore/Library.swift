@@ -118,6 +118,7 @@ public struct Adjustments: Codable, Equatable {
     public internal(set) var levelQuarterTones: LevelQuarterTones?
     public var lensDistortion: Double = 0
     public var localBrushes: [LocalBrushStroke] = []
+    public var localBrushMaskSettings: [LocalBrushAdjustment: LocalBrushMaskSettings] = [:]
     public var spotRemovals: [SpotRemoval] = []
     public var sharpening: Double = 0
     public var edgeSharpening: Double = 0
@@ -129,7 +130,7 @@ public struct Adjustments: Codable, Equatable {
     public var vignette: Double = 0
     public var devignette: Double = 0
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, temperatureKelvin, tint, targetedColors, blackAndWhiteEnabled, blackAndWhiteRed, blackAndWhiteGreen, blackAndWhiteBlue, monochromeTintHue, monochromeTintStrength, redEyeCorrections, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction, definition, definitionRadius, chromaticAberrationRedCyan, chromaticAberrationBlueYellow, vignette, devignette }
+    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, temperatureKelvin, tint, targetedColors, blackAndWhiteEnabled, blackAndWhiteRed, blackAndWhiteGreen, blackAndWhiteBlue, monochromeTintHue, monochromeTintStrength, redEyeCorrections, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, localBrushMaskSettings, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction, definition, definitionRadius, chromaticAberrationRedCyan, chromaticAberrationBlueYellow, vignette, devignette }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
@@ -169,6 +170,8 @@ public struct Adjustments: Codable, Equatable {
         levelQuarterTones = try values.decodeIfPresent(LevelQuarterTones.self, forKey: .levelQuarterTones)
         lensDistortion = try values.decodeIfPresent(Double.self, forKey: .lensDistortion) ?? 0
         localBrushes = try values.decodeIfPresent([LocalBrushStroke].self, forKey: .localBrushes) ?? []
+        localBrushMaskSettings = try values.decodeIfPresent([LocalBrushAdjustment: LocalBrushMaskSettings].self,
+                                                             forKey: .localBrushMaskSettings) ?? [:]
         spotRemovals = try values.decodeIfPresent([SpotRemoval].self, forKey: .spotRemovals) ?? []
         sharpening = try values.decodeIfPresent(Double.self, forKey: .sharpening) ?? 0
         edgeSharpening = try values.decodeIfPresent(Double.self, forKey: .edgeSharpening) ?? 0
@@ -206,6 +209,10 @@ public extension Adjustments {
 
     var hasDefinitionRecipe: Bool {
         definition != 0 || definitionRadius != DefinitionRules.neutralRadius
+    }
+
+    var hasAdvancedLocalBrushRecipe: Bool {
+        localBrushes.contains(where: \.edgeAware) || localBrushMaskSettings.values.contains { !$0.isNeutral }
     }
 
     var hasLensEffects: Bool {
@@ -278,7 +285,10 @@ public extension Adjustments {
             result.crop = crop; result.lensDistortion = lensDistortion
             result.flipHorizontal = flipHorizontal; result.flipVertical = flipVertical
         }
-        if groups.contains(.localBrush) { result.localBrushes = localBrushes }
+        if groups.contains(.localBrush) {
+            result.localBrushes = localBrushes
+            result.localBrushMaskSettings = localBrushMaskSettings
+        }
         if groups.contains(.retouch) { result.spotRemovals = spotRemovals }
         if groups.contains(.detail) {
             result.sharpening = sharpening
@@ -427,6 +437,10 @@ public struct Library: Codable {
         if version < 26, hasRecipe(where: \.hasDefinitionRecipe) { version = 26 }
     }
 
+    public mutating func upgradeForAdvancedLocalBrushes() {
+        if version < 27, hasRecipe(where: \.hasAdvancedLocalBrushRecipe) { version = 27 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -470,6 +484,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 27, hasRecipe(where: \.hasAdvancedLocalBrushRecipe) { throw LibraryError.unsupportedVersion }
         if version < 26, hasRecipe(where: \.hasDefinitionRecipe) { throw LibraryError.unsupportedVersion }
         if version < 25, hasRecipe(where: \.hasRedEyeCorrections) { throw LibraryError.unsupportedVersion }
         if version < 24, hasRecipe(where: \.hasBlackAndWhiteRecipe) { throw LibraryError.unsupportedVersion }
@@ -490,7 +505,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...26).contains(version) { return }
+        if (7...27).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -666,6 +681,7 @@ public final class LibraryRepository {
         normalized.upgradeForBlackAndWhite()
         normalized.upgradeForRedEye()
         normalized.upgradeForDefinition()
+        normalized.upgradeForAdvancedLocalBrushes()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
@@ -955,13 +971,18 @@ public enum Renderer {
         let size = maxDimension.map { min(Int($0), max(width, height)) } ?? max(width, height)
         let orientation = properties[kCGImagePropertyOrientation as String] as? Int ?? 1
         let (sourceWidth, sourceHeight) = (5...8).contains(orientation) ? (height, width) : (width, height)
-        let mask = try LocalExposureMask(strokes: adjustments.localBrushes, sourceWidth: sourceWidth, sourceHeight: sourceHeight)
         guard let decoded = CGImageSourceCreateThumbnailAtIndex(source, 0, [kCGImageSourceCreateThumbnailFromImageAlways: true, kCGImageSourceCreateThumbnailWithTransform: true, kCGImageSourceThumbnailMaxPixelSize: size] as CFDictionary),
               let space = CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(data: nil, width: decoded.width, height: decoded.height, bitsPerComponent: 8, bytesPerRow: decoded.width * 4, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue),
               let data = context.data else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
         context.draw(decoded, in: CGRect(x: 0, y: 0, width: decoded.width, height: decoded.height))
         let pixels = data.bindMemory(to: UInt8.self, capacity: decoded.width * decoded.height * 4)
+        let edgeMap = adjustments.localBrushes.contains(where: \.edgeAware)
+            ? LocalBrushEdgeMap(pixels: UnsafePointer(pixels), width: decoded.width, height: decoded.height)
+            : nil
+        let mask = try LocalExposureMask(strokes: adjustments.localBrushes,
+            settings: adjustments.localBrushMaskSettings, sourceWidth: sourceWidth,
+            sourceHeight: sourceHeight, edgeMap: edgeMap)
         let globalMultiplier = pow(2.0, adjustments.exposure)
         let brightness = adjustments.brightness.isFinite ? min(1, max(-1, adjustments.brightness)) : 0
         let vibrancy = adjustments.vibrancy.isFinite ? min(1, max(-1, adjustments.vibrancy)) : 0

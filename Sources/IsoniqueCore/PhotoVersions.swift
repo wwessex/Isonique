@@ -160,6 +160,7 @@ public enum PhotoHistoryEntry: Codable, Equatable {
             if changes.contains(where: { $0.iptc?.isEmpty == false }) { return 11 }
             return changes.contains { $0.keywordPaths != nil } ? 10 : 9
         default:
+            if photo?.adjustments.hasAdvancedLocalBrushRecipe == true { return 27 }
             if photo?.adjustments.hasDefinitionRecipe == true { return 26 }
             if photo?.adjustments.hasRedEyeCorrections == true { return 25 }
             if photo?.adjustments.hasBlackAndWhiteRecipe == true { return 24 }

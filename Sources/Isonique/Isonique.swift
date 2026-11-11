@@ -304,6 +304,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         saved.upgradeForBlackAndWhite()
         saved.upgradeForRedEye()
         saved.upgradeForDefinition()
+        saved.upgradeForAdvancedLocalBrushes()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -1502,9 +1503,12 @@ struct PhotoViewer: View {
     @State private var pendingTargetedColorSample: TargetedColorSampleWork?
     @State private var geometry: PhotoGeometry?
     @State private var erasingBrush = false
+    @State private var showBrushMask = false
+    @State private var brushMaskOverlay: BrushMaskOverlayFrame?
     @AppStorage("brush.size") private var brushSize = 12.0
     @AppStorage("brush.softness") private var brushSoftness = 70.0
     @AppStorage("brush.strength") private var brushStrength = 50.0
+    @AppStorage("brush.edgeAware") private var edgeAwareBrush = true
     @AppStorage("spot.size") private var spotSize = 12.0
     @AppStorage("redEye.size") private var redEyeSize = 8.0
     @AppStorage("redEye.darkness") private var redEyeDarkness = 55.0
@@ -1522,9 +1526,21 @@ struct PhotoViewer: View {
         let maximum: CGFloat?
         let profile: Data?
     }
+    private struct BrushMaskOverlayRequest: Equatable {
+        let url: URL
+        let adjustments: Adjustments
+        let adjustment: LocalBrushAdjustment
+        let maximum: CGFloat?
+    }
+    private struct BrushMaskOverlayFrame {
+        let request: BrushMaskOverlayRequest
+        let image: CGImage?
+    }
 
     var body: some View {
         let request = renderRequest
+        let maskRequest = brushMaskOverlayRequest
+        let maskOverlay = brushMaskOverlay.flatMap { $0.request == maskRequest ? $0.image : nil }
         let sampler = model.activeCurveSampling
         let sampleWork = pendingSample.flatMap { $0.request == sampler ? $0 : nil }
         let whiteBalanceSampler = model.activeWhiteBalanceSampling
@@ -1536,10 +1552,7 @@ struct PhotoViewer: View {
             if let image {
                 if model.tool == .crop { CropCanvas(image: image, crop: $draft, pixelSize: cropSize, aspect: cropLocked && cropAspect > 0 ? cropAspect : nil).padding(16) }
                 else if model.tool == .brush, let geometry, geometry.matches(photo.adjustments) {
-                    BrushCanvas(image: image, geometry: geometry, adjustment: model.brushAdjustment,
-                                erasing: erasingBrush, radius: brushSize / 200, softness: brushSoftness / 100,
-                                strength: brushStrength / 100) { model.applyBrushStroke($0, to: photo.id) }
-                        .padding(16)
+                    brushCanvas(image: image, geometry: geometry, overlay: maskOverlay)
                 }
                 else if model.tool == .spot, let geometry, geometry.matches(photo.adjustments) {
                     SpotRemovalCanvas(image: image, geometry: geometry, photo: photo, radius: spotSize / 200)
@@ -1589,7 +1602,8 @@ struct PhotoViewer: View {
                 }.buttonStyle(.plain).help(model.loupeActive ? "Hide Loupe" : "Show Loupe")
                     .accessibilityLabel(model.loupeActive ? "Hide Loupe" : "Show Loupe")
                     .disabled(model.tool != .select)
-                Button(zoom ? "Fit" : "100%") { zoom.toggle() }.buttonStyle(.plain).font(.caption.monospacedDigit()).help("Toggle actual pixels").disabled(model.tool != .select)
+                Button(zoom ? "Fit" : "100%") { zoom.toggle() }.buttonStyle(.plain).font(.caption.monospacedDigit()).help("Toggle actual pixels")
+                    .disabled(model.tool != .select && model.tool != .brush)
             }.padding(.horizontal, 16).padding(.vertical, 11).workspaceGlass(radius: 24).padding(16)
         }.overlay(alignment: .bottomTrailing) {
             if model.loupeActive {
@@ -1644,9 +1658,16 @@ struct PhotoViewer: View {
                     cancel: { model.tool = .select }, apply: { model.edit { $0.adjustments.crop = draft }; model.tool = .select })
                     .padding(12).workspaceGlass().padding(8)
             } else if model.tool == .brush {
+                let settings = photo.adjustments.localBrushSettings(for: model.brushAdjustment)
                 BrushControls(adjustment: $model.brushAdjustment, erasing: $erasingBrush,
                               size: $brushSize, softness: $brushSoftness, strength: $brushStrength,
-                              hasMask: photo.adjustments.localBrushes.contains { $0.adjustment == model.brushAdjustment },
+                              edgeAware: $edgeAwareBrush, showMask: $showBrushMask,
+                              hasMask: photo.adjustments.localBrushes.contains {
+                                  $0.adjustment == model.brushAdjustment && !$0.erasing
+                              },
+                              maskOpacity: settings.opacity, maskInverted: settings.inverted,
+                              setOpacity: { model.setBrushMaskOpacity($0, for: model.brushAdjustment) },
+                              invert: { model.invertBrushMask(model.brushAdjustment) },
                               reset: { model.clearBrushMask(model.brushAdjustment) },
                               done: { model.tool = .select })
                     .padding(12).workspaceGlass().padding(8)
@@ -1660,7 +1681,7 @@ struct PhotoViewer: View {
         }.padding(.top, 8)
         .onChange(of: model.tool) { _, tool in
             if tool == .crop { draft = photo.adjustments.crop ?? PhotoCrop(x: 0, y: 0, width: 1, height: 1) }
-            if tool != .brush { erasingBrush = false }
+            if tool != .brush { erasingBrush = false; showBrushMask = false }
         }
         .onChange(of: model.brushAdjustment) { _, _ in erasingBrush = false }
         .task(id: sampleWork) {
@@ -1705,6 +1726,25 @@ struct PhotoViewer: View {
                 model.error = error.localizedDescription
             }
         }
+        .task(id: maskRequest) {
+            guard let maskRequest else {
+                brushMaskOverlay = nil
+                return
+            }
+            do {
+                let overlay = try await Task.detached(priority: .userInitiated) {
+                    try Renderer.localBrushMaskOverlay(maskRequest.url,
+                        adjustments: maskRequest.adjustments, adjustment: maskRequest.adjustment,
+                        maxDimension: maskRequest.maximum)
+                }.value
+                guard !Task.isCancelled, brushMaskOverlayRequest == maskRequest else { return }
+                brushMaskOverlay = BrushMaskOverlayFrame(request: maskRequest, image: overlay)
+            } catch {
+                guard !Task.isCancelled, brushMaskOverlayRequest == maskRequest else { return }
+                brushMaskOverlay = nil
+                model.error = "Could not show the brush mask. " + error.localizedDescription
+            }
+        }
         .task(id: request) {
             if request.isCropping, let size = try? Renderer.dimensions(url, adjustments: request.adjustments) { cropSize = size }
             do {
@@ -1732,6 +1772,23 @@ struct PhotoViewer: View {
                         model.activeTargetedColorSampling == nil ? nil : queueSample)
     }
 
+    @ViewBuilder
+    private func brushCanvas(image: ViewerImage, geometry: PhotoGeometry, overlay: CGImage?) -> some View {
+        let canvas = BrushCanvas(image: image, geometry: geometry, adjustment: model.brushAdjustment,
+                                 erasing: erasingBrush, radius: brushSize / 200,
+                                 softness: brushSoftness / 100, strength: brushStrength / 100,
+                                 edgeAware: edgeAwareBrush, overlay: overlay, showMask: showBrushMask) {
+            model.applyBrushStroke($0, to: photo.id)
+        }
+        if zoom {
+            ScrollView([.horizontal, .vertical]) {
+                canvas.frame(width: image.size.width, height: image.size.height)
+            }.padding(16)
+        } else {
+            canvas.padding(16)
+        }
+    }
+
     private func queueSample(at point: CGPoint) {
         guard completedRequest == renderRequest, let image else { return }
         let width = image.rendered.width, height = image.rendered.height
@@ -1756,8 +1813,18 @@ struct PhotoViewer: View {
         return RenderRequest(url: url, originalStatus: model.originalStatusRevision, isCropping: model.tool == .crop,
                              adjustments: settings,
                              maximum: (model.tool == .spot || model.tool == .redEye ||
+                                 (model.tool == .brush && zoom) ||
                                  (model.tool == .select && (zoom || model.loupeActive))) ? nil : 2400,
                              profile: model.proofEnabled ? model.proofProfile : nil)
+    }
+
+    private var brushMaskOverlayRequest: BrushMaskOverlayRequest? {
+        guard model.tool == .brush, showBrushMask, !original,
+              photo.adjustments.localBrushes.contains(where: {
+                  $0.adjustment == model.brushAdjustment && !$0.erasing && $0.isValid
+              }) else { return nil }
+        return BrushMaskOverlayRequest(url: url, adjustments: photo.adjustments,
+            adjustment: model.brushAdjustment, maximum: zoom ? nil : 2400)
     }
 }
 struct Inspector: View {

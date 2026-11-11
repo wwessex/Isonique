@@ -5,6 +5,78 @@ import XCTest
 @testable import IsoniqueCore
 
 final class LocalBrushTests: XCTestCase {
+    func testEdgeAwarenessProtectsContrastBoundaryAndSupportsEraseInvertAndOpacity() throws {
+        let width = 100, height = 60
+        var pixels = [UInt8](repeating: 255, count: width * height * 4)
+        for y in 0..<height {
+            for x in 0..<width {
+                let value: UInt8 = x < width / 2 ? 45 : 210
+                let offset = (y * width + x) * 4
+                pixels[offset] = value; pixels[offset + 1] = value; pixels[offset + 2] = value
+            }
+        }
+        let edgeMap = pixels.withUnsafeBufferPointer {
+            LocalBrushEdgeMap(pixels: $0.baseAddress!, width: width, height: height)
+        }
+        let point = BrushPoint(x: 0.4, y: 0.5)
+        let protectedStroke = stroke(.dodge, points: [point], radius: 0.25,
+                                     softness: 0, strength: 1, edgeAware: true)
+        let ordinaryStroke = stroke(.dodge, points: [point], radius: 0.25,
+                                    softness: 0, strength: 1)
+        let protected = try XCTUnwrap(LocalExposureMask(strokes: [protectedStroke],
+            sourceWidth: width, sourceHeight: height, edgeMap: edgeMap))
+        let ordinary = try XCTUnwrap(LocalExposureMask(strokes: [ordinaryStroke],
+            sourceWidth: width, sourceHeight: height, edgeMap: edgeMap))
+        XCTAssertEqual(exposure(protected, 40, 30, width: width, height: height), 1.5, accuracy: 0.0001)
+        XCTAssertEqual(exposure(protected, 52, 30, width: width, height: height), 0, accuracy: 0.0001)
+        XCTAssertGreaterThan(exposure(ordinary, 52, 30, width: width, height: height), 1.4)
+
+        let erase = stroke(.dodge, points: [point], radius: 0.08, softness: 0,
+                           strength: 1, erasing: true, edgeAware: true)
+        let erased = try XCTUnwrap(LocalExposureMask(strokes: [protectedStroke, erase],
+            sourceWidth: width, sourceHeight: height, edgeMap: edgeMap))
+        XCTAssertEqual(exposure(erased, 40, 30, width: width, height: height), 0, accuracy: 0.0001)
+
+        let settings: [LocalBrushAdjustment: LocalBrushMaskSettings] = [
+            .dodge: LocalBrushMaskSettings(opacity: 0.4, inverted: false),
+            .burn: LocalBrushMaskSettings(opacity: 1, inverted: true),
+        ]
+        let faded = try XCTUnwrap(LocalExposureMask(strokes: [protectedStroke], settings: settings,
+            sourceWidth: width, sourceHeight: height, edgeMap: edgeMap))
+        XCTAssertEqual(exposure(faded, 40, 30, width: width, height: height), 0.6, accuracy: 0.0001)
+        XCTAssertEqual(exposure(faded, 80, 30, width: width, height: height), 0, accuracy: 0.0001,
+                       "An inverted setting must not activate an unpainted adjustment")
+        let inverted = try XCTUnwrap(LocalExposureMask(strokes: [protectedStroke], settings: [
+            .dodge: LocalBrushMaskSettings(opacity: 0.4, inverted: true),
+        ], sourceWidth: width, sourceHeight: height, edgeMap: edgeMap))
+        XCTAssertEqual(exposure(inverted, 40, 30, width: width, height: height), 0, accuracy: 0.0001)
+        XCTAssertEqual(exposure(inverted, 80, 30, width: width, height: height), 0.6, accuracy: 0.0001)
+    }
+
+    func testAdvancedBrushRecipesRequireSchema27AndLegacyStrokesRemainNeutral() throws {
+        let legacyJSON = Data(#"{"adjustment":"Dodge","radius":0.1,"softness":0.5,"strength":0.8,"points":[{"x":0.2,"y":0.3}]}"#.utf8)
+        let legacy = try JSONDecoder().decode(LocalBrushStroke.self, from: legacyJSON)
+        XCTAssertFalse(legacy.edgeAware)
+        XCTAssertEqual(try JSONDecoder().decode(Adjustments.self, from: Data("{}".utf8)).localBrushMaskSettings, [:])
+
+        var library = Library()
+        var photo = Photo(filename: "source.png", originalName: "source.png", projectID: nil,
+                          width: 100, height: 60, camera: "", captureDate: "", sha256: "fixture")
+        let advanced = stroke(.dodge, points: [BrushPoint(x: 0.2, y: 0.3)], radius: 0.1,
+                              softness: 0.5, strength: 0.8, edgeAware: true)
+        photo.adjustments.localBrushes = [advanced]
+        photo.adjustments.localBrushMaskSettings[.dodge] = LocalBrushMaskSettings(opacity: 0.65, inverted: true)
+        library.photos = [photo]
+        XCTAssertThrowsError(try library.validateSchema())
+        library.upgradeForAdvancedLocalBrushes()
+        XCTAssertEqual(library.version, 27)
+        XCTAssertNoThrow(try library.validateSchema())
+        let decoded = try JSONDecoder().decode(Library.self, from: JSONEncoder().encode(library))
+        XCTAssertEqual(decoded.photos[0].adjustments.localBrushes, [advanced])
+        XCTAssertEqual(decoded.photos[0].adjustments.localBrushSettings(for: .dodge),
+                       LocalBrushMaskSettings(opacity: 0.65, inverted: true))
+    }
+
     func testMaskFalloffSamplingAndIndependentErasure() throws {
         let path = [BrushPoint(x: 0.25, y: 0.5), BrushPoint(x: 0.75, y: 0.5)]
         let dodge = stroke(.dodge, points: path, radius: 0.15, softness: 0.8, strength: 0.6)
@@ -137,9 +209,10 @@ final class LocalBrushTests: XCTestCase {
     }
 
     private func stroke(_ adjustment: LocalBrushAdjustment, points: [BrushPoint], radius: Double,
-                        softness: Double, strength: Double, erasing: Bool = false) -> LocalBrushStroke {
+                        softness: Double, strength: Double, erasing: Bool = false,
+                        edgeAware: Bool = false) -> LocalBrushStroke {
         LocalBrushStroke(adjustment: adjustment, erasing: erasing, radius: radius,
-                         softness: softness, strength: strength, points: points)
+                         softness: softness, strength: strength, edgeAware: edgeAware, points: points)
     }
 
     private func mask(_ strokes: [LocalBrushStroke]) throws -> LocalExposureMask {
@@ -148,6 +221,11 @@ final class LocalBrushTests: XCTestCase {
 
     private func exposure(_ mask: LocalExposureMask, _ x: Int, _ y: Int) -> Double {
         mask.exposure(x: x, y: y, imageWidth: 100, imageHeight: 100)
+    }
+
+    private func exposure(_ mask: LocalExposureMask, _ x: Int, _ y: Int,
+                          width: Int, height: Int) -> Double {
+        mask.exposure(x: x, y: y, imageWidth: width, imageHeight: height)
     }
 
     private func withFixture(_ body: (URL, URL) throws -> Void) throws {
