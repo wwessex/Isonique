@@ -9,7 +9,13 @@ struct ExportOptionsView: View {
     @State private var options = ExportOptions()
     @State private var name = ""
     var presets: [ExportPreset] { (try? JSONDecoder().decode([ExportPreset].self, from: savedPresets)) ?? [] }
+
     var body: some View {
+        let batchPreview = model.batchMode ? Result {
+            try BatchExport.plan(photos: model.batchPhotos, projects: model.library.projects, options: options)
+        } : nil
+        let batchPlan = try? batchPreview?.get()
+        let invalid = invalidDimensions || (model.batchMode && batchPlan?.entries.isEmpty != false)
         VStack(alignment: .leading, spacing: 18) {
             Text(model.batchMode ? "Export Selected Photos" : "Export Photo").font(.title2.bold())
             Text(model.batchMode ? "\(model.batchPhotos.count) selected photos" : (model.selected?.displayName ?? "")).foregroundStyle(.secondary)
@@ -45,6 +51,9 @@ struct ExportOptionsView: View {
             ))
             Text("The separate .xmp file carries your current IPTC fields, caption, rating and keyword paths.")
                 .font(.caption).foregroundStyle(.secondary)
+            if let batchPreview {
+                batchNaming(batchPreview)
+            }
             HStack {
                 TextField("Preset name", text: $name)
                 Button("Save preset") {
@@ -60,12 +69,51 @@ struct ExportOptionsView: View {
                     lastOptions = (try? JSONEncoder().encode(options)) ?? Data()
                     let selected = options
                     dismiss()
-                    DispatchQueue.main.async { model.exportWithOptions(selected) }
+                    DispatchQueue.main.async { model.exportWithOptions(selected, batchPlan: batchPlan) }
                 }.buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction).disabled(invalid)
             }
-        }.padding(26).frame(width: 510)
+        }.padding(26).frame(width: model.batchMode ? 560 : 510)
             .onAppear { options = (try? JSONDecoder().decode(ExportOptions.self, from: lastOptions)) ?? ExportOptions() }
     }
-    var invalid: Bool { options.format != .original && !(0...100000).contains(options.maxDimension) }
+
+    private func batchNaming(_ preview: Result<BatchExport.Plan, Error>) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                TextField("Filename template", text: Binding(
+                    get: { options.filenameTemplate ?? "" },
+                    set: { options.filenameTemplate = $0.isEmpty ? nil : $0 }
+                ), prompt: Text("Sequence and version name"))
+                    .monospaced()
+                    .help("Leave blank for numbered version names. Isonique adds the file extension.")
+                Menu("Templates") {
+                    Button("Sequence and Version Name") { options.filenameTemplate = nil }
+                    Button("Version Name") { options.filenameTemplate = "{version}" }
+                    Button("Original Filename") { options.filenameTemplate = "{original}" }
+                    Button("Project and Sequence") { options.filenameTemplate = "{project}-{sequence}" }
+                }.fixedSize()
+            }
+            Text("{original}, {catalogue}, {version}, {project}, {year}, {month}, {day}, {sequence}")
+                .font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+            switch preview {
+            case .success(let plan):
+                Text("Filename Preview").font(.headline)
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 4) {
+                        ForEach(plan.entries) { entry in
+                            Text(entry.filename).textSelection(.enabled)
+                            if let sidecar = entry.sidecarFilename {
+                                Text(sidecar).foregroundStyle(.secondary).textSelection(.enabled)
+                            }
+                        }
+                    }.font(.caption.monospaced()).frame(maxWidth: .infinity, alignment: .leading)
+                }.frame(height: min(105, CGFloat(plan.entries.count) * (options.xmpSidecar == true ? 42 : 22)))
+                    .accessibilityLabel("Filename Preview")
+            case .failure(let error):
+                Text(error.localizedDescription).font(.caption).foregroundStyle(.red)
+            }
+        }
+    }
+
+    private var invalidDimensions: Bool { options.format != .original && !(0...100000).contains(options.maxDimension) }
     func save(_ all: [ExportPreset]) { savedPresets = (try? JSONEncoder().encode(all)) ?? Data() }
 }

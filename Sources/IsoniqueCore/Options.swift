@@ -19,6 +19,8 @@ public struct ExportOptions: Codable, Equatable {
     public var gps = false
     /// Optional so existing saved export presets still decode.
     public var xmpSidecar: Bool?
+    /// An absent template keeps the default numbered version names for batch export.
+    public var filenameTemplate: String?
     public init() {}
 }
 public struct ExportPreset: Codable, Identifiable {

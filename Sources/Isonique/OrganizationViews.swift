@@ -84,32 +84,28 @@ struct VersionsView: View {
 }
 
 extension Workspace {
-    func exportBatch(_ options: ExportOptions) {
-        let snapshot = batchPhotos
-        guard !busy, !snapshot.isEmpty, let repository else { return }
+    func exportBatch(_ plan: BatchExport.Plan) {
+        guard !busy, !plan.entries.isEmpty, let repository else { return }
+        guard batchMode, batchPhotos.map(\.id) == plan.entries.map(\.id) else {
+            error = "The selection changed. Reopen Export to review the filenames."
+            return
+        }
         let panel = NSOpenPanel(); panel.canChooseFiles = false; panel.canChooseDirectories = true
         panel.message = "A new Isonique Export folder will hold the selected photos. Originals stay unchanged."
         guard panel.runModal() == .OK, let parent = panel.url else { return }
         // Export enforces managed/legacy library path safety for every destination.
         let folder = parent.appendingPathComponent("Isonique Export \(UUID().uuidString)", isDirectory: true)
-        busy = true; status = "Exporting \(snapshot.count) photos…"
+        busy = true; status = "Exporting \(plan.entries.count) photos…"
         Task {
             let result = await Task.detached { () -> (Int, String?) in
                 var count = 0
                 do {
-                    try BatchExport.prepareDirectory(folder, repository: repository)
-                    for (index, photo) in snapshot.enumerated() {
-                        let suffix = options.format == .original ? (photo.filename as NSString).pathExtension : options.format.suffix
-                        let base = photo.exportBaseName
-                        let url = folder.appendingPathComponent("\(index + 1)-\(base).\(suffix)")
-                        try Renderer.export(photo, repository: repository, to: url, options: options)
-                        count += 1
-                    }
+                    try plan.write(to: folder, repository: repository) { count += 1 }
                     return (count, nil)
                 } catch { return (count, error.localizedDescription) }
             }.value
             busy = false; error = result.1
-            status = "Exported \(result.0) of \(snapshot.count) photos" + (result.1 == nil ? " to \(folder.lastPathComponent)" : " · stopped; completed files remain")
+            status = "Exported \(result.0) of \(plan.entries.count) photos" + (result.1 == nil ? " to \(folder.lastPathComponent)" : " · stopped; completed files remain")
         }
     }
 }

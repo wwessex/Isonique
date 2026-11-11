@@ -261,9 +261,15 @@ Enable GPS — current photo location when exporting edited JPEG, PNG or TIFF fi
 
 Cleared locations and exports with GPS disabled omit GPS. Original-file export remains a byte-for-byte copy with its embedded metadata. [Apple Image I/O GPS dictionary](https://developer.apple.com/documentation/imageio/gps-dictionary-keys)
 
+## Batch export naming templates
+
+Select photos and open Export. Choose a template or enter literal text and tokens in Filename template. Available tokens are `{original}`, `{catalogue}`, `{version}`, `{project}`, `{year}`, `{month}`, `{day}` and `{sequence}`. Sequence tokens use four digits. Isonique appends the extension for the selected output format or the source extension for original export. A blank template and older presets use the existing numbered version names.
+
+Review the final image and optional XMP sidecar names before choosing a destination. Case and Unicode equivalents share the same collision rules. A numeric suffix keeps colliding names distinct and follows the image into its sidecar. Export writes the previewed names to a new folder. Save Preset stores the template with the other export options. [Aperture 3.5 Help](https://aperture.skydocu.com/en/export-photos/rename-photos-at-export/)
+
 ## Next checkpoint
 
-Add naming templates to batch export with a filename preview. Verify collision handling and compatibility with existing export presets.
+Add TIFF compression choices to export presets. Verify lossless pixel round trips and compatibility with existing presets.
 
 ## Pending physical camera checks
 

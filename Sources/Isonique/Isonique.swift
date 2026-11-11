@@ -625,10 +625,10 @@ enum EditTool: String { case select, crop, straighten, brush }
         }
     }
     func exportPanel() { if !isViewingTrash, (batchMode ? !batchPhotos.isEmpty : selected != nil) && !busy { showExportOptions = true } }
-    func exportWithOptions(_ options: ExportOptions) {
+    func exportWithOptions(_ options: ExportOptions, batchPlan: BatchExport.Plan?) {
         guard !isViewingTrash else { return }
-        if batchMode { exportBatch(options); return }
-        guard let photo = selected, let repository, !busy else { return }
+        if let batchPlan { exportBatch(batchPlan); return }
+        guard !batchMode, let photo = selected, let repository, !busy else { return }
         let panel = NSSavePanel()
         let suffix = options.format == .original ? (photo.filename as NSString).pathExtension : options.format.suffix
         panel.allowedContentTypes = options.format == .original ? [UTType(filenameExtension: suffix) ?? .data] : [options.format.type]
