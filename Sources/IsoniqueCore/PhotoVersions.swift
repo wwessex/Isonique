@@ -155,11 +155,12 @@ public enum PhotoHistoryEntry: Codable, Equatable {
         switch self {
         case .captureDates: return 8
         case .locations: return 16
-        case .stamp(let changes): return changes.contains(where: \.containsSpotRemoval) ? 19 : 13
+        case .stamp(let changes): return max(13, changes.compactMap(\.requiredCatalogueVersion).max() ?? 0)
         case .batchMetadata(let changes):
             if changes.contains(where: { $0.iptc?.isEmpty == false }) { return 11 }
             return changes.contains { $0.keywordPaths != nil } ? 10 : 9
         default:
+            if photo?.adjustments.hasDetailAdjustments == true { return 20 }
             if photo?.adjustments.spotRemovals.isEmpty == false { return 19 }
             if photo?.locationOverride != nil { return 16 }
             if photo?.gpsIndex?.coordinates != nil { return 15 }

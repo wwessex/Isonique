@@ -110,8 +110,11 @@ public struct Adjustments: Codable, Equatable {
     public var lensDistortion: Double = 0
     public var localBrushes: [LocalBrushStroke] = []
     public var spotRemovals: [SpotRemoval] = []
+    public var sharpening: Double = 0
+    public var edgeSharpening: Double = 0
+    public var luminanceNoiseReduction: Double = 0
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, spotRemovals }
+    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
@@ -142,6 +145,9 @@ public struct Adjustments: Codable, Equatable {
         lensDistortion = try values.decodeIfPresent(Double.self, forKey: .lensDistortion) ?? 0
         localBrushes = try values.decodeIfPresent([LocalBrushStroke].self, forKey: .localBrushes) ?? []
         spotRemovals = try values.decodeIfPresent([SpotRemoval].self, forKey: .spotRemovals) ?? []
+        sharpening = try values.decodeIfPresent(Double.self, forKey: .sharpening) ?? 0
+        edgeSharpening = try values.decodeIfPresent(Double.self, forKey: .edgeSharpening) ?? 0
+        luminanceNoiseReduction = try values.decodeIfPresent(Double.self, forKey: .luminanceNoiseReduction) ?? 0
     }
 }
 /// Independent editing groups; selective stamping preserves every unselected group.
@@ -149,6 +155,7 @@ public enum AdjustmentGroup: String, CaseIterable, Codable, Identifiable {
     case basic = "Exposure & color", whiteBalance = "White balance", tone = "Highlights & shadows", geometry = "Crop, rotation & lens"
     case localBrush = "Local brush masks"
     case retouch = "Spot removal"
+    case detail = "Detail"
     public var id: String { rawValue }
 }
 public enum FlipAxis: String, CaseIterable, Identifiable {
@@ -158,6 +165,10 @@ public enum FlipAxis: String, CaseIterable, Identifiable {
 }
 
 public extension Adjustments {
+    var hasDetailAdjustments: Bool {
+        sharpening != 0 || edgeSharpening != 0 || luminanceNoiseReduction != 0
+    }
+
     mutating func toggleFlip(_ axis: FlipAxis) {
         switch axis {
         case .horizontal:
@@ -197,6 +208,11 @@ public extension Adjustments {
         }
         if groups.contains(.localBrush) { result.localBrushes = localBrushes }
         if groups.contains(.retouch) { result.spotRemovals = spotRemovals }
+        if groups.contains(.detail) {
+            result.sharpening = sharpening
+            result.edgeSharpening = edgeSharpening
+            result.luminanceNoiseReduction = luminanceNoiseReduction
+        }
         return result
     }
 }
@@ -303,6 +319,10 @@ public struct Library: Codable {
         if version < 19, hasRecipe(where: { !$0.spotRemovals.isEmpty }) { version = 19 }
     }
 
+    public mutating func upgradeForDetailAdjustments() {
+        if version < 20, hasRecipe(where: \.hasDetailAdjustments) { version = 20 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -346,6 +366,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 20, hasRecipe(where: \.hasDetailAdjustments) { throw LibraryError.unsupportedVersion }
         if version < 19, hasRecipe(where: { !$0.spotRemovals.isEmpty }) { throw LibraryError.unsupportedVersion }
         if version < 18, hasProjectGPXWaypoints { throw LibraryError.unsupportedVersion }
         if version < 17, hasProjectGPXTracks { throw LibraryError.unsupportedVersion }
@@ -359,7 +380,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...19).contains(version) { return }
+        if (7...20).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -528,6 +549,7 @@ public final class LibraryRepository {
         var normalized = library
         normalized.upgradeForKeywordPaths()
         normalized.upgradeForSpotRemoval()
+        normalized.upgradeForDetailAdjustments()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
@@ -756,8 +778,11 @@ public enum Renderer {
         let toneTable = (0...255).map { TonalTools.map(Double($0) / 255, adjustments: adjustments) }
         let levels = try TonalTools.applying(toned, table: toneTable, curves: adjustments.channelCurves,
                                              channelLevels: adjustments.channelLevels)
-        let retouched = try applySpotRemovals(levels, spots: adjustments.spotRemovals)
-        let image = try applyGeometry(applyLens(retouched, amount: geometry.lensAmount), geometry: geometry)
+        let reduced = try applyLuminanceNoiseReduction(levels, amount: adjustments.luminanceNoiseReduction)
+        let retouched = try applySpotRemovals(reduced, spots: adjustments.spotRemovals)
+        let detailed = try applySharpening(retouched, sharpening: adjustments.sharpening,
+                                          edgeSharpening: adjustments.edgeSharpening)
+        let image = try applyGeometry(applyLens(detailed, amount: geometry.lensAmount), geometry: geometry)
         return (image, geometry)
     }
 

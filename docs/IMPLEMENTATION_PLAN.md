@@ -297,9 +297,15 @@ Choose Repair Spot or Clone Spot from Photos, the Viewer editing strip or the Ad
 
 Clone copies the sampled patch directly. Repair transfers its texture with a local colour offset so it blends into the destination. Ordered spots render after global tone, Levels and Curves and before lens and geometric transforms, using the same source-space recipe for the Viewer and export. Circular feathering and clamped source sampling keep patches safe at image edges. Format 19 protects spot recipes, versions and persistent Undo/Redo history. Lift and Stamp expose Spot Removal as a separate opt-in group.
 
+## Sharpening and luminance noise reduction
+
+Open Detail in the Adjustments inspector for independent Sharpening, Edge sharpening and Luminance noise reduction amounts. Reduction uses a small edge-preserving luminance neighbourhood and keeps the image's channel differences. Global sharpening applies a luminance unsharp mask, while Edge sharpening gates its additional gain by local high-frequency contrast. Flat fields remain neutral.
+
+The shared renderer applies luminance reduction after Levels and Curves, Repair and Clone after reduction, and sharpening before lens and geometric transforms. A 100% Viewer frame and edited export therefore use the same full-resolution pixels. Format 20 protects the three recipe values, versions and optional persistent history. The separate Detail Lift and Stamp group copies all three controls. Older recipes decode neutral values and remain on their existing catalogue version until a Detail adjustment is used.
+
 ## Next checkpoint
 
-Add non-destructive global sharpening, edge sharpening and luminance noise reduction. Use shared full-resolution preview/export rendering, keep older recipes neutral, and test flat fields, high-contrast edges, Undo/Redo, persistence and preservation of originals.
+Add non-destructive chromatic-aberration correction plus vignette and devignette controls. Use the shared full-resolution Viewer/export renderer, keep older recipes neutral, and test edge pixels, geometry, Undo/Redo, persistence and preservation of originals.
 
 ## Pending physical camera checks
 

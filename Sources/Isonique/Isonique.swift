@@ -289,6 +289,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
         saved.upgradeForChannelCurves()
         saved.upgradeForBrushRecipes()
         saved.upgradeForSpotRemoval()
+        saved.upgradeForDetailAdjustments()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -1752,6 +1753,22 @@ struct Inspector: View {
             Text("HIGHLIGHTS & SHADOWS").font(.caption).foregroundStyle(.secondary)
             adjustment("Shadows", path: \.adjustments.shadows, range: 0...1)
             adjustment("Highlights", path: \.adjustments.highlights, range: -1...0)
+            DisclosureGroup("Detail") {
+                VStack(alignment: .leading, spacing: 10) {
+                    adjustment("Sharpening", path: \.adjustments.sharpening, range: 0...1)
+                    adjustment("Edge sharpening", path: \.adjustments.edgeSharpening, range: 0...1)
+                    adjustment("Luminance noise reduction", path: \.adjustments.luminanceNoiseReduction, range: 0...1)
+                    Button("Reset Detail") {
+                        model.edit {
+                            $0.adjustments.sharpening = 0
+                            $0.adjustments.edgeSharpening = 0
+                            $0.adjustments.luminanceNoiseReduction = 0
+                        }
+                    }.disabled(!photo.adjustments.hasDetailAdjustments)
+                    Text("Noise reduction smooths luminance before retouching. Sharpening restores luminance detail after Repair and Clone without shifting colour.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }.padding(.top, 8)
+            }
             DisclosureGroup("Local Brush Masks") {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {
