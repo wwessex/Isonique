@@ -303,9 +303,15 @@ Open Detail in the Adjustments inspector for independent Sharpening, Edge sharpe
 
 The shared renderer applies luminance reduction after Levels and Curves, Repair and Clone after reduction, and sharpening before lens and geometric transforms. A 100% Viewer frame and edited export therefore use the same full-resolution pixels. Format 20 protects the three recipe values, versions and optional persistent history. The separate Detail Lift and Stamp group copies all three controls. Older recipes decode neutral values and remain on their existing catalogue version until a Detail adjustment is used.
 
+## Chromatic aberration, vignette and devignette
+
+Open Color Proofing & Lens for signed Red/Cyan and Blue/Yellow aberration correction, Vignette and Devignette. Each aberration slider moves only its named channel radially relative to green, supports inward or outward correction and clamps edge samples. Devignette brightens lens falloff in the source frame before noise reduction, retouching, sharpening and geometry. Vignette darkens the final cropped and rotated composition.
+
+Format 21 protects all four values, versions and optional persistent history. Lens & vignette is a separate Lift and Stamp group, while project merge compares the four controls independently. Older recipes decode neutral values without upgrading. The implementation is manual and profile-free; vignette radius and softness are currently fixed.
+
 ## Next checkpoint
 
-Add non-destructive chromatic-aberration correction plus vignette and devignette controls. Use the shared full-resolution Viewer/export renderer, keep older recipes neutral, and test edge pixels, geometry, Undo/Redo, persistence and preservation of originals.
+Add a non-destructive white-balance eyedropper using the Viewer Loupe, plus Kelvin and tint controls. Test neutral sampling, clipped and transparent pixels, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
 
 ## Pending physical camera checks
 

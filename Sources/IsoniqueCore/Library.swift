@@ -113,8 +113,12 @@ public struct Adjustments: Codable, Equatable {
     public var sharpening: Double = 0
     public var edgeSharpening: Double = 0
     public var luminanceNoiseReduction: Double = 0
+    public var chromaticAberrationRedCyan: Double = 0
+    public var chromaticAberrationBlueYellow: Double = 0
+    public var vignette: Double = 0
+    public var devignette: Double = 0
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction }
+    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction, chromaticAberrationRedCyan, chromaticAberrationBlueYellow, vignette, devignette }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
@@ -148,6 +152,10 @@ public struct Adjustments: Codable, Equatable {
         sharpening = try values.decodeIfPresent(Double.self, forKey: .sharpening) ?? 0
         edgeSharpening = try values.decodeIfPresent(Double.self, forKey: .edgeSharpening) ?? 0
         luminanceNoiseReduction = try values.decodeIfPresent(Double.self, forKey: .luminanceNoiseReduction) ?? 0
+        chromaticAberrationRedCyan = try values.decodeIfPresent(Double.self, forKey: .chromaticAberrationRedCyan) ?? 0
+        chromaticAberrationBlueYellow = try values.decodeIfPresent(Double.self, forKey: .chromaticAberrationBlueYellow) ?? 0
+        vignette = try values.decodeIfPresent(Double.self, forKey: .vignette) ?? 0
+        devignette = try values.decodeIfPresent(Double.self, forKey: .devignette) ?? 0
     }
 }
 /// Independent editing groups; selective stamping preserves every unselected group.
@@ -156,6 +164,7 @@ public enum AdjustmentGroup: String, CaseIterable, Codable, Identifiable {
     case localBrush = "Local brush masks"
     case retouch = "Spot removal"
     case detail = "Detail"
+    case lensEffects = "Lens & vignette"
     public var id: String { rawValue }
 }
 public enum FlipAxis: String, CaseIterable, Identifiable {
@@ -167,6 +176,10 @@ public enum FlipAxis: String, CaseIterable, Identifiable {
 public extension Adjustments {
     var hasDetailAdjustments: Bool {
         sharpening != 0 || edgeSharpening != 0 || luminanceNoiseReduction != 0
+    }
+
+    var hasLensEffects: Bool {
+        chromaticAberrationRedCyan != 0 || chromaticAberrationBlueYellow != 0 || vignette != 0 || devignette != 0
     }
 
     mutating func toggleFlip(_ axis: FlipAxis) {
@@ -212,6 +225,12 @@ public extension Adjustments {
             result.sharpening = sharpening
             result.edgeSharpening = edgeSharpening
             result.luminanceNoiseReduction = luminanceNoiseReduction
+        }
+        if groups.contains(.lensEffects) {
+            result.chromaticAberrationRedCyan = chromaticAberrationRedCyan
+            result.chromaticAberrationBlueYellow = chromaticAberrationBlueYellow
+            result.vignette = vignette
+            result.devignette = devignette
         }
         return result
     }
@@ -323,6 +342,10 @@ public struct Library: Codable {
         if version < 20, hasRecipe(where: \.hasDetailAdjustments) { version = 20 }
     }
 
+    public mutating func upgradeForLensEffects() {
+        if version < 21, hasRecipe(where: \.hasLensEffects) { version = 21 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -366,6 +389,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 21, hasRecipe(where: \.hasLensEffects) { throw LibraryError.unsupportedVersion }
         if version < 20, hasRecipe(where: \.hasDetailAdjustments) { throw LibraryError.unsupportedVersion }
         if version < 19, hasRecipe(where: { !$0.spotRemovals.isEmpty }) { throw LibraryError.unsupportedVersion }
         if version < 18, hasProjectGPXWaypoints { throw LibraryError.unsupportedVersion }
@@ -380,7 +404,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...20).contains(version) { return }
+        if (7...21).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -550,6 +574,7 @@ public final class LibraryRepository {
         normalized.upgradeForKeywordPaths()
         normalized.upgradeForSpotRemoval()
         normalized.upgradeForDetailAdjustments()
+        normalized.upgradeForLensEffects()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
@@ -778,12 +803,17 @@ public enum Renderer {
         let toneTable = (0...255).map { TonalTools.map(Double($0) / 255, adjustments: adjustments) }
         let levels = try TonalTools.applying(toned, table: toneTable, curves: adjustments.channelCurves,
                                              channelLevels: adjustments.channelLevels)
-        let reduced = try applyLuminanceNoiseReduction(levels, amount: adjustments.luminanceNoiseReduction)
+        let aberration = try applyChromaticAberration(levels,
+            redCyan: adjustments.chromaticAberrationRedCyan,
+            blueYellow: adjustments.chromaticAberrationBlueYellow)
+        let illuminated = try applyDevignette(aberration, amount: adjustments.devignette)
+        let reduced = try applyLuminanceNoiseReduction(illuminated, amount: adjustments.luminanceNoiseReduction)
         let retouched = try applySpotRemovals(reduced, spots: adjustments.spotRemovals)
         let detailed = try applySharpening(retouched, sharpening: adjustments.sharpening,
                                           edgeSharpening: adjustments.edgeSharpening)
         let image = try applyGeometry(applyLens(detailed, amount: geometry.lensAmount), geometry: geometry)
-        return (image, geometry)
+        let finished = try applyVignette(image, amount: adjustments.vignette)
+        return (finished, geometry)
     }
 
     public static func adjustmentHistograms(_ url: URL, adjustments: Adjustments) throws -> AdjustmentHistograms {

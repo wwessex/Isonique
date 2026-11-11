@@ -290,6 +290,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
         saved.upgradeForBrushRecipes()
         saved.upgradeForSpotRemoval()
         saved.upgradeForDetailAdjustments()
+        saved.upgradeForLensEffects()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -1800,6 +1801,22 @@ struct Inspector: View {
                     Text("Proofing affects the viewer only. RGB profiles only; no paper/ink simulation.").font(.caption2).foregroundStyle(.secondary)
                     adjustment("Lens distortion", path: \.adjustments.lensDistortion, range: -1...1)
                     Text("Manual barrel/pincushion correction applies to preview and export; no automatic lens profiles. Edge pixels are extended.").font(.caption2).foregroundStyle(.secondary)
+                    Divider()
+                    Text("CHROMATIC ABERRATION").font(.caption).foregroundStyle(.secondary)
+                    adjustment("Red / Cyan", path: \.adjustments.chromaticAberrationRedCyan, range: -1...1)
+                    adjustment("Blue / Yellow", path: \.adjustments.chromaticAberrationBlueYellow, range: -1...1)
+                    adjustment("Vignette", path: \.adjustments.vignette, range: 0...1)
+                    adjustment("Devignette", path: \.adjustments.devignette, range: 0...1)
+                    Button("Reset Lens Effects") {
+                        model.edit {
+                            $0.adjustments.chromaticAberrationRedCyan = 0
+                            $0.adjustments.chromaticAberrationBlueYellow = 0
+                            $0.adjustments.vignette = 0
+                            $0.adjustments.devignette = 0
+                        }
+                    }.disabled(!photo.adjustments.hasLensEffects)
+                    Text("Aberration and devignetting use the source frame. Vignette follows the final crop and rotation.")
+                        .font(.caption2).foregroundStyle(.secondary)
                 }.padding(.top, 10)
             }
             DisclosureGroup("Crop & Rotation") {
