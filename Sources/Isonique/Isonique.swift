@@ -296,6 +296,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
         saved.upgradeForLensEffects()
         saved.upgradeForKelvinWhiteBalance()
         saved.upgradeForTargetedColors()
+        saved.upgradeForBlackAndWhite()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -1808,6 +1809,40 @@ struct Inspector: View {
             Text("Sample an opaque, unclipped neutral grey or white pixel with the full-resolution Viewer Loupe.")
                 .font(.caption2).foregroundStyle(.secondary)
             TargetedColorEditor(photo: photo)
+            DisclosureGroup("Black & White") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle("Enable Black & White", isOn: Binding(get: {
+                        model.selected?.adjustments.blackAndWhiteEnabled ?? false
+                    }, set: { enabled in
+                        model.compareOriginal = false
+                        model.edit { $0.adjustments.blackAndWhiteEnabled = enabled }
+                    }))
+                    VStack(spacing: 10) {
+                        adjustment("Red contribution", path: \.adjustments.blackAndWhiteRed,
+                                   range: BlackAndWhiteRules.contributionRange, neutral: BlackAndWhiteRules.neutralRed)
+                        adjustment("Green contribution", path: \.adjustments.blackAndWhiteGreen,
+                                   range: BlackAndWhiteRules.contributionRange, neutral: BlackAndWhiteRules.neutralGreen)
+                        adjustment("Blue contribution", path: \.adjustments.blackAndWhiteBlue,
+                                   range: BlackAndWhiteRules.contributionRange, neutral: BlackAndWhiteRules.neutralBlue)
+                        adjustment("Tint hue", path: \.adjustments.monochromeTintHue,
+                                   range: 0...360, neutral: BlackAndWhiteRules.neutralTintHue)
+                        adjustment("Tint strength", path: \.adjustments.monochromeTintStrength, range: 0...1)
+                    }.disabled(!photo.adjustments.blackAndWhiteEnabled)
+                    Button("Reset Black & White") {
+                        model.compareOriginal = false
+                        model.edit {
+                            $0.adjustments.blackAndWhiteEnabled = false
+                            $0.adjustments.blackAndWhiteRed = BlackAndWhiteRules.neutralRed
+                            $0.adjustments.blackAndWhiteGreen = BlackAndWhiteRules.neutralGreen
+                            $0.adjustments.blackAndWhiteBlue = BlackAndWhiteRules.neutralBlue
+                            $0.adjustments.monochromeTintHue = BlackAndWhiteRules.neutralTintHue
+                            $0.adjustments.monochromeTintStrength = 0
+                        }
+                    }.disabled(!photo.adjustments.hasBlackAndWhiteRecipe)
+                    Text("Neutral contributions use Rec. 709 luminance. Tint strength zero produces pure grayscale.")
+                        .font(.caption2).foregroundStyle(.secondary)
+                }.padding(.top, 10)
+            }
             Divider()
             HistogramView(photo: photo)
             if showsInputs && inputHistogramError && inputs == nil {

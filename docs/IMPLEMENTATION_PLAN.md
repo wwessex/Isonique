@@ -321,9 +321,15 @@ Targeted Color in the Adjustments inspector stores multiple named colour ranges.
 
 The shared renderer evaluates every range from the pixel's original hue, combines overlapping weights, then applies one bounded HSL conversion before Levels and Curves. Neutral or empty records bypass conversion exactly. Adjustment-input histograms and sampled curve points therefore see the targeted-colour result. Format 23 protects range records in photos, versions, targeted-colour Lift and Stamp data and optional persistent history; project merge compares the group independently. Older recipes decode an empty list and remain unchanged.
 
+## Black-and-white channel mixer and tint
+
+Black & White in Adjustments converts the targeted-colour result before Levels and Curves. Red, green and blue contributions range from zero to double strength; Rec. 709 values are the neutral defaults. The renderer clamps each contribution and the mixed output, so channel isolation, all-zero black and over-range white remain bounded. Tint Hue and Tint Strength optionally colourise the monochrome result while preserving HSL lightness. Strength zero produces equal RGB channels.
+
+Format 24 protects the enable state, channel contributions and tint in photos, versions, the separate Black & white Lift and Stamp group and optional persistent history. Project merge compares all six controls independently. Older recipes decode disabled neutral values. The Black & White preset now enables the mixer instead of discarding channel information with global desaturation; existing saved saturation-zero recipes keep their historical rendering.
+
 ## Next checkpoint
 
-Add a non-destructive black-and-white channel mixer with red, green and blue contributions plus an optional monochrome tint. Test neutral luminance, channel isolation, bounded mixing, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
+Add non-destructive manual red-eye correction with multiple editable eye regions, pupil size and darkness controls in the Viewer. Test edge clipping, neutral non-red pixels, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
 
 ## Pending physical camera checks
 

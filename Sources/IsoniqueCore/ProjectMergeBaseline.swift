@@ -144,6 +144,12 @@ private extension Adjustments {
         apply(\.temperatureKelvin, "Temperature (K)")
         apply(\.tint, "Tint")
         apply(\.targetedColors, AdjustmentGroup.targetedColor.rawValue)
+        apply(\.blackAndWhiteEnabled, "Black & White")
+        apply(\.blackAndWhiteRed, "Black & White Red")
+        apply(\.blackAndWhiteGreen, "Black & White Green")
+        apply(\.blackAndWhiteBlue, "Black & White Blue")
+        apply(\.monochromeTintHue, "Monochrome Tint Hue")
+        apply(\.monochromeTintStrength, "Monochrome Tint Strength")
         apply(\.shadows, "Shadows")
         apply(\.highlights, "Highlights")
 

@@ -1441,7 +1441,9 @@ final class LibraryTests: XCTestCase {
             XCTAssertEqual(result.quarterTurns, target.quarterTurns)
             XCTAssertEqual(result.straighten, target.straighten)
         }
-        XCTAssertEqual(AdjustmentPreset.monochrome.applying(to: target).saturation, 0)
+        let monochrome = AdjustmentPreset.monochrome.applying(to: target)
+        XCTAssertTrue(monochrome.blackAndWhiteEnabled)
+        XCTAssertEqual(monochrome.saturation, 1)
         XCTAssertEqual(AdjustmentPreset.natural.applying(to: target).exposure, 0)
     }
 
