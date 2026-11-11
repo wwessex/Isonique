@@ -141,6 +141,7 @@ private extension Adjustments {
         apply(\.contrast, "Contrast")
         apply(\.saturation, "Saturation")
         apply(\.warmth, "Temperature")
+        apply(\.temperatureKelvin, "Temperature (K)")
         apply(\.tint, "Tint")
         apply(\.shadows, "Shadows")
         apply(\.highlights, "Highlights")

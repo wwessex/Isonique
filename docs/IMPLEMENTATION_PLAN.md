@@ -309,9 +309,15 @@ Open Color Proofing & Lens for signed Red/Cyan and Blue/Yellow aberration correc
 
 Format 21 protects all four values, versions and optional persistent history. Lens & vignette is a separate Lift and Stamp group, while project merge compares the four controls independently. Older recipes decode neutral values without upgrading. The implementation is manual and profile-free; vignette radius and softness are currently fixed.
 
+## Kelvin white balance and neutral sampling
+
+The Adjustments inspector exposes a 2000 K–12000 K Temperature control and the existing green/magenta Tint control. Sample Neutral opens the full-resolution Viewer Loupe and applies both values in one history entry after sampling an opaque, unclipped neutral grey or white source pixel. Sampling follows the saved crop, rotation, flip, straighten and lens mapping, but reads before the white-balance stage so an existing correction cannot compound itself.
+
+Format 22 protects non-neutral Kelvin values in photos, versions, Lift and Stamp data and optional persistent history. Project merge compares Kelvin independently. Older recipes decode to neutral 6500 K and retain the existing normalized Warmth rendering; changing Kelvin or using the eyedropper clears that legacy offset. The Viewer cache and edited export share the same full-resolution sRGB renderer. RAW camera-neutral metadata, adjustable sample areas, automatic skin-tone or natural-grey modes and extended-range processing remain open.
+
 ## Next checkpoint
 
-Add a non-destructive white-balance eyedropper using the Viewer Loupe, plus Kelvin and tint controls. Test neutral sampling, clipped and transparent pixels, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
+Add non-destructive targeted Hue, Saturation and Luminance colour controls with reusable colour ranges and a Viewer Loupe sampler. Test hue wraparound, range falloff, neutral settings, multiple targets, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
 
 ## Pending physical camera checks
 

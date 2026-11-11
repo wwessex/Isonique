@@ -90,6 +90,7 @@ public struct Adjustments: Codable, Equatable {
     public var contrast: Double = 1
     public var saturation: Double = 1
     public var warmth: Double = 0
+    public var temperatureKelvin: Double = WhiteBalanceRules.neutralKelvin
     public var tint: Double = 0
     public var shadows: Double = 0
     public var highlights: Double = 0
@@ -118,7 +119,7 @@ public struct Adjustments: Codable, Equatable {
     public var vignette: Double = 0
     public var devignette: Double = 0
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction, chromaticAberrationRedCyan, chromaticAberrationBlueYellow, vignette, devignette }
+    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, temperatureKelvin, tint, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction, chromaticAberrationRedCyan, chromaticAberrationBlueYellow, vignette, devignette }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
@@ -128,6 +129,8 @@ public struct Adjustments: Codable, Equatable {
         contrast = try values.decodeIfPresent(Double.self, forKey: .contrast) ?? 1
         saturation = try values.decodeIfPresent(Double.self, forKey: .saturation) ?? 1
         warmth = try values.decodeIfPresent(Double.self, forKey: .warmth) ?? 0
+        temperatureKelvin = WhiteBalanceRules.clamp(kelvin:
+            try values.decodeIfPresent(Double.self, forKey: .temperatureKelvin) ?? WhiteBalanceRules.neutralKelvin)
         tint = try values.decodeIfPresent(Double.self, forKey: .tint) ?? 0
         shadows = try values.decodeIfPresent(Double.self, forKey: .shadows) ?? 0
         highlights = try values.decodeIfPresent(Double.self, forKey: .highlights) ?? 0
@@ -182,6 +185,10 @@ public extension Adjustments {
         chromaticAberrationRedCyan != 0 || chromaticAberrationBlueYellow != 0 || vignette != 0 || devignette != 0
     }
 
+    var hasKelvinWhiteBalance: Bool {
+        WhiteBalanceRules.clamp(kelvin: temperatureKelvin) != WhiteBalanceRules.neutralKelvin
+    }
+
     mutating func toggleFlip(_ axis: FlipAxis) {
         switch axis {
         case .horizontal:
@@ -205,7 +212,11 @@ public extension Adjustments {
             result.exposure = exposure; result.contrast = contrast; result.saturation = saturation
             result.brightness = brightness; result.vibrancy = vibrancy; result.sepia = sepia
         }
-        if groups.contains(.whiteBalance) { result.warmth = warmth; result.tint = tint }
+        if groups.contains(.whiteBalance) {
+            result.warmth = warmth
+            result.temperatureKelvin = temperatureKelvin
+            result.tint = tint
+        }
         if groups.contains(.tone) {
             result.shadows = shadows; result.highlights = highlights
             result.blackPoint = blackPoint; result.whitePoint = whitePoint; result.gamma = gamma
@@ -244,7 +255,7 @@ public enum AdjustmentPreset: String, CaseIterable, Identifiable {
         case .natural: break
         case .vivid: recipe.contrast = 1.12; recipe.saturation = 1.25
         case .monochrome: recipe.saturation = 0; recipe.contrast = 1.1
-        case .warm: recipe.warmth = 0.3; recipe.saturation = 1.05
+        case .warm: recipe.temperatureKelvin = 7_800; recipe.saturation = 1.05
         case .sepia: recipe.sepia = 1
         }
         return recipe.stamping(onto: current, groups: [.basic, .whiteBalance, .tone])
@@ -346,6 +357,10 @@ public struct Library: Codable {
         if version < 21, hasRecipe(where: \.hasLensEffects) { version = 21 }
     }
 
+    public mutating func upgradeForKelvinWhiteBalance() {
+        if version < 22, hasRecipe(where: \.hasKelvinWhiteBalance) { version = 22 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -389,6 +404,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 22, hasRecipe(where: \.hasKelvinWhiteBalance) { throw LibraryError.unsupportedVersion }
         if version < 21, hasRecipe(where: \.hasLensEffects) { throw LibraryError.unsupportedVersion }
         if version < 20, hasRecipe(where: \.hasDetailAdjustments) { throw LibraryError.unsupportedVersion }
         if version < 19, hasRecipe(where: { !$0.spotRemovals.isEmpty }) { throw LibraryError.unsupportedVersion }
@@ -404,7 +420,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...21).contains(version) { return }
+        if (7...22).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -575,6 +591,7 @@ public final class LibraryRepository {
         normalized.upgradeForSpotRemoval()
         normalized.upgradeForDetailAdjustments()
         normalized.upgradeForLensEffects()
+        normalized.upgradeForKelvinWhiteBalance()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
@@ -834,8 +851,8 @@ public enum Renderer {
                                          adjustments: adjustments, channel: channel)
     }
 
-    private static func renderToneInput(_ url: URL, adjustments: Adjustments,
-                                        maxDimension: CGFloat?) throws -> (CGImage, PhotoGeometry) {
+    static func renderToneInput(_ url: URL, adjustments: Adjustments,
+                                maxDimension: CGFloat?) throws -> (CGImage, PhotoGeometry) {
         try Task.checkCancellation()
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
@@ -901,7 +918,8 @@ public enum Renderer {
     /// Shared independent sRGB tonal treatment for previews, exports and GPU-free hosts.
     /// Neutral settings bypass conversion; these are not Apple's proprietary RAW formulas.
     static func applyTone(_ source: CGImage, adjustments a: Adjustments) throws -> CGImage {
-        guard a.warmth != 0 || a.tint != 0 || a.shadows != 0 || a.highlights != 0 else { return source }
+        guard a.warmth != 0 || a.temperatureKelvin != WhiteBalanceRules.neutralKelvin || a.tint != 0 ||
+                a.shadows != 0 || a.highlights != 0 else { return source }
         guard let space = CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(data: nil, width: source.width, height: source.height, bitsPerComponent: 8, bytesPerRow: source.width * 4, space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue),
               let data = context.data else { throw LibraryError.unsupportedImage("tone adjustment") }
@@ -910,7 +928,9 @@ public enum Renderer {
         func bounded(_ value: Double, _ range: ClosedRange<Double>) -> Double {
             value.isFinite ? min(range.upperBound, max(range.lowerBound, value)) : 0
         }
-        let warmth = bounded(a.warmth, -1...1) * 0.15, tint = bounded(a.tint, -1...1) * 0.15
+        let temperature = WhiteBalanceRules.temperatureComponent(for: a.temperatureKelvin) +
+            bounded(a.warmth, -1...1) * 0.15
+        let tint = bounded(a.tint, -1...1) * 0.15
         let shadows = bounded(a.shadows, 0...1), highlights = bounded(a.highlights, -1...0)
         for offset in stride(from: 0, to: source.width * source.height * 4, by: 4) {
             let alpha = Double(pixels[offset + 3]) / 255
@@ -919,7 +939,8 @@ public enum Renderer {
             let luminance = 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2]
             let tone = shadows * pow(1 - luminance, 2) * luminance + highlights * pow(luminance, 2) * (1 - luminance)
             for index in 0..<3 {
-                let balance = index == 0 ? warmth + tint * 0.5 : (index == 1 ? -tint : -warmth + tint * 0.5)
+                let balance = index == 0 ? temperature + tint * 0.5 :
+                    (index == 1 ? -tint : -temperature + tint * 0.5)
                 let value = channels[index] * (1 + balance) + tone
                 pixels[offset + index] = UInt8((min(1, max(0, value)) * alpha * 255).rounded())
             }

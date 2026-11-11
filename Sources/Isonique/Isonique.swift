@@ -50,6 +50,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
     @Published var places = false
     @Published var showLoupe = false
     @Published var curveSampling: CurveSamplingRequest?
+    @Published var whiteBalanceSampling: WhiteBalanceSamplingRequest?
     @Published var curvePointSelection: CurvePointSelection?
     @Published var browserLayout: BrowserPresentation
     @Published var gridThumbnailSize: GridThumbnailSize {
@@ -291,6 +292,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
         saved.upgradeForSpotRemoval()
         saved.upgradeForDetailAdjustments()
         saved.upgradeForLensEffects()
+        saved.upgradeForKelvinWhiteBalance()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -411,13 +413,15 @@ enum EditTool: String { case select, crop, straighten, brush, spot }
     }
     func showBrowser(allPhotos: Bool = false) {
         viewer = false; tool = .select; compareOriginal = false; stopComparison()
+        curveSampling = nil; whiteBalanceSampling = nil
         if allPhotos {
             scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all; colorFilter = .all; advancedSearch = nil
         }
     }
     func exitViewer() {
-        if curveSampling != nil {
+        if curveSampling != nil || whiteBalanceSampling != nil {
             curveSampling = nil
+            whiteBalanceSampling = nil
             return
         }
         if comparisonID != nil { stopComparison() }
@@ -1330,6 +1334,9 @@ struct ContentView: View {
         .onChange(of: model.activeCurveSampling) { _, active in
             if active == nil, model.curveSampling != nil { model.curveSampling = nil }
         }
+        .onChange(of: model.activeWhiteBalanceSampling) { _, active in
+            if active == nil, model.whiteBalanceSampling != nil { model.whiteBalanceSampling = nil }
+        }
         .onChange(of: model.search) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onChange(of: model.ratingFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
         .onChange(of: model.originalFilter) { _, _ in if model.selected == nil { model.selection = model.photos.first?.id } }
@@ -1459,6 +1466,7 @@ struct PhotoViewer: View {
     @State private var completedRequest: RenderRequest?
     @State private var loupePoint = CGPoint(x: 0.5, y: 0.5)
     @State private var pendingSample: CurveSampleWork?
+    @State private var pendingWhiteBalanceSample: WhiteBalanceSampleWork?
     @State private var geometry: PhotoGeometry?
     @State private var erasingBrush = false
     @AppStorage("brush.size") private var brushSize = 12.0
@@ -1484,6 +1492,8 @@ struct PhotoViewer: View {
         let request = renderRequest
         let sampler = model.activeCurveSampling
         let sampleWork = pendingSample.flatMap { $0.request == sampler ? $0 : nil }
+        let whiteBalanceSampler = model.activeWhiteBalanceSampling
+        let whiteBalanceSampleWork = pendingWhiteBalanceSample.flatMap { $0.request == whiteBalanceSampler ? $0 : nil }
         VStack(spacing: 10) {
             
             if let image {
@@ -1556,6 +1566,18 @@ struct PhotoViewer: View {
                                 }
                                 Button("Cancel Sampling") { model.curveSampling = nil }
                             }.font(.caption).frame(width: 156).padding([.horizontal, .bottom], 10)
+                        } else if whiteBalanceSampler != nil {
+                            VStack(spacing: 6) {
+                                Text("White Balance").font(.caption.weight(.semibold))
+                                if whiteBalanceSampleWork != nil {
+                                    ProgressView("Sampling pixel").controlSize(.small)
+                                } else {
+                                    Text("Target an opaque, unclipped neutral grey or white pixel.")
+                                        .multilineTextAlignment(.center).foregroundStyle(.secondary)
+                                    Button("Set White Balance") { queueSample(at: loupePoint) }
+                                }
+                                Button("Cancel Sampling") { model.whiteBalanceSampling = nil }
+                            }.font(.caption).frame(width: 156).padding([.horizontal, .bottom], 10)
                         }
                     }.workspaceGlass().padding(16)
                 } else if failure == nil {
@@ -1598,6 +1620,20 @@ struct PhotoViewer: View {
                 model.error = error.localizedDescription
             }
         }
+        .task(id: whiteBalanceSampleWork) {
+            guard let whiteBalanceSampleWork else { return }
+            do {
+                let sample = try await whiteBalanceSampleWork.load(from: url)
+                guard !Task.isCancelled, model.activeWhiteBalanceSampling == whiteBalanceSampleWork.request else { return }
+                pendingWhiteBalanceSample = nil
+                model.finishWhiteBalanceSampling(whiteBalanceSampleWork.request, sample: sample)
+            } catch {
+                guard !Task.isCancelled, model.activeWhiteBalanceSampling == whiteBalanceSampleWork.request else { return }
+                pendingWhiteBalanceSample = nil
+                model.whiteBalanceSampling = nil
+                model.error = error.localizedDescription
+            }
+        }
         .task(id: request) {
             if request.isCropping, let size = try? Renderer.dimensions(url, adjustments: request.adjustments) { cropSize = size }
             do {
@@ -1620,17 +1656,23 @@ struct PhotoViewer: View {
     }
 
     private var loupeTarget: some View {
-        LoupeTarget(point: $loupePoint, sample: model.activeCurveSampling == nil ? nil : queueSample)
+        LoupeTarget(point: $loupePoint,
+                    sample: model.activeCurveSampling == nil && model.activeWhiteBalanceSampling == nil ? nil : queueSample)
     }
 
     private func queueSample(at point: CGPoint) {
-        guard let request = model.activeCurveSampling, request.photoID == photo.id,
-              pendingSample?.request != request, completedRequest == renderRequest, let image else { return }
+        guard completedRequest == renderRequest, let image else { return }
         let width = image.rendered.width, height = image.rendered.height
         let pixel = LoupeSample(point: point, width: width, height: height, span: 1)
         let center = CGPoint(x: (Double(pixel.x) + 0.5) / Double(width),
                              y: (Double(pixel.y) + 0.5) / Double(height))
-        pendingSample = CurveSampleWork(request: request, point: center)
+        if let request = model.activeCurveSampling, request.photoID == photo.id,
+           pendingSample?.request != request {
+            pendingSample = CurveSampleWork(request: request, point: center)
+        } else if let request = model.activeWhiteBalanceSampling, request.photoID == photo.id,
+                  pendingWhiteBalanceSample?.request != request {
+            pendingWhiteBalanceSample = WhiteBalanceSampleWork(request: request, point: center)
+        }
     }
 
     private var renderRequest: RenderRequest {
@@ -1705,8 +1747,26 @@ struct Inspector: View {
             adjustment("Sepia", path: \.adjustments.sepia, range: 0...1)
             Divider()
             Text("WHITE BALANCE").font(.caption).foregroundStyle(.secondary)
-            adjustment("Warmth", path: \.adjustments.warmth, range: -1...1)
+            temperatureAdjustment()
             adjustment("Tint", path: \.adjustments.tint, range: -1...1)
+            HStack {
+                Button {
+                    model.startWhiteBalanceSampling(photoID: photo.id)
+                } label: {
+                    Label("Sample Neutral", systemImage: "eyedropper")
+                }.disabled(model.busy || !model.canShowLoupe)
+                Button("Reset") {
+                    model.compareOriginal = false
+                    model.edit {
+                        $0.adjustments.warmth = 0
+                        $0.adjustments.temperatureKelvin = WhiteBalanceRules.neutralKelvin
+                        $0.adjustments.tint = 0
+                    }
+                }.disabled(photo.adjustments.warmth == 0 &&
+                    photo.adjustments.temperatureKelvin == WhiteBalanceRules.neutralKelvin && photo.adjustments.tint == 0)
+            }
+            Text("Sample an opaque, unclipped neutral grey or white pixel with the full-resolution Viewer Loupe.")
+                .font(.caption2).foregroundStyle(.secondary)
             Divider()
             HistogramView(photo: photo)
             if showsInputs && inputHistogramError && inputs == nil {
@@ -1917,6 +1977,35 @@ struct Inspector: View {
                 Button { value.wrappedValue = neutral } label: { Image(systemName: "arrow.counterclockwise") }.buttonStyle(.borderless).help("Reset \(title)").accessibilityLabel("Reset \(title)")
             }.font(.caption)
             Slider(value: value, in: range).accessibilityLabel(title)
+        }
+    }
+
+    func temperatureAdjustment() -> some View {
+        let value = Binding<Double>(get: {
+            model.selected?.adjustments.displayedTemperatureKelvin ?? WhiteBalanceRules.neutralKelvin
+        }, set: { input in
+            guard input.isFinite else { return }
+            model.compareOriginal = false
+            model.edit {
+                $0.adjustments.warmth = 0
+                $0.adjustments.temperatureKelvin = WhiteBalanceRules.clamp(kelvin: input)
+            }
+        })
+        return VStack(spacing: 6) {
+            HStack {
+                Text("Temperature")
+                Spacer()
+                TextField("Temperature", value: value, format: .number.precision(.fractionLength(0)))
+                    .textFieldStyle(.roundedBorder).frame(width: 72).multilineTextAlignment(.trailing)
+                Text("K").foregroundStyle(.secondary)
+                Button {
+                    value.wrappedValue = WhiteBalanceRules.neutralKelvin
+                } label: {
+                    Image(systemName: "arrow.counterclockwise")
+                }.buttonStyle(.borderless).help("Reset Temperature").accessibilityLabel("Reset Temperature")
+            }.font(.caption)
+            Slider(value: value, in: WhiteBalanceRules.minimumKelvin...WhiteBalanceRules.maximumKelvin)
+                .accessibilityLabel("Temperature in Kelvin")
         }
     }
 }
