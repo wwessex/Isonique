@@ -9,6 +9,23 @@ public enum ExportFormat: String, Codable, CaseIterable, Identifiable {
     public var type: UTType { switch self { case .jpeg: return .jpeg; case .png: return .png; case .tiff: return .tiff; case .original: return .data } }
     public var suffix: String { switch self { case .jpeg: return "jpg"; case .png: return "png"; case .tiff: return "tiff"; case .original: return "" } }
 }
+public enum TIFFCompression: String, Codable, CaseIterable, Identifiable {
+    case uncompressed = "None"
+    case lzw = "LZW"
+    case zip = "ZIP"
+    case packBits = "PackBits"
+
+    public var id: String { rawValue }
+
+    var imageIOValue: Int {
+        switch self {
+        case .uncompressed: return 1
+        case .lzw: return 5
+        case .zip: return 8
+        case .packBits: return 32773
+        }
+    }
+}
 public struct ExportOptions: Codable, Equatable {
     public var format: ExportFormat = .jpeg
     public var quality = 0.95
@@ -21,6 +38,8 @@ public struct ExportOptions: Codable, Equatable {
     public var xmpSidecar: Bool?
     /// An absent template keeps the default numbered version names for batch export.
     public var filenameTemplate: String?
+    /// Older presets omit this field and retain the exporter's uncompressed TIFF behavior.
+    public var tiffCompression: TIFFCompression?
     public init() {}
 }
 public struct ExportPreset: Codable, Identifiable {

@@ -989,6 +989,12 @@ public enum Renderer {
             }
             properties[kCGImagePropertyGPSDictionary as String] = photo.exportGPSProperties(from: originalGPSProperties)
         }
+        if options.format == .tiff {
+            var tiff = properties[kCGImagePropertyTIFFDictionary as String] as? [String: Any] ?? [:]
+            tiff[kCGImagePropertyTIFFCompression as String] =
+                (options.tiffCompression ?? .uncompressed).imageIOValue
+            properties[kCGImagePropertyTIFFDictionary as String] = tiff
+        }
         properties[kCGImagePropertyOrientation as String] = 1
         properties[kCGImageDestinationLossyCompressionQuality as String] = options.quality.isFinite ? min(1, max(0, options.quality)) : 0.95
         let data = NSMutableData()

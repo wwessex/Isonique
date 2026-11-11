@@ -566,3 +566,9 @@
 - Loaded a preset saved before filename templates and verified its numbered version names and TIFF size setting. Saved and decoded a new preset with all eight tokens, then reopened the TIFFs from both plans to verify their format, dimensions and previewed paths. Tested unsafe patterns, unknown tokens and multibyte filename limits.
 - The native macOS app built and launched with a disposable test library. macOS ScreenCaptureKit could not capture its window, so manual checks of the sheet, preset controls and destination picker remain pending.
 - All 290 release tests passed, including four RAW fixtures and Finder Trash handoff. The branding check passed and the arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
+
+## TIFF compression choices
+
+- Exported the same rendered image with None, LZW, ZIP and PackBits compression. Image I/O reported the requested compression tag for every file, and decoded RGBA pixels matched the render byte for byte.
+- Decoded a preset created before the compression field existed and verified that it exported an uncompressed TIFF. New presets preserved their selected compression through JSON encoding and decoding. Exporting every compression mode left the managed original byte for byte unchanged.
+- All 291 release tests passed, including four RAW fixtures and Finder Trash handoff. The branding check passed and the arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.

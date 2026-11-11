@@ -60,6 +60,7 @@ extension LibraryTests {
         """.utf8)
         let old = try JSONDecoder().decode(ExportPreset.self, from: oldPreset)
         XCTAssertNil(old.options.filenameTemplate)
+        XCTAssertNil(old.options.tiffCompression)
         XCTAssertEqual(old.options.format, .tiff)
         XCTAssertEqual(old.options.quality, 0.8)
         XCTAssertEqual(old.options.maxDimension, 24)
@@ -81,6 +82,7 @@ extension LibraryTests {
         XCTAssertEqual(legacy.entries.map(\.filename), ["1-Catalogue.tiff", "2-Alternate.tiff"])
 
         var options = old.options
+        options.tiffCompression = .lzw
         options.filenameTemplate = "{project}-{year}{month}{day}-{sequence}-{original}-{catalogue}-{version}"
         options.xmpSidecar = true
         let new = ExportPreset(name: old.name, options: options)
@@ -91,7 +93,10 @@ extension LibraryTests {
             "Client-Studio-20240805-0001-Camera-Catalogue-Catalogue.tiff",
             "Client-Studio-20240805-0002-Camera-Catalogue-Alternate.tiff"
         ])
-        for (plan, directory) in [(legacy, "Legacy Export"), (custom, "Custom Export")] {
+        for (plan, directory, compression) in [
+            (legacy, "Legacy Export", TIFFCompression.uncompressed),
+            (custom, "Custom Export", TIFFCompression.lzw)
+        ] {
             let output = temporary.appendingPathComponent(directory)
             try plan.write(to: output, repository: repository)
             let expectedNames = plan.entries.map(\.filename) + plan.entries.compactMap(\.sidecarFilename)
@@ -100,11 +105,44 @@ extension LibraryTests {
                 let url = output.appendingPathComponent(entry.filename)
                 let source = try XCTUnwrap(CGImageSourceCreateWithURL(url as CFURL, nil))
                 XCTAssertEqual(CGImageSourceGetType(source) as String?, UTType.tiff.identifier)
+                let properties = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any])
+                let tiff = try XCTUnwrap(properties[kCGImagePropertyTIFFDictionary as String] as? [String: Any])
+                XCTAssertEqual(tiff[kCGImagePropertyTIFFCompression as String] as? Int, compression.imageIOValue)
                 let image = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
                 XCTAssertEqual(image.width, 24)
                 XCTAssertEqual(image.height, 18)
             }
         }
+    }
+
+    func testTIFFCompressionChoicesRoundTripPixelsAndPresets() throws {
+        let repository = try LibraryRepository.createEmpty(at: temporary.appendingPathComponent("TIFF Library"))
+        var library = try repository.load()
+        XCTAssertTrue(try repository.importPhoto(fixture("Compression Source.png"), projectID: nil, into: &library))
+        let photo = try XCTUnwrap(library.photos.first)
+        let originalURL = try repository.availableOriginalURL(photo)
+        let originalData = try Data(contentsOf: originalURL)
+        let original = try Renderer.render(originalURL, adjustments: photo.adjustments)
+        let expectedPixels = try rgba8Pixels(original)
+
+        for compression in TIFFCompression.allCases {
+            var options = ExportOptions()
+            options.format = .tiff
+            options.tiffCompression = compression
+            let preset = ExportPreset(name: compression.rawValue, options: options)
+            let reopened = try JSONDecoder().decode(ExportPreset.self, from: JSONEncoder().encode(preset))
+            XCTAssertEqual(reopened.options, options)
+
+            let output = temporary.appendingPathComponent("\(compression.rawValue).tiff")
+            try Renderer.export(photo, repository: repository, to: output, options: reopened.options)
+            let source = try XCTUnwrap(CGImageSourceCreateWithURL(output as CFURL, nil))
+            let properties = try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any])
+            let tiff = try XCTUnwrap(properties[kCGImagePropertyTIFFDictionary as String] as? [String: Any])
+            XCTAssertEqual(tiff[kCGImagePropertyTIFFCompression as String] as? Int, compression.imageIOValue)
+            let decoded = try XCTUnwrap(CGImageSourceCreateImageAtIndex(source, 0, nil))
+            XCTAssertEqual(try rgba8Pixels(decoded), expectedPixels, compression.rawValue)
+        }
+        XCTAssertEqual(try Data(contentsOf: originalURL), originalData)
     }
 
     func testBatchExportRejectsUnsafeAndOverlongFilenamesDuringPreview() throws {
@@ -124,4 +162,19 @@ extension LibraryTests {
         let preview = try BatchExport.plan(photos: [photo, second], projects: [], options: options)
         XCTAssertEqual(preview.entries.map(\.filename), [longStem + ".jpg", String(repeating: "é", count: 124) + "-2.jpg"])
     }
+}
+
+private func rgba8Pixels(_ image: CGImage) throws -> [UInt8] {
+    var pixels = [UInt8](repeating: 0, count: image.width * image.height * 4)
+    let context = try XCTUnwrap(CGContext(
+        data: &pixels,
+        width: image.width,
+        height: image.height,
+        bitsPerComponent: 8,
+        bytesPerRow: image.width * 4,
+        space: CGColorSpaceCreateDeviceRGB(),
+        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+    ))
+    context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+    return pixels
 }

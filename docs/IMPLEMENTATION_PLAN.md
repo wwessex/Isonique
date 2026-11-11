@@ -267,9 +267,13 @@ Select photos and open Export. Choose a template or enter literal text and token
 
 Review the final image and optional XMP sidecar names before choosing a destination. Case and Unicode equivalents share the same collision rules. A numeric suffix keeps colliding names distinct and follows the image into its sidecar. Export writes the previewed names to a new folder. Save Preset stores the template with the other export options. [Aperture 3.5 Help](https://aperture.skydocu.com/en/export-photos/rename-photos-at-export/)
 
+## TIFF compression
+
+Select TIFF as the export format, then choose None, LZW, ZIP or PackBits compression. All four modes are lossless and saved as part of the export preset. Presets created before this setting was introduced continue to use uncompressed TIFF output.
+
 ## Next checkpoint
 
-Add TIFF compression choices to export presets. Verify lossless pixel round trips and compatibility with existing presets.
+Add HEIF export using the system Image I/O encoder. Verify metadata controls, export preset compatibility and preview-to-export pixel consistency.
 
 ## Pending physical camera checks
 

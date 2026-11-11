@@ -34,6 +34,16 @@ struct ExportOptionsView: View {
                 if options.format == .jpeg {
                     HStack { Text("JPEG quality"); Slider(value: $options.quality, in: 0.1...1); Text("\(Int(options.quality * 100))%").monospacedDigit().frame(width: 45) }
                 }
+                if options.format == .tiff {
+                    Picker("TIFF compression", selection: Binding(
+                        get: { options.tiffCompression ?? .uncompressed },
+                        set: { options.tiffCompression = $0 }
+                    )) {
+                        ForEach(TIFFCompression.allCases) { compression in
+                            Text(compression.rawValue).tag(compression)
+                        }
+                    }
+                }
                 HStack { Text("Longest edge (pixels)"); TextField("0", value: $options.maxDimension, format: .number).frame(width: 100) }
                 Text("0 keeps full resolution. Images are reduced proportionally and never enlarged.").font(.caption).foregroundStyle(.secondary)
                 GroupBox("Include metadata") {
