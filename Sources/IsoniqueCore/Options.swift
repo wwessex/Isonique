@@ -51,6 +51,30 @@ public enum TIFFCompression: String, Codable, CaseIterable, Identifiable {
         }
     }
 }
+public enum WatermarkPosition: String, Codable, CaseIterable, Identifiable {
+    case topLeft = "Top Left"
+    case topRight = "Top Right"
+    case center = "Center"
+    case bottomLeft = "Bottom Left"
+    case bottomRight = "Bottom Right"
+
+    public var id: String { rawValue }
+}
+public struct WatermarkSettings: Codable, Equatable, Hashable {
+    public var text: String
+    public var position: WatermarkPosition
+    public var opacity: Double
+    /// Font height as a fraction of the image's shorter edge.
+    public var scale: Double
+
+    public init(text: String, position: WatermarkPosition = .bottomRight,
+                opacity: Double = 0.75, scale: Double = 0.06) {
+        self.text = text
+        self.position = position
+        self.opacity = opacity
+        self.scale = scale
+    }
+}
 public struct ExportOptions: Codable, Equatable {
     public var format: ExportFormat = .jpeg
     public var quality = 0.95
@@ -65,6 +89,8 @@ public struct ExportOptions: Codable, Equatable {
     public var filenameTemplate: String?
     /// Older presets omit this field and retain the exporter's uncompressed TIFF behavior.
     public var tiffCompression: TIFFCompression?
+    /// Absent in older presets and when watermarking is disabled.
+    public var watermark: WatermarkSettings?
     public init() {}
 }
 public struct ExportPreset: Codable, Identifiable {

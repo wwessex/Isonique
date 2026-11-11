@@ -46,6 +46,7 @@ struct ExportOptionsView: View {
                 }
                 HStack { Text("Longest edge (pixels)"); TextField("0", value: $options.maxDimension, format: .number).frame(width: 100) }
                 Text("0 keeps full resolution. Images are reduced proportionally and never enlarged.").font(.caption).foregroundStyle(.secondary)
+                watermarkControls(model.batchMode ? model.batchPhotos.first : model.selected)
                 GroupBox("Include metadata") {
                     VStack(alignment: .leading, spacing: 10) {
                         Toggle("EXIF — camera and capture information", isOn: $options.exif)
@@ -124,6 +125,104 @@ struct ExportOptionsView: View {
         }
     }
 
+    @ViewBuilder private func watermarkControls(_ photo: Photo?) -> some View {
+        GroupBox("Text watermark") {
+            VStack(alignment: .leading, spacing: 10) {
+                TextField("Watermark text", text: Binding(
+                    get: { options.watermark?.text ?? "" },
+                    set: { value in
+                        let limited = String(value.prefix(200))
+                        if limited.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            options.watermark = nil
+                        } else {
+                            var settings = options.watermark ?? WatermarkSettings(text: limited)
+                            settings.text = limited
+                            options.watermark = settings
+                        }
+                    }
+                ))
+                if let watermark = options.watermark {
+                    Picker("Position", selection: watermarkBinding(\.position, default: .bottomRight)) {
+                        ForEach(WatermarkPosition.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    HStack {
+                        Text("Opacity")
+                        Slider(value: watermarkBinding(\.opacity, default: 0.75), in: 0.1...1)
+                        Text("\(Int(watermark.opacity * 100))%").monospacedDigit().frame(width: 45)
+                    }
+                    HStack {
+                        Text("Scale")
+                        Slider(value: watermarkBinding(\.scale, default: 0.06), in: 0.02...0.2)
+                        Text("\(Int(watermark.scale * 100))%").monospacedDigit().frame(width: 45)
+                    }
+                    if let photo, let repository = model.repository,
+                       let url = try? repository.availableOriginalURL(photo) {
+                        ExportWatermarkPreview(
+                            request: .init(photoID: photo.id, url: url, adjustments: photo.adjustments,
+                                           maximum: 480, revision: model.originalStatusRevision),
+                            cache: model.thumbnailCache,
+                            settings: watermark
+                        )
+                        if model.batchMode {
+                            Text("Previewing the first selected photo.").font(.caption).foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Label("Watermark preview unavailable", systemImage: "exclamationmark.triangle")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(8)
+        }
+    }
+
+    private func watermarkBinding<Value>(_ keyPath: WritableKeyPath<WatermarkSettings, Value>,
+                                         default defaultValue: Value) -> Binding<Value> {
+        Binding(
+            get: { options.watermark?[keyPath: keyPath] ?? defaultValue },
+            set: { value in
+                guard var settings = options.watermark else { return }
+                settings[keyPath: keyPath] = value
+                options.watermark = settings
+            }
+        )
+    }
+
     private var invalidDimensions: Bool { options.format != .original && !(0...100000).contains(options.maxDimension) }
     func save(_ all: [ExportPreset]) { savedPresets = (try? JSONEncoder().encode(all)) ?? Data() }
+}
+
+private struct ExportWatermarkPreview: View {
+    struct Key: Equatable {
+        let request: ThumbnailCache.Request
+        let settings: WatermarkSettings
+    }
+
+    let request: ThumbnailCache.Request
+    let cache: ThumbnailCache
+    let settings: WatermarkSettings
+    @State private var loaded: (key: Key, image: CGImage)?
+
+    var body: some View {
+        let key = Key(request: request, settings: settings)
+        Group {
+            if let loaded, loaded.key == key {
+                Image(decorative: loaded.image, scale: 1).resizable().scaledToFit()
+            } else {
+                ProgressView()
+            }
+        }
+        .frame(maxWidth: .infinity).frame(height: 120).background(Color.black.opacity(0.35)).clipped()
+        .accessibilityLabel("Watermark Preview")
+        .task(id: key) {
+            do {
+                let thumbnail = try await cache.image(for: request)
+                try Task.checkCancellation()
+                let image = try ExportWatermark.apply(settings, to: thumbnail)
+                guard !Task.isCancelled else { return }
+                loaded = (key, image)
+            } catch {
+                if !Task.isCancelled { loaded = nil }
+            }
+        }
+    }
 }

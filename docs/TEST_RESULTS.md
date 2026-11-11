@@ -579,3 +579,10 @@
 - HEIF passed the existing metadata controls with EXIF, IPTC and GPS enabled and disabled. Corrected capture dates, catalogue GPS, explicit location clears and clipping-warning isolation use the same behavior as JPEG, PNG and TIFF.
 - A full-quality HEIF export kept the full-size renderer dimensions. Its decoded 8-bit RGBA pixels stayed within an average difference of four levels and a maximum difference of 48 levels from the full-size preview. The export preset and batch filename survived encoding and decoding, and the managed original remained byte for byte unchanged.
 - All 292 release tests passed, including four RAW fixtures and Finder Trash handoff. The branding check passed and the arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.
+
+## Text watermarks
+
+- Verified top-left, top-right, centre, bottom-left and bottom-right placement from changed-pixel bounds. Lower opacity produced a smaller pixel delta, and larger relative scale covered more pixels.
+- Saved and reopened watermark text, position, opacity and scale in an export preset. A preset created before the watermark field still decoded with watermarking disabled.
+- JPEG, PNG, TIFF and HEIF exports contained the watermark. PNG output matched the shared preview renderer pixel for pixel. A two-version batch produced the same previewed pixels for both files, while edited and original exports left the managed original byte for byte unchanged.
+- All 294 release tests passed, including four verified RAW fixtures and Finder Trash handoff. The branding check passed and the arm64 archive passed strict signature verification on macOS 27.3 with Xcode 27.2.

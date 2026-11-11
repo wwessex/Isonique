@@ -275,9 +275,13 @@ Select TIFF as the export format, then choose None, LZW, ZIP or PackBits compres
 
 Select HEIF to export an edited `.heic` file with the system Image I/O encoder. HEIF uses the same full-size renderer, longest-edge sizing, quality control, batch filename templates, metadata switches and optional XMP sidecars as the other edited formats. Export presets retain HEIF and its quality setting. The output remains 8-bit sRGB.
 
+## Text watermarks
+
+Enter text in the export sheet to enable a watermark on edited output. Choose a corner or the centre, then set opacity and relative scale while reviewing the first selected photo. The shared Core Graphics and Core Text renderer applies the same watermark after resizing and before JPEG, PNG, TIFF or HEIF encoding. Export presets retain the text and controls, batch export applies them to every selected version, and original-file export ignores watermark settings to preserve the source bytes.
+
 ## Next checkpoint
 
-Add watermarking to edited exports with position, opacity and scale controls saved in export presets. Verify batch output, preview consistency and original-file protection.
+Add external-editor handoff with a rendered TIFF derivative and a verified return path as a new non-destructive version. Preserve the source original and test cancellation, missing returns and editor failures.
 
 ## Pending physical camera checks
 

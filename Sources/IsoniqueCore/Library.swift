@@ -955,6 +955,7 @@ public enum Renderer {
             guard let resized = context.makeImage() else { throw LibraryError.unsupportedImage(photo.originalName) }
             image = resized
         }
+        image = try ExportWatermark.apply(options.watermark, to: image)
         var properties: [String: Any] = [:]
         let embedded = source.flatMap { CGImageSourceCopyPropertiesAtIndex($0, 0, nil) as? [String: Any] } ?? [:]
         if options.exif {
