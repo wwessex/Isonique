@@ -70,7 +70,7 @@ public extension Renderer {
         neutral.warmth = 0
         neutral.temperatureKelvin = WhiteBalanceRules.neutralKelvin
         neutral.tint = 0
-        let (image, geometry) = try renderToneInput(url, adjustments: neutral, maxDimension: nil)
+        let (image, geometry, _) = try renderToneInput(url, adjustments: neutral, maxDimension: nil)
         try Task.checkCancellation()
         let source = geometry.sourcePoint(x: viewerPoint.x, y: viewerPoint.y)
         let x = min(image.width - 1, max(0, Int(source.x * Double(image.width))))

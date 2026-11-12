@@ -176,7 +176,7 @@ public extension Renderer {
     static func sampleTargetedColor(_ url: URL, adjustments: Adjustments,
                                     viewerPoint: CGPoint) throws -> TargetedColorSample? {
         guard (0...1).contains(viewerPoint.x), (0...1).contains(viewerPoint.y) else { return nil }
-        let (image, geometry) = try renderToneInput(url, adjustments: adjustments, maxDimension: nil)
+        let (image, geometry, _) = try renderToneInput(url, adjustments: adjustments, maxDimension: nil)
         try Task.checkCancellation()
         let source = geometry.sourcePoint(x: viewerPoint.x, y: viewerPoint.y)
         let x = min(image.width - 1, max(0, Int(source.x * Double(image.width))))

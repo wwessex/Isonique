@@ -365,9 +365,15 @@ Saturation and Definition join Dodge and Burn in the Photos menu, editing strip,
 
 Zero mask opacity is pixel-neutral. Edge detection continues to sample original straight-sRGB luminance, so an effect does not leak across a protected boundary even when another mode overlaps it. Both effects run in the shared CPU preview/export pipeline. Format 28 distinguishes the new adjustment identifiers from format-27 Dodge/Burn recipes, allowing the preceding build to reject the newer catalogue cleanly instead of failing while decoding an enum value it does not understand.
 
+## Local Sharpening and Luminance Noise Reduction brushes
+
+Sharpening and Luminance Noise Reduction now join the four existing local modes in Photos, the editing strip, the Inspector and the six-way Viewer control. Each reuses the established source-coordinate mask, edge-awareness, erasing, inversion and post-stroke opacity. Sharpening applies the same bounded luminance high-pass kernel as the global Detail control after retouching and global sharpening. Luminance Noise Reduction applies the same edge-preserving luminance neighbourhood after global reduction and before Definition and retouching. Brush strength scales kernel output per pixel rather than selecting a separate preview approximation.
+
+The two masks remain independent and compose in a stable order where they overlap: local reduction runs before local sharpening. Constant fields remain unchanged, edge-aware strokes do not cross a sampled high-contrast boundary and zero mask opacity bypasses each operation. Viewer previews and edited exports use this one CPU path; originals and Original-format exports remain byte-identical. Format 29 distinguishes the two new adjustment identifiers so format-28 builds reject those catalogues cleanly.
+
 ## Next checkpoint
 
-Add non-destructive local Sharpening and Luminance Noise Reduction brush modes using the shared edge-aware mask infrastructure. Test flat fields, high-contrast boundaries, independent and overlapping masks, erase/invert/opacity, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
+Add non-destructive local Contrast and Blur brush modes using the shared edge-aware mask infrastructure. Test flat fields, high-contrast boundaries, neutral and maximum strengths, independent and overlapping masks, erase/invert/opacity, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
 
 ## Pending physical camera checks
 

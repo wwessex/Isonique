@@ -219,6 +219,10 @@ public extension Adjustments {
         localBrushes.contains { $0.adjustment == .saturation || $0.adjustment == .definition }
     }
 
+    var hasLocalDetailBrushRecipe: Bool {
+        localBrushes.contains { $0.adjustment == .sharpening || $0.adjustment == .noiseReduction }
+    }
+
     var hasLensEffects: Bool {
         chromaticAberrationRedCyan != 0 || chromaticAberrationBlueYellow != 0 || vignette != 0 || devignette != 0
     }
@@ -449,6 +453,10 @@ public struct Library: Codable {
         if version < 28, hasRecipe(where: \.hasExtendedLocalBrushRecipe) { version = 28 }
     }
 
+    public mutating func upgradeForLocalDetailBrushes() {
+        if version < 29, hasRecipe(where: \.hasLocalDetailBrushRecipe) { version = 29 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -492,6 +500,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 29, hasRecipe(where: \.hasLocalDetailBrushRecipe) { throw LibraryError.unsupportedVersion }
         if version < 28, hasRecipe(where: \.hasExtendedLocalBrushRecipe) { throw LibraryError.unsupportedVersion }
         if version < 27, hasRecipe(where: \.hasAdvancedLocalBrushRecipe) { throw LibraryError.unsupportedVersion }
         if version < 26, hasRecipe(where: \.hasDefinitionRecipe) { throw LibraryError.unsupportedVersion }
@@ -514,7 +523,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...28).contains(version) { return }
+        if (7...29).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -692,6 +701,7 @@ public final class LibraryRepository {
         normalized.upgradeForDefinition()
         normalized.upgradeForAdvancedLocalBrushes()
         normalized.upgradeForExtendedLocalBrushes()
+        normalized.upgradeForLocalDetailBrushes()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
@@ -916,7 +926,8 @@ public enum Renderer {
 
     public static func renderWithGeometry(_ url: URL, adjustments: Adjustments,
                                           maxDimension: CGFloat? = nil) throws -> (image: CGImage, geometry: PhotoGeometry) {
-        let (toned, geometry) = try renderToneInput(url, adjustments: adjustments, maxDimension: maxDimension)
+        let (toned, geometry, localMask) = try renderToneInput(url, adjustments: adjustments,
+                                                               maxDimension: maxDimension)
         let corrected = try applyRedEyeCorrections(toned, corrections: adjustments.redEyeCorrections)
         let colored = try applyTargetedColors(corrected, targets: adjustments.targetedColors)
         let monochrome = try applyBlackAndWhite(colored, enabled: adjustments.blackAndWhiteEnabled,
@@ -931,18 +942,20 @@ public enum Renderer {
             blueYellow: adjustments.chromaticAberrationBlueYellow)
         let illuminated = try applyDevignette(aberration, amount: adjustments.devignette)
         let reduced = try applyLuminanceNoiseReduction(illuminated, amount: adjustments.luminanceNoiseReduction)
-        let defined = try applyDefinition(reduced, strength: adjustments.definition,
+        let locallyReduced = try applyLocalLuminanceNoiseReduction(reduced, mask: localMask)
+        let defined = try applyDefinition(locallyReduced, strength: adjustments.definition,
                                           radius: adjustments.definitionRadius)
         let retouched = try applySpotRemovals(defined, spots: adjustments.spotRemovals)
         let detailed = try applySharpening(retouched, sharpening: adjustments.sharpening,
                                           edgeSharpening: adjustments.edgeSharpening)
-        let image = try applyGeometry(applyLens(detailed, amount: geometry.lensAmount), geometry: geometry)
+        let locallyDetailed = try applyLocalSharpening(detailed, mask: localMask)
+        let image = try applyGeometry(applyLens(locallyDetailed, amount: geometry.lensAmount), geometry: geometry)
         let finished = try applyVignette(image, amount: adjustments.vignette)
         return (finished, geometry)
     }
 
     public static func adjustmentHistograms(_ url: URL, adjustments: Adjustments) throws -> AdjustmentHistograms {
-        let (toned, _) = try renderToneInput(url, adjustments: adjustments, maxDimension: 384)
+        let (toned, _, _) = try renderToneInput(url, adjustments: adjustments, maxDimension: 384)
         let corrected = try applyRedEyeCorrections(toned, corrections: adjustments.redEyeCorrections)
         let colored = try applyTargetedColors(corrected, targets: adjustments.targetedColors)
         let monochrome = try applyBlackAndWhite(colored, enabled: adjustments.blackAndWhiteEnabled,
@@ -956,7 +969,7 @@ public enum Renderer {
     public static func sampleCurveInput(_ url: URL, adjustments: Adjustments, channel: CurveChannel,
                                         viewerPoint: CGPoint) throws -> Int? {
         guard (0...1).contains(viewerPoint.x), (0...1).contains(viewerPoint.y) else { return nil }
-        let (toned, geometry) = try renderToneInput(url, adjustments: adjustments, maxDimension: nil)
+        let (toned, geometry, _) = try renderToneInput(url, adjustments: adjustments, maxDimension: nil)
         try Task.checkCancellation()
         let source = geometry.sourcePoint(x: viewerPoint.x, y: viewerPoint.y)
         let x = min(toned.width - 1, Int(source.x * Double(toned.width)))
@@ -972,7 +985,7 @@ public enum Renderer {
     }
 
     static func renderToneInput(_ url: URL, adjustments: Adjustments,
-                                maxDimension: CGFloat?) throws -> (CGImage, PhotoGeometry) {
+                                maxDimension: CGFloat?) throws -> (CGImage, PhotoGeometry, LocalAdjustmentMask?) {
         try Task.checkCancellation()
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
@@ -1044,7 +1057,7 @@ public enum Renderer {
         let toned = try applyTone(result, adjustments: adjustments)
         let locallyDefined = try applyLocalDefinition(toned, mask: mask)
         return (locallyDefined, PhotoGeometry(width: decoded.width, height: decoded.height,
-                                              adjustments: adjustments))
+                                              adjustments: adjustments), mask)
     }
     /// Shared independent sRGB tonal treatment for previews, exports and GPU-free hosts.
     /// Neutral settings bypass conversion; these are not Apple's proprietary RAW formulas.

@@ -9,6 +9,17 @@ extension Renderer {
     }
 
     static func applyLuminanceNoiseReduction(_ source: CGImage, amount: Double) throws -> CGImage {
+        try applyLuminanceNoiseReduction(source, amount: amount, mask: nil)
+    }
+
+    static func applyLocalLuminanceNoiseReduction(_ source: CGImage,
+                                                   mask: LocalAdjustmentMask?) throws -> CGImage {
+        guard mask?.isActive(.noiseReduction) == true else { return source }
+        return try applyLuminanceNoiseReduction(source, amount: 1, mask: mask)
+    }
+
+    private static func applyLuminanceNoiseReduction(_ source: CGImage, amount: Double,
+                                                      mask: LocalAdjustmentMask?) throws -> CGImage {
         let amount = boundedDetail(amount)
         guard amount > 0 else { return source }
         return try withDetailPixels(source, operation: "luminance noise reduction") { pixels, width, height in
@@ -33,7 +44,9 @@ extension Renderer {
                         total += neighbor * weight
                         totalWeight += weight
                     }
-                    let delta = (total / totalWeight - current) * amount
+                    let localAmount = amount * (mask?.coverage(for: .noiseReduction, x: x, y: y,
+                        imageWidth: width, imageHeight: height) ?? 1)
+                    let delta = (total / totalWeight - current) * localAmount
                     writeLuminanceDelta(delta, channels: channels, alpha: alpha, pixels: pixels, offset: offset)
                 }
             }
@@ -41,6 +54,16 @@ extension Renderer {
     }
 
     static func applySharpening(_ source: CGImage, sharpening: Double, edgeSharpening: Double) throws -> CGImage {
+        try applySharpening(source, sharpening: sharpening, edgeSharpening: edgeSharpening, mask: nil)
+    }
+
+    static func applyLocalSharpening(_ source: CGImage, mask: LocalAdjustmentMask?) throws -> CGImage {
+        guard mask?.isActive(.sharpening) == true else { return source }
+        return try applySharpening(source, sharpening: 1, edgeSharpening: 0, mask: mask)
+    }
+
+    private static func applySharpening(_ source: CGImage, sharpening: Double, edgeSharpening: Double,
+                                        mask: LocalAdjustmentMask?) throws -> CGImage {
         let sharpening = boundedDetail(sharpening)
         let edgeSharpening = boundedDetail(edgeSharpening)
         guard sharpening > 0 || edgeSharpening > 0 else { return source }
@@ -58,7 +81,9 @@ extension Renderer {
                     let current = luminance(channels)
                     let highPass = current - Double(blurred[y * width + x])
                     let edgeMask = smoothstep(min(1, abs(highPass) / 0.08))
-                    let gain = sharpening * 1.6 + edgeSharpening * 2.2 * edgeMask
+                    let localAmount = mask?.coverage(for: .sharpening, x: x, y: y,
+                        imageWidth: width, imageHeight: height) ?? 1
+                    let gain = (sharpening * 1.6 + edgeSharpening * 2.2 * edgeMask) * localAmount
                     writeLuminanceDelta(highPass * gain, channels: channels, alpha: alpha,
                                         pixels: pixels, offset: offset)
                 }

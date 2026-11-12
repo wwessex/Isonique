@@ -306,6 +306,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         saved.upgradeForDefinition()
         saved.upgradeForAdvancedLocalBrushes()
         saved.upgradeForExtendedLocalBrushes()
+        saved.upgradeForLocalDetailBrushes()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -762,6 +763,9 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 Button("Burn Brush") { workspace.chooseBrush(.burn) }.disabled(!workspace.canBrush)
                 Button("Saturation Brush") { workspace.chooseBrush(.saturation) }.disabled(!workspace.canBrush)
                 Button("Definition Brush") { workspace.chooseBrush(.definition) }.disabled(!workspace.canBrush)
+                Button("Sharpening Brush") { workspace.chooseBrush(.sharpening) }.disabled(!workspace.canBrush)
+                Button("Luminance Noise Reduction Brush") { workspace.chooseBrush(.noiseReduction) }
+                    .disabled(!workspace.canBrush)
                 Button("Repair Spot") { workspace.chooseSpotRemoval(.repair) }.disabled(!workspace.canSpotRemove)
                 Button("Clone Spot") { workspace.chooseSpotRemoval(.clone) }.disabled(!workspace.canSpotRemove)
                 Button("Manual Red-Eye") { workspace.chooseRedEyeCorrection() }.disabled(!workspace.canCorrectRedEye)
@@ -1468,6 +1472,8 @@ struct EditBar: View {
                     Button("Burn Brush") { model.chooseBrush(.burn) }
                     Button("Saturation Brush") { model.chooseBrush(.saturation) }
                     Button("Definition Brush") { model.chooseBrush(.definition) }
+                    Button("Sharpening Brush") { model.chooseBrush(.sharpening) }
+                    Button("Luminance Noise Reduction Brush") { model.chooseBrush(.noiseReduction) }
                 } label: {
                     Label("Brush", systemImage: "paintbrush.pointed")
                         .foregroundStyle(model.tool == .brush ? Color.accentColor : .primary)
@@ -2037,6 +2043,10 @@ struct Inspector: View {
                         GridRow {
                             Button("Saturation Brush") { model.chooseBrush(.saturation) }
                             Button("Definition Brush") { model.chooseBrush(.definition) }
+                        }
+                        GridRow {
+                            Button("Sharpening Brush") { model.chooseBrush(.sharpening) }
+                            Button("Noise Reduction Brush") { model.chooseBrush(.noiseReduction) }
                         }
                     }.disabled(!model.canBrush)
                     Text("Paint in the Viewer. Each stroke is one undo step.")
