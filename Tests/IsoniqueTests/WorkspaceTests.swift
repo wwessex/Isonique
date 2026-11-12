@@ -386,7 +386,8 @@ final class WorkspaceTests: XCTestCase {
         XCTAssertEqual(workspace.comparisonPhoto?.id, neutral.id)
         XCTAssertEqual(workspace.selected?.id, photo.id)
         workspace.selectBrowserPhoto(neutral.id)
-        XCTAssertEqual(workspace.comparisonPhoto?.id, photo.id)
+        XCTAssertEqual(workspace.comparisonPhoto?.id, neutral.id,
+                       "Selecting Primary no longer silently swaps the comparison roles")
         workspace.chooseTool(.crop)
         XCTAssertNil(workspace.comparisonID)
         workspace.renameVersion(neutral.id, to: "Deliverable")
@@ -414,6 +415,56 @@ final class WorkspaceTests: XCTestCase {
         rule.projectID = UUID()
         XCTAssertTrue(reopened.saveSmartAlbum(name: "Still compatible", rule: rule))
         XCTAssertEqual(reopened.library.version, 3)
+    }
+
+    @MainActor
+    func testMultiPhotoComparisonPrimarySelectFilteredStartupAndRemoval() async throws {
+        let root = try temporaryLibrary()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let workspace = Workspace(libraryRoot: root)
+        var photos = (0..<4).map { index in
+            Photo(filename: "photo-\(index).png", originalName: "photo-\(index).png", projectID: nil,
+                  width: 32, height: 24, camera: "", captureDate: "", sha256: "fixture-\(index)")
+        }
+        photos[0].caption = "Compare group"
+        photos[1].caption = "Compare group"
+        photos[2].caption = "Compare group"
+        photos[3].caption = "Outside filter"
+        var library = workspace.library
+        library.photos = photos
+        XCTAssertTrue(workspace.commit(library))
+        workspace.search = "Compare group"
+        workspace.batchMode = true
+        workspace.batchSelection = Set(photos.map(\.id))
+        workspace.selection = photos[1].id
+        XCTAssertTrue(workspace.canStartComparison)
+        workspace.startComparison()
+        XCTAssertFalse(workspace.batchMode)
+        XCTAssertEqual(workspace.comparisonIDs, [photos[1].id, photos[0].id, photos[2].id])
+        XCTAssertEqual(workspace.comparisonID, photos[1].id)
+        XCTAssertEqual(workspace.selection, photos[0].id)
+
+        workspace.moveComparisonSelection(by: 1)
+        XCTAssertEqual(workspace.selection, photos[2].id)
+        workspace.promoteComparisonSelection()
+        XCTAssertEqual(workspace.comparisonID, photos[2].id)
+        XCTAssertEqual(workspace.selection, photos[1].id)
+        XCTAssertEqual(workspace.comparisonIDs.first, photos[2].id)
+        workspace.removeFromComparison(photos[2].id)
+        XCTAssertEqual(workspace.comparisonIDs.count, 3, "Primary must be promoted before it can be removed")
+
+        workspace.search = ""
+        workspace.selectBrowserPhoto(photos[3].id)
+        XCTAssertEqual(workspace.comparisonIDs.count, 4)
+        XCTAssertEqual(workspace.selection, photos[3].id)
+        workspace.removeComparisonSelection()
+        XCTAssertEqual(workspace.comparisonIDs.count, 3)
+        XCTAssertFalse(workspace.comparisonIDs.contains(photos[3].id))
+        workspace.removeFromComparison(photos[0].id)
+        XCTAssertEqual(workspace.comparisonIDs.count, 2,
+                       "The final Primary/Select pair remains in Compare")
+        XCTAssertEqual(Workspace(libraryRoot: root).comparisonIDs, [],
+                       "Comparison UI state must never persist into the catalogue")
     }
 
     @MainActor

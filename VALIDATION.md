@@ -25,20 +25,22 @@ Use the signed build, a disposable library and a pen tablet that macOS recognise
 Use the signed build and a Mac trackpad or display/input driver that advertises standard AppKit magnification gestures. Record the hardware, driver and macOS version. A MacBook Pro trackpad is supported; current MacBook Pro displays do not provide direct touch contacts.
 
 1. Open a large photo in the Viewer and pinch outward from Fit. Confirm the app enters continuous pixel zoom, reports the current percentage and remains responsive while the full-resolution frame loads.
-2. Verify the gesture stops at 800%, then pinch inward through 25% and confirm it returns to Fit. The Fit/100% button must continue to switch modes.
-3. At an intermediate zoom, scroll around the photograph, pinch again and confirm the gesture starts from the displayed percentage without a jump. Repeat with the Loupe enabled.
+2. Confirm a tiny outward pinch remains at Fit, then continue in small increments without jumping to 100%. Verify the gesture stops at 800%, then pinch inward to the fitted image scale and confirm it returns to Fit. The Fit/100% button must continue to switch modes.
+3. At an intermediate zoom below and above 100%, scroll around the photograph, pinch again and confirm the gesture starts from the displayed percentage without a jump. Repeat with the Loupe enabled.
 4. Enter a local brush, pinch without painting an accidental stroke, then paint and use Undo/Redo. Reopen the library and confirm the recipe did not change merely from zooming.
 5. If testing a touch display, confirm its driver translates contacts into a native magnification gesture. Record unsupported direct-touch hardware separately rather than treating it as an Isonique zoom failure.
 
 ## Physical Compare navigation
 
-Use two photos with visibly different aspect ratios and the signed build. Record the input device and macOS version.
+Use at least four photos with visibly different aspect ratios and the signed build. Record the input device and macOS version.
 
-1. Start side-by-side Compare and leave Synchronize Navigation enabled. Click 100% in either pane, pan to an identifiable subject and confirm both percentage readouts and normalized subject positions move together.
-2. Pinch from Fit into pixel zoom, continue to 800%, then pinch inward until both panes return to Fit. Confirm the 1800-pixel preview is replaced by full resolution only while pixel zoom is active.
-3. Disable Synchronize Navigation. Give each pane a different zoom and pan position, then enable synchronization and confirm the selected pane adopts the reference pane’s navigation.
-4. While full-resolution loading is visible, return to Fit or choose a different selected photo from the filmstrip. Confirm the obsolete result never replaces the current comparison.
-5. Export either photo before and after navigation. Confirm output is identical and reopening the library retains its prior recipes without storing comparison navigation.
+1. Select at least three visible Browser photos and start Compare. Confirm the current photo is Primary, every other pane is numbered Select, and narrowing the Browser filter excludes hidden selections at startup.
+2. Use the arrow keys to navigate Selects, Option-P to promote one to Primary and Option-Delete to remove one. Confirm the final Primary/Select pair cannot be reduced and Done cancels Compare without saving its UI state.
+3. Resize the window through one-, two- and three-column layouts. Leave Synchronize Navigation enabled, click 100% in any pane, pan to an identifiable subject and confirm every percentage readout and normalized subject position moves together across mixed aspect ratios.
+4. Pinch from Fit in small increments without a jump to 100%, continue to 800%, then pinch inward until every pane returns to Fit. Confirm the 1800-pixel preview is replaced by full resolution only while pixel zoom is active.
+5. Disable Synchronize Navigation. Give each pane a different zoom and pan position, then enable synchronization and confirm every Select adopts the Primary pane’s navigation.
+6. While full-resolution loading is visible, return to Fit, remove a Select or add a different Browser photo. Confirm an obsolete result never replaces a current pane.
+7. Export every compared photo before and after navigation. Confirm output is identical and reopening the library retains its prior recipes without storing comparison membership or navigation.
 
 ## Physical PTP camera import
 

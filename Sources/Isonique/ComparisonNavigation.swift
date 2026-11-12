@@ -1,8 +1,6 @@
 import AppKit
 import SwiftUI
 
-enum ComparisonSide { case reference, selected }
-
 struct ComparisonNavigation: Equatable {
     var scale: CGFloat?
     var center = CGPoint(x: 0.5, y: 0.5)
@@ -12,8 +10,9 @@ struct ComparisonNavigation: Equatable {
         if scale == nil { center = CGPoint(x: 0.5, y: 0.5) }
     }
 
-    mutating func magnify(from base: CGFloat?, by magnification: CGFloat) {
-        scale = ViewerZoom.magnified(from: base, by: magnification)
+    mutating func magnify(from base: CGFloat?, by magnification: CGFloat,
+                          fitScale: CGFloat? = nil) {
+        scale = ViewerZoom.magnified(from: base, by: magnification, fitScale: fitScale)
         if scale == nil { center = CGPoint(x: 0.5, y: 0.5) }
     }
 
@@ -23,32 +22,34 @@ struct ComparisonNavigation: Equatable {
     }
 }
 
-struct ComparisonNavigationPair: Equatable {
+struct ComparisonNavigationSet: Equatable {
     var synchronized = true
-    var reference = ComparisonNavigation()
-    var selected = ComparisonNavigation()
+    var shared = ComparisonNavigation()
+    var independent: [UUID: ComparisonNavigation] = [:]
 
-    subscript(side: ComparisonSide) -> ComparisonNavigation {
-        switch side {
-        case .reference: reference
-        case .selected: selected
-        }
+    func value(for id: UUID) -> ComparisonNavigation {
+        synchronized ? shared : independent[id] ?? shared
     }
 
-    mutating func update(_ value: ComparisonNavigation, for side: ComparisonSide) {
-        switch side {
-        case .reference: reference = value
-        case .selected: selected = value
-        }
-        if synchronized {
-            reference = value
-            selected = value
-        }
+    mutating func update(_ value: ComparisonNavigation, for id: UUID) {
+        if synchronized { shared = value }
+        else { independent[id] = value }
     }
 
-    mutating func setSynchronized(_ enabled: Bool) {
+    mutating func setSynchronized(_ enabled: Bool, primaryID: UUID?, visibleIDs: [UUID]) {
+        guard synchronized != enabled else { return }
+        if enabled {
+            if let primaryID { shared = independent[primaryID] ?? shared }
+        } else {
+            for id in visibleIDs { independent[id] = shared }
+        }
         synchronized = enabled
-        if enabled { selected = reference }
+        retain(visibleIDs)
+    }
+
+    mutating func retain(_ ids: [UUID]) {
+        let available = Set(ids)
+        independent = independent.filter { available.contains($0.key) }
     }
 }
 
@@ -213,11 +214,11 @@ final class ComparisonScrollView: NSScrollView {
     }
 
     override func magnify(with event: NSEvent) {
-        let sample = magnificationSession.sample(current: navigation.scale,
+        let sample = magnificationSession.sample(current: navigation.scale ?? fitScale,
             delta: event.magnification, began: event.phase == .began,
             ended: event.phase == .ended || event.phase == .cancelled)
         var updated = navigation
-        updated.magnify(from: sample.base, by: sample.factor)
+        updated.magnify(from: sample.base, by: sample.factor, fitScale: fitScale)
         navigationChanged?(updated)
     }
 

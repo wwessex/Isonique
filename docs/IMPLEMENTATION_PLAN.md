@@ -407,17 +407,23 @@ Viewer, mask overlays and export now share a thread-safe source-space mask LRU b
 
 The performance contract is measurable without machine-sensitive wall-clock assertions: a 24-stroke append session performs 24 stroke rasters rather than 300, the clean and incremental masks agree, and a 12,000 × 8,000 source stays within a 16 MiB fixture budget. The format-34 pressure workflow confirms Undo/Redo, restart persistence, original preservation and byte-identical full-resolution Viewer and PNG export while the export records an exact shared-cache hit.
 
-The Viewer also accepts the native macOS magnification gesture in Select and Brush modes. Pinching outward leaves Fit for continuous pixel zoom, pinching inward past the lower threshold returns to Fit, and the range is bounded to 25–800%. The established Fit/100% control remains available. This works with Mac trackpads and compatible devices that emit AppKit magnification gestures; macOS does not expose arbitrary touch-display contacts as iOS-style touches without driver translation.
+The Viewer also accepts the native macOS magnification gesture in Select and Brush modes. Pinching outward leaves Fit for continuous pixel zoom, pinching inward to the fitted scale returns to Fit, and the range is bounded to 1–800%. The fitted image scale, not an assumed 100%, is captured as the gesture baseline. A 0.5% hysteresis keeps tiny changes at Fit while still allowing fine increments immediately above it. The established Fit/100% control remains available. This works with Mac trackpads and compatible devices that emit AppKit magnification gestures; macOS does not expose arbitrary touch-display contacts as iOS-style touches without driver translation.
 
 ## Synchronized Compare navigation
 
-The two-photo Compare workspace now uses native AppKit scroll viewports with the same 25–800% pixel-scale policy as the main Viewer. Both panes begin in Fit. Pinching, pressing 100% or scrolling updates a normalized centre coordinate; synchronized mode applies that coordinate and scale to both panes, so a wide reference and tall selected image stay aligned without equating raw pixel offsets. Each pane retains its own Fit/100% control. Turning off Synchronize Navigation copies the shared state and then permits separate zoom and pan; turning it back on makes the reference pane authoritative.
+The two-photo Compare workspace uses native AppKit scroll viewports with the same fit-relative 1–800% pixel-scale policy as the main Viewer. Both panes begin in Fit. Pinching, pressing 100% or scrolling updates a normalized centre coordinate; synchronized mode applies that coordinate and scale to both panes, so a wide Primary and tall Select image stay aligned without equating raw pixel offsets. Each pane retains its own Fit/100% control. Turning off Synchronize Navigation copies the shared state and then permits separate zoom and pan; turning it back on makes the Primary pane authoritative.
 
 Fit requests retain the established 1800-pixel preview. Entering pixel zoom changes request identity and loads full resolution through the shared Viewer cache; changing magnification inside pixel mode only transforms the viewport. Returning to Fit cancels obsolete full-resolution work and requests the bounded preview. Replacing a comparison photo also changes task identity. Navigation lives only in SwiftUI/AppKit state and never writes catalogue recipes or enters exports.
 
+## Multi-photo Compare and Primary/Select workflow
+
+Compare now starts from two or more visible photos selected in the Browser. The current selection becomes Primary, the remaining photos are numbered Selects and responsive layouts use one, two or three columns with additional rows as space requires. Clicking a pane chooses its Select. Arrow keys move between Selects, Option-P promotes the active Select and Option-Delete removes it while protecting the final Primary/Select pair. Selecting another visible Browser photo during Compare adds it without silently changing the Primary.
+
+Synchronized navigation stores one normalized scale and centre for every visible pane. Independent mode materializes a separate state for each photo; re-enabling synchronization makes the current Primary authoritative, and removing photos discards their stale navigation state. Full-resolution loads retain photo-specific task identities, so cancellation and comparison changes cannot publish an obsolete frame. The workflow is transient UI state: it does not save catalogue recipes, alter originals or change edited export pixels.
+
 ## Next checkpoint
 
-Extend Compare to three or more selected photos with a clear Primary/Select workflow. Add keyboard promotion, removal and navigation, responsive multi-image layouts and synchronized zoom across all visible panes. Test changing the primary, filtered selections, mixed aspect ratios, cancellation and preservation of catalogue recipes and exports.
+Add a non-destructive Light Table workspace for freely arranging selected photos on a persistent canvas. Include drag positioning, resize, rotate, alignment, stacking order, Fit/100% inspection and reusable layouts without changing photo recipes. Test mixed aspect ratios, filtered selections, Undo/Redo, persistence, PDF/print output and preservation of originals and edited exports.
 
 ## Pending physical camera checks
 

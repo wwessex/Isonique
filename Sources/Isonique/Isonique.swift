@@ -61,6 +61,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var showInspector = true
     @Published var compareOriginal = false
     @Published var comparisonID: UUID?
+    @Published var comparisonIDs: [UUID] = []
     @Published var tool = EditTool.select
     @Published var brushAdjustment = LocalBrushAdjustment.dodge
     @Published var brushInstanceID: UUID?
@@ -351,7 +352,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
             ?? stack.flatMap { id in visible.first { $0.stackID == id }?.id }
             ?? visible.first?.id
         compareOriginal = false; tool = .select
-        if comparisonPhoto == nil { stopComparison() }
+        if comparisonID != nil && comparisonPhotos.count < 2 { stopComparison() }
         if visible.isEmpty { viewer = false }
     }
     var selectedTrashActionIDs: Set<UUID> {
@@ -742,6 +743,12 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                     .keyboardShortcut("o", modifiers: [.option]).disabled(!workspace.canStartComparison)
                 Button("End Comparison", action: workspace.stopComparison)
                     .keyboardShortcut(.return, modifiers: [.command]).disabled(workspace.comparisonID == nil)
+                Button("Promote Compare Select", action: workspace.promoteComparisonSelection)
+                    .keyboardShortcut("p", modifiers: [.option])
+                    .disabled(!workspace.canPromoteComparisonSelection)
+                Button("Remove Compare Select", action: workspace.removeComparisonSelection)
+                    .keyboardShortcut(.delete, modifiers: [.option])
+                    .disabled(!workspace.canRemoveComparisonSelection)
                 Divider()
                 Toggle("Highlight Hot & Cold Areas", isOn: $workspace.clipping.both)
                     .keyboardShortcut("h", modifiers: [.option, .shift])
@@ -1204,8 +1211,8 @@ struct ContentView: View {
                             }.frame(maxWidth: .infinity, maxHeight: .infinity)
                         } else if model.viewer, let photo = model.selected, let repo = model.repository {
                             Group {
-                                if let comparison = model.comparisonPhoto {
-                                    PhotoComparisonView(reference: comparison, selected: photo, repository: repo)
+                                if model.comparisonID != nil, model.comparisonPhotos.count >= 2 {
+                                    PhotoComparisonView(photos: model.comparisonPhotos, repository: repo)
                                 } else if let url = try? repo.availableOriginalURL(photo) {
                                     PhotoViewer(photo: photo, url: url, original: model.compareOriginal).id(photo.id)
                                 } else {
@@ -1544,7 +1551,9 @@ struct PhotoViewer: View {
     @State private var failure: String?
     @State private var zoomScale: CGFloat?
     @State private var pinchBaseScale: CGFloat?
+    @State private var pinchFitScale: CGFloat?
     @State private var pinchActive = false
+    @State private var viewerViewportSize = CGSize.zero
     @State private var cropSize = CGSize(width: 1, height: 1)
     @AppStorage("crop.aspect") private var cropAspect = 0.0
     @AppStorage("crop.locked") private var cropLocked = false
@@ -1739,6 +1748,10 @@ struct PhotoViewer: View {
                     .padding(12).workspaceGlass().padding(8)
             }
         }.padding(.top, 8)
+        .background(GeometryReader { proxy in
+            Color.clear.preference(key: ViewerViewportSizePreference.self, value: proxy.size)
+        })
+        .onPreferenceChange(ViewerViewportSizePreference.self) { viewerViewportSize = $0 }
         .simultaneousGesture(viewerMagnificationGesture)
         .onChange(of: model.tool) { _, tool in
             if tool == .crop { draft = photo.adjustments.crop ?? PhotoCrop(x: 0, y: 0, width: 1, height: 1) }
@@ -1844,15 +1857,21 @@ struct PhotoViewer: View {
             .onChanged { magnification in
                 guard model.tool == .select || model.tool == .brush else { return }
                 if !pinchActive {
-                    pinchBaseScale = zoomScale
+                    pinchFitScale = image.map {
+                        ViewerZoom.fittedScale(viewportSize: viewerViewportSize, imageSize: $0.size)
+                    }
+                    pinchBaseScale = zoomScale ?? pinchFitScale
                     pinchActive = true
                 }
-                zoomScale = ViewerZoom.magnified(from: pinchBaseScale, by: magnification)
+                zoomScale = ViewerZoom.magnified(from: pinchBaseScale, by: magnification,
+                                                  fitScale: pinchFitScale)
             }
             .onEnded { magnification in
                 guard pinchActive else { return }
-                zoomScale = ViewerZoom.magnified(from: pinchBaseScale, by: magnification)
+                zoomScale = ViewerZoom.magnified(from: pinchBaseScale, by: magnification,
+                                                  fitScale: pinchFitScale)
                 pinchBaseScale = nil
+                pinchFitScale = nil
                 pinchActive = false
             }
     }

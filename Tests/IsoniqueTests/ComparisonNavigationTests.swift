@@ -7,28 +7,33 @@ import IsoniqueCore
 
 final class ComparisonNavigationTests: XCTestCase {
     func testSynchronizedAndIndependentNavigation() {
-        var pair = ComparisonNavigationPair()
+        let primaryID = UUID(), firstID = UUID(), secondID = UUID()
+        let ids = [primaryID, firstID, secondID]
+        var navigation = ComparisonNavigationSet()
         var reference = ComparisonNavigation(scale: 2)
         reference.moveCenter(to: CGPoint(x: 0.7, y: 0.35))
-        pair.update(reference, for: .reference)
-        XCTAssertEqual(pair.reference, reference)
-        XCTAssertEqual(pair.selected, reference)
+        navigation.update(reference, for: firstID)
+        XCTAssertEqual(navigation.value(for: primaryID), reference)
+        XCTAssertEqual(navigation.value(for: secondID), reference)
 
-        pair.setSynchronized(false)
+        navigation.setSynchronized(false, primaryID: primaryID, visibleIDs: ids)
         var selected = ComparisonNavigation(scale: 0.5)
         selected.moveCenter(to: CGPoint(x: 0.25, y: 0.8))
-        pair.update(selected, for: .selected)
-        XCTAssertEqual(pair.reference, reference)
-        XCTAssertEqual(pair.selected, selected)
+        navigation.update(selected, for: secondID)
+        XCTAssertEqual(navigation.value(for: primaryID), reference)
+        XCTAssertEqual(navigation.value(for: firstID), reference)
+        XCTAssertEqual(navigation.value(for: secondID), selected)
 
-        pair.setSynchronized(true)
-        XCTAssertEqual(pair.selected, reference,
-                       "Re-locking navigation makes the reference pane authoritative")
+        navigation.setSynchronized(true, primaryID: primaryID, visibleIDs: ids)
+        XCTAssertEqual(navigation.value(for: secondID), reference,
+                       "Re-locking navigation makes the Primary pane authoritative")
         reference.toggleActualPixels()
-        pair.update(reference, for: .selected)
-        XCTAssertNil(pair.reference.scale)
-        XCTAssertEqual(pair.reference.center, CGPoint(x: 0.5, y: 0.5))
-        XCTAssertEqual(pair.selected, pair.reference)
+        navigation.update(reference, for: firstID)
+        XCTAssertNil(navigation.value(for: primaryID).scale)
+        XCTAssertEqual(navigation.value(for: secondID).center, CGPoint(x: 0.5, y: 0.5))
+        navigation.setSynchronized(false, primaryID: primaryID, visibleIDs: ids)
+        navigation.retain([primaryID, secondID])
+        XCTAssertNil(navigation.independent[firstID])
     }
 
     func testNormalizedPanMatchesDifferentAspectRatiosAndClampsEdges() {
@@ -50,20 +55,25 @@ final class ComparisonNavigationTests: XCTestCase {
         XCTAssertEqual(navigation.center, CGPoint(x: 0.5, y: 0.5))
         navigation.moveCenter(to: CGPoint(x: -1, y: 2))
         XCTAssertEqual(navigation.center, CGPoint(x: 0, y: 1))
+        XCTAssertEqual(ComparisonLayout.columnCount(width: 700, photoCount: 4), 2)
+        XCTAssertEqual(ComparisonLayout.columnCount(width: 1200, photoCount: 4), 3)
+        XCTAssertEqual(ComparisonLayout.columnCount(width: 1600, photoCount: 2), 2)
     }
 
-    func testSmallTrackpadDeltasAccumulateFromFitAcrossTheGesture() {
+    func testSmallTrackpadDeltasAccumulateFromFitAcrossTheGesture() throws {
         var session = ComparisonMagnificationSession()
-        let first = session.sample(current: nil, delta: 0.01, began: true, ended: false)
-        XCTAssertNil(first.base)
+        let fitScale: CGFloat = 0.2
+        let first = session.sample(current: fitScale, delta: 0.01, began: true, ended: false)
+        XCTAssertEqual(first.base, fitScale)
         XCTAssertEqual(first.factor, 1.01, accuracy: 0.000_001)
-        let second = session.sample(current: nil, delta: 0.01, began: false, ended: false)
+        let second = session.sample(current: fitScale, delta: 0.01, began: false, ended: false)
         XCTAssertEqual(second.factor, 1.0201, accuracy: 0.000_001)
-        let third = session.sample(current: nil, delta: 0.01, began: false, ended: false)
+        let third = session.sample(current: fitScale, delta: 0.01, began: false, ended: false)
         XCTAssertEqual(third.factor, 1.030301, accuracy: 0.000_001)
-        XCTAssertEqual(try XCTUnwrap(ViewerZoom.magnified(from: third.base, by: third.factor)),
-                       third.factor, accuracy: 0.000_001)
-        _ = session.sample(current: nil, delta: 0, began: false, ended: true)
+        XCTAssertEqual(try XCTUnwrap(ViewerZoom.magnified(from: third.base,
+            by: third.factor, fitScale: fitScale)), fitScale * third.factor, accuracy: 0.000_001)
+        XCTAssertNil(ViewerZoom.magnified(from: third.base, by: 0.99, fitScale: fitScale))
+        _ = session.sample(current: fitScale, delta: 0, began: false, ended: true)
         XCTAssertFalse(session.active)
         XCTAssertEqual(session.factor, 1)
     }
@@ -165,12 +175,13 @@ final class ComparisonNavigationTests: XCTestCase {
         let secondExport = folder.appendingPathComponent("After-navigation.png")
         try Renderer.export(wide, repository: repository, to: firstExport, options: options)
         XCTAssertEqual(try pixels(full.rendered), try pixels(decode(firstExport)))
-        var pair = ComparisonNavigationPair()
-        pair.update(ComparisonNavigation(scale: 4, center: CGPoint(x: 0.8, y: 0.2)),
-                    for: .reference)
-        pair.setSynchronized(false)
-        pair.update(ComparisonNavigation(scale: 0.5, center: CGPoint(x: 0.2, y: 0.8)),
-                    for: .selected)
+        let wideID = wide.id, tallID = tall.id
+        var navigation = ComparisonNavigationSet()
+        navigation.update(ComparisonNavigation(scale: 4, center: CGPoint(x: 0.8, y: 0.2)),
+                          for: wideID)
+        navigation.setSynchronized(false, primaryID: wideID, visibleIDs: [wideID, tallID])
+        navigation.update(ComparisonNavigation(scale: 0.5, center: CGPoint(x: 0.2, y: 0.8)),
+                          for: tallID)
         try Renderer.export(wide, repository: repository, to: secondExport, options: options)
         XCTAssertEqual(try LibraryRepository.digest(firstExport),
                        try LibraryRepository.digest(secondExport))

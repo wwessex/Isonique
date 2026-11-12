@@ -74,6 +74,10 @@ extension Workspace {
         switch press.key {
         case .leftArrow, .rightArrow:
             guard !batchMode, !photos.isEmpty else { return .ignored }
+            if comparisonID != nil {
+                moveComparisonSelection(by: press.key == .leftArrow ? -1 : 1)
+                return .handled
+            }
             let visible = photos.filter { $0.id != comparisonID }
             if let index = visible.firstIndex(where: { $0.id == selection }) {
                 let next = index + (press.key == .leftArrow ? -1 : 1)
