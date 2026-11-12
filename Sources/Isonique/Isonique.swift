@@ -307,6 +307,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         saved.upgradeForAdvancedLocalBrushes()
         saved.upgradeForExtendedLocalBrushes()
         saved.upgradeForLocalDetailBrushes()
+        saved.upgradeForLocalContrastBlur()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -766,6 +767,8 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 Button("Sharpening Brush") { workspace.chooseBrush(.sharpening) }.disabled(!workspace.canBrush)
                 Button("Luminance Noise Reduction Brush") { workspace.chooseBrush(.noiseReduction) }
                     .disabled(!workspace.canBrush)
+                Button("Contrast Brush") { workspace.chooseBrush(.contrast) }.disabled(!workspace.canBrush)
+                Button("Blur Brush") { workspace.chooseBrush(.blur) }.disabled(!workspace.canBrush)
                 Button("Repair Spot") { workspace.chooseSpotRemoval(.repair) }.disabled(!workspace.canSpotRemove)
                 Button("Clone Spot") { workspace.chooseSpotRemoval(.clone) }.disabled(!workspace.canSpotRemove)
                 Button("Manual Red-Eye") { workspace.chooseRedEyeCorrection() }.disabled(!workspace.canCorrectRedEye)
@@ -1474,6 +1477,8 @@ struct EditBar: View {
                     Button("Definition Brush") { model.chooseBrush(.definition) }
                     Button("Sharpening Brush") { model.chooseBrush(.sharpening) }
                     Button("Luminance Noise Reduction Brush") { model.chooseBrush(.noiseReduction) }
+                    Button("Contrast Brush") { model.chooseBrush(.contrast) }
+                    Button("Blur Brush") { model.chooseBrush(.blur) }
                 } label: {
                     Label("Brush", systemImage: "paintbrush.pointed")
                         .foregroundStyle(model.tool == .brush ? Color.accentColor : .primary)
@@ -2047,6 +2052,10 @@ struct Inspector: View {
                         GridRow {
                             Button("Sharpening Brush") { model.chooseBrush(.sharpening) }
                             Button("Noise Reduction Brush") { model.chooseBrush(.noiseReduction) }
+                        }
+                        GridRow {
+                            Button("Contrast Brush") { model.chooseBrush(.contrast) }
+                            Button("Blur Brush") { model.chooseBrush(.blur) }
                         }
                     }.disabled(!model.canBrush)
                     Text("Paint in the Viewer. Each stroke is one undo step.")

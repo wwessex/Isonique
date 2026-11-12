@@ -62,6 +62,55 @@ extension Renderer {
         return try applySharpening(source, sharpening: 1, edgeSharpening: 0, mask: mask)
     }
 
+    static func applyLocalContrast(_ source: CGImage, mask: LocalAdjustmentMask?) throws -> CGImage {
+        guard mask?.isActive(.contrast) == true else { return source }
+        return try withDetailPixels(source, operation: "local contrast") { pixels, width, height in
+            for y in 0..<height {
+                if y.isMultiple(of: 64) { try Task.checkCancellation() }
+                for x in 0..<width {
+                    let offset = (y * width + x) * 4
+                    let alpha = Double(pixels[offset + 3]) / 255
+                    guard alpha > 0 else { continue }
+                    let amount = mask?.coverage(for: .contrast, x: x, y: y,
+                        imageWidth: width, imageHeight: height) ?? 0
+                    guard amount > 0 else { continue }
+                    let channels = straightChannels(pixels, offset: offset, alpha: alpha)
+                    let current = luminance(channels)
+                    let pivot = 128.0 / 255
+                    let target = pivot + (current - pivot) * (1 + amount)
+                    writeLuminanceDelta(target - current, channels: channels, alpha: alpha,
+                                        pixels: pixels, offset: offset)
+                }
+            }
+        }
+    }
+
+    static func applyLocalBlur(_ source: CGImage, mask: LocalAdjustmentMask?) throws -> CGImage {
+        guard mask?.isActive(.blur) == true else { return source }
+        return try withDetailPixels(source, operation: "local blur") { pixels, width, height in
+            var blurred = [Float](repeating: 0, count: width * height)
+            var temporary = blurred
+            try blurredLuminance(pixels, width: width, height: height,
+                                 output: &blurred, temporary: &temporary)
+            for y in 0..<height {
+                if y.isMultiple(of: 64) { try Task.checkCancellation() }
+                for x in 0..<width {
+                    let offset = (y * width + x) * 4
+                    let alpha = Double(pixels[offset + 3]) / 255
+                    guard alpha > 0 else { continue }
+                    let amount = mask?.coverage(for: .blur, x: x, y: y,
+                        imageWidth: width, imageHeight: height) ?? 0
+                    guard amount > 0 else { continue }
+                    let channels = straightChannels(pixels, offset: offset, alpha: alpha)
+                    let current = luminance(channels)
+                    let delta = (Double(blurred[y * width + x]) - current) * amount
+                    writeLuminanceDelta(delta, channels: channels, alpha: alpha,
+                                        pixels: pixels, offset: offset)
+                }
+            }
+        }
+    }
+
     private static func applySharpening(_ source: CGImage, sharpening: Double, edgeSharpening: Double,
                                         mask: LocalAdjustmentMask?) throws -> CGImage {
         let sharpening = boundedDetail(sharpening)

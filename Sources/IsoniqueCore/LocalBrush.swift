@@ -9,6 +9,8 @@ public enum LocalBrushAdjustment: String, Codable, CaseIterable, Identifiable {
     case definition = "Definition"
     case sharpening = "Sharpening"
     case noiseReduction = "Noise Reduction"
+    case contrast = "Contrast"
+    case blur = "Blur"
     public var id: Self { self }
 }
 
@@ -302,6 +304,8 @@ public extension Renderer {
         case .definition: color = (40, 205, 150)
         case .sharpening: color = (255, 135, 45)
         case .noiseReduction: color = (145, 95, 235)
+        case .contrast: color = (35, 190, 225)
+        case .blur: color = (145, 150, 165)
         }
         for y in 0..<decoded.height {
             if y.isMultiple(of: 64) { try Task.checkCancellation() }

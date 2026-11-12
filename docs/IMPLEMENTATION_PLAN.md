@@ -371,9 +371,15 @@ Sharpening and Luminance Noise Reduction now join the four existing local modes 
 
 The two masks remain independent and compose in a stable order where they overlap: local reduction runs before local sharpening. Constant fields remain unchanged, edge-aware strokes do not cross a sampled high-contrast boundary and zero mask opacity bypasses each operation. Viewer previews and edited exports use this one CPU path; originals and Original-format exports remain byte-identical. Format 29 distinguishes the two new adjustment identifiers so format-28 builds reject those catalogues cleanly.
 
+## Local Contrast and Blur brushes
+
+Contrast and Blur complete two more Aperture-style local operations using the same source-coordinate strokes, edge-aware mask sampling, erasing, inversion, post-stroke opacity and Viewer-only overlays as the existing brushes. With eight modes, the Viewer uses a compact labelled picker instead of compressing every name into one segmented row. The Photos menu, editing strip and Inspector expose both operations directly.
+
+Contrast expands luminance around the exact 8-bit sRGB midpoint after Curves and Levels, preserving a uniform 128-grey field while separating shadows and highlights at maximum strength. Blur blends toward the shared separable luminance neighbourhood after local and global sharpening, retaining the source's colour differences. Zero opacity bypasses both effects. Edge-aware masks protect the opposite side of a high-contrast boundary, and overlaps compose deterministically with Contrast before Blur. Format 30 distinguishes the two identifiers so format-29 builds reject incompatible recipes cleanly.
+
 ## Next checkpoint
 
-Add non-destructive local Contrast and Blur brush modes using the shared edge-aware mask infrastructure. Test flat fields, high-contrast boundaries, neutral and maximum strengths, independent and overlapping masks, erase/invert/opacity, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
+Add non-destructive local Tint and Skin Smoothing brush modes using the shared edge-aware mask infrastructure. Add persisted Tint hue and saturation plus Skin Smoothing amount and detail-preservation controls. Test neutral and maximum settings, skin-tone and non-skin fixtures, high-contrast boundaries, overlapping masks, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
 
 ## Pending physical camera checks
 

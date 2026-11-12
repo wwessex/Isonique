@@ -223,6 +223,10 @@ public extension Adjustments {
         localBrushes.contains { $0.adjustment == .sharpening || $0.adjustment == .noiseReduction }
     }
 
+    var hasLocalContrastBlurRecipe: Bool {
+        localBrushes.contains { $0.adjustment == .contrast || $0.adjustment == .blur }
+    }
+
     var hasLensEffects: Bool {
         chromaticAberrationRedCyan != 0 || chromaticAberrationBlueYellow != 0 || vignette != 0 || devignette != 0
     }
@@ -457,6 +461,10 @@ public struct Library: Codable {
         if version < 29, hasRecipe(where: \.hasLocalDetailBrushRecipe) { version = 29 }
     }
 
+    public mutating func upgradeForLocalContrastBlur() {
+        if version < 30, hasRecipe(where: \.hasLocalContrastBlurRecipe) { version = 30 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -500,6 +508,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 30, hasRecipe(where: \.hasLocalContrastBlurRecipe) { throw LibraryError.unsupportedVersion }
         if version < 29, hasRecipe(where: \.hasLocalDetailBrushRecipe) { throw LibraryError.unsupportedVersion }
         if version < 28, hasRecipe(where: \.hasExtendedLocalBrushRecipe) { throw LibraryError.unsupportedVersion }
         if version < 27, hasRecipe(where: \.hasAdvancedLocalBrushRecipe) { throw LibraryError.unsupportedVersion }
@@ -523,7 +532,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...29).contains(version) { return }
+        if (7...30).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -702,6 +711,7 @@ public final class LibraryRepository {
         normalized.upgradeForAdvancedLocalBrushes()
         normalized.upgradeForExtendedLocalBrushes()
         normalized.upgradeForLocalDetailBrushes()
+        normalized.upgradeForLocalContrastBlur()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
@@ -937,7 +947,8 @@ public enum Renderer {
         let toneTable = (0...255).map { TonalTools.map(Double($0) / 255, adjustments: adjustments) }
         let levels = try TonalTools.applying(monochrome, table: toneTable, curves: adjustments.channelCurves,
                                              channelLevels: adjustments.channelLevels)
-        let aberration = try applyChromaticAberration(levels,
+        let locallyContrasted = try applyLocalContrast(levels, mask: localMask)
+        let aberration = try applyChromaticAberration(locallyContrasted,
             redCyan: adjustments.chromaticAberrationRedCyan,
             blueYellow: adjustments.chromaticAberrationBlueYellow)
         let illuminated = try applyDevignette(aberration, amount: adjustments.devignette)
@@ -949,7 +960,8 @@ public enum Renderer {
         let detailed = try applySharpening(retouched, sharpening: adjustments.sharpening,
                                           edgeSharpening: adjustments.edgeSharpening)
         let locallyDetailed = try applyLocalSharpening(detailed, mask: localMask)
-        let image = try applyGeometry(applyLens(locallyDetailed, amount: geometry.lensAmount), geometry: geometry)
+        let locallyBlurred = try applyLocalBlur(locallyDetailed, mask: localMask)
+        let image = try applyGeometry(applyLens(locallyBlurred, amount: geometry.lensAmount), geometry: geometry)
         let finished = try applyVignette(image, amount: adjustments.vignette)
         return (finished, geometry)
     }

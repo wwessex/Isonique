@@ -11,6 +11,8 @@ private extension LocalBrushAdjustment {
         case .definition: return .mint
         case .sharpening: return .orange
         case .noiseReduction: return .purple
+        case .contrast: return .cyan
+        case .blur: return .gray
         }
     }
 }
@@ -95,7 +97,7 @@ struct BrushControls: View {
             HStack {
                 Picker("Brush adjustment", selection: $adjustment) {
                     ForEach(LocalBrushAdjustment.allCases) { Text($0.rawValue).tag($0) }
-                }.labelsHidden().pickerStyle(.segmented).frame(maxWidth: 480)
+                }.pickerStyle(.menu).frame(width: 180)
                 Toggle("Erase", isOn: $erasing).toggleStyle(.button).help("Erase from the selected mask")
                 Toggle("Edge Aware", isOn: $edgeAware).toggleStyle(.button)
                     .help("Protect edges whose luminance differs from the start of the stroke")
