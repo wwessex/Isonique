@@ -121,6 +121,7 @@ public struct Adjustments: Codable, Equatable {
     public var localBrushMaskSettings: [LocalBrushAdjustment: LocalBrushMaskSettings] = [:]
     public var localTintSettings = LocalTintSettings()
     public var localSkinSmoothingSettings = LocalSkinSmoothingSettings()
+    public var localBrushInstances: [LocalBrushInstance] = []
     public var spotRemovals: [SpotRemoval] = []
     public var sharpening: Double = 0
     public var edgeSharpening: Double = 0
@@ -132,7 +133,7 @@ public struct Adjustments: Codable, Equatable {
     public var vignette: Double = 0
     public var devignette: Double = 0
     public init() {}
-    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, temperatureKelvin, tint, targetedColors, blackAndWhiteEnabled, blackAndWhiteRed, blackAndWhiteGreen, blackAndWhiteBlue, monochromeTintHue, monochromeTintStrength, redEyeCorrections, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, localBrushMaskSettings, localTintSettings, localSkinSmoothingSettings, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction, definition, definitionRadius, chromaticAberrationRedCyan, chromaticAberrationBlueYellow, vignette, devignette }
+    enum CodingKeys: String, CodingKey { case exposure, brightness, vibrancy, sepia, contrast, saturation, warmth, temperatureKelvin, tint, targetedColors, blackAndWhiteEnabled, blackAndWhiteRed, blackAndWhiteGreen, blackAndWhiteBlue, monochromeTintHue, monochromeTintStrength, redEyeCorrections, shadows, highlights, quarterTurns, flipHorizontal, flipVertical, straighten, crop, lensDistortion, blackPoint, whitePoint, gamma, curveShadows, curveMidtones, curveHighlights, channelCurves, channelLevels, levelQuarterTones, localBrushes, localBrushMaskSettings, localTintSettings, localSkinSmoothingSettings, localBrushInstances, spotRemovals, sharpening, edgeSharpening, luminanceNoiseReduction, definition, definitionRadius, chromaticAberrationRedCyan, chromaticAberrationBlueYellow, vignette, devignette }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         exposure = try values.decodeIfPresent(Double.self, forKey: .exposure) ?? 0
@@ -178,6 +179,8 @@ public struct Adjustments: Codable, Equatable {
                                                         forKey: .localTintSettings) ?? LocalTintSettings()
         localSkinSmoothingSettings = try values.decodeIfPresent(LocalSkinSmoothingSettings.self,
             forKey: .localSkinSmoothingSettings) ?? LocalSkinSmoothingSettings()
+        localBrushInstances = try values.decodeIfPresent([LocalBrushInstance].self,
+                                                          forKey: .localBrushInstances) ?? []
         spotRemovals = try values.decodeIfPresent([SpotRemoval].self, forKey: .spotRemovals) ?? []
         sharpening = try values.decodeIfPresent(Double.self, forKey: .sharpening) ?? 0
         edgeSharpening = try values.decodeIfPresent(Double.self, forKey: .edgeSharpening) ?? 0
@@ -238,6 +241,8 @@ public extension Adjustments {
             localTintSettings != LocalTintSettings() ||
             localSkinSmoothingSettings != LocalSkinSmoothingSettings()
     }
+
+    var hasLocalBrushInstancesRecipe: Bool { !localBrushInstances.isEmpty }
 
     var hasLensEffects: Bool {
         chromaticAberrationRedCyan != 0 || chromaticAberrationBlueYellow != 0 || vignette != 0 || devignette != 0
@@ -314,6 +319,7 @@ public extension Adjustments {
             result.localBrushMaskSettings = localBrushMaskSettings
             result.localTintSettings = localTintSettings
             result.localSkinSmoothingSettings = localSkinSmoothingSettings
+            result.localBrushInstances = localBrushInstances
         }
         if groups.contains(.retouch) { result.spotRemovals = spotRemovals }
         if groups.contains(.detail) {
@@ -483,6 +489,10 @@ public struct Library: Codable {
         if version < 31, hasRecipe(where: \.hasLocalTintSkinRecipe) { version = 31 }
     }
 
+    public mutating func upgradeForLocalBrushInstances() {
+        if version < 32, hasRecipe(where: \.hasLocalBrushInstancesRecipe) { version = 32 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -526,6 +536,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 32, hasRecipe(where: \.hasLocalBrushInstancesRecipe) { throw LibraryError.unsupportedVersion }
         if version < 31, hasRecipe(where: \.hasLocalTintSkinRecipe) { throw LibraryError.unsupportedVersion }
         if version < 30, hasRecipe(where: \.hasLocalContrastBlurRecipe) { throw LibraryError.unsupportedVersion }
         if version < 29, hasRecipe(where: \.hasLocalDetailBrushRecipe) { throw LibraryError.unsupportedVersion }
@@ -551,7 +562,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...31).contains(version) { return }
+        if (7...32).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -732,6 +743,7 @@ public final class LibraryRepository {
         normalized.upgradeForLocalDetailBrushes()
         normalized.upgradeForLocalContrastBlur()
         normalized.upgradeForLocalTintSkin()
+        normalized.upgradeForLocalBrushInstances()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
@@ -956,8 +968,8 @@ public enum Renderer {
 
     public static func renderWithGeometry(_ url: URL, adjustments: Adjustments,
                                           maxDimension: CGFloat? = nil) throws -> (image: CGImage, geometry: PhotoGeometry) {
-        let (toned, geometry, localMask) = try renderToneInput(url, adjustments: adjustments,
-                                                               maxDimension: maxDimension)
+        let (toned, geometry, localBrushes) = try renderToneInput(url, adjustments: adjustments,
+                                                                  maxDimension: maxDimension)
         let corrected = try applyRedEyeCorrections(toned, corrections: adjustments.redEyeCorrections)
         let colored = try applyTargetedColors(corrected, targets: adjustments.targetedColors)
         let monochrome = try applyBlackAndWhite(colored, enabled: adjustments.blackAndWhiteEnabled,
@@ -967,24 +979,42 @@ public enum Renderer {
         let toneTable = (0...255).map { TonalTools.map(Double($0) / 255, adjustments: adjustments) }
         let levels = try TonalTools.applying(monochrome, table: toneTable, curves: adjustments.channelCurves,
                                              channelLevels: adjustments.channelLevels)
-        let locallyContrasted = try applyLocalContrast(levels, mask: localMask)
+        var locallyContrasted = levels
+        for brush in localBrushes where brush.recipe.adjustment == .contrast {
+            locallyContrasted = try applyLocalContrast(locallyContrasted, mask: brush.mask)
+        }
         let aberration = try applyChromaticAberration(locallyContrasted,
             redCyan: adjustments.chromaticAberrationRedCyan,
             blueYellow: adjustments.chromaticAberrationBlueYellow)
         let illuminated = try applyDevignette(aberration, amount: adjustments.devignette)
         let reduced = try applyLuminanceNoiseReduction(illuminated, amount: adjustments.luminanceNoiseReduction)
-        let locallyReduced = try applyLocalLuminanceNoiseReduction(reduced, mask: localMask)
+        var locallyReduced = reduced
+        for brush in localBrushes where brush.recipe.adjustment == .noiseReduction {
+            locallyReduced = try applyLocalLuminanceNoiseReduction(locallyReduced, mask: brush.mask)
+        }
         let defined = try applyDefinition(locallyReduced, strength: adjustments.definition,
                                           radius: adjustments.definitionRadius)
         let retouched = try applySpotRemovals(defined, spots: adjustments.spotRemovals)
         let detailed = try applySharpening(retouched, sharpening: adjustments.sharpening,
                                           edgeSharpening: adjustments.edgeSharpening)
-        let locallyDetailed = try applyLocalSharpening(detailed, mask: localMask)
-        let locallySmoothed = try applyLocalSkinSmoothing(locallyDetailed,
-            settings: adjustments.localSkinSmoothingSettings, mask: localMask)
-        let locallyTinted = try applyLocalTint(locallySmoothed, settings: adjustments.localTintSettings,
-                                               mask: localMask)
-        let locallyBlurred = try applyLocalBlur(locallyTinted, mask: localMask)
+        var locallyDetailed = detailed
+        for brush in localBrushes where brush.recipe.adjustment == .sharpening {
+            locallyDetailed = try applyLocalSharpening(locallyDetailed, mask: brush.mask)
+        }
+        var locallySmoothed = locallyDetailed
+        for brush in localBrushes where brush.recipe.adjustment == .skinSmoothing {
+            locallySmoothed = try applyLocalSkinSmoothing(locallySmoothed,
+                settings: brush.recipe.skinSmoothingSettings, mask: brush.mask)
+        }
+        var locallyTinted = locallySmoothed
+        for brush in localBrushes where brush.recipe.adjustment == .tint {
+            locallyTinted = try applyLocalTint(locallyTinted, settings: brush.recipe.tintSettings,
+                                               mask: brush.mask)
+        }
+        var locallyBlurred = locallyTinted
+        for brush in localBrushes where brush.recipe.adjustment == .blur {
+            locallyBlurred = try applyLocalBlur(locallyBlurred, mask: brush.mask)
+        }
         let image = try applyGeometry(applyLens(locallyBlurred, amount: geometry.lensAmount), geometry: geometry)
         let finished = try applyVignette(image, amount: adjustments.vignette)
         return (finished, geometry)
@@ -1021,7 +1051,7 @@ public enum Renderer {
     }
 
     static func renderToneInput(_ url: URL, adjustments: Adjustments,
-                                maxDimension: CGFloat?) throws -> (CGImage, PhotoGeometry, LocalAdjustmentMask?) {
+                                maxDimension: CGFloat?) throws -> (CGImage, PhotoGeometry, [RenderedLocalBrushInstance]) {
         try Task.checkCancellation()
         guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
               let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
@@ -1036,11 +1066,11 @@ public enum Renderer {
               let data = context.data else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
         context.draw(decoded, in: CGRect(x: 0, y: 0, width: decoded.width, height: decoded.height))
         let pixels = data.bindMemory(to: UInt8.self, capacity: decoded.width * decoded.height * 4)
-        let edgeMap = adjustments.localBrushes.contains(where: \.edgeAware)
+        let recipes = adjustments.effectiveLocalBrushInstances
+        let edgeMap = recipes.lazy.flatMap(\.strokes).contains(where: \.edgeAware)
             ? LocalBrushEdgeMap(pixels: UnsafePointer(pixels), width: decoded.width, height: decoded.height)
             : nil
-        let mask = try LocalAdjustmentMask(strokes: adjustments.localBrushes,
-            settings: adjustments.localBrushMaskSettings, sourceWidth: sourceWidth,
+        let localBrushes = try adjustments.renderedLocalBrushInstances(sourceWidth: sourceWidth,
             sourceHeight: sourceHeight, edgeMap: edgeMap)
         let globalMultiplier = pow(2.0, adjustments.exposure)
         let brightness = adjustments.brightness.isFinite ? min(1, max(-1, adjustments.brightness)) : 0
@@ -1055,8 +1085,13 @@ public enum Renderer {
             if offset.isMultiple(of: 65_536) { try Task.checkCancellation() }
             let alpha = Double(pixels[offset + 3]) / 255
             guard alpha > 0 else { continue }
-            let localEV = mask?.exposure(x: (offset / 4) % decoded.width, y: (offset / 4) / decoded.width,
-                                         imageWidth: decoded.width, imageHeight: decoded.height) ?? 0
+            let pixelX = (offset / 4) % decoded.width, pixelY = (offset / 4) / decoded.width
+            let localEV = localBrushes.lazy
+                .filter { $0.recipe.adjustment == .dodge || $0.recipe.adjustment == .burn }
+                .reduce(0) { value, brush in
+                    value + brush.mask.exposure(x: pixelX, y: pixelY,
+                        imageWidth: decoded.width, imageHeight: decoded.height)
+                }
             let multiplier = localEV == 0 ? globalMultiplier : globalMultiplier * pow(2, localEV)
             let red = expose(Double(pixels[offset]) / (255 * alpha), multiplier: multiplier)
             let green = expose(Double(pixels[offset + 1]) / (255 * alpha), multiplier: multiplier)
@@ -1073,10 +1108,10 @@ public enum Renderer {
                 let relativeChroma = peak > 0 ? (peak - min(red, green, blue)) / peak : 0
                 saturation *= 1 + vibrancy * (1 - relativeChroma)
             }
-            let localSaturation = mask?.coverage(for: .saturation,
-                x: (offset / 4) % decoded.width, y: (offset / 4) / decoded.width,
-                imageWidth: decoded.width, imageHeight: decoded.height) ?? 0
-            saturation *= 1 + localSaturation
+            for brush in localBrushes where brush.recipe.adjustment == .saturation {
+                saturation *= 1 + brush.mask.coverage(for: .saturation, x: pixelX, y: pixelY,
+                    imageWidth: decoded.width, imageHeight: decoded.height)
+            }
             let sepiaLuma = sepia == 0 ? 0 : min(1, max(0, (luminance - 0.5) * adjustments.contrast + 0.5 + lift))
             let warmth = 0.56 * sepiaLuma * (1 - sepiaLuma)
             func encode(_ channel: Double, sepiaTint: Double) -> UInt8 {
@@ -1091,9 +1126,12 @@ public enum Renderer {
         }
         guard let result = context.makeImage() else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
         let toned = try applyTone(result, adjustments: adjustments)
-        let locallyDefined = try applyLocalDefinition(toned, mask: mask)
+        var locallyDefined = toned
+        for brush in localBrushes where brush.recipe.adjustment == .definition {
+            locallyDefined = try applyLocalDefinition(locallyDefined, mask: brush.mask)
+        }
         return (locallyDefined, PhotoGeometry(width: decoded.width, height: decoded.height,
-                                              adjustments: adjustments), mask)
+                                              adjustments: adjustments), localBrushes)
     }
     /// Shared independent sRGB tonal treatment for previews, exports and GPU-free hosts.
     /// Neutral settings bypass conversion; these are not Apple's proprietary RAW formulas.

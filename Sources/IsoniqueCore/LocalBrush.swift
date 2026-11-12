@@ -119,9 +119,105 @@ public struct LocalBrushMaskSettings: Codable, Equatable {
     var boundedOpacity: Double { opacity.isFinite ? min(1, max(0, opacity)) : 1 }
 }
 
+/// One independently ordered local adjustment, including its own mask and parameters.
+/// Format-31 recipes are converted to one instance per adjustment only when an instance
+/// operation is first used, so opening an older catalogue does not rewrite it.
+public struct LocalBrushInstance: Codable, Equatable, Identifiable {
+    public var id: UUID
+    public var name: String
+    public var adjustment: LocalBrushAdjustment
+    public var enabled: Bool
+    public var strokes: [LocalBrushStroke]
+    public var maskSettings: LocalBrushMaskSettings
+    public var tintSettings: LocalTintSettings
+    public var skinSmoothingSettings: LocalSkinSmoothingSettings
+
+    public init(id: UUID = UUID(), name: String, adjustment: LocalBrushAdjustment,
+                enabled: Bool = true, strokes: [LocalBrushStroke] = [],
+                maskSettings: LocalBrushMaskSettings = LocalBrushMaskSettings(),
+                tintSettings: LocalTintSettings = LocalTintSettings(),
+                skinSmoothingSettings: LocalSkinSmoothingSettings = LocalSkinSmoothingSettings()) {
+        self.id = id
+        self.name = name
+        self.adjustment = adjustment
+        self.enabled = enabled
+        self.strokes = strokes
+        self.maskSettings = maskSettings
+        self.tintSettings = tintSettings
+        self.skinSmoothingSettings = skinSmoothingSettings
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, adjustment, enabled, strokes, maskSettings, tintSettings, skinSmoothingSettings
+    }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        adjustment = try values.decode(LocalBrushAdjustment.self, forKey: .adjustment)
+        name = try values.decodeIfPresent(String.self, forKey: .name) ?? adjustment.rawValue
+        enabled = try values.decodeIfPresent(Bool.self, forKey: .enabled) ?? true
+        strokes = try values.decodeIfPresent([LocalBrushStroke].self, forKey: .strokes) ?? []
+        maskSettings = try values.decodeIfPresent(LocalBrushMaskSettings.self,
+                                                   forKey: .maskSettings) ?? LocalBrushMaskSettings()
+        tintSettings = try values.decodeIfPresent(LocalTintSettings.self,
+                                                   forKey: .tintSettings) ?? LocalTintSettings()
+        skinSmoothingSettings = try values.decodeIfPresent(LocalSkinSmoothingSettings.self,
+            forKey: .skinSmoothingSettings) ?? LocalSkinSmoothingSettings()
+    }
+
+    public var displayName: String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? adjustment.rawValue : trimmed
+    }
+
+    static func legacyID(for adjustment: LocalBrushAdjustment) -> UUID {
+        let position = (LocalBrushAdjustment.allCases.firstIndex(of: adjustment) ?? 0) + 1
+        return UUID(uuidString: "00000000-0000-4000-8000-\(String(format: "%012d", position))")!
+    }
+}
+
 public extension Adjustments {
     func localBrushSettings(for adjustment: LocalBrushAdjustment) -> LocalBrushMaskSettings {
-        localBrushMaskSettings[adjustment] ?? LocalBrushMaskSettings()
+        if let instance = localBrushInstances.first(where: { $0.adjustment == adjustment }) {
+            return instance.maskSettings
+        }
+        return localBrushMaskSettings[adjustment] ?? LocalBrushMaskSettings()
+    }
+
+    func localBrushInstance(id: UUID?) -> LocalBrushInstance? {
+        guard let id else { return nil }
+        return effectiveLocalBrushInstances.first { $0.id == id }
+    }
+
+    func localBrushInstances(for adjustment: LocalBrushAdjustment) -> [LocalBrushInstance] {
+        effectiveLocalBrushInstances.filter { $0.adjustment == adjustment }
+    }
+
+    var effectiveLocalBrushInstances: [LocalBrushInstance] {
+        guard localBrushInstances.isEmpty else { return localBrushInstances }
+        return LocalBrushAdjustment.allCases.compactMap { adjustment in
+            let strokes = localBrushes.filter { $0.adjustment == adjustment }
+            let hasSettings = localBrushMaskSettings[adjustment] != nil ||
+                (adjustment == .tint && localTintSettings != LocalTintSettings()) ||
+                (adjustment == .skinSmoothing && localSkinSmoothingSettings != LocalSkinSmoothingSettings())
+            guard !strokes.isEmpty || hasSettings else { return nil }
+            return LocalBrushInstance(id: LocalBrushInstance.legacyID(for: adjustment),
+                name: adjustment.rawValue, adjustment: adjustment, strokes: strokes,
+                maskSettings: localBrushMaskSettings[adjustment] ?? LocalBrushMaskSettings(),
+                tintSettings: adjustment == .tint ? localTintSettings : LocalTintSettings(),
+                skinSmoothingSettings: adjustment == .skinSmoothing
+                    ? localSkinSmoothingSettings : LocalSkinSmoothingSettings())
+        }
+    }
+
+    mutating func migrateLocalBrushInstances() {
+        guard localBrushInstances.isEmpty else { return }
+        localBrushInstances = effectiveLocalBrushInstances
+        localBrushes = []
+        localBrushMaskSettings = [:]
+        localTintSettings = LocalTintSettings()
+        localSkinSmoothingSettings = LocalSkinSmoothingSettings()
     }
 }
 
@@ -295,13 +391,35 @@ struct LocalAdjustmentMask {
     }
 }
 
+struct RenderedLocalBrushInstance {
+    let recipe: LocalBrushInstance
+    let mask: LocalAdjustmentMask
+}
+
+extension Adjustments {
+    func renderedLocalBrushInstances(sourceWidth: Int, sourceHeight: Int,
+                                     edgeMap: LocalBrushEdgeMap?) throws -> [RenderedLocalBrushInstance] {
+        try effectiveLocalBrushInstances.compactMap { instance in
+            guard instance.enabled,
+                  let mask = try LocalAdjustmentMask(strokes: instance.strokes,
+                    settings: [instance.adjustment: instance.maskSettings], sourceWidth: sourceWidth,
+                    sourceHeight: sourceHeight, edgeMap: edgeMap) else { return nil }
+            return RenderedLocalBrushInstance(recipe: instance, mask: mask)
+        }
+    }
+}
+
 public extension Renderer {
     /// Viewer-only coloured mask overlay. It is never part of the edited export pipeline.
     static func localBrushMaskOverlay(_ url: URL, adjustments: Adjustments,
                                       adjustment: LocalBrushAdjustment,
+                                      instanceID: UUID? = nil,
                                       maxDimension: CGFloat? = nil) throws -> CGImage? {
         try Task.checkCancellation()
-        guard adjustments.localBrushes.contains(where: { $0.adjustment == adjustment && !$0.erasing && $0.isValid }),
+        let candidates = adjustments.localBrushInstances(for: adjustment)
+        guard let instance = instanceID.flatMap({ id in candidates.first { $0.id == id } }) ?? candidates.first,
+              instance.enabled,
+              instance.strokes.contains(where: { !$0.erasing && $0.isValid }),
               let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any]
         let sourceWidth = properties?[kCGImagePropertyPixelWidth as String] as? Int ?? 1
@@ -326,11 +444,11 @@ public extension Renderer {
               let overlayData = overlayContext.data else { throw LibraryError.unsupportedImage("brush mask overlay") }
         sourceContext.draw(decoded, in: CGRect(x: 0, y: 0, width: decoded.width, height: decoded.height))
         let sourcePixels = sourceData.bindMemory(to: UInt8.self, capacity: decoded.width * decoded.height * 4)
-        let edgeMap = adjustments.localBrushes.contains(where: \.edgeAware)
+        let edgeMap = instance.strokes.contains(where: \.edgeAware)
             ? LocalBrushEdgeMap(pixels: UnsafePointer(sourcePixels), width: decoded.width, height: decoded.height)
             : nil
-        guard let mask = try LocalAdjustmentMask(strokes: adjustments.localBrushes,
-            settings: adjustments.localBrushMaskSettings, sourceWidth: decoded.width,
+        guard let mask = try LocalAdjustmentMask(strokes: instance.strokes,
+            settings: [adjustment: instance.maskSettings], sourceWidth: decoded.width,
             sourceHeight: decoded.height, edgeMap: edgeMap) else { return nil }
         let overlay = overlayData.bindMemory(to: UInt8.self, capacity: decoded.width * decoded.height * 4)
         let color: (UInt8, UInt8, UInt8)

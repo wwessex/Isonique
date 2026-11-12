@@ -44,33 +44,40 @@ final class LocalTintSkinWorkspaceTests: XCTestCase {
         workspace.setBrushMaskOpacity(0.55, for: .tint)
         workspace.invertBrushMask(.skinSmoothing)
         XCTAssertEqual(workspace.history.undo.count, 6)
-        XCTAssertEqual(workspace.library.version, 31)
-        XCTAssertEqual(workspace.selected?.adjustments.localTintSettings, tintSettings)
-        XCTAssertEqual(workspace.selected?.adjustments.localSkinSmoothingSettings, skinSettings)
+        XCTAssertEqual(workspace.library.version, 32)
+        XCTAssertEqual(workspace.selected?.adjustments.localBrushInstances(for: .tint).first?.tintSettings,
+                       tintSettings)
+        XCTAssertEqual(workspace.selected?.adjustments.localBrushInstances(for: .skinSmoothing).first?
+            .skinSmoothingSettings, skinSettings)
 
         workspace.undoEdit()
         workspace.undoEdit()
         workspace.undoEdit()
-        XCTAssertEqual(workspace.selected?.adjustments.localSkinSmoothingSettings,
-                       LocalSkinSmoothingSettings())
+        XCTAssertEqual(workspace.selected?.adjustments.localBrushInstances(for: .skinSmoothing).first?
+            .skinSmoothingSettings, LocalSkinSmoothingSettings())
         workspace.undoEdit()
-        XCTAssertEqual(workspace.selected?.adjustments.localTintSettings, LocalTintSettings())
+        XCTAssertEqual(workspace.selected?.adjustments.localBrushInstances(for: .tint).first?.tintSettings,
+                       LocalTintSettings())
         workspace.redoEdit()
         workspace.redoEdit()
         workspace.redoEdit()
         workspace.redoEdit()
-        XCTAssertEqual(workspace.selected?.adjustments.localTintSettings, tintSettings)
-        XCTAssertEqual(workspace.selected?.adjustments.localSkinSmoothingSettings, skinSettings)
+        XCTAssertEqual(workspace.selected?.adjustments.localBrushInstances(for: .tint).first?.tintSettings,
+                       tintSettings)
+        XCTAssertEqual(workspace.selected?.adjustments.localBrushInstances(for: .skinSmoothing).first?
+            .skinSmoothingSettings, skinSettings)
         XCTAssertEqual(workspace.selected?.adjustments.localBrushSettings(for: .tint).opacity, 0.55)
         XCTAssertTrue(try XCTUnwrap(workspace.selected).adjustments
             .localBrushSettings(for: .skinSmoothing).inverted)
 
         let reopened = Workspace(libraryRoot: repository.root, preferences: preferences)
         reopened.selection = photoID
-        XCTAssertEqual(reopened.library.version, 31)
-        XCTAssertEqual(reopened.selected?.adjustments.localBrushes, [tint, skin])
-        XCTAssertEqual(reopened.selected?.adjustments.localTintSettings, tintSettings)
-        XCTAssertEqual(reopened.selected?.adjustments.localSkinSmoothingSettings, skinSettings)
+        XCTAssertEqual(reopened.library.version, 32)
+        XCTAssertEqual(reopened.selected?.adjustments.effectiveLocalBrushInstances.flatMap(\.strokes), [tint, skin])
+        XCTAssertEqual(reopened.selected?.adjustments.localBrushInstances(for: .tint).first?.tintSettings,
+                       tintSettings)
+        XCTAssertEqual(reopened.selected?.adjustments.localBrushInstances(for: .skinSmoothing).first?
+            .skinSmoothingSettings, skinSettings)
 
         let edited = try XCTUnwrap(reopened.selected)
         let original = try repository.availableOriginalURL(edited)

@@ -40,7 +40,7 @@ final class LocalSaturationDefinitionWorkspaceTests: XCTestCase {
         workspace.setBrushMaskOpacity(0.55, for: .saturation)
         workspace.invertBrushMask(.definition)
         XCTAssertEqual(workspace.history.undo.count, 4)
-        XCTAssertEqual(workspace.library.version, 28)
+        XCTAssertEqual(workspace.library.version, 32)
         XCTAssertEqual(workspace.selected?.adjustments.localBrushSettings(for: .saturation).opacity, 0.55)
         XCTAssertTrue(try XCTUnwrap(workspace.selected).adjustments.localBrushSettings(for: .definition).inverted)
 
@@ -55,8 +55,9 @@ final class LocalSaturationDefinitionWorkspaceTests: XCTestCase {
 
         let reopened = Workspace(libraryRoot: repository.root, preferences: preferences)
         reopened.selection = photoID
-        XCTAssertEqual(reopened.library.version, 28)
-        XCTAssertEqual(reopened.selected?.adjustments.localBrushes, [saturation, definition])
+        XCTAssertEqual(reopened.library.version, 32)
+        XCTAssertEqual(reopened.selected?.adjustments.effectiveLocalBrushInstances.flatMap(\.strokes),
+                       [saturation, definition])
         XCTAssertEqual(reopened.selected?.adjustments.localBrushSettings(for: .saturation).opacity, 0.55)
         XCTAssertTrue(try XCTUnwrap(reopened.selected).adjustments.localBrushSettings(for: .definition).inverted)
 

@@ -36,7 +36,7 @@ final class AdvancedLocalBrushWorkspaceTests: XCTestCase {
         workspace.setBrushMaskOpacity(0.45, for: .dodge)
         workspace.invertBrushMask(.dodge)
         XCTAssertEqual(workspace.history.undo.count, 3)
-        XCTAssertEqual(workspace.library.version, 27)
+        XCTAssertEqual(workspace.library.version, 32)
         XCTAssertEqual(workspace.selected?.adjustments.localBrushSettings(for: .dodge),
                        LocalBrushMaskSettings(opacity: 0.45, inverted: true))
 
@@ -51,13 +51,15 @@ final class AdvancedLocalBrushWorkspaceTests: XCTestCase {
 
         let reopened = Workspace(libraryRoot: repository.root, preferences: preferences)
         reopened.selection = photoID
-        XCTAssertEqual(reopened.library.version, 27)
-        XCTAssertEqual(reopened.selected?.adjustments.localBrushes, [stroke])
+        XCTAssertEqual(reopened.library.version, 32)
+        XCTAssertEqual(reopened.selected?.adjustments.effectiveLocalBrushInstances.flatMap(\.strokes), [stroke])
         XCTAssertEqual(reopened.selected?.adjustments.localBrushSettings(for: .dodge),
                        LocalBrushMaskSettings(opacity: 0.45, inverted: true))
         reopened.clearBrushMask(.dodge)
-        XCTAssertTrue(try XCTUnwrap(reopened.selected).adjustments.localBrushes.isEmpty)
-        XCTAssertTrue(try XCTUnwrap(reopened.selected).adjustments.localBrushMaskSettings.isEmpty)
+        XCTAssertTrue(try XCTUnwrap(reopened.selected).adjustments.effectiveLocalBrushInstances
+            .flatMap(\.strokes).isEmpty)
+        XCTAssertEqual(try XCTUnwrap(reopened.selected).adjustments.localBrushSettings(for: .dodge),
+                       LocalBrushMaskSettings())
         reopened.undoEdit()
 
         let brushed = try XCTUnwrap(reopened.selected)

@@ -383,9 +383,15 @@ Tint and Skin Smoothing complete two more Aperture-style local operations on the
 
 Skin Smoothing evaluates photographic colour before Tint so a strong cool tint cannot disable the skin classifier where the two masks overlap. Both use the full-resolution CPU preview/export renderer and keep originals untouched. Format 31 distinguishes their identifiers and settings, while older recipes decode with neutral/default settings and keep their previous appearance.
 
+## Multiple local-adjustment instances
+
+Every local effect can now own multiple named instances. Each instance persists its enabled state, ordered source-coordinate strokes, mask opacity and inversion plus Tint or Skin Smoothing parameters where applicable. The Viewer control creates, selects, renames, enables, reorders, duplicates and deletes instances. Every mutation uses normal photo history, so it participates in persistent Undo/Redo and stale-write protection.
+
+Same-type instances composite in their displayed order; different effect types retain the established renderer stage order. Lift and Stamp and explicitly selected spatial custom presets copy the complete instance list, while safe preset defaults continue to preserve spatial recipes. A format-31 recipe remains unchanged when merely opened and renders through a stable one-instance compatibility view. Its legacy masks are converted to format 32 only when the user first uses an instance-aware editing action, and a pixel comparison verifies that conversion does not alter the rendered result.
+
 ## Next checkpoint
 
-Support multiple independently named instances of each local adjustment brush, with enable/disable, reorder, duplicate and delete actions. Preserve existing single-instance recipes through migration. Test compositing order, independent masks and parameters, Undo/Redo, persistence, Lift and Stamp, preset compatibility, full-resolution preview/export consistency and preservation of originals.
+Add non-destructive local Polarize and Halo Reduction brush modes using the shared instance-aware, edge-aware mask infrastructure. Give Polarize a bounded intensity control and Halo Reduction amount and radius controls. Test neutral and maximum settings, sky and edge fixtures, multiple ordered instances, Undo/Redo, persistence, Lift and Stamp, full-resolution preview/export consistency and preservation of originals.
 
 ## Pending physical camera checks
 

@@ -28,86 +28,207 @@ extension Workspace {
     func chooseBrush(_ adjustment: LocalBrushAdjustment) {
         guard canBrush else { return }
         brushAdjustment = adjustment
+        brushInstanceID = selected?.adjustments.localBrushInstances(for: adjustment).first?.id
         chooseTool(.brush)
     }
 
     func applyBrushStroke(_ stroke: LocalBrushStroke, to id: UUID) {
         guard tool == .brush, !batchMode, selection == id, stroke.isValid else { return }
+        let targetID = brushInstanceID
+            ?? selected?.adjustments.localBrushInstances(for: stroke.adjustment).first?.id
+            ?? UUID()
         edit { photo in
-            if stroke.erasing && !photo.adjustments.localBrushes.contains(where: {
-                $0.adjustment == stroke.adjustment && !$0.erasing
-            }) { return }
-            photo.adjustments.localBrushes.append(stroke)
+            photo.adjustments.migrateLocalBrushInstances()
+            if let index = photo.adjustments.localBrushInstances.firstIndex(where: { $0.id == targetID }) {
+                guard photo.adjustments.localBrushInstances[index].adjustment == stroke.adjustment else { return }
+                if stroke.erasing && !photo.adjustments.localBrushInstances[index].strokes.contains(where: {
+                    !$0.erasing
+                }) { return }
+                photo.adjustments.localBrushInstances[index].strokes.append(stroke)
+            } else {
+                guard !stroke.erasing else { return }
+                photo.adjustments.localBrushInstances.append(LocalBrushInstance(id: targetID,
+                    name: nextBrushInstanceName(stroke.adjustment, in: photo.adjustments),
+                    adjustment: stroke.adjustment, strokes: [stroke]))
+            }
         }
+        brushInstanceID = targetID
     }
 
     func clearBrushMask(_ adjustment: LocalBrushAdjustment) {
-        guard !batchMode else { return }
-        edit {
-            $0.adjustments.localBrushes.removeAll { $0.adjustment == adjustment }
-            $0.adjustments.localBrushMaskSettings.removeValue(forKey: adjustment)
+        guard !batchMode, let targetID = activeBrushInstanceID(for: adjustment) else { return }
+        edit { photo in
+            photo.adjustments.migrateLocalBrushInstances()
+            guard let index = photo.adjustments.localBrushInstances.firstIndex(where: { $0.id == targetID }) else {
+                return
+            }
+            photo.adjustments.localBrushInstances[index].strokes = []
+            photo.adjustments.localBrushInstances[index].maskSettings = LocalBrushMaskSettings()
         }
     }
 
     func setBrushMaskOpacity(_ opacity: Double, for adjustment: LocalBrushAdjustment) {
-        guard !batchMode, selected?.adjustments.localBrushes.contains(where: {
-            $0.adjustment == adjustment && !$0.erasing
-        }) == true else { return }
+        guard !batchMode, let targetID = activeBrushInstanceID(for: adjustment),
+              selected?.adjustments.localBrushInstance(id: targetID)?.strokes.contains(where: { !$0.erasing }) == true
+        else { return }
         let value = opacity.isFinite ? min(1, max(0, opacity)) : 1
-        edit {
-            var settings = $0.adjustments.localBrushSettings(for: adjustment)
-            guard settings.opacity != value else { return }
-            settings.opacity = value
-            if settings.isNeutral { $0.adjustments.localBrushMaskSettings.removeValue(forKey: adjustment) }
-            else { $0.adjustments.localBrushMaskSettings[adjustment] = settings }
+        edit { photo in
+            photo.adjustments.migrateLocalBrushInstances()
+            guard let index = photo.adjustments.localBrushInstances.firstIndex(where: { $0.id == targetID }),
+                  photo.adjustments.localBrushInstances[index].maskSettings.opacity != value else { return }
+            photo.adjustments.localBrushInstances[index].maskSettings.opacity = value
         }
     }
 
     func invertBrushMask(_ adjustment: LocalBrushAdjustment) {
-        guard !batchMode, selected?.adjustments.localBrushes.contains(where: {
-            $0.adjustment == adjustment && !$0.erasing
-        }) == true else { return }
-        edit {
-            var settings = $0.adjustments.localBrushSettings(for: adjustment)
-            settings.inverted.toggle()
-            if settings.isNeutral { $0.adjustments.localBrushMaskSettings.removeValue(forKey: adjustment) }
-            else { $0.adjustments.localBrushMaskSettings[adjustment] = settings }
+        guard !batchMode, let targetID = activeBrushInstanceID(for: adjustment),
+              selected?.adjustments.localBrushInstance(id: targetID)?.strokes.contains(where: { !$0.erasing }) == true
+        else { return }
+        edit { photo in
+            photo.adjustments.migrateLocalBrushInstances()
+            guard let index = photo.adjustments.localBrushInstances.firstIndex(where: { $0.id == targetID }) else {
+                return
+            }
+            photo.adjustments.localBrushInstances[index].maskSettings.inverted.toggle()
         }
     }
 
     func setLocalTintSettings(_ settings: LocalTintSettings) {
-        guard !batchMode else { return }
+        guard !batchMode, let targetID = activeBrushInstanceID(for: .tint) else { return }
         let hue = settings.hue.isFinite
             ? (settings.hue.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360) : 30
         let saturation = settings.saturation.isFinite ? min(1, max(0, settings.saturation)) : 0
-        edit {
+        edit { photo in
+            photo.adjustments.migrateLocalBrushInstances()
+            guard let index = photo.adjustments.localBrushInstances.firstIndex(where: { $0.id == targetID }) else {
+                return
+            }
             let value = LocalTintSettings(hue: hue, saturation: saturation)
-            guard $0.adjustments.localTintSettings != value else { return }
-            $0.adjustments.localTintSettings = value
+            guard photo.adjustments.localBrushInstances[index].tintSettings != value else { return }
+            photo.adjustments.localBrushInstances[index].tintSettings = value
         }
     }
 
     func setLocalSkinSmoothingSettings(_ settings: LocalSkinSmoothingSettings) {
-        guard !batchMode else { return }
+        guard !batchMode, let targetID = activeBrushInstanceID(for: .skinSmoothing) else { return }
         let amount = settings.amount.isFinite ? min(1, max(0, settings.amount)) : 0
         let detail = settings.detailPreservation.isFinite
             ? min(1, max(0, settings.detailPreservation)) : 0.5
-        edit {
+        edit { photo in
+            photo.adjustments.migrateLocalBrushInstances()
+            guard let index = photo.adjustments.localBrushInstances.firstIndex(where: { $0.id == targetID }) else {
+                return
+            }
             let value = LocalSkinSmoothingSettings(amount: amount, detailPreservation: detail)
-            guard $0.adjustments.localSkinSmoothingSettings != value else { return }
-            $0.adjustments.localSkinSmoothingSettings = value
+            guard photo.adjustments.localBrushInstances[index].skinSmoothingSettings != value else { return }
+            photo.adjustments.localBrushInstances[index].skinSmoothingSettings = value
         }
+    }
+
+    func selectBrushInstance(for adjustment: LocalBrushAdjustment) {
+        brushInstanceID = selected?.adjustments.localBrushInstances(for: adjustment).first?.id
+    }
+
+    func createBrushInstance(_ adjustment: LocalBrushAdjustment) {
+        guard canBrush else { return }
+        let id = UUID()
+        edit { photo in
+            photo.adjustments.migrateLocalBrushInstances()
+            photo.adjustments.localBrushInstances.append(LocalBrushInstance(id: id,
+                name: nextBrushInstanceName(adjustment, in: photo.adjustments), adjustment: adjustment))
+        }
+        brushInstanceID = id
+    }
+
+    func renameBrushInstance(_ id: UUID, to name: String) {
+        let value = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !batchMode, !value.isEmpty else { return }
+        edit { photo in
+            photo.adjustments.migrateLocalBrushInstances()
+            guard let index = photo.adjustments.localBrushInstances.firstIndex(where: { $0.id == id }),
+                  photo.adjustments.localBrushInstances[index].name != value else { return }
+            photo.adjustments.localBrushInstances[index].name = value
+        }
+    }
+
+    func setBrushInstanceEnabled(_ id: UUID, enabled: Bool) {
+        guard !batchMode else { return }
+        edit { photo in
+            photo.adjustments.migrateLocalBrushInstances()
+            guard let index = photo.adjustments.localBrushInstances.firstIndex(where: { $0.id == id }),
+                  photo.adjustments.localBrushInstances[index].enabled != enabled else { return }
+            photo.adjustments.localBrushInstances[index].enabled = enabled
+        }
+    }
+
+    func duplicateBrushInstance(_ id: UUID) {
+        guard !batchMode, let source = selected?.adjustments.localBrushInstance(id: id) else { return }
+        let copyID = UUID()
+        edit { photo in
+            photo.adjustments.migrateLocalBrushInstances()
+            guard let index = photo.adjustments.localBrushInstances.firstIndex(where: { $0.id == id }) else {
+                return
+            }
+            var copy = source
+            copy.id = copyID
+            copy.name = source.displayName + " Copy"
+            photo.adjustments.localBrushInstances.insert(copy, at: index + 1)
+        }
+        brushInstanceID = copyID
+    }
+
+    func moveBrushInstance(_ id: UUID, by offset: Int) {
+        guard !batchMode, offset != 0 else { return }
+        edit { photo in
+            photo.adjustments.migrateLocalBrushInstances()
+            guard let index = photo.adjustments.localBrushInstances.firstIndex(where: { $0.id == id }) else {
+                return
+            }
+            let adjustment = photo.adjustments.localBrushInstances[index].adjustment
+            let siblings = photo.adjustments.localBrushInstances.indices.filter {
+                photo.adjustments.localBrushInstances[$0].adjustment == adjustment
+            }
+            guard let position = siblings.firstIndex(of: index) else { return }
+            let destination = position + offset
+            guard siblings.indices.contains(destination) else { return }
+            photo.adjustments.localBrushInstances.swapAt(index, siblings[destination])
+        }
+    }
+
+    func deleteBrushInstance(_ id: UUID) {
+        guard !batchMode, let instance = selected?.adjustments.localBrushInstance(id: id) else { return }
+        let remaining = selected?.adjustments.localBrushInstances(for: instance.adjustment).filter { $0.id != id } ?? []
+        edit { photo in
+            photo.adjustments.migrateLocalBrushInstances()
+            photo.adjustments.localBrushInstances.removeAll { $0.id == id }
+        }
+        brushInstanceID = remaining.first?.id
+    }
+
+    private func activeBrushInstanceID(for adjustment: LocalBrushAdjustment) -> UUID? {
+        if let brushInstanceID,
+           selected?.adjustments.localBrushInstance(id: brushInstanceID)?.adjustment == adjustment {
+            return brushInstanceID
+        }
+        return selected?.adjustments.localBrushInstances(for: adjustment).first?.id
+    }
+
+    private func nextBrushInstanceName(_ adjustment: LocalBrushAdjustment, in adjustments: Adjustments) -> String {
+        let count = adjustments.localBrushInstances(for: adjustment).count
+        return count == 0 ? adjustment.rawValue : "\(adjustment.rawValue) \(count + 1)"
     }
 }
 
 struct BrushControls: View {
     @Binding var adjustment: LocalBrushAdjustment
+    @Binding var instanceID: UUID?
     @Binding var erasing: Bool
     @Binding var size: Double
     @Binding var softness: Double
     @Binding var strength: Double
     @Binding var edgeAware: Bool
     @Binding var showMask: Bool
+    let instances: [LocalBrushInstance]
     let hasMask: Bool
     let maskOpacity: Double
     let maskInverted: Bool
@@ -116,6 +237,12 @@ struct BrushControls: View {
     let setOpacity: (Double) -> Void
     let setTintSettings: (LocalTintSettings) -> Void
     let setSkinSmoothingSettings: (LocalSkinSmoothingSettings) -> Void
+    let createInstance: () -> Void
+    let renameInstance: (UUID, String) -> Void
+    let setInstanceEnabled: (UUID, Bool) -> Void
+    let duplicateInstance: (UUID) -> Void
+    let moveInstance: (UUID, Int) -> Void
+    let deleteInstance: (UUID) -> Void
     let invert: () -> Void
     let reset: () -> Void
     let done: () -> Void
@@ -125,6 +252,11 @@ struct BrushControls: View {
     @State private var tintSaturation = 35.0
     @State private var smoothingAmount = 50.0
     @State private var detailPreservation = 50.0
+    @State private var instanceName = ""
+
+    private var selectedInstance: LocalBrushInstance? {
+        instanceID.flatMap { id in instances.first { $0.id == id } }
+    }
 
     var body: some View {
         VStack(spacing: 8) {
@@ -141,6 +273,43 @@ struct BrushControls: View {
                 Button(maskInverted ? "Uninvert Mask" : "Invert Mask", action: invert).disabled(!hasMask)
                 Button("Reset Mask", action: reset).disabled(!hasMask)
                 Button("Done", action: done)
+            }
+            HStack(spacing: 8) {
+                Picker("Instance", selection: $instanceID) {
+                    if instances.isEmpty { Text("New mask").tag(nil as UUID?) }
+                    ForEach(instances) { instance in
+                        Text(instance.enabled ? instance.displayName : "\(instance.displayName) (Off)")
+                            .tag(Optional(instance.id))
+                    }
+                }.pickerStyle(.menu).frame(width: 190)
+                Button(action: createInstance) { Label("New Instance", systemImage: "plus") }
+                    .help("Create an empty \(adjustment.rawValue) instance")
+                TextField("Instance name", text: $instanceName)
+                    .textFieldStyle(.roundedBorder).frame(minWidth: 130, maxWidth: 220)
+                    .onSubmit {
+                        if let id = selectedInstance?.id { renameInstance(id, instanceName) }
+                    }
+                    .disabled(selectedInstance == nil)
+                Button("Rename") {
+                    if let id = selectedInstance?.id { renameInstance(id, instanceName) }
+                }.disabled(selectedInstance == nil || instanceName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                Toggle("Enabled", isOn: Binding(get: { selectedInstance?.enabled ?? false }, set: { value in
+                    if let id = selectedInstance?.id { setInstanceEnabled(id, value) }
+                })).disabled(selectedInstance == nil)
+                Button(action: { if let id = selectedInstance?.id { duplicateInstance(id) } }) {
+                    Image(systemName: "plus.square.on.square")
+                }.help("Duplicate instance").disabled(selectedInstance == nil)
+                Button(action: { if let id = selectedInstance?.id { moveInstance(id, -1) } }) {
+                    Image(systemName: "arrow.up")
+                }.help("Move instance earlier").disabled(!canMove(-1))
+                Button(action: { if let id = selectedInstance?.id { moveInstance(id, 1) } }) {
+                    Image(systemName: "arrow.down")
+                }.help("Move instance later").disabled(!canMove(1))
+                Button(role: .destructive, action: {
+                    if let id = selectedInstance?.id { deleteInstance(id) }
+                }) { Image(systemName: "trash") }
+                    .help("Delete instance").disabled(selectedInstance == nil)
+                Spacer()
             }
             HStack(spacing: 10) {
                 slider("Size", value: $size, range: 1...50)
@@ -186,6 +355,8 @@ struct BrushControls: View {
             }
             .onChange(of: tintSettings) { _, _ in syncSettings() }
             .onChange(of: skinSmoothingSettings) { _, _ in syncSettings() }
+            .onChange(of: instanceID) { _, _ in syncSettings() }
+            .onChange(of: instances) { _, _ in syncSettings() }
     }
 
     private func slider(_ name: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
@@ -219,6 +390,13 @@ struct BrushControls: View {
         tintSaturation = tintSettings.saturation * 100
         smoothingAmount = skinSmoothingSettings.amount * 100
         detailPreservation = skinSmoothingSettings.detailPreservation * 100
+        instanceName = selectedInstance?.displayName ?? ""
+    }
+
+    private func canMove(_ offset: Int) -> Bool {
+        guard let id = selectedInstance?.id,
+              let index = instances.firstIndex(where: { $0.id == id }) else { return false }
+        return instances.indices.contains(index + offset)
     }
 }
 

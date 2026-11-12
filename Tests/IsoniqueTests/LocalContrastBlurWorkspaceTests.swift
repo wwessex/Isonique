@@ -40,7 +40,7 @@ final class LocalContrastBlurWorkspaceTests: XCTestCase {
         workspace.setBrushMaskOpacity(0.55, for: .contrast)
         workspace.invertBrushMask(.blur)
         XCTAssertEqual(workspace.history.undo.count, 4)
-        XCTAssertEqual(workspace.library.version, 30)
+        XCTAssertEqual(workspace.library.version, 32)
         XCTAssertEqual(workspace.selected?.adjustments.localBrushSettings(for: .contrast).opacity, 0.55)
         XCTAssertTrue(try XCTUnwrap(workspace.selected).adjustments.localBrushSettings(for: .blur).inverted)
 
@@ -55,8 +55,9 @@ final class LocalContrastBlurWorkspaceTests: XCTestCase {
 
         let reopened = Workspace(libraryRoot: repository.root, preferences: preferences)
         reopened.selection = photoID
-        XCTAssertEqual(reopened.library.version, 30)
-        XCTAssertEqual(reopened.selected?.adjustments.localBrushes, [contrast, blur])
+        XCTAssertEqual(reopened.library.version, 32)
+        XCTAssertEqual(reopened.selected?.adjustments.effectiveLocalBrushInstances.flatMap(\.strokes),
+                       [contrast, blur])
         XCTAssertEqual(reopened.selected?.adjustments.localBrushSettings(for: .contrast).opacity, 0.55)
         XCTAssertTrue(try XCTUnwrap(reopened.selected).adjustments.localBrushSettings(for: .blur).inverted)
 

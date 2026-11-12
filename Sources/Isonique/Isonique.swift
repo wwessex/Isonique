@@ -63,6 +63,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var comparisonID: UUID?
     @Published var tool = EditTool.select
     @Published var brushAdjustment = LocalBrushAdjustment.dodge
+    @Published var brushInstanceID: UUID?
     @Published var spotMode = SpotRemovalMode.repair
     @Published var selectedSpotID: UUID?
     @Published var spotDraftSource: BrushPoint?
@@ -309,6 +310,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         saved.upgradeForLocalDetailBrushes()
         saved.upgradeForLocalContrastBlur()
         saved.upgradeForLocalTintSkin()
+        saved.upgradeForLocalBrushInstances()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -1551,6 +1553,7 @@ struct PhotoViewer: View {
         let url: URL
         let adjustments: Adjustments
         let adjustment: LocalBrushAdjustment
+        let instanceID: UUID?
         let maximum: CGFloat?
     }
     private struct BrushMaskOverlayFrame {
@@ -1679,19 +1682,28 @@ struct PhotoViewer: View {
                     cancel: { model.tool = .select }, apply: { model.edit { $0.adjustments.crop = draft }; model.tool = .select })
                     .padding(12).workspaceGlass().padding(8)
             } else if model.tool == .brush {
-                let settings = photo.adjustments.localBrushSettings(for: model.brushAdjustment)
-                BrushControls(adjustment: $model.brushAdjustment, erasing: $erasingBrush,
+                let instances = photo.adjustments.localBrushInstances(for: model.brushAdjustment)
+                let instance = model.brushInstanceID.flatMap { id in instances.first { $0.id == id } }
+                    ?? instances.first
+                let settings = instance?.maskSettings ?? LocalBrushMaskSettings()
+                BrushControls(adjustment: $model.brushAdjustment, instanceID: $model.brushInstanceID,
+                              erasing: $erasingBrush,
                               size: $brushSize, softness: $brushSoftness, strength: $brushStrength,
                               edgeAware: $edgeAwareBrush, showMask: $showBrushMask,
-                              hasMask: photo.adjustments.localBrushes.contains {
-                                  $0.adjustment == model.brushAdjustment && !$0.erasing
-                              },
+                              instances: instances,
+                              hasMask: instance?.strokes.contains { !$0.erasing } == true,
                               maskOpacity: settings.opacity, maskInverted: settings.inverted,
-                              tintSettings: photo.adjustments.localTintSettings,
-                              skinSmoothingSettings: photo.adjustments.localSkinSmoothingSettings,
+                              tintSettings: instance?.tintSettings ?? LocalTintSettings(),
+                              skinSmoothingSettings: instance?.skinSmoothingSettings ?? LocalSkinSmoothingSettings(),
                               setOpacity: { model.setBrushMaskOpacity($0, for: model.brushAdjustment) },
                               setTintSettings: model.setLocalTintSettings,
                               setSkinSmoothingSettings: model.setLocalSkinSmoothingSettings,
+                              createInstance: { model.createBrushInstance(model.brushAdjustment) },
+                              renameInstance: model.renameBrushInstance,
+                              setInstanceEnabled: model.setBrushInstanceEnabled,
+                              duplicateInstance: model.duplicateBrushInstance,
+                              moveInstance: model.moveBrushInstance,
+                              deleteInstance: model.deleteBrushInstance,
                               invert: { model.invertBrushMask(model.brushAdjustment) },
                               reset: { model.clearBrushMask(model.brushAdjustment) },
                               done: { model.tool = .select })
@@ -1708,7 +1720,10 @@ struct PhotoViewer: View {
             if tool == .crop { draft = photo.adjustments.crop ?? PhotoCrop(x: 0, y: 0, width: 1, height: 1) }
             if tool != .brush { erasingBrush = false; showBrushMask = false }
         }
-        .onChange(of: model.brushAdjustment) { _, _ in erasingBrush = false }
+        .onChange(of: model.brushAdjustment) { _, adjustment in
+            erasingBrush = false
+            model.selectBrushInstance(for: adjustment)
+        }
         .task(id: sampleWork) {
             guard let sampleWork else { return }
             do {
@@ -1760,6 +1775,7 @@ struct PhotoViewer: View {
                 let overlay = try await Task.detached(priority: .userInitiated) {
                     try Renderer.localBrushMaskOverlay(maskRequest.url,
                         adjustments: maskRequest.adjustments, adjustment: maskRequest.adjustment,
+                        instanceID: maskRequest.instanceID,
                         maxDimension: maskRequest.maximum)
                 }.value
                 guard !Task.isCancelled, brushMaskOverlayRequest == maskRequest else { return }
@@ -1845,11 +1861,11 @@ struct PhotoViewer: View {
 
     private var brushMaskOverlayRequest: BrushMaskOverlayRequest? {
         guard model.tool == .brush, showBrushMask, !original,
-              photo.adjustments.localBrushes.contains(where: {
-                  $0.adjustment == model.brushAdjustment && !$0.erasing && $0.isValid
-              }) else { return nil }
+              let instance = photo.adjustments.localBrushInstance(id: model.brushInstanceID),
+              instance.enabled,
+              instance.strokes.contains(where: { !$0.erasing && $0.isValid }) else { return nil }
         return BrushMaskOverlayRequest(url: url, adjustments: photo.adjustments,
-            adjustment: model.brushAdjustment, maximum: zoom ? nil : 2400)
+            adjustment: model.brushAdjustment, instanceID: instance.id, maximum: zoom ? nil : 2400)
     }
 }
 struct Inspector: View {
