@@ -42,6 +42,16 @@ Use at least four photos with visibly different aspect ratios and the signed bui
 6. While full-resolution loading is visible, return to Fit, remove a Select or add a different Browser photo. Confirm an obsolete result never replaces a current pane.
 7. Export every compared photo before and after navigation. Confirm output is identical and reopening the library retains its prior recipes without storing comparison membership or navigation.
 
+## Physical Light Table workspace
+
+Use a disposable library with at least four wide, tall and square photos, including one adjusted version.
+
+1. Filter the Browser, select several visible photos and also leave one now-hidden photo selected. Create a Light Table and confirm only the visible selection is included.
+2. Drag and resize a card at Fit and 100%, rotate it, multi-select two cards for each alignment, and move cards to front and back. Confirm the canvas remains responsive and does not accidentally edit a photo.
+3. Undo and Redo each operation, rename and duplicate the layout, reopen the library and confirm every reusable layout retains geometry and stacking order.
+4. Save PDF and use Print. Confirm the PDF matches the canvas arrangement, the print panel scales it to the selected paper and the adjusted photo matches an ordinary edited export.
+5. Export the compared photos before and after Light Table work and verify identical output. Verify the managed originals remain byte-identical.
+
 ## Physical PTP camera import
 
 Use a disposable library and a physical USB camera in PTP or Photo Transfer mode. Put at least three distinct test photos on the camera. A larger group of photos gives you time to cancel an active transfer. Record the Isonique commit, macOS version, camera model, firmware and USB mode with the results. [README smoke test](README.md#development)

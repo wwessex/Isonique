@@ -418,13 +418,14 @@ public struct Library: Codable {
     // This is the revision the value was based on, never part of the on-disk schema.
     var catalogueRevision: CatalogueRevision?
     private enum CodingKeys: String, CodingKey {
-        case projectExportMembership, pendingFinderTrash, history, stackBrowser, version, photos, projects, albums
+        case projectExportMembership, pendingFinderTrash, history, stackBrowser, lightTables, version, photos, projects, albums
     }
 
     var projectExportMembership: ProjectExportMembership?
     var pendingFinderTrash: [PendingFinderTrash]?
     public var history: EditHistory?
     public var stackBrowser: StackBrowserState?
+    public var lightTables: [LightTableLayout]?
     public var version = 1
     public var photos: [Photo] = []
     public var projects: [Collection] = []
@@ -512,6 +513,10 @@ public struct Library: Codable {
         if version < 34, hasRecipe(where: \.hasPressureBrushRecipe) { version = 34 }
     }
 
+    public mutating func upgradeForLightTables() {
+        if version < 35, lightTables?.isEmpty == false { version = 35 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -555,6 +560,14 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 35, lightTables?.isEmpty == false { throw LibraryError.unsupportedVersion }
+        var lightTableIDs: Set<UUID> = []
+        for layout in lightTables ?? [] {
+            guard lightTableIDs.insert(layout.id).inserted else {
+                throw LibraryError.integrity("duplicate Light Table identity")
+            }
+            try layout.validated()
+        }
         if version < 34, hasRecipe(where: \.hasPressureBrushRecipe) { throw LibraryError.unsupportedVersion }
         if version < 33, hasRecipe(where: \.hasLocalPolarizeHaloRecipe) { throw LibraryError.unsupportedVersion }
         if version < 32, hasRecipe(where: \.hasLocalBrushInstancesRecipe) { throw LibraryError.unsupportedVersion }
@@ -583,7 +596,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...34).contains(version) { return }
+        if (7...35).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -767,6 +780,7 @@ public final class LibraryRepository {
         normalized.upgradeForLocalBrushInstances()
         normalized.upgradeForLocalPolarizeHalo()
         normalized.upgradeForPressureBrushes()
+        normalized.upgradeForLightTables()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }

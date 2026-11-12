@@ -421,9 +421,17 @@ Compare now starts from two or more visible photos selected in the Browser. The 
 
 Synchronized navigation stores one normalized scale and centre for every visible pane. Independent mode materializes a separate state for each photo; re-enabling synchronization makes the current Primary authoritative, and removing photos discards their stale navigation state. Full-resolution loads retain photo-specific task identities, so cancellation and comparison changes cannot publish an obsolete frame. The workflow is transient UI state: it does not save catalogue recipes, alter originals or change edited export pixels.
 
+## Persistent Light Table workspace
+
+Format 35 adds library-level named Light Table layouts without adding fields to a photo or its adjustment recipe. Each item stores a stable photo identifier, centre, size, rotation and stacking order on a 1600 × 1000 canvas. A layout starts with only the selected photos visible in the current filtered Browser. Adding photos later preserves every existing position. Layouts appear in their own sidebar section and can be renamed, duplicated or deleted.
+
+The native canvas supports direct dragging, corner resizing, multi-selection, six alignments, five-degree rotation, bring-to-front/send-to-back ordering and removal. Fit scales the full canvas into the available workspace; 100% shows one canvas point per display point and requests the selected photo at full resolution through the shared Viewer cache. Every committed operation records one Light Table history snapshot, including persistent Undo/Redo when enabled.
+
+PDF and native print output use one page at the saved canvas dimensions. Items render in stacking order through the same full-resolution adjustment renderer used by edited export, then apply only Light Table placement and rotation. Layout operations therefore cannot change catalogue photo recipes, original bytes or ordinary export output. The macOS print panel scales the canvas to the selected paper.
+
 ## Next checkpoint
 
-Add a non-destructive Light Table workspace for freely arranging selected photos on a persistent canvas. Include drag positioning, resize, rotate, alignment, stacking order, Fit/100% inspection and reusable layouts without changing photo recipes. Test mixed aspect ratios, filtered selections, Undo/Redo, persistence, PDF/print output and preservation of originals and edited exports.
+Add a dedicated full-screen photography workspace with independently hideable Browser, filmstrip, Inspector and toolbar panels plus remembered layouts for editing, culling and Compare. Support native full-screen entry/exit, keyboard panel cycling and a secondary-display Viewer where available. Test state restoration, focus and shortcuts, mixed-display scale and colour profiles, cancellation during full-resolution transitions and preservation of recipes and exports.
 
 ## Pending physical camera checks
 

@@ -111,6 +111,10 @@ public extension Library {
         case .batchMetadata(let changes):
             return replaceBatchMetadata(changes).map(PhotoHistoryEntry.batchMetadata)
         case .locations(let changes): return replaceLocations(changes).map(PhotoHistoryEntry.locations)
+        case .lightTables(let layouts):
+            let current = lightTables ?? []
+            lightTables = layouts
+            return .lightTables(current)
         case .stamp(let changes):
             return applyPhotoFieldChanges(changes, photoID: \.photoID) { photo, change in
                 change.applying(to: &photo)
@@ -128,11 +132,12 @@ public enum PhotoHistoryEntry: Codable, Equatable {
     case batchMetadata([BatchMetadataChange])
     case stamp([PhotoStampChange])
     case locations([PhotoLocationChange])
+    case lightTables([LightTableLayout])
 
     public var photo: Photo? {
         switch self {
         case .edit(let photo), .removeVersion(let photo), .restoreVersion(let photo): return photo
-        case .stackPick, .captureDates, .batchMetadata, .stamp, .locations: return nil
+        case .stackPick, .captureDates, .batchMetadata, .stamp, .locations, .lightTables: return nil
         }
     }
 
@@ -147,6 +152,7 @@ public enum PhotoHistoryEntry: Codable, Equatable {
         case .batchMetadata(let changes): return changes.map(\.photoID)
         case .stamp(let changes): return changes.map(\.photoID)
         case .locations(let changes): return changes.map(\.photoID)
+        case .lightTables: return []
         default: return []
         }
     }
@@ -155,6 +161,7 @@ public enum PhotoHistoryEntry: Codable, Equatable {
         switch self {
         case .captureDates: return 8
         case .locations: return 16
+        case .lightTables: return 35
         case .stamp(let changes): return max(13, changes.compactMap(\.requiredCatalogueVersion).max() ?? 0)
         case .batchMetadata(let changes):
             if changes.contains(where: { $0.iptc?.isEmpty == false }) { return 11 }

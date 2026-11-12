@@ -281,6 +281,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         return visible.first { $0.id == selection }
     }
     var title: String {
+        if let lightTable = activeLightTable { return lightTable.name }
         if isViewingTrash { return "Trash" }
         if scope == "flagged" { return "Flagged" }
         if let project = library.projects.first(where: { scope == "project:\($0.id)" }) { return project.name }
@@ -314,6 +315,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         saved.upgradeForLocalBrushInstances()
         saved.upgradeForLocalPolarizeHalo()
         saved.upgradeForPressureBrushes()
+        saved.upgradeForLightTables()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -331,9 +333,13 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         var draft = library
         guard let entry = nextHistory.step(in: &draft, redoing: redo),
               commit(draft, history: nextHistory) else { return }
-        let continuedTool = viewer && selection == entry.selectionID && (tool == .brush || tool == .spot || tool == .redEye) ? tool : nil
-        selectAfterChange(preferred: entry.selectionID)
-        if let continuedTool, selection == entry.selectionID { tool = continuedTool }
+        if case .lightTables = entry {
+            if activeLightTableID != nil, activeLightTable == nil { scope = "all" }
+        } else {
+            let continuedTool = viewer && selection == entry.selectionID && (tool == .brush || tool == .spot || tool == .redEye) ? tool : nil
+            selectAfterChange(preferred: entry.selectionID)
+            if let continuedTool, selection == entry.selectionID { tool = continuedTool }
+        }
         switch entry {
         case .edit: status = redo ? "Photo edit redone" : "Photo edit undone"
         case .removeVersion: status = "Version creation undone"
@@ -343,6 +349,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         case .batchMetadata: status = redo ? "Batch metadata change redone" : "Batch metadata change undone"
         case .stamp: status = redo ? "Stamp redone" : "Stamp undone"
         case .locations: status = redo ? "Location change redone" : "Location change undone"
+        case .lightTables: status = redo ? "Light Table change redone" : "Light Table change undone"
         }
     }
     func selectAfterChange(preferred: UUID?) {
@@ -760,6 +767,8 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                     .disabled(!workspace.loupeActive && !workspace.canShowLoupe)
             }
             CommandMenu("Review") {
+                Button("New Light Table from Selection", action: workspace.createLightTable)
+                    .disabled(!workspace.canCreateLightTable)
                 Button("Auto Stack by Capture Time…") { workspace.showAutoStack = true }.disabled(workspace.busy || workspace.isViewingTrash || workspace.photos.isEmpty)
                 Button("Start Slideshow…") {
                     workspace.startSlideshow()
@@ -887,15 +896,27 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 Button("Features & Limits…") { openWindow(id: "features") }
             }
             CommandGroup(replacing: .printItem) {
-                Button("Print Contact Sheet…", action: workspace.openPrintLayout)
-                    .keyboardShortcut("p")
-                    .disabled(!workspace.canPrintPhotos)
+                if let lightTable = workspace.activeLightTable {
+                    Button("Print Light Table…") { workspace.printLightTable(lightTable) }
+                        .keyboardShortcut("p")
+                        .disabled(lightTable.items.isEmpty || workspace.busy)
+                } else {
+                    Button("Print Contact Sheet…", action: workspace.openPrintLayout)
+                        .keyboardShortcut("p")
+                        .disabled(!workspace.canPrintPhotos)
+                }
             }
             CommandGroup(replacing: .undoRedo) {
-                Button("Undo Photo Edit") { workspace.undoEdit() }.keyboardShortcut("z").disabled(!workspace.canUndo || workspace.busy)
-                Button("Redo Photo Edit") { workspace.redoEdit() }.keyboardShortcut("z", modifiers: [.command, .shift]).disabled(!workspace.canRedo || workspace.busy)
+                Button(workspace.activeLightTable == nil ? "Undo Photo Edit" : "Undo Light Table Change") {
+                    workspace.undoEdit()
+                }.keyboardShortcut("z").disabled(!workspace.canUndo || workspace.busy)
+                Button(workspace.activeLightTable == nil ? "Redo Photo Edit" : "Redo Light Table Change") {
+                    workspace.redoEdit()
+                }.keyboardShortcut("z", modifiers: [.command, .shift]).disabled(!workspace.canRedo || workspace.busy)
             }
             CommandGroup(after: .newItem) {
+                Button("New Light Table from Selection", action: workspace.createLightTable)
+                    .disabled(!workspace.canCreateLightTable)
                 Button("New Smart Album…") { workspace.editingSmartAlbum = nil; workspace.showSmartAlbum = true }
                     .keyboardShortcut("l", modifiers: [.command, .shift])
                     .disabled(workspace.busy || workspace.repository == nil)
@@ -1139,12 +1160,28 @@ struct ContentView: View {
                                 }
                             } }
                     }
+                    Section("Light Tables") {
+                        ForEach(model.lightTables) { layout in
+                            Label(layout.name, systemImage: "rectangle.on.rectangle.angled")
+                                .tag("lightTable:\(layout.id)")
+                                .contextMenu {
+                                    Button("Add Visible Selection") { model.addSelection(toLightTable: layout.id) }
+                                        .disabled(model.lightTableCandidatePhotos.isEmpty)
+                                    Button("Duplicate Light Table") { model.duplicateLightTable(layout.id) }
+                                    Button("Delete Light Table", role: .destructive) {
+                                        model.deleteLightTable(layout.id)
+                                    }
+                                }
+                        }
+                    }
                 }.listStyle(.sidebar).scrollContentBackground(.hidden)
                 HStack {
                     Menu {
                         Button("New Project") { collectionEditor = .newProject }
                         Button("New Album") { collectionEditor = .newAlbum }
                         Button("New Smart Album…") { model.editingSmartAlbum = nil; model.showSmartAlbum = true }
+                        Button("New Light Table from Selection", action: model.createLightTable)
+                            .disabled(!model.canCreateLightTable)
                     } label: { Image(systemName: "plus"); Text("Create") }
                         .menuStyle(.borderlessButton)
                     Spacer()
@@ -1161,34 +1198,44 @@ struct ContentView: View {
                             Button("All Photos") { model.showBrowser(allPhotos: true) }
                         }
                     }
-                    VStack(alignment: .leading, spacing: 3) { Text(model.title).font(.title2.weight(.semibold)); Text("\(model.photos.count) photographs").font(.caption).foregroundStyle(.secondary) }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(model.title).font(.title2.weight(.semibold))
+                        Text("\(model.activeLightTable?.items.count ?? model.photos.count) photographs")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     Spacer()
-                    if model.advancedSearch != nil {
+                    if model.activeLightTable == nil, model.advancedSearch != nil {
                         Button("Clear Advanced Search", systemImage: "xmark.circle") { model.advancedSearch = nil }
                             .labelStyle(.iconOnly).help("Clear Advanced Search")
                     }
-                    if model.isViewingTrash {
+                    if model.activeLightTable == nil, model.isViewingTrash {
                         Button("Put Back") { model.setPhotosTrashed(model.selectedTrashActionIDs, trashed: false) }
                             .disabled(model.selectedTrashActionIDs.isEmpty)
                         Button("Empty Trash…", action: model.showEmptyLibraryTrashReview)
                             .disabled(!model.canReviewEmptyLibraryTrash)
                     }
-                    Picker("Rating filter", selection: $model.ratingFilter) { ForEach(RatingFilter.allCases) { filter in Text(filter.label).tag(filter) } }.labelsHidden().frame(width: 165)
-                    Picker("View", selection: Binding(get: { model.presentation }, set: model.choosePresentation)) {
-                        ForEach(BrowserPresentation.allCases) { presentation in
-                            Image(systemName: presentation.icon).accessibilityLabel(presentation.rawValue).tag(presentation)
-                                .disabled(!model.canChoosePresentation(presentation))
-                        }
-                    }.labelsHidden().pickerStyle(.segmented).frame(width: 155)
+                    if model.activeLightTable == nil {
+                        Picker("Rating filter", selection: $model.ratingFilter) { ForEach(RatingFilter.allCases) { filter in Text(filter.label).tag(filter) } }.labelsHidden().frame(width: 165)
+                        Picker("View", selection: Binding(get: { model.presentation }, set: model.choosePresentation)) {
+                            ForEach(BrowserPresentation.allCases) { presentation in
+                                Image(systemName: presentation.icon).accessibilityLabel(presentation.rawValue).tag(presentation)
+                                    .disabled(!model.canChoosePresentation(presentation))
+                            }
+                        }.labelsHidden().pickerStyle(.segmented).frame(width: 155)
+                    }
                 }.padding(.horizontal, 22).padding(.vertical, 16)
                 Divider().opacity(0.4)
-                if model.batchMode { BatchBar() }
-                if model.showKeywordControls && !model.isViewingTrash { KeywordControls() }
-                if !model.isViewingTrash { EditBar().disabled(model.batchMode) }
-                Divider().opacity(0.4)
+                if model.activeLightTable == nil {
+                    if model.batchMode { BatchBar() }
+                    if model.showKeywordControls && !model.isViewingTrash { KeywordControls() }
+                    if !model.isViewingTrash { EditBar().disabled(model.batchMode) }
+                    Divider().opacity(0.4)
+                }
                 HSplitView {
                     VStack(spacing: 0) {
-                        if model.presentation == .places {
+                        if let lightTable = model.activeLightTable {
+                            LightTableWorkspace(layout: lightTable).environmentObject(model)
+                        } else if model.presentation == .places {
                             PlacesBrowser(model: model) { photo, onSelect in
                                 photoCell(photo, compact: true, onSelect: onSelect)
                             }
@@ -1243,7 +1290,7 @@ struct ContentView: View {
                             return .handled
                         }
                         .onKeyPress(keys: [.leftArrow, .rightArrow, "0", "1", "2", "3", "4", "5", "9", "=", "-", "/"], phases: .down, action: model.reviewKey)
-                    if model.showInspector && !model.isViewingTrash {
+                    if model.activeLightTable == nil, model.showInspector && !model.isViewingTrash {
                         Inspector().frame(minWidth: 260, idealWidth: 290, maxWidth: 340).workspaceGlass(radius: 20).padding(10)
                     }
                 }
@@ -1252,7 +1299,8 @@ struct ContentView: View {
                     if model.busy { ProgressView().controlSize(.small) } else { Image(systemName: "checkmark.shield").foregroundStyle(.secondary) }
                     Text(model.status).font(.caption).lineLimit(2)
                     Spacer()
-                    Text("\(model.photos.count) photos").font(.caption2).foregroundStyle(.secondary)
+                    Text("\(model.activeLightTable?.items.count ?? model.photos.count) photos")
+                        .font(.caption2).foregroundStyle(.secondary)
                 }.padding(.horizontal, 18).padding(.vertical, 10).background(.ultraThinMaterial)
             }
         }
@@ -1266,7 +1314,7 @@ struct ContentView: View {
                     model.showBrowser()
                     if model.selected == nil { model.selection = model.photos.first?.id }
                 }
-            } }
+            }.disabled(model.activeLightTable != nil) }
             ToolbarItem { Button { openWindow(id: "features") } label: { Label("Features & Limits", systemImage: "questionmark.circle") }.help("See available features and what is still missing") }
             ToolbarItem { Button { withAnimation(.easeInOut(duration: 0.2)) { model.showInspector.toggle() } } label: { Label("Inspector", systemImage: "sidebar.right") }.help("Show or hide inspector") }
             ToolbarItem {
@@ -1285,18 +1333,22 @@ struct ContentView: View {
                         ForEach(PhotoColorLabel.allCases) { label in Text(model.name(for: label)).tag(ColorLabelFilter.color(label)) }
                     }
                 } label: { Label("Sort & Filter", systemImage: "arrow.up.arrow.down") }
+                    .disabled(model.activeLightTable != nil)
             }
             ToolbarItem {
                 Menu {
                     Button("Compare Photos", action: model.startComparison).disabled(!model.canStartComparison)
+                    Button("New Light Table from Selection", action: model.createLightTable)
+                        .disabled(!model.canCreateLightTable)
                     Button("Auto Stack by Capture Time…") { model.showAutoStack = true }
                     Button("Start Slideshow…") {
                         model.startSlideshow()
                     }
-                } label: { Label("Review", systemImage: "play.rectangle") }.disabled(model.busy || model.isViewingTrash || model.photos.isEmpty || model.repository == nil)
+                } label: { Label("Review", systemImage: "play.rectangle") }
+                    .disabled(model.busy || model.isViewingTrash || model.photos.isEmpty || model.repository == nil)
             }
             ToolbarItem { Button(action: model.importPanel) { Label("Import", systemImage: "square.and.arrow.down") } }
-            ToolbarItem { Button(action: model.exportPanel) { Label("Export", systemImage: "square.and.arrow.up") }.disabled(model.isViewingTrash || (model.batchMode ? model.batchPhotos.isEmpty : model.selected == nil)) }
+            ToolbarItem { Button(action: model.exportPanel) { Label("Export", systemImage: "square.and.arrow.up") }.disabled(model.activeLightTable != nil || model.isViewingTrash || (model.batchMode ? model.batchPhotos.isEmpty : model.selected == nil)) }
         }
     }
     var body: some View {
