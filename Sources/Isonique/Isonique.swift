@@ -305,6 +305,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         saved.upgradeForRedEye()
         saved.upgradeForDefinition()
         saved.upgradeForAdvancedLocalBrushes()
+        saved.upgradeForExtendedLocalBrushes()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -759,6 +760,8 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
             CommandMenu("Photos") {
                 Button("Dodge Brush") { workspace.chooseBrush(.dodge) }.disabled(!workspace.canBrush)
                 Button("Burn Brush") { workspace.chooseBrush(.burn) }.disabled(!workspace.canBrush)
+                Button("Saturation Brush") { workspace.chooseBrush(.saturation) }.disabled(!workspace.canBrush)
+                Button("Definition Brush") { workspace.chooseBrush(.definition) }.disabled(!workspace.canBrush)
                 Button("Repair Spot") { workspace.chooseSpotRemoval(.repair) }.disabled(!workspace.canSpotRemove)
                 Button("Clone Spot") { workspace.chooseSpotRemoval(.clone) }.disabled(!workspace.canSpotRemove)
                 Button("Manual Red-Eye") { workspace.chooseRedEyeCorrection() }.disabled(!workspace.canCorrectRedEye)
@@ -1463,6 +1466,8 @@ struct EditBar: View {
                 Menu {
                     Button("Dodge Brush") { model.chooseBrush(.dodge) }
                     Button("Burn Brush") { model.chooseBrush(.burn) }
+                    Button("Saturation Brush") { model.chooseBrush(.saturation) }
+                    Button("Definition Brush") { model.chooseBrush(.definition) }
                 } label: {
                     Label("Brush", systemImage: "paintbrush.pointed")
                         .foregroundStyle(model.tool == .brush ? Color.accentColor : .primary)
@@ -2024,9 +2029,15 @@ struct Inspector: View {
             }
             DisclosureGroup("Local Brush Masks") {
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Button("Dodge Brush") { model.chooseBrush(.dodge) }
-                        Button("Burn Brush") { model.chooseBrush(.burn) }
+                    Grid(horizontalSpacing: 8, verticalSpacing: 8) {
+                        GridRow {
+                            Button("Dodge Brush") { model.chooseBrush(.dodge) }
+                            Button("Burn Brush") { model.chooseBrush(.burn) }
+                        }
+                        GridRow {
+                            Button("Saturation Brush") { model.chooseBrush(.saturation) }
+                            Button("Definition Brush") { model.chooseBrush(.definition) }
+                        }
                     }.disabled(!model.canBrush)
                     Text("Paint in the Viewer. Each stroke is one undo step.")
                         .font(.caption2).foregroundStyle(.secondary)

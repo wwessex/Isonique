@@ -2,6 +2,17 @@ import SwiftUI
 import AppKit
 import IsoniqueCore
 
+private extension LocalBrushAdjustment {
+    var guideColor: Color {
+        switch self {
+        case .dodge: return .yellow
+        case .burn: return .blue
+        case .saturation: return .pink
+        case .definition: return .mint
+        }
+    }
+}
+
 extension Workspace {
     var canBrush: Bool {
         guard !busy, !batchMode, !isViewingTrash, let selected else { return false }
@@ -82,7 +93,7 @@ struct BrushControls: View {
             HStack {
                 Picker("Brush adjustment", selection: $adjustment) {
                     ForEach(LocalBrushAdjustment.allCases) { Text($0.rawValue).tag($0) }
-                }.labelsHidden().pickerStyle(.segmented).frame(maxWidth: 150)
+                }.labelsHidden().pickerStyle(.segmented).frame(maxWidth: 320)
                 Toggle("Erase", isOn: $erasing).toggleStyle(.button).help("Erase from the selected mask")
                 Toggle("Edge Aware", isOn: $edgeAware).toggleStyle(.button)
                     .help("Protect edges whose luminance differs from the start of the stroke")
@@ -166,7 +177,7 @@ struct BrushCanvas: View {
                         .frame(width: size.width, height: size.height).allowsHitTesting(false)
                 }
                 if let draft, let first = draft.points.first {
-                    let color: Color = draft.erasing ? .white : (draft.adjustment == .dodge ? .yellow : .blue)
+                    let color: Color = draft.erasing ? .white : draft.adjustment.guideColor
                     Path { path in
                         path.move(to: first)
                         for point in draft.points.dropFirst() { path.addLine(to: point) }

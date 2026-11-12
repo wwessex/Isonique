@@ -5,6 +5,8 @@ import ImageIO
 public enum LocalBrushAdjustment: String, Codable, CaseIterable, Identifiable {
     case dodge = "Dodge"
     case burn = "Burn"
+    case saturation = "Saturation"
+    case definition = "Definition"
     public var id: Self { self }
 }
 
@@ -114,7 +116,7 @@ struct LocalBrushEdgeMap {
 
 /// Bounded mask raster in source space. Each stroke uses maximum coverage along its
 /// path, then composites once, so input sampling frequency does not change opacity.
-struct LocalExposureMask {
+struct LocalAdjustmentMask {
     let width: Int
     let height: Int
     private let masks: [LocalBrushAdjustment: [Float]]
@@ -127,18 +129,21 @@ struct LocalExposureMask {
         let scale = min(1, 2048 / Double(max(sourceWidth, sourceHeight)))
         width = max(1, Int((Double(sourceWidth) * scale).rounded()))
         height = max(1, Int((Double(sourceHeight) * scale).rounded()))
-        var dodge = [Float](repeating: 0, count: width * height)
-        var burn = dodge
+        let empty = [Float](repeating: 0, count: width * height)
+        var buffers: [LocalBrushAdjustment: [Float]] = [:]
         activeAdjustments = Set(strokes.lazy.filter { !$0.erasing && $0.isValid }.map(\.adjustment))
         for stroke in strokes where stroke.isValid {
             try Task.checkCancellation()
-            switch stroke.adjustment {
-            case .dodge: try Self.paint(stroke, width: width, height: height, edgeMap: edgeMap, into: &dodge)
-            case .burn: try Self.paint(stroke, width: width, height: height, edgeMap: edgeMap, into: &burn)
-            }
+            if buffers[stroke.adjustment] == nil { buffers[stroke.adjustment] = empty }
+            try Self.paint(stroke, width: width, height: height, edgeMap: edgeMap,
+                           into: &buffers[stroke.adjustment]!)
         }
-        masks = [.dodge: dodge, .burn: burn]
+        masks = buffers
         self.settings = settings
+    }
+
+    func isActive(_ adjustment: LocalBrushAdjustment) -> Bool {
+        activeAdjustments.contains(adjustment)
     }
 
     func exposure(x: Int, y: Int, imageWidth: Int, imageHeight: Int) -> Double {
@@ -283,11 +288,17 @@ public extension Renderer {
         let edgeMap = adjustments.localBrushes.contains(where: \.edgeAware)
             ? LocalBrushEdgeMap(pixels: UnsafePointer(sourcePixels), width: decoded.width, height: decoded.height)
             : nil
-        guard let mask = try LocalExposureMask(strokes: adjustments.localBrushes,
+        guard let mask = try LocalAdjustmentMask(strokes: adjustments.localBrushes,
             settings: adjustments.localBrushMaskSettings, sourceWidth: decoded.width,
             sourceHeight: decoded.height, edgeMap: edgeMap) else { return nil }
         let overlay = overlayData.bindMemory(to: UInt8.self, capacity: decoded.width * decoded.height * 4)
-        let color: (UInt8, UInt8, UInt8) = adjustment == .dodge ? (255, 205, 30) : (45, 115, 255)
+        let color: (UInt8, UInt8, UInt8)
+        switch adjustment {
+        case .dodge: color = (255, 205, 30)
+        case .burn: color = (45, 115, 255)
+        case .saturation: color = (230, 65, 180)
+        case .definition: color = (40, 205, 150)
+        }
         for y in 0..<decoded.height {
             if y.isMultiple(of: 64) { try Task.checkCancellation() }
             for x in 0..<decoded.width {

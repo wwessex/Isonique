@@ -359,9 +359,15 @@ Show Mask asks the shared source and geometry pipeline for a yellow Dodge or blu
 
 Format 27 protects the per-stroke edge flag and per-mask opacity and inversion in photos, versions, Lift and Stamp, custom presets, project merge and optional persistent history. Existing strokes decode with edge protection off and default mask settings preserve their exact earlier rendering.
 
+## Local Saturation and Definition brushes
+
+Saturation and Definition join Dodge and Burn in the Photos menu, editing strip, Inspector and four-way Viewer control. Each has its own ordered strokes, erasures, edge-aware coverage, overlay colour, inversion and post-stroke opacity. Masks remain independent when they overlap: Saturation scales source chroma without changing the Definition mask, while Definition applies the existing bounded 2%-radius luminance local-contrast kernel through its own coverage after basic tone processing.
+
+Zero mask opacity is pixel-neutral. Edge detection continues to sample original straight-sRGB luminance, so an effect does not leak across a protected boundary even when another mode overlaps it. Both effects run in the shared CPU preview/export pipeline. Format 28 distinguishes the new adjustment identifiers from format-27 Dodge/Burn recipes, allowing the preceding build to reject the newer catalogue cleanly instead of failing while decoding an enum value it does not understand.
+
 ## Next checkpoint
 
-Add non-destructive local Saturation and Definition brush modes using the shared edge-aware mask infrastructure. Test neutral settings, independent and overlapping masks, edge protection, erase/invert/opacity, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
+Add non-destructive local Sharpening and Luminance Noise Reduction brush modes using the shared edge-aware mask infrastructure. Test flat fields, high-contrast boundaries, independent and overlapping masks, erase/invert/opacity, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
 
 ## Pending physical camera checks
 

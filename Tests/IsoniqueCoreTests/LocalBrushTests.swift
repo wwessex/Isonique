@@ -23,9 +23,9 @@ final class LocalBrushTests: XCTestCase {
                                      softness: 0, strength: 1, edgeAware: true)
         let ordinaryStroke = stroke(.dodge, points: [point], radius: 0.25,
                                     softness: 0, strength: 1)
-        let protected = try XCTUnwrap(LocalExposureMask(strokes: [protectedStroke],
+        let protected = try XCTUnwrap(LocalAdjustmentMask(strokes: [protectedStroke],
             sourceWidth: width, sourceHeight: height, edgeMap: edgeMap))
-        let ordinary = try XCTUnwrap(LocalExposureMask(strokes: [ordinaryStroke],
+        let ordinary = try XCTUnwrap(LocalAdjustmentMask(strokes: [ordinaryStroke],
             sourceWidth: width, sourceHeight: height, edgeMap: edgeMap))
         XCTAssertEqual(exposure(protected, 40, 30, width: width, height: height), 1.5, accuracy: 0.0001)
         XCTAssertEqual(exposure(protected, 52, 30, width: width, height: height), 0, accuracy: 0.0001)
@@ -33,7 +33,7 @@ final class LocalBrushTests: XCTestCase {
 
         let erase = stroke(.dodge, points: [point], radius: 0.08, softness: 0,
                            strength: 1, erasing: true, edgeAware: true)
-        let erased = try XCTUnwrap(LocalExposureMask(strokes: [protectedStroke, erase],
+        let erased = try XCTUnwrap(LocalAdjustmentMask(strokes: [protectedStroke, erase],
             sourceWidth: width, sourceHeight: height, edgeMap: edgeMap))
         XCTAssertEqual(exposure(erased, 40, 30, width: width, height: height), 0, accuracy: 0.0001)
 
@@ -41,12 +41,12 @@ final class LocalBrushTests: XCTestCase {
             .dodge: LocalBrushMaskSettings(opacity: 0.4, inverted: false),
             .burn: LocalBrushMaskSettings(opacity: 1, inverted: true),
         ]
-        let faded = try XCTUnwrap(LocalExposureMask(strokes: [protectedStroke], settings: settings,
+        let faded = try XCTUnwrap(LocalAdjustmentMask(strokes: [protectedStroke], settings: settings,
             sourceWidth: width, sourceHeight: height, edgeMap: edgeMap))
         XCTAssertEqual(exposure(faded, 40, 30, width: width, height: height), 0.6, accuracy: 0.0001)
         XCTAssertEqual(exposure(faded, 80, 30, width: width, height: height), 0, accuracy: 0.0001,
                        "An inverted setting must not activate an unpainted adjustment")
-        let inverted = try XCTUnwrap(LocalExposureMask(strokes: [protectedStroke], settings: [
+        let inverted = try XCTUnwrap(LocalAdjustmentMask(strokes: [protectedStroke], settings: [
             .dodge: LocalBrushMaskSettings(opacity: 0.4, inverted: true),
         ], sourceWidth: width, sourceHeight: height, edgeMap: edgeMap))
         XCTAssertEqual(exposure(inverted, 40, 30, width: width, height: height), 0, accuracy: 0.0001)
@@ -215,15 +215,15 @@ final class LocalBrushTests: XCTestCase {
                          softness: softness, strength: strength, edgeAware: edgeAware, points: points)
     }
 
-    private func mask(_ strokes: [LocalBrushStroke]) throws -> LocalExposureMask {
-        try XCTUnwrap(LocalExposureMask(strokes: strokes, sourceWidth: 100, sourceHeight: 100))
+    private func mask(_ strokes: [LocalBrushStroke]) throws -> LocalAdjustmentMask {
+        try XCTUnwrap(LocalAdjustmentMask(strokes: strokes, sourceWidth: 100, sourceHeight: 100))
     }
 
-    private func exposure(_ mask: LocalExposureMask, _ x: Int, _ y: Int) -> Double {
+    private func exposure(_ mask: LocalAdjustmentMask, _ x: Int, _ y: Int) -> Double {
         mask.exposure(x: x, y: y, imageWidth: 100, imageHeight: 100)
     }
 
-    private func exposure(_ mask: LocalExposureMask, _ x: Int, _ y: Int,
+    private func exposure(_ mask: LocalAdjustmentMask, _ x: Int, _ y: Int,
                           width: Int, height: Int) -> Double {
         mask.exposure(x: x, y: y, imageWidth: width, imageHeight: height)
     }

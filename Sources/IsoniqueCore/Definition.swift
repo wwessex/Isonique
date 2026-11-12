@@ -22,6 +22,21 @@ public extension Renderer {
     static func applyDefinition(_ source: CGImage, strength: Double, radius: Double) throws -> CGImage {
         let strength = DefinitionRules.strength(strength)
         guard strength > 0 else { return source }
+        return try applyingDefinition(source, radius: radius) { _, _ in strength }
+    }
+
+    /// Applies the same bounded Definition kernel through a source-space local mask.
+    internal static func applyLocalDefinition(_ source: CGImage,
+                                              mask: LocalAdjustmentMask?) throws -> CGImage {
+        guard let mask, mask.isActive(.definition) else { return source }
+        return try applyingDefinition(source, radius: DefinitionRules.neutralRadius) { x, y in
+            mask.coverage(for: .definition, x: x, y: y,
+                          imageWidth: source.width, imageHeight: source.height)
+        }
+    }
+
+    private static func applyingDefinition(_ source: CGImage, radius: Double,
+                                           strengthAt: (Int, Int) -> Double) throws -> CGImage {
         guard let space = CGColorSpace(name: CGColorSpace.sRGB),
               let context = CGContext(data: nil, width: source.width, height: source.height,
                                       bitsPerComponent: 8, bytesPerRow: source.width * 4, space: space,
@@ -34,7 +49,6 @@ public extension Renderer {
             Double(min(source.width, source.height))).rounded()))
         let blurred = try boxBlurredLuminance(pixels, width: source.width, height: source.height,
                                               radius: pixelRadius)
-        let maximumDelta = DefinitionRules.maximumLuminanceDelta * strength
 
         for y in 0..<source.height {
             if y.isMultiple(of: 64) { try Task.checkCancellation() }
@@ -45,8 +59,11 @@ public extension Renderer {
                 let red = Double(pixels[offset]) / (255 * alpha)
                 let green = Double(pixels[offset + 1]) / (255 * alpha)
                 let blue = Double(pixels[offset + 2]) / (255 * alpha)
+                let strength = DefinitionRules.strength(strengthAt(x, y))
+                guard strength > 0 else { continue }
                 let luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue
                 let highPass = luminance - Double(blurred[y * source.width + x])
+                let maximumDelta = DefinitionRules.maximumLuminanceDelta * strength
                 let delta = min(maximumDelta, max(-maximumDelta, highPass * strength * 1.8))
                 guard abs(delta) >= 0.5 / 255 else { continue }
                 func encoded(_ channel: Double) -> UInt8 {

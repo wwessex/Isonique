@@ -215,6 +215,10 @@ public extension Adjustments {
         localBrushes.contains(where: \.edgeAware) || localBrushMaskSettings.values.contains { !$0.isNeutral }
     }
 
+    var hasExtendedLocalBrushRecipe: Bool {
+        localBrushes.contains { $0.adjustment == .saturation || $0.adjustment == .definition }
+    }
+
     var hasLensEffects: Bool {
         chromaticAberrationRedCyan != 0 || chromaticAberrationBlueYellow != 0 || vignette != 0 || devignette != 0
     }
@@ -441,6 +445,10 @@ public struct Library: Codable {
         if version < 27, hasRecipe(where: \.hasAdvancedLocalBrushRecipe) { version = 27 }
     }
 
+    public mutating func upgradeForExtendedLocalBrushes() {
+        if version < 28, hasRecipe(where: \.hasExtendedLocalBrushRecipe) { version = 28 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -484,6 +492,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 28, hasRecipe(where: \.hasExtendedLocalBrushRecipe) { throw LibraryError.unsupportedVersion }
         if version < 27, hasRecipe(where: \.hasAdvancedLocalBrushRecipe) { throw LibraryError.unsupportedVersion }
         if version < 26, hasRecipe(where: \.hasDefinitionRecipe) { throw LibraryError.unsupportedVersion }
         if version < 25, hasRecipe(where: \.hasRedEyeCorrections) { throw LibraryError.unsupportedVersion }
@@ -505,7 +514,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...27).contains(version) { return }
+        if (7...28).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -682,6 +691,7 @@ public final class LibraryRepository {
         normalized.upgradeForRedEye()
         normalized.upgradeForDefinition()
         normalized.upgradeForAdvancedLocalBrushes()
+        normalized.upgradeForExtendedLocalBrushes()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
@@ -980,7 +990,7 @@ public enum Renderer {
         let edgeMap = adjustments.localBrushes.contains(where: \.edgeAware)
             ? LocalBrushEdgeMap(pixels: UnsafePointer(pixels), width: decoded.width, height: decoded.height)
             : nil
-        let mask = try LocalExposureMask(strokes: adjustments.localBrushes,
+        let mask = try LocalAdjustmentMask(strokes: adjustments.localBrushes,
             settings: adjustments.localBrushMaskSettings, sourceWidth: sourceWidth,
             sourceHeight: sourceHeight, edgeMap: edgeMap)
         let globalMultiplier = pow(2.0, adjustments.exposure)
@@ -1014,6 +1024,10 @@ public enum Renderer {
                 let relativeChroma = peak > 0 ? (peak - min(red, green, blue)) / peak : 0
                 saturation *= 1 + vibrancy * (1 - relativeChroma)
             }
+            let localSaturation = mask?.coverage(for: .saturation,
+                x: (offset / 4) % decoded.width, y: (offset / 4) / decoded.width,
+                imageWidth: decoded.width, imageHeight: decoded.height) ?? 0
+            saturation *= 1 + localSaturation
             let sepiaLuma = sepia == 0 ? 0 : min(1, max(0, (luminance - 0.5) * adjustments.contrast + 0.5 + lift))
             let warmth = 0.56 * sepiaLuma * (1 - sepiaLuma)
             func encode(_ channel: Double, sepiaTint: Double) -> UInt8 {
@@ -1028,7 +1042,9 @@ public enum Renderer {
         }
         guard let result = context.makeImage() else { throw LibraryError.unsupportedImage(url.lastPathComponent) }
         let toned = try applyTone(result, adjustments: adjustments)
-        return (toned, PhotoGeometry(width: decoded.width, height: decoded.height, adjustments: adjustments))
+        let locallyDefined = try applyLocalDefinition(toned, mask: mask)
+        return (locallyDefined, PhotoGeometry(width: decoded.width, height: decoded.height,
+                                              adjustments: adjustments))
     }
     /// Shared independent sRGB tonal treatment for previews, exports and GPU-free hosts.
     /// Neutral settings bypass conversion; these are not Apple's proprietary RAW formulas.
