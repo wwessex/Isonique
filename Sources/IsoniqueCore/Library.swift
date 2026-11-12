@@ -244,6 +244,12 @@ public extension Adjustments {
 
     var hasLocalBrushInstancesRecipe: Bool { !localBrushInstances.isEmpty }
 
+    var hasLocalPolarizeHaloRecipe: Bool {
+        localBrushInstances.contains {
+            $0.adjustment == .polarize || $0.adjustment == .haloReduction
+        }
+    }
+
     var hasLensEffects: Bool {
         chromaticAberrationRedCyan != 0 || chromaticAberrationBlueYellow != 0 || vignette != 0 || devignette != 0
     }
@@ -493,6 +499,10 @@ public struct Library: Codable {
         if version < 32, hasRecipe(where: \.hasLocalBrushInstancesRecipe) { version = 32 }
     }
 
+    public mutating func upgradeForLocalPolarizeHalo() {
+        if version < 33, hasRecipe(where: \.hasLocalPolarizeHaloRecipe) { version = 33 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -536,6 +546,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 33, hasRecipe(where: \.hasLocalPolarizeHaloRecipe) { throw LibraryError.unsupportedVersion }
         if version < 32, hasRecipe(where: \.hasLocalBrushInstancesRecipe) { throw LibraryError.unsupportedVersion }
         if version < 31, hasRecipe(where: \.hasLocalTintSkinRecipe) { throw LibraryError.unsupportedVersion }
         if version < 30, hasRecipe(where: \.hasLocalContrastBlurRecipe) { throw LibraryError.unsupportedVersion }
@@ -562,7 +573,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...32).contains(version) { return }
+        if (7...33).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -744,6 +755,7 @@ public final class LibraryRepository {
         normalized.upgradeForLocalContrastBlur()
         normalized.upgradeForLocalTintSkin()
         normalized.upgradeForLocalBrushInstances()
+        normalized.upgradeForLocalPolarizeHalo()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }
@@ -979,7 +991,12 @@ public enum Renderer {
         let toneTable = (0...255).map { TonalTools.map(Double($0) / 255, adjustments: adjustments) }
         let levels = try TonalTools.applying(monochrome, table: toneTable, curves: adjustments.channelCurves,
                                              channelLevels: adjustments.channelLevels)
-        var locallyContrasted = levels
+        var locallyPolarized = levels
+        for brush in localBrushes where brush.recipe.adjustment == .polarize {
+            locallyPolarized = try applyLocalPolarize(locallyPolarized,
+                settings: brush.recipe.polarizeSettings, mask: brush.mask)
+        }
+        var locallyContrasted = locallyPolarized
         for brush in localBrushes where brush.recipe.adjustment == .contrast {
             locallyContrasted = try applyLocalContrast(locallyContrasted, mask: brush.mask)
         }
@@ -1001,7 +1018,12 @@ public enum Renderer {
         for brush in localBrushes where brush.recipe.adjustment == .sharpening {
             locallyDetailed = try applyLocalSharpening(locallyDetailed, mask: brush.mask)
         }
-        var locallySmoothed = locallyDetailed
+        var locallyDehaloed = locallyDetailed
+        for brush in localBrushes where brush.recipe.adjustment == .haloReduction {
+            locallyDehaloed = try applyLocalHaloReduction(locallyDehaloed,
+                settings: brush.recipe.haloReductionSettings, mask: brush.mask)
+        }
+        var locallySmoothed = locallyDehaloed
         for brush in localBrushes where brush.recipe.adjustment == .skinSmoothing {
             locallySmoothed = try applyLocalSkinSmoothing(locallySmoothed,
                 settings: brush.recipe.skinSmoothingSettings, mask: brush.mask)

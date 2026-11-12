@@ -15,6 +15,8 @@ private extension LocalBrushAdjustment {
         case .blur: return .gray
         case .tint: return .red
         case .skinSmoothing: return .brown
+        case .polarize: return .blue
+        case .haloReduction: return .green
         }
     }
 }
@@ -122,6 +124,31 @@ extension Workspace {
             let value = LocalSkinSmoothingSettings(amount: amount, detailPreservation: detail)
             guard photo.adjustments.localBrushInstances[index].skinSmoothingSettings != value else { return }
             photo.adjustments.localBrushInstances[index].skinSmoothingSettings = value
+        }
+    }
+
+    func setLocalPolarizeSettings(_ settings: LocalPolarizeSettings) {
+        guard !batchMode, let targetID = activeBrushInstanceID(for: .polarize) else { return }
+        let value = LocalPolarizeSettings(intensity: settings.intensity.isFinite
+            ? min(1, max(0, settings.intensity)) : 0)
+        edit { photo in
+            photo.adjustments.migrateLocalBrushInstances()
+            guard let index = photo.adjustments.localBrushInstances.firstIndex(where: { $0.id == targetID }),
+                  photo.adjustments.localBrushInstances[index].polarizeSettings != value else { return }
+            photo.adjustments.localBrushInstances[index].polarizeSettings = value
+        }
+    }
+
+    func setLocalHaloReductionSettings(_ settings: LocalHaloReductionSettings) {
+        guard !batchMode, let targetID = activeBrushInstanceID(for: .haloReduction) else { return }
+        let amount = settings.amount.isFinite ? min(1, max(0, settings.amount)) : 0
+        let radius = settings.radius.isFinite ? min(0.08, max(0.0025, settings.radius)) : 0.015
+        let value = LocalHaloReductionSettings(amount: amount, radius: radius)
+        edit { photo in
+            photo.adjustments.migrateLocalBrushInstances()
+            guard let index = photo.adjustments.localBrushInstances.firstIndex(where: { $0.id == targetID }),
+                  photo.adjustments.localBrushInstances[index].haloReductionSettings != value else { return }
+            photo.adjustments.localBrushInstances[index].haloReductionSettings = value
         }
     }
 
@@ -234,9 +261,13 @@ struct BrushControls: View {
     let maskInverted: Bool
     let tintSettings: LocalTintSettings
     let skinSmoothingSettings: LocalSkinSmoothingSettings
+    let polarizeSettings: LocalPolarizeSettings
+    let haloReductionSettings: LocalHaloReductionSettings
     let setOpacity: (Double) -> Void
     let setTintSettings: (LocalTintSettings) -> Void
     let setSkinSmoothingSettings: (LocalSkinSmoothingSettings) -> Void
+    let setPolarizeSettings: (LocalPolarizeSettings) -> Void
+    let setHaloReductionSettings: (LocalHaloReductionSettings) -> Void
     let createInstance: () -> Void
     let renameInstance: (UUID, String) -> Void
     let setInstanceEnabled: (UUID, Bool) -> Void
@@ -252,6 +283,9 @@ struct BrushControls: View {
     @State private var tintSaturation = 35.0
     @State private var smoothingAmount = 50.0
     @State private var detailPreservation = 50.0
+    @State private var polarizeIntensity = 50.0
+    @State private var haloReductionAmount = 50.0
+    @State private var haloReductionRadius = 1.5
     @State private var instanceName = ""
 
     private var selectedInstance: LocalBrushInstance? {
@@ -347,6 +381,23 @@ struct BrushControls: View {
                             amount: smoothingAmount / 100, detailPreservation: detailPreservation / 100))
                     }
                 }
+            } else if adjustment == .polarize {
+                HStack(spacing: 10) {
+                    committedSlider("Polarize Intensity", value: $polarizeIntensity, range: 0...100) {
+                        setPolarizeSettings(LocalPolarizeSettings(intensity: polarizeIntensity / 100))
+                    }
+                }
+            } else if adjustment == .haloReduction {
+                HStack(spacing: 10) {
+                    committedSlider("Halo Reduction", value: $haloReductionAmount, range: 0...100) {
+                        setHaloReductionSettings(LocalHaloReductionSettings(
+                            amount: haloReductionAmount / 100, radius: haloReductionRadius / 100))
+                    }
+                    committedSlider("Halo Radius", value: $haloReductionRadius, range: 0.25...8) {
+                        setHaloReductionSettings(LocalHaloReductionSettings(
+                            amount: haloReductionAmount / 100, radius: haloReductionRadius / 100))
+                    }
+                }
             }
         }.font(.caption)
             .onAppear { syncSettings() }
@@ -355,6 +406,8 @@ struct BrushControls: View {
             }
             .onChange(of: tintSettings) { _, _ in syncSettings() }
             .onChange(of: skinSmoothingSettings) { _, _ in syncSettings() }
+            .onChange(of: polarizeSettings) { _, _ in syncSettings() }
+            .onChange(of: haloReductionSettings) { _, _ in syncSettings() }
             .onChange(of: instanceID) { _, _ in syncSettings() }
             .onChange(of: instances) { _, _ in syncSettings() }
     }
@@ -390,6 +443,9 @@ struct BrushControls: View {
         tintSaturation = tintSettings.saturation * 100
         smoothingAmount = skinSmoothingSettings.amount * 100
         detailPreservation = skinSmoothingSettings.detailPreservation * 100
+        polarizeIntensity = polarizeSettings.intensity * 100
+        haloReductionAmount = haloReductionSettings.amount * 100
+        haloReductionRadius = haloReductionSettings.radius * 100
         instanceName = selectedInstance?.displayName ?? ""
     }
 

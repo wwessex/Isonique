@@ -389,9 +389,15 @@ Every local effect can now own multiple named instances. Each instance persists 
 
 Same-type instances composite in their displayed order; different effect types retain the established renderer stage order. Lift and Stamp and explicitly selected spatial custom presets copy the complete instance list, while safe preset defaults continue to preserve spatial recipes. A format-31 recipe remains unchanged when merely opened and renders through a stable one-instance compatibility view. Its legacy masks are converted to format 32 only when the user first uses an instance-aware editing action, and a pixel comparison verifies that conversion does not alter the rendered result.
 
+## Local Polarize and Halo Reduction brushes
+
+Polarize and Halo Reduction complete the outstanding Aperture-style local effect set on the shared instance-aware mask system. Polarize stores a bounded intensity for each instance and selectively darkens and increases saturation in cool chromatic sky-like pixels; neutral intensity, achromatic pixels and warm colours bypass the operation. Halo Reduction stores bounded amount and radius controls per instance and moves luminance overshoot towards a separable local mean after global and local sharpening. Neutral amount and flat fields remain unchanged, and its radius scales with the shorter rendered image side.
+
+Both modes are available from Photos, the editing strip, the Inspector and the Viewer brush picker. They inherit independent names, enabled state, ordering, duplicate/delete actions, source-coordinate strokes, edge awareness, erase, inversion, opacity and Viewer-only overlays. Same-type instances composite in their displayed order in the one full-resolution preview/export renderer. Format 33 protects the new identifiers and parameters; format-32 instances decode compatible defaults, while a format-32 catalogue containing either new mode is rejected until upgraded. Lift and Stamp and explicitly spatial custom presets copy the complete records.
+
 ## Next checkpoint
 
-Add non-destructive local Polarize and Halo Reduction brush modes using the shared instance-aware, edge-aware mask infrastructure. Give Polarize a bounded intensity control and Halo Reduction amount and radius controls. Test neutral and maximum settings, sky and edge fixtures, multiple ordered instances, Undo/Redo, persistence, Lift and Stamp, full-resolution preview/export consistency and preservation of originals.
+Add pressure-sensitive tablet input for local brushes, with independently configurable pressure mapping for brush size and strength plus an unchanged mouse and trackpad fallback. Test pressure-curve bounds, mid-stroke samples, Undo/Redo, persistence and compatibility with existing format-33 brush recipes.
 
 ## Pending physical camera checks
 

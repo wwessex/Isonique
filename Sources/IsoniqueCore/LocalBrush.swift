@@ -13,6 +13,8 @@ public enum LocalBrushAdjustment: String, Codable, CaseIterable, Identifiable {
     case blur = "Blur"
     case tint = "Tint"
     case skinSmoothing = "Skin Smoothing"
+    case polarize = "Polarize"
+    case haloReduction = "Halo Reduction"
     public var id: Self { self }
 }
 
@@ -49,6 +51,30 @@ public struct LocalSkinSmoothingSettings: Codable, Equatable {
     var boundedDetailPreservation: Double {
         detailPreservation.isFinite ? min(1, max(0, detailPreservation)) : 0.5
     }
+}
+
+public struct LocalPolarizeSettings: Codable, Equatable {
+    public var intensity: Double
+
+    public init(intensity: Double = 0.5) {
+        self.intensity = intensity
+    }
+
+    var boundedIntensity: Double { intensity.isFinite ? min(1, max(0, intensity)) : 0 }
+}
+
+public struct LocalHaloReductionSettings: Codable, Equatable {
+    public var amount: Double
+    /// Radius as a fraction of the shorter rendered image side.
+    public var radius: Double
+
+    public init(amount: Double = 0.5, radius: Double = 0.015) {
+        self.amount = amount
+        self.radius = radius
+    }
+
+    var boundedAmount: Double { amount.isFinite ? min(1, max(0, amount)) : 0 }
+    var boundedRadius: Double { radius.isFinite ? min(0.08, max(0.0025, radius)) : 0.015 }
 }
 
 /// Normalized coordinates in the EXIF-oriented original, before geometric edits.
@@ -131,12 +157,16 @@ public struct LocalBrushInstance: Codable, Equatable, Identifiable {
     public var maskSettings: LocalBrushMaskSettings
     public var tintSettings: LocalTintSettings
     public var skinSmoothingSettings: LocalSkinSmoothingSettings
+    public var polarizeSettings: LocalPolarizeSettings
+    public var haloReductionSettings: LocalHaloReductionSettings
 
     public init(id: UUID = UUID(), name: String, adjustment: LocalBrushAdjustment,
                 enabled: Bool = true, strokes: [LocalBrushStroke] = [],
                 maskSettings: LocalBrushMaskSettings = LocalBrushMaskSettings(),
                 tintSettings: LocalTintSettings = LocalTintSettings(),
-                skinSmoothingSettings: LocalSkinSmoothingSettings = LocalSkinSmoothingSettings()) {
+                skinSmoothingSettings: LocalSkinSmoothingSettings = LocalSkinSmoothingSettings(),
+                polarizeSettings: LocalPolarizeSettings = LocalPolarizeSettings(),
+                haloReductionSettings: LocalHaloReductionSettings = LocalHaloReductionSettings()) {
         self.id = id
         self.name = name
         self.adjustment = adjustment
@@ -145,10 +175,13 @@ public struct LocalBrushInstance: Codable, Equatable, Identifiable {
         self.maskSettings = maskSettings
         self.tintSettings = tintSettings
         self.skinSmoothingSettings = skinSmoothingSettings
+        self.polarizeSettings = polarizeSettings
+        self.haloReductionSettings = haloReductionSettings
     }
 
     enum CodingKeys: String, CodingKey {
         case id, name, adjustment, enabled, strokes, maskSettings, tintSettings, skinSmoothingSettings
+        case polarizeSettings, haloReductionSettings
     }
 
     public init(from decoder: Decoder) throws {
@@ -164,6 +197,10 @@ public struct LocalBrushInstance: Codable, Equatable, Identifiable {
                                                    forKey: .tintSettings) ?? LocalTintSettings()
         skinSmoothingSettings = try values.decodeIfPresent(LocalSkinSmoothingSettings.self,
             forKey: .skinSmoothingSettings) ?? LocalSkinSmoothingSettings()
+        polarizeSettings = try values.decodeIfPresent(LocalPolarizeSettings.self,
+            forKey: .polarizeSettings) ?? LocalPolarizeSettings()
+        haloReductionSettings = try values.decodeIfPresent(LocalHaloReductionSettings.self,
+            forKey: .haloReductionSettings) ?? LocalHaloReductionSettings()
     }
 
     public var displayName: String {
@@ -463,6 +500,8 @@ public extension Renderer {
         case .blur: color = (145, 150, 165)
         case .tint: color = (235, 100, 115)
         case .skinSmoothing: color = (235, 175, 120)
+        case .polarize: color = (35, 155, 230)
+        case .haloReduction: color = (105, 205, 170)
         }
         for y in 0..<decoded.height {
             if y.isMultiple(of: 64) { try Task.checkCancellation() }

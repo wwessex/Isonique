@@ -170,6 +170,73 @@ extension Renderer {
         }
     }
 
+    static func applyLocalPolarize(_ source: CGImage, settings: LocalPolarizeSettings,
+                                   mask: LocalAdjustmentMask?) throws -> CGImage {
+        let intensity = settings.boundedIntensity
+        guard intensity > 0, mask?.isActive(.polarize) == true else { return source }
+        return try withDetailPixels(source, operation: "local polarize") { pixels, width, height in
+            for y in 0..<height {
+                if y.isMultiple(of: 64) { try Task.checkCancellation() }
+                for x in 0..<width {
+                    let offset = (y * width + x) * 4
+                    let alpha = Double(pixels[offset + 3]) / 255
+                    guard alpha > 0 else { continue }
+                    let coverage = mask?.coverage(for: .polarize, x: x, y: y,
+                        imageWidth: width, imageHeight: height) ?? 0
+                    guard coverage > 0 else { continue }
+                    let channels = straightChannels(pixels, offset: offset, alpha: alpha)
+                    let hsl = TargetedColorTools.hsl(red: channels.red, green: channels.green,
+                                                     blue: channels.blue)
+                    guard hsl.saturation > 0.08 else { continue }
+                    let hueDistance = min(abs(hsl.hue - 215), 360 - abs(hsl.hue - 215))
+                    guard hueDistance < 75 else { continue }
+                    let hueWeight = 1 - smoothstep(min(1, hueDistance / 75))
+                    let saturationWeight = smoothstep(min(1, max(0, (hsl.saturation - 0.08) / 0.35)))
+                    let amount = intensity * coverage * hueWeight * saturationWeight
+                    guard amount > 0 else { continue }
+                    let output = TargetedColorTools.rgb(
+                        hue: hsl.hue,
+                        saturation: TargetedColorTools.signed(hsl.saturation, amount: amount * 0.4),
+                        luminance: TargetedColorTools.signed(hsl.luminance, amount: -amount * 0.22))
+                    writeChannels(DetailRGB(red: output.red, green: output.green, blue: output.blue),
+                                  alpha: alpha, pixels: pixels, offset: offset)
+                }
+            }
+        }
+    }
+
+    static func applyLocalHaloReduction(_ source: CGImage, settings: LocalHaloReductionSettings,
+                                        mask: LocalAdjustmentMask?) throws -> CGImage {
+        let amount = settings.boundedAmount
+        guard amount > 0, mask?.isActive(.haloReduction) == true else { return source }
+        return try withDetailPixels(source, operation: "local halo reduction") { pixels, width, height in
+            let radius = max(1, Int((Double(min(width, height)) * settings.boundedRadius).rounded()))
+            var blurred = [Float](repeating: 0, count: width * height)
+            var temporary = blurred
+            try boxBlurredLuminance(pixels, width: width, height: height, radius: radius,
+                                    output: &blurred, temporary: &temporary)
+            for y in 0..<height {
+                if y.isMultiple(of: 64) { try Task.checkCancellation() }
+                for x in 0..<width {
+                    let offset = (y * width + x) * 4
+                    let alpha = Double(pixels[offset + 3]) / 255
+                    guard alpha > 0 else { continue }
+                    let coverage = mask?.coverage(for: .haloReduction, x: x, y: y,
+                        imageWidth: width, imageHeight: height) ?? 0
+                    guard coverage > 0 else { continue }
+                    let channels = straightChannels(pixels, offset: offset, alpha: alpha)
+                    let current = luminance(channels)
+                    let localMean = Double(blurred[y * width + x])
+                    let highPass = current - localMean
+                    let haloWeight = smoothstep(min(1, max(0, (abs(highPass) - 0.015) / 0.12)))
+                    guard haloWeight > 0 else { continue }
+                    writeLuminanceDelta(-highPass * amount * coverage * haloWeight,
+                                        channels: channels, alpha: alpha, pixels: pixels, offset: offset)
+                }
+            }
+        }
+    }
+
     private static func applySharpening(_ source: CGImage, sharpening: Double, edgeSharpening: Double,
                                         mask: LocalAdjustmentMask?) throws -> CGImage {
         let sharpening = boundedDetail(sharpening)
@@ -243,6 +310,55 @@ extension Renderer {
                 output[y * width + x] = (temporary[above * width + x] +
                                          2 * temporary[y * width + x] +
                                          temporary[below * width + x]) / 4
+            }
+        }
+    }
+
+    private static func boxBlurredLuminance(_ pixels: UnsafeMutablePointer<UInt8>, width: Int, height: Int,
+                                            radius: Int, output: inout [Float],
+                                            temporary: inout [Float]) throws {
+        guard width > 0, height > 0 else { return }
+        for y in 0..<height {
+            if y.isMultiple(of: 64) { try Task.checkCancellation() }
+            for x in 0..<width {
+                let offset = (y * width + x) * 4
+                let alpha = Double(pixels[offset + 3]) / 255
+                output[y * width + x] = alpha > 0
+                    ? Float(luminance(straightChannels(pixels, offset: offset, alpha: alpha))) : 0
+            }
+        }
+        for y in 0..<height {
+            var sum = 0.0
+            var count = 0
+            for x in 0..<width {
+                let entering = x + radius
+                if entering < width { sum += Double(output[y * width + entering]); count += 1 }
+                if x == 0 {
+                    for initial in 0..<min(radius, width) {
+                        sum += Double(output[y * width + initial]); count += 1
+                    }
+                } else {
+                    let leaving = x - radius - 1
+                    if leaving >= 0 { sum -= Double(output[y * width + leaving]); count -= 1 }
+                }
+                temporary[y * width + x] = Float(sum / Double(max(1, count)))
+            }
+        }
+        for x in 0..<width {
+            var sum = 0.0
+            var count = 0
+            for y in 0..<height {
+                let entering = y + radius
+                if entering < height { sum += Double(temporary[entering * width + x]); count += 1 }
+                if y == 0 {
+                    for initial in 0..<min(radius, height) {
+                        sum += Double(temporary[initial * width + x]); count += 1
+                    }
+                } else {
+                    let leaving = y - radius - 1
+                    if leaving >= 0 { sum -= Double(temporary[leaving * width + x]); count -= 1 }
+                }
+                output[y * width + x] = Float(sum / Double(max(1, count)))
             }
         }
     }
