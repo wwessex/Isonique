@@ -401,9 +401,17 @@ The Viewer brush canvas now uses a native AppKit input surface so pen and eraser
 
 The source-space mask raster interpolates both scales along each segment while retaining edge protection, softness, erase, inversion and instance ordering. This makes the full-resolution Viewer and export output independent of later preference changes. Format 34 is required only when a point contains a non-default pressure scale; fixed format-33 recipes decode scale 1, omit default fields when re-encoded and do not upgrade merely because they are opened or saved.
 
+## Source-space brush caching and Viewer magnification
+
+Viewer, mask overlays and export now share a thread-safe source-space mask LRU bounded to 128 MiB and 12 entries. An unchanged instance is an exact hit. When a painting session appends strokes, the cache reuses the longest matching recipe prefix and rasterises only the suffix. Editing an earlier stroke, changing source dimensions or changing the decoded source fingerprint used by an edge-aware stroke causes a full rebuild. A cancelled request neither returns a cached result nor publishes partial work. Mask rasters remain capped at 2048 pixels on the longest source edge.
+
+The performance contract is measurable without machine-sensitive wall-clock assertions: a 24-stroke append session performs 24 stroke rasters rather than 300, the clean and incremental masks agree, and a 12,000 × 8,000 source stays within a 16 MiB fixture budget. The format-34 pressure workflow confirms Undo/Redo, restart persistence, original preservation and byte-identical full-resolution Viewer and PNG export while the export records an exact shared-cache hit.
+
+The Viewer also accepts the native macOS magnification gesture in Select and Brush modes. Pinching outward leaves Fit for continuous pixel zoom, pinching inward past the lower threshold returns to Fit, and the range is bounded to 25–800%. The established Fit/100% control remains available. This works with Mac trackpads and compatible devices that emit AppKit magnification gestures; macOS does not expose arbitrary touch-display contacts as iOS-style touches without driver translation.
+
 ## Next checkpoint
 
-Improve large-file and long-session brush performance with reusable source-space mask caching and incremental stroke rasterisation. Add measurable performance budgets, cancellation and cache invalidation tests while preserving byte-identical Viewer/export output and all format-34 recipes.
+Add synchronized zoom and pan to side-by-side Compare, including trackpad pinch, Fit/100% controls and a switch for independent navigation. Test different aspect ratios, full-resolution transitions, cancellation and comparison changes without altering exports or catalogue recipes.
 
 ## Pending physical camera checks
 

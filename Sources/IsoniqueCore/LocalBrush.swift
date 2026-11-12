@@ -351,23 +351,40 @@ struct LocalBrushEdgeMap {
     let width: Int
     let height: Int
     let values: [Float]
+    /// Fingerprints the decoded source used for edge protection. Cached masks may
+    /// only be reused when this value and the source-space geometry both match.
+    let signature: UInt64
 
     init(pixels: UnsafePointer<UInt8>, width: Int, height: Int) {
         self.width = width
         self.height = height
         var values = [Float](repeating: 0, count: width * height)
+        var signature: UInt64 = 14_695_981_039_346_656_037
+        func mix(_ value: UInt64) {
+            signature ^= value
+            signature &*= 1_099_511_628_211
+        }
+        mix(UInt64(width))
+        mix(UInt64(height))
         for y in 0..<height {
             for x in 0..<width {
                 let offset = (y * width + x) * 4
                 let alpha = Double(pixels[offset + 3]) / 255
-                guard alpha > 0 else { continue }
-                let red = Double(pixels[offset]) / (255 * alpha)
-                let green = Double(pixels[offset + 1]) / (255 * alpha)
-                let blue = Double(pixels[offset + 2]) / (255 * alpha)
-                values[y * width + x] = Float(0.2126 * red + 0.7152 * green + 0.0722 * blue)
+                let luminance: Float
+                if alpha > 0 {
+                    let red = Double(pixels[offset]) / (255 * alpha)
+                    let green = Double(pixels[offset + 1]) / (255 * alpha)
+                    let blue = Double(pixels[offset + 2]) / (255 * alpha)
+                    luminance = Float(0.2126 * red + 0.7152 * green + 0.0722 * blue)
+                } else {
+                    luminance = 0
+                }
+                values[y * width + x] = luminance
+                mix(UInt64(luminance.bitPattern))
             }
         }
         self.values = values
+        self.signature = signature
     }
 
     func luminance(x: Double, y: Double) -> Double {
@@ -387,21 +404,46 @@ struct LocalAdjustmentMask {
     private let settings: [LocalBrushAdjustment: LocalBrushMaskSettings]
 
     init?(strokes: [LocalBrushStroke], settings: [LocalBrushAdjustment: LocalBrushMaskSettings] = [:],
-          sourceWidth: Int, sourceHeight: Int, edgeMap: LocalBrushEdgeMap? = nil) throws {
+          sourceWidth: Int, sourceHeight: Int, edgeMap: LocalBrushEdgeMap? = nil,
+          reusing prefix: LocalAdjustmentMask? = nil, rasterizingFrom requestedStart: Int = 0) throws {
         guard strokes.contains(where: { !$0.erasing && $0.isValid }) else { return nil }
         let scale = min(1, 2048 / Double(max(sourceWidth, sourceHeight)))
         width = max(1, Int((Double(sourceWidth) * scale).rounded()))
         height = max(1, Int((Double(sourceHeight) * scale).rounded()))
         let empty = [Float](repeating: 0, count: width * height)
-        var buffers: [LocalBrushAdjustment: [Float]] = [:]
+        let canReuse = prefix?.width == width && prefix?.height == height && requestedStart > 0
+        var buffers = canReuse ? prefix!.masks : [:]
+        let start = canReuse ? min(requestedStart, strokes.count) : 0
         activeAdjustments = Set(strokes.lazy.filter { !$0.erasing && $0.isValid }.map(\.adjustment))
-        for stroke in strokes where stroke.isValid {
+        for stroke in strokes.dropFirst(start) where stroke.isValid {
             try Task.checkCancellation()
             if buffers[stroke.adjustment] == nil { buffers[stroke.adjustment] = empty }
             try Self.paint(stroke, width: width, height: height, edgeMap: edgeMap,
                            into: &buffers[stroke.adjustment]!)
         }
         masks = buffers
+        self.settings = settings
+    }
+
+    var byteCost: Int {
+        masks.values.reduce(0) { partial, values in
+            let (cost, overflow) = values.count.multipliedReportingOverflow(by: MemoryLayout<Float>.stride)
+            return overflow || partial > Int.max - cost ? Int.max : partial + cost
+        }
+    }
+
+    func applying(_ settings: [LocalBrushAdjustment: LocalBrushMaskSettings]) -> LocalAdjustmentMask {
+        LocalAdjustmentMask(width: width, height: height, masks: masks,
+                            activeAdjustments: activeAdjustments, settings: settings)
+    }
+
+    private init(width: Int, height: Int, masks: [LocalBrushAdjustment: [Float]],
+                 activeAdjustments: Set<LocalBrushAdjustment>,
+                 settings: [LocalBrushAdjustment: LocalBrushMaskSettings]) {
+        self.width = width
+        self.height = height
+        self.masks = masks
+        self.activeAdjustments = activeAdjustments
         self.settings = settings
     }
 
@@ -537,12 +579,12 @@ struct RenderedLocalBrushInstance {
 
 extension Adjustments {
     func renderedLocalBrushInstances(sourceWidth: Int, sourceHeight: Int,
-                                     edgeMap: LocalBrushEdgeMap?) throws -> [RenderedLocalBrushInstance] {
+                                     edgeMap: LocalBrushEdgeMap?,
+                                     cache: LocalBrushMaskCache = .shared) throws -> [RenderedLocalBrushInstance] {
         try effectiveLocalBrushInstances.compactMap { instance in
             guard instance.enabled,
-                  let mask = try LocalAdjustmentMask(strokes: instance.strokes,
-                    settings: [instance.adjustment: instance.maskSettings], sourceWidth: sourceWidth,
-                    sourceHeight: sourceHeight, edgeMap: edgeMap) else { return nil }
+                  let mask = try cache.mask(for: instance, sourceWidth: sourceWidth,
+                                            sourceHeight: sourceHeight, edgeMap: edgeMap) else { return nil }
             return RenderedLocalBrushInstance(recipe: instance, mask: mask)
         }
     }
@@ -586,9 +628,8 @@ public extension Renderer {
         let edgeMap = instance.strokes.contains(where: \.edgeAware)
             ? LocalBrushEdgeMap(pixels: UnsafePointer(sourcePixels), width: decoded.width, height: decoded.height)
             : nil
-        guard let mask = try LocalAdjustmentMask(strokes: instance.strokes,
-            settings: [adjustment: instance.maskSettings], sourceWidth: decoded.width,
-            sourceHeight: decoded.height, edgeMap: edgeMap) else { return nil }
+        guard let mask = try LocalBrushMaskCache.shared.mask(for: instance,
+            sourceWidth: decoded.width, sourceHeight: decoded.height, edgeMap: edgeMap) else { return nil }
         let overlay = overlayData.bindMemory(to: UInt8.self, capacity: decoded.width * decoded.height * 4)
         let color: (UInt8, UInt8, UInt8)
         switch adjustment {

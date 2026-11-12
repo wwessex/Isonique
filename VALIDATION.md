@@ -20,6 +20,16 @@ Use the signed build, a disposable library and a pen tablet that macOS recognise
 3. Change both minimum controls and compare Soft, Linear and Firm at mid pressure. Mouse and trackpad strokes must still use the fixed Size and Strength values.
 4. Undo and Redo each stroke, reopen the library and export the edited photo. Confirm the masks persist and the Viewer matches export. Disconnect the tablet and confirm ordinary pointer painting still works.
 
+## Physical Viewer magnification gesture
+
+Use the signed build and a Mac trackpad or display/input driver that advertises standard AppKit magnification gestures. Record the hardware, driver and macOS version. A MacBook Pro trackpad is supported; current MacBook Pro displays do not provide direct touch contacts.
+
+1. Open a large photo in the Viewer and pinch outward from Fit. Confirm the app enters continuous pixel zoom, reports the current percentage and remains responsive while the full-resolution frame loads.
+2. Verify the gesture stops at 800%, then pinch inward through 25% and confirm it returns to Fit. The Fit/100% button must continue to switch modes.
+3. At an intermediate zoom, scroll around the photograph, pinch again and confirm the gesture starts from the displayed percentage without a jump. Repeat with the Loupe enabled.
+4. Enter a local brush, pinch without painting an accidental stroke, then paint and use Undo/Redo. Reopen the library and confirm the recipe did not change merely from zooming.
+5. If testing a touch display, confirm its driver translates contacts into a native magnification gesture. Record unsupported direct-touch hardware separately rather than treating it as an Isonique zoom failure.
+
 ## Physical PTP camera import
 
 Use a disposable library and a physical USB camera in PTP or Photo Transfer mode. Put at least three distinct test photos on the camera. A larger group of photos gives you time to cancel an active transfer. Record the Isonique commit, macOS version, camera model, firmware and USB mode with the results. [README smoke test](README.md#development)

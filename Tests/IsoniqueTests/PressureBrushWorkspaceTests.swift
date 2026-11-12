@@ -81,6 +81,7 @@ final class PressureBrushWorkspaceTests: XCTestCase {
                        [stroke])
         let edited = try XCTUnwrap(reopened.selected)
         let original = try repository.availableOriginalURL(edited)
+        LocalBrushMaskCache.shared.removeAll()
         let viewer = try await reopened.viewerRenderCache.frame(url: original, adjustments: edited.adjustments,
                                                                  maximum: nil, revision: 0)
         XCTAssertNotEqual(try pixels(viewer.image),
@@ -90,6 +91,10 @@ final class PressureBrushWorkspaceTests: XCTestCase {
         let output = folder.appendingPathComponent("Pressure.png")
         try Renderer.export(edited, repository: repository, to: output, options: options)
         XCTAssertEqual(try pixels(viewer.image), try pixels(decode(output)))
+        let cacheStats = LocalBrushMaskCache.shared.statistics()
+        XCTAssertGreaterThanOrEqual(cacheStats.exactHits, 1,
+            "The edited export should reuse the full-size Viewer source-space mask")
+        XCTAssertEqual(cacheStats.rasterizedStrokes, 1)
         XCTAssertEqual(try LibraryRepository.digest(source), sourceDigest)
         XCTAssertEqual(try LibraryRepository.digest(original), sourceDigest)
         var originalOptions = ExportOptions()

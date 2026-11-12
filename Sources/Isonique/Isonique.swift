@@ -1542,7 +1542,9 @@ struct PhotoViewer: View {
     @AppStorage("redEye.size") private var redEyeSize = 8.0
     @AppStorage("redEye.darkness") private var redEyeDarkness = 55.0
     @State private var failure: String?
-    @State private var zoom = false
+    @State private var zoomScale: CGFloat?
+    @State private var pinchBaseScale: CGFloat?
+    @State private var pinchActive = false
     @State private var cropSize = CGSize(width: 1, height: 1)
     @AppStorage("crop.aspect") private var cropAspect = 0.0
     @AppStorage("crop.locked") private var cropLocked = false
@@ -1595,7 +1597,9 @@ struct PhotoViewer: View {
                 }
                 else if zoom && model.tool == .select {
                     ScrollView([.horizontal, .vertical]) {
-                        ClippingPreview(image: image).frame(width: image.size.width, height: image.size.height)
+                        ClippingPreview(image: image)
+                            .frame(width: image.size.width * (zoomScale ?? 1),
+                                   height: image.size.height * (zoomScale ?? 1))
                             .overlay { if model.loupeActive { loupeTarget } }
                     }
                 }
@@ -1632,8 +1636,13 @@ struct PhotoViewer: View {
                 }.buttonStyle(.plain).help(model.loupeActive ? "Hide Loupe" : "Show Loupe")
                     .accessibilityLabel(model.loupeActive ? "Hide Loupe" : "Show Loupe")
                     .disabled(model.tool != .select)
-                Button(zoom ? "Fit" : "100%") { zoom.toggle() }.buttonStyle(.plain).font(.caption.monospacedDigit()).help("Toggle actual pixels")
+                Button(zoom ? "Fit" : "100%") { zoomScale = ViewerZoom.toggled(zoomScale) }
+                    .buttonStyle(.plain).font(.caption.monospacedDigit()).help("Toggle actual pixels")
                     .disabled(model.tool != .select && model.tool != .brush)
+                if let zoomScale {
+                    Text(ViewerZoom.percentage(zoomScale)).font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary).accessibilityLabel("Viewer zoom")
+                }
             }.padding(.horizontal, 16).padding(.vertical, 11).workspaceGlass(radius: 24).padding(16)
         }.overlay(alignment: .bottomTrailing) {
             if model.loupeActive {
@@ -1730,6 +1739,7 @@ struct PhotoViewer: View {
                     .padding(12).workspaceGlass().padding(8)
             }
         }.padding(.top, 8)
+        .simultaneousGesture(viewerMagnificationGesture)
         .onChange(of: model.tool) { _, tool in
             if tool == .crop { draft = photo.adjustments.crop ?? PhotoCrop(x: 0, y: 0, width: 1, height: 1) }
             if tool != .brush { erasingBrush = false; showBrushMask = false }
@@ -1827,6 +1837,26 @@ struct PhotoViewer: View {
                         model.activeTargetedColorSampling == nil ? nil : queueSample)
     }
 
+    private var zoom: Bool { zoomScale != nil }
+
+    private var viewerMagnificationGesture: some Gesture {
+        MagnificationGesture()
+            .onChanged { magnification in
+                guard model.tool == .select || model.tool == .brush else { return }
+                if !pinchActive {
+                    pinchBaseScale = zoomScale
+                    pinchActive = true
+                }
+                zoomScale = ViewerZoom.magnified(from: pinchBaseScale, by: magnification)
+            }
+            .onEnded { magnification in
+                guard pinchActive else { return }
+                zoomScale = ViewerZoom.magnified(from: pinchBaseScale, by: magnification)
+                pinchBaseScale = nil
+                pinchActive = false
+            }
+    }
+
     @ViewBuilder
     private func brushCanvas(image: ViewerImage, geometry: PhotoGeometry, overlay: CGImage?) -> some View {
         let pressureMapping = BrushPressureMapping(
@@ -1843,7 +1873,8 @@ struct PhotoViewer: View {
         }
         if zoom {
             ScrollView([.horizontal, .vertical]) {
-                canvas.frame(width: image.size.width, height: image.size.height)
+                canvas.frame(width: image.size.width * (zoomScale ?? 1),
+                             height: image.size.height * (zoomScale ?? 1))
             }.padding(16)
         } else {
             canvas.padding(16)
