@@ -11,6 +11,15 @@
 
 The supported deployment target is macOS 14. Native validation has been performed on Apple Silicon with macOS 27.3. Running on older macOS versions, using physical camera devices and recovering a real legacy Aperture library remain separate validation tasks.
 
+## Physical pressure-sensitive tablet
+
+Use the signed build, a disposable library and a pen tablet that macOS recognises. Record the tablet model, driver, macOS version and Isonique commit.
+
+1. Open a photo, select a local brush and leave Tablet Size and Tablet Strength on Linear. Draw one stroke from light to firm pressure. Show Mask should reveal increasing width and opacity without gaps.
+2. Set Tablet Size to Off and Tablet Strength to Firm. Draw another light-to-firm stroke. Its width should stay fixed while opacity changes. Reverse the settings and confirm only width changes.
+3. Change both minimum controls and compare Soft, Linear and Firm at mid pressure. Mouse and trackpad strokes must still use the fixed Size and Strength values.
+4. Undo and Redo each stroke, reopen the library and export the edited photo. Confirm the masks persist and the Viewer matches export. Disconnect the tablet and confirm ordinary pointer painting still works.
+
 ## Physical PTP camera import
 
 Use a disposable library and a physical USB camera in PTP or Photo Transfer mode. Put at least three distinct test photos on the camera. A larger group of photos gives you time to cancel an active transfer. Record the Isonique commit, macOS version, camera model, firmware and USB mode with the results. [README smoke test](README.md#development)

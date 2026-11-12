@@ -81,10 +81,96 @@ public struct LocalHaloReductionSettings: Codable, Equatable {
 public struct BrushPoint: Codable, Equatable {
     public let x: Double
     public let y: Double
+    /// Per-sample multipliers captured from a pressure-sensitive tablet.
+    public let radiusScale: Double
+    public let strengthScale: Double
 
-    public init(x: Double, y: Double) {
+    public init(x: Double, y: Double, radiusScale: Double = 1, strengthScale: Double = 1) {
         self.x = x
         self.y = y
+        self.radiusScale = radiusScale
+        self.strengthScale = strengthScale
+    }
+
+    enum CodingKeys: String, CodingKey { case x, y, radiusScale, strengthScale }
+
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        x = try values.decode(Double.self, forKey: .x)
+        y = try values.decode(Double.self, forKey: .y)
+        radiusScale = try values.decodeIfPresent(Double.self, forKey: .radiusScale) ?? 1
+        strengthScale = try values.decodeIfPresent(Double.self, forKey: .strengthScale) ?? 1
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(x, forKey: .x)
+        try values.encode(y, forKey: .y)
+        if radiusScale != 1 { try values.encode(radiusScale, forKey: .radiusScale) }
+        if strengthScale != 1 { try values.encode(strengthScale, forKey: .strengthScale) }
+    }
+
+    var isValid: Bool {
+        (0...1).contains(x) && (0...1).contains(y) &&
+            radiusScale.isFinite && (0...1).contains(radiusScale) &&
+            strengthScale.isFinite && (0...1).contains(strengthScale)
+    }
+
+    var usesPressure: Bool {
+        radiusScale != 1 || strengthScale != 1
+    }
+}
+
+public enum BrushPressureCurve: String, Codable, CaseIterable, Identifiable {
+    case off = "Off"
+    case soft = "Soft"
+    case linear = "Linear"
+    case firm = "Firm"
+
+    public var id: Self { self }
+}
+
+public struct BrushPressureSample: Equatable {
+    public let radiusScale: Double
+    public let strengthScale: Double
+}
+
+public struct BrushPressureMapping: Codable, Equatable {
+    public var sizeCurve: BrushPressureCurve
+    public var strengthCurve: BrushPressureCurve
+    public var minimumSize: Double
+    public var minimumStrength: Double
+
+    public init(sizeCurve: BrushPressureCurve = .linear,
+                strengthCurve: BrushPressureCurve = .linear,
+                minimumSize: Double = 0.2, minimumStrength: Double = 0.1) {
+        self.sizeCurve = sizeCurve
+        self.strengthCurve = strengthCurve
+        self.minimumSize = minimumSize
+        self.minimumStrength = minimumStrength
+    }
+
+    public func sample(pressure: Double?, isTablet: Bool) -> BrushPressureSample {
+        guard isTablet, let pressure, pressure.isFinite else {
+            return BrushPressureSample(radiusScale: 1, strengthScale: 1)
+        }
+        let bounded = min(1, max(0, pressure))
+        return BrushPressureSample(
+            radiusScale: scale(pressure: bounded, curve: sizeCurve, minimum: minimumSize),
+            strengthScale: scale(pressure: bounded, curve: strengthCurve, minimum: minimumStrength))
+    }
+
+    private func scale(pressure: Double, curve: BrushPressureCurve, minimum: Double) -> Double {
+        guard curve != .off else { return 1 }
+        let floor = minimum.isFinite ? min(1, max(0, minimum)) : 0
+        let response: Double
+        switch curve {
+        case .off: response = 1
+        case .soft: response = sqrt(pressure)
+        case .linear: response = pressure
+        case .firm: response = pressure * pressure
+        }
+        return floor + (1 - floor) * response
     }
 }
 
@@ -127,8 +213,11 @@ public struct LocalBrushStroke: Codable, Equatable {
     public var isValid: Bool {
         (0.0025...0.25).contains(radius) && (0...1).contains(softness) &&
             (0...1).contains(strength) && strength > 0 && !points.isEmpty &&
-            points.allSatisfy { (0...1).contains($0.x) && (0...1).contains($0.y) }
+            points.allSatisfy(\.isValid) &&
+            points.contains { $0.radiusScale > 0 && $0.strengthScale > 0 }
     }
+
+    var hasPressureSamples: Bool { points.contains(where: \.usesPressure) }
 }
 
 public struct LocalBrushMaskSettings: Codable, Equatable {
@@ -347,18 +436,22 @@ struct LocalAdjustmentMask {
 
     private static func paint(_ stroke: LocalBrushStroke, width: Int, height: Int,
                               edgeMap: LocalBrushEdgeMap?, into mask: inout [Float]) throws {
-        let points = stroke.points.map { BrushPoint(x: $0.x * Double(width), y: $0.y * Double(height)) }
+        let points = stroke.points.map {
+            BrushPoint(x: $0.x * Double(width), y: $0.y * Double(height),
+                       radiusScale: $0.radiusScale, strengthScale: $0.strengthScale)
+        }
         guard let first = points.first else { return }
         let seedLuminance = stroke.edgeAware ? edgeMap?.luminance(x: stroke.points[0].x, y: stroke.points[0].y) : nil
-        let radius = stroke.radius * Double(min(width, height))
-        let innerRadius = radius * (1 - stroke.softness)
-        let bounds = PixelBounds(points: points, radius: radius, width: width, height: height)
+        let baseRadius = stroke.radius * Double(min(width, height))
+        let maximumRadius = baseRadius * (points.map(\.radiusScale).max() ?? 1)
+        let bounds = PixelBounds(points: points, radius: maximumRadius, width: width, height: height)
         var coverage = [Float](repeating: 0, count: bounds.columns * bounds.rows)
 
         func paintSegment(from start: BrushPoint, to end: BrushPoint) throws {
             let dx = end.x - start.x, dy = end.y - start.y
             let lengthSquared = dx * dx + dy * dy
-            let segment = PixelBounds(points: [start, end], radius: radius, width: width, height: height)
+            let segmentRadius = baseRadius * max(start.radiusScale, end.radiusScale)
+            let segment = PixelBounds(points: [start, end], radius: segmentRadius, width: width, height: height)
             for y in segment.y0..<segment.y1 {
                 if y.isMultiple(of: 32) { try Task.checkCancellation() }
                 let py = Double(y) + 0.5 - start.y
@@ -367,7 +460,10 @@ struct LocalAdjustmentMask {
                     let t = lengthSquared == 0 ? 0 : min(1, max(0, (px * dx + py * dy) / lengthSquared))
                     let vx = px - t * dx, vy = py - t * dy
                     let squaredDistance = vx * vx + vy * vy
-                    guard squaredDistance <= radius * radius else { continue }
+                    let radiusScale = start.radiusScale + (end.radiusScale - start.radiusScale) * t
+                    let radius = baseRadius * radiusScale
+                    guard radius > 0, squaredDistance <= radius * radius else { continue }
+                    let innerRadius = radius * (1 - stroke.softness)
                     let opacity: Double
                     if squaredDistance <= innerRadius * innerRadius {
                         opacity = 1
@@ -382,8 +478,11 @@ struct LocalAdjustmentMask {
                         let position = min(1, max(0, (difference - 0.025) / 0.125))
                         edgeWeight = 1 - position * position * (3 - 2 * position)
                     } else { edgeWeight = 1 }
+                    let pressureStrength = start.strengthScale +
+                        (end.strengthScale - start.strengthScale) * t
                     let index = (y - bounds.y0) * bounds.columns + x - bounds.x0
-                    coverage[index] = max(coverage[index], Float(opacity * edgeWeight))
+                    coverage[index] = max(coverage[index],
+                        Float(opacity * edgeWeight * pressureStrength))
                 }
             }
         }
@@ -392,20 +491,23 @@ struct LocalAdjustmentMask {
         for (start, end) in zip(points, points.dropFirst()) {
             // Subdivide long diagonals to avoid evaluating their entire bounding rectangle.
             let length = hypot(end.x - start.x, end.y - start.y)
-            let steps = max(1, Int(ceil(length / max(16, radius * 2))))
+            let steps = max(1, Int(ceil(length / max(16, baseRadius * 2))))
             var previous = start
             for step in 1...steps {
                 let t = Double(step) / Double(steps)
-                let next = BrushPoint(x: start.x + (end.x - start.x) * t, y: start.y + (end.y - start.y) * t)
+                let next = BrushPoint(x: start.x + (end.x - start.x) * t,
+                    y: start.y + (end.y - start.y) * t,
+                    radiusScale: start.radiusScale + (end.radiusScale - start.radiusScale) * t,
+                    strengthScale: start.strengthScale + (end.strengthScale - start.strengthScale) * t)
                 try paintSegment(from: previous, to: next)
                 previous = next
             }
         }
-        let strength = Float(stroke.strength)
         for y in bounds.y0..<bounds.y1 {
             if y.isMultiple(of: 32) { try Task.checkCancellation() }
             for x in bounds.x0..<bounds.x1 {
-                let amount = coverage[(y - bounds.y0) * bounds.columns + x - bounds.x0] * strength
+                let amount = coverage[(y - bounds.y0) * bounds.columns + x - bounds.x0] *
+                    Float(stroke.strength)
                 let index = y * width + x
                 if stroke.erasing { mask[index] *= 1 - amount }
                 else { mask[index] += (1 - mask[index]) * amount }

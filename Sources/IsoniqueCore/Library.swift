@@ -250,6 +250,11 @@ public extension Adjustments {
         }
     }
 
+    var hasPressureBrushRecipe: Bool {
+        localBrushes.contains(where: \.hasPressureSamples) ||
+            localBrushInstances.lazy.flatMap(\.strokes).contains(where: \.hasPressureSamples)
+    }
+
     var hasLensEffects: Bool {
         chromaticAberrationRedCyan != 0 || chromaticAberrationBlueYellow != 0 || vignette != 0 || devignette != 0
     }
@@ -503,6 +508,10 @@ public struct Library: Codable {
         if version < 33, hasRecipe(where: \.hasLocalPolarizeHaloRecipe) { version = 33 }
     }
 
+    public mutating func upgradeForPressureBrushes() {
+        if version < 34, hasRecipe(where: \.hasPressureBrushRecipe) { version = 34 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -546,6 +555,7 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 34, hasRecipe(where: \.hasPressureBrushRecipe) { throw LibraryError.unsupportedVersion }
         if version < 33, hasRecipe(where: \.hasLocalPolarizeHaloRecipe) { throw LibraryError.unsupportedVersion }
         if version < 32, hasRecipe(where: \.hasLocalBrushInstancesRecipe) { throw LibraryError.unsupportedVersion }
         if version < 31, hasRecipe(where: \.hasLocalTintSkinRecipe) { throw LibraryError.unsupportedVersion }
@@ -573,7 +583,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...33).contains(version) { return }
+        if (7...34).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -756,6 +766,7 @@ public final class LibraryRepository {
         normalized.upgradeForLocalTintSkin()
         normalized.upgradeForLocalBrushInstances()
         normalized.upgradeForLocalPolarizeHalo()
+        normalized.upgradeForPressureBrushes()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }

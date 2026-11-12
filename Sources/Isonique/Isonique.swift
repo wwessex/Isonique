@@ -312,6 +312,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         saved.upgradeForLocalTintSkin()
         saved.upgradeForLocalBrushInstances()
         saved.upgradeForLocalPolarizeHalo()
+        saved.upgradeForPressureBrushes()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -1531,6 +1532,12 @@ struct PhotoViewer: View {
     @AppStorage("brush.softness") private var brushSoftness = 70.0
     @AppStorage("brush.strength") private var brushStrength = 50.0
     @AppStorage("brush.edgeAware") private var edgeAwareBrush = true
+    @AppStorage(BrushPressurePreferences.sizeCurveKey)
+    private var brushPressureSizeCurve = BrushPressureCurve.linear.rawValue
+    @AppStorage(BrushPressurePreferences.strengthCurveKey)
+    private var brushPressureStrengthCurve = BrushPressureCurve.linear.rawValue
+    @AppStorage(BrushPressurePreferences.minimumSizeKey) private var brushPressureMinimumSize = 20.0
+    @AppStorage(BrushPressurePreferences.minimumStrengthKey) private var brushPressureMinimumStrength = 10.0
     @AppStorage("spot.size") private var spotSize = 12.0
     @AppStorage("redEye.size") private var redEyeSize = 8.0
     @AppStorage("redEye.darkness") private var redEyeDarkness = 55.0
@@ -1689,6 +1696,10 @@ struct PhotoViewer: View {
                               erasing: $erasingBrush,
                               size: $brushSize, softness: $brushSoftness, strength: $brushStrength,
                               edgeAware: $edgeAwareBrush, showMask: $showBrushMask,
+                              pressureSizeCurve: $brushPressureSizeCurve,
+                              pressureStrengthCurve: $brushPressureStrengthCurve,
+                              pressureMinimumSize: $brushPressureMinimumSize,
+                              pressureMinimumStrength: $brushPressureMinimumStrength,
                               instances: instances,
                               hasMask: instance?.strokes.contains { !$0.erasing } == true,
                               maskOpacity: settings.opacity, maskInverted: settings.inverted,
@@ -1818,10 +1829,16 @@ struct PhotoViewer: View {
 
     @ViewBuilder
     private func brushCanvas(image: ViewerImage, geometry: PhotoGeometry, overlay: CGImage?) -> some View {
+        let pressureMapping = BrushPressureMapping(
+            sizeCurve: BrushPressureCurve(rawValue: brushPressureSizeCurve) ?? .linear,
+            strengthCurve: BrushPressureCurve(rawValue: brushPressureStrengthCurve) ?? .linear,
+            minimumSize: brushPressureMinimumSize / 100,
+            minimumStrength: brushPressureMinimumStrength / 100)
         let canvas = BrushCanvas(image: image, geometry: geometry, adjustment: model.brushAdjustment,
                                  erasing: erasingBrush, radius: brushSize / 200,
                                  softness: brushSoftness / 100, strength: brushStrength / 100,
-                                 edgeAware: edgeAwareBrush, overlay: overlay, showMask: showBrushMask) {
+                                 edgeAware: edgeAwareBrush, pressureMapping: pressureMapping,
+                                 overlay: overlay, showMask: showBrushMask) {
             model.applyBrushStroke($0, to: photo.id)
         }
         if zoom {

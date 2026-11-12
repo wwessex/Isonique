@@ -395,9 +395,15 @@ Polarize and Halo Reduction complete the outstanding Aperture-style local effect
 
 Both modes are available from Photos, the editing strip, the Inspector and the Viewer brush picker. They inherit independent names, enabled state, ordering, duplicate/delete actions, source-coordinate strokes, edge awareness, erase, inversion, opacity and Viewer-only overlays. Same-type instances composite in their displayed order in the one full-resolution preview/export renderer. Format 33 protects the new identifiers and parameters; format-32 instances decode compatible defaults, while a format-32 catalogue containing either new mode is rejected until upgraded. Lift and Stamp and explicitly spatial custom presets copy the complete records.
 
+## Pressure-sensitive tablet brushes
+
+The Viewer brush canvas now uses a native AppKit input surface so pen and eraser tablet events provide pressure alongside source coordinates. Size and strength have independent Off, Soft, Linear and Firm response mappings plus persisted minimum values. Mapping is resolved while the stroke is captured, and bounded radius and strength scales are stored on every sampled point. Existing mouse and trackpad input deliberately supplies no tablet pressure and therefore retains the configured fixed size and strength.
+
+The source-space mask raster interpolates both scales along each segment while retaining edge protection, softness, erase, inversion and instance ordering. This makes the full-resolution Viewer and export output independent of later preference changes. Format 34 is required only when a point contains a non-default pressure scale; fixed format-33 recipes decode scale 1, omit default fields when re-encoded and do not upgrade merely because they are opened or saved.
+
 ## Next checkpoint
 
-Add pressure-sensitive tablet input for local brushes, with independently configurable pressure mapping for brush size and strength plus an unchanged mouse and trackpad fallback. Test pressure-curve bounds, mid-stroke samples, Undo/Redo, persistence and compatibility with existing format-33 brush recipes.
+Improve large-file and long-session brush performance with reusable source-space mask caching and incremental stroke rasterisation. Add measurable performance budgets, cancellation and cache invalidation tests while preserving byte-identical Viewer/export output and all format-34 recipes.
 
 ## Pending physical camera checks
 

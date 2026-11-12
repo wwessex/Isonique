@@ -2,6 +2,33 @@ import SwiftUI
 import AppKit
 import IsoniqueCore
 
+struct BrushPressurePreferences {
+    static let sizeCurveKey = "brush.pressure.sizeCurve"
+    static let strengthCurveKey = "brush.pressure.strengthCurve"
+    static let minimumSizeKey = "brush.pressure.minimumSize"
+    static let minimumStrengthKey = "brush.pressure.minimumStrength"
+
+    static func load(from preferences: UserDefaults) -> BrushPressureMapping {
+        let sizeCurve = preferences.string(forKey: sizeCurveKey)
+            .flatMap(BrushPressureCurve.init(rawValue:)) ?? .linear
+        let strengthCurve = preferences.string(forKey: strengthCurveKey)
+            .flatMap(BrushPressureCurve.init(rawValue:)) ?? .linear
+        let minimumSize = preferences.object(forKey: minimumSizeKey) == nil
+            ? 0.2 : preferences.double(forKey: minimumSizeKey) / 100
+        let minimumStrength = preferences.object(forKey: minimumStrengthKey) == nil
+            ? 0.1 : preferences.double(forKey: minimumStrengthKey) / 100
+        return BrushPressureMapping(sizeCurve: sizeCurve, strengthCurve: strengthCurve,
+                                    minimumSize: minimumSize, minimumStrength: minimumStrength)
+    }
+
+    static func save(_ mapping: BrushPressureMapping, to preferences: UserDefaults) {
+        preferences.set(mapping.sizeCurve.rawValue, forKey: sizeCurveKey)
+        preferences.set(mapping.strengthCurve.rawValue, forKey: strengthCurveKey)
+        preferences.set(mapping.minimumSize * 100, forKey: minimumSizeKey)
+        preferences.set(mapping.minimumStrength * 100, forKey: minimumStrengthKey)
+    }
+}
+
 private extension LocalBrushAdjustment {
     var guideColor: Color {
         switch self {
@@ -255,6 +282,10 @@ struct BrushControls: View {
     @Binding var strength: Double
     @Binding var edgeAware: Bool
     @Binding var showMask: Bool
+    @Binding var pressureSizeCurve: String
+    @Binding var pressureStrengthCurve: String
+    @Binding var pressureMinimumSize: Double
+    @Binding var pressureMinimumStrength: Double
     let instances: [LocalBrushInstance]
     let hasMask: Bool
     let maskOpacity: Double
@@ -361,6 +392,22 @@ struct BrushControls: View {
                     }.disabled(!hasMask).accessibilityLabel("Mask opacity")
                 }
             }
+            HStack(spacing: 10) {
+                Picker("Tablet Size", selection: $pressureSizeCurve) {
+                    ForEach(BrushPressureCurve.allCases) { curve in
+                        Text(curve.rawValue).tag(curve.rawValue)
+                    }
+                }.pickerStyle(.menu).help("Map pen pressure to brush size")
+                slider("Minimum Size", value: $pressureMinimumSize, range: 0...100)
+                    .disabled(pressureSizeCurve == BrushPressureCurve.off.rawValue)
+                Picker("Tablet Strength", selection: $pressureStrengthCurve) {
+                    ForEach(BrushPressureCurve.allCases) { curve in
+                        Text(curve.rawValue).tag(curve.rawValue)
+                    }
+                }.pickerStyle(.menu).help("Map pen pressure to brush strength")
+                slider("Minimum Strength", value: $pressureMinimumStrength, range: 0...100)
+                    .disabled(pressureStrengthCurve == BrushPressureCurve.off.rawValue)
+            }
             if adjustment == .tint {
                 HStack(spacing: 10) {
                     committedSlider("Tint Hue", value: $tintHue, range: 0...359, suffix: "°") {
@@ -456,6 +503,91 @@ struct BrushControls: View {
     }
 }
 
+enum BrushInputPhase { case began, changed, ended }
+
+struct BrushInputEvent {
+    let location: CGPoint
+    let pressure: Double?
+    let isTablet: Bool
+    let phase: BrushInputPhase
+}
+
+private struct BrushInputSurface: NSViewRepresentable {
+    let event: (BrushInputEvent) -> Void
+    let hover: (CGPoint?) -> Void
+
+    func makeNSView(context: Context) -> BrushInputNSView {
+        let view = BrushInputNSView()
+        view.event = event
+        view.hover = hover
+        return view
+    }
+
+    func updateNSView(_ view: BrushInputNSView, context: Context) {
+        view.event = event
+        view.hover = hover
+    }
+}
+
+enum BrushInputClassifier {
+    static func isTablet(subtype: NSEvent.EventSubtype,
+                         pointingDeviceType: NSEvent.PointingDeviceType) -> Bool {
+        subtype == .tabletPoint || pointingDeviceType == .pen || pointingDeviceType == .eraser
+    }
+}
+
+private final class BrushInputNSView: NSView {
+    var event: ((BrushInputEvent) -> Void)?
+    var hover: ((CGPoint?) -> Void)?
+    private var tracking: NSTrackingArea?
+
+    override var isFlipped: Bool { true }
+    override var acceptsFirstResponder: Bool { true }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    override func updateTrackingAreas() {
+        if let tracking { removeTrackingArea(tracking) }
+        let options: NSTrackingArea.Options = [.mouseEnteredAndExited, .mouseMoved,
+                                               .activeInKeyWindow, .inVisibleRect]
+        let next = NSTrackingArea(rect: .zero, options: options, owner: self)
+        addTrackingArea(next)
+        tracking = next
+        super.updateTrackingAreas()
+    }
+
+    override func resetCursorRects() {
+        addCursorRect(bounds, cursor: .crosshair)
+    }
+
+    override func mouseEntered(with event: NSEvent) { hover?(location(for: event)) }
+    override func mouseMoved(with event: NSEvent) { hover?(location(for: event)) }
+    override func mouseExited(with event: NSEvent) { hover?(nil) }
+    override func mouseDown(with event: NSEvent) {
+        window?.makeFirstResponder(self)
+        emit(event, phase: .began)
+    }
+    override func mouseDragged(with event: NSEvent) { emit(event, phase: .changed) }
+    override func mouseUp(with event: NSEvent) { emit(event, phase: .ended) }
+
+    private func emit(_ source: NSEvent, phase: BrushInputPhase) {
+        let tablet = BrushInputClassifier.isTablet(subtype: source.subtype,
+                                                    pointingDeviceType: source.pointingDeviceType)
+        event?(BrushInputEvent(location: location(for: source),
+                               pressure: tablet ? Double(source.pressure) : nil,
+                               isTablet: tablet, phase: phase))
+    }
+
+    private func location(for event: NSEvent) -> CGPoint {
+        convert(event.locationInWindow, from: nil)
+    }
+}
+
+struct BrushCanvasPoint: Equatable {
+    let location: CGPoint
+    let radiusScale: Double
+    let strengthScale: Double
+}
+
 struct BrushCanvas: View {
     let image: ViewerImage
     let geometry: PhotoGeometry
@@ -465,6 +597,7 @@ struct BrushCanvas: View {
     let softness: Double
     let strength: Double
     let edgeAware: Bool
+    let pressureMapping: BrushPressureMapping
     let overlay: CGImage?
     let showMask: Bool
     let commit: (LocalBrushStroke) -> Void
@@ -478,7 +611,7 @@ struct BrushCanvas: View {
         let softness: Double
         let strength: Double
         let edgeAware: Bool
-        var points: [CGPoint] = []
+        var points: [BrushCanvasPoint] = []
     }
 
     var body: some View {
@@ -486,7 +619,8 @@ struct BrushCanvas: View {
             let scale = min(proxy.size.width / image.size.width, proxy.size.height / image.size.height)
             let size = CGSize(width: image.size.width * scale, height: image.size.height * scale)
             let sourceEdge = min(geometry.sourceSize.width, geometry.sourceSize.height)
-            let diameter = max(2, 2 * (draft?.radius ?? radius) * sourceEdge * scale)
+            let pressureScale = draft?.points.last?.radiusScale ?? 1
+            let diameter = max(2, 2 * (draft?.radius ?? radius) * pressureScale * sourceEdge * scale)
             ZStack(alignment: .topLeading) {
                 ClippingPreview(image: image).frame(width: size.width, height: size.height)
                 if showMask, let overlay {
@@ -496,45 +630,23 @@ struct BrushCanvas: View {
                 if let draft, let first = draft.points.first {
                     let color: Color = draft.erasing ? .white : draft.adjustment.guideColor
                     Path { path in
-                        path.move(to: first)
-                        for point in draft.points.dropFirst() { path.addLine(to: point) }
-                        if draft.points.count == 1 { path.addLine(to: CGPoint(x: first.x + 0.01, y: first.y)) }
+                        path.move(to: first.location)
+                        for point in draft.points.dropFirst() { path.addLine(to: point.location) }
+                        if draft.points.count == 1 {
+                            path.addLine(to: CGPoint(x: first.location.x + 0.01, y: first.location.y))
+                        }
                     }.stroke(color.opacity(0.28), style: StrokeStyle(lineWidth: diameter, lineCap: .round, lineJoin: .round))
                         .allowsHitTesting(false)
                 }
-                if let point = draft?.points.last ?? hover {
+                BrushInputSurface(event: { handle($0, in: size) }, hover: { hover = $0.map {
+                    clamp($0, to: size)
+                } }).frame(width: size.width, height: size.height)
+                if let point = draft?.points.last?.location ?? hover {
                     Circle().strokeBorder(.black.opacity(0.75), lineWidth: 2)
                         .overlay { Circle().strokeBorder(.white, lineWidth: 1) }
                         .frame(width: diameter, height: diameter).position(point).allowsHitTesting(false)
                 }
             }.frame(width: size.width, height: size.height).clipped().contentShape(Rectangle())
-                .onContinuousHover { phase in
-                    switch phase {
-                    case .active(let point): hover = point
-                    case .ended: hover = nil
-                    }
-                }
-                .gesture(DragGesture(minimumDistance: 0).onChanged { drag in
-                    if draft == nil {
-                        draft = Draft(adjustment: adjustment, erasing: erasing, radius: radius,
-                                      softness: softness, strength: strength, edgeAware: edgeAware,
-                                      points: [clamp(drag.startLocation, to: size)])
-                    }
-                    let point = clamp(drag.location, to: size)
-                    if let last = draft?.points.last, hypot(point.x - last.x, point.y - last.y) >= 1.5 {
-                        draft?.points.append(point)
-                    }
-                }.onEnded { drag in
-                    guard var completed = draft else { return }
-                    draft = nil
-                    let end = clamp(drag.location, to: size)
-                    if completed.points.last != end { completed.points.append(end) }
-                    let points = Self.sourcePoints(completed.points, displayedSize: size, geometry: geometry)
-                    commit(LocalBrushStroke(adjustment: completed.adjustment, erasing: completed.erasing,
-                                            radius: completed.radius, softness: completed.softness,
-                                            strength: completed.strength, edgeAware: completed.edgeAware,
-                                            points: points))
-                })
                 .accessibilityLabel("Brush canvas. Click or drag on the photo to paint the selected mask.")
                 .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
         }
@@ -544,11 +656,54 @@ struct BrushCanvas: View {
         CGPoint(x: min(size.width, max(0, point.x)), y: min(size.height, max(0, point.y)))
     }
 
+    private func handle(_ input: BrushInputEvent, in size: CGSize) {
+        let location = clamp(input.location, to: size)
+        let pressure = pressureMapping.sample(pressure: input.pressure, isTablet: input.isTablet)
+        let point = BrushCanvasPoint(location: location, radiusScale: pressure.radiusScale,
+                                     strengthScale: pressure.strengthScale)
+        switch input.phase {
+        case .began:
+            draft = Draft(adjustment: adjustment, erasing: erasing, radius: radius,
+                          softness: softness, strength: strength, edgeAware: edgeAware,
+                          points: [point])
+        case .changed:
+            guard var current = draft else { return }
+            if let last = current.points.last,
+               hypot(location.x - last.location.x, location.y - last.location.y) >= 1.5 ||
+                abs(point.radiusScale - last.radiusScale) >= 0.02 ||
+                abs(point.strengthScale - last.strengthScale) >= 0.02 {
+                current.points.append(point)
+                draft = current
+            }
+        case .ended:
+            guard var completed = draft else { return }
+            draft = nil
+            if let last = completed.points.last,
+               hypot(location.x - last.location.x, location.y - last.location.y) >= 0.5 {
+                completed.points.append(point)
+            }
+            let points = Self.sourcePoints(completed.points, displayedSize: size, geometry: geometry)
+            commit(LocalBrushStroke(adjustment: completed.adjustment, erasing: completed.erasing,
+                                    radius: completed.radius, softness: completed.softness,
+                                    strength: completed.strength, edgeAware: completed.edgeAware,
+                                    points: points))
+        }
+    }
+
     static func sourcePoints(_ points: [CGPoint], displayedSize: CGSize,
+                             geometry: PhotoGeometry) -> [BrushPoint] {
+        sourcePoints(points.map { BrushCanvasPoint(location: $0, radiusScale: 1, strengthScale: 1) },
+                     displayedSize: displayedSize, geometry: geometry)
+    }
+
+    static func sourcePoints(_ points: [BrushCanvasPoint], displayedSize: CGSize,
                              geometry: PhotoGeometry) -> [BrushPoint] {
         guard displayedSize.width > 0, displayedSize.height > 0 else { return [] }
         return points.map {
-            geometry.sourcePoint(x: $0.x / displayedSize.width, y: $0.y / displayedSize.height)
+            let source = geometry.sourcePoint(x: $0.location.x / displayedSize.width,
+                                              y: $0.location.y / displayedSize.height)
+            return BrushPoint(x: source.x, y: source.y, radiusScale: $0.radiusScale,
+                              strengthScale: $0.strengthScale)
         }
     }
 }
