@@ -409,9 +409,15 @@ The performance contract is measurable without machine-sensitive wall-clock asse
 
 The Viewer also accepts the native macOS magnification gesture in Select and Brush modes. Pinching outward leaves Fit for continuous pixel zoom, pinching inward past the lower threshold returns to Fit, and the range is bounded to 25–800%. The established Fit/100% control remains available. This works with Mac trackpads and compatible devices that emit AppKit magnification gestures; macOS does not expose arbitrary touch-display contacts as iOS-style touches without driver translation.
 
+## Synchronized Compare navigation
+
+The two-photo Compare workspace now uses native AppKit scroll viewports with the same 25–800% pixel-scale policy as the main Viewer. Both panes begin in Fit. Pinching, pressing 100% or scrolling updates a normalized centre coordinate; synchronized mode applies that coordinate and scale to both panes, so a wide reference and tall selected image stay aligned without equating raw pixel offsets. Each pane retains its own Fit/100% control. Turning off Synchronize Navigation copies the shared state and then permits separate zoom and pan; turning it back on makes the reference pane authoritative.
+
+Fit requests retain the established 1800-pixel preview. Entering pixel zoom changes request identity and loads full resolution through the shared Viewer cache; changing magnification inside pixel mode only transforms the viewport. Returning to Fit cancels obsolete full-resolution work and requests the bounded preview. Replacing a comparison photo also changes task identity. Navigation lives only in SwiftUI/AppKit state and never writes catalogue recipes or enters exports.
+
 ## Next checkpoint
 
-Add synchronized zoom and pan to side-by-side Compare, including trackpad pinch, Fit/100% controls and a switch for independent navigation. Test different aspect ratios, full-resolution transitions, cancellation and comparison changes without altering exports or catalogue recipes.
+Extend Compare to three or more selected photos with a clear Primary/Select workflow. Add keyboard promotion, removal and navigation, responsive multi-image layouts and synchronized zoom across all visible panes. Test changing the primary, filtered selections, mixed aspect ratios, cancellation and preservation of catalogue recipes and exports.
 
 ## Pending physical camera checks
 

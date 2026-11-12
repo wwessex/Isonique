@@ -115,6 +115,7 @@ struct PhotoComparisonView: View {
     let reference: Photo
     let selected: Photo
     let repository: LibraryRepository
+    @State private var navigation = ComparisonNavigationPair()
 
     var body: some View {
         VStack(spacing: 8) {
@@ -122,13 +123,59 @@ struct PhotoComparisonView: View {
                 Label("Compare Photos", systemImage: "rectangle.split.2x1")
                 Spacer()
                 if model.clipping.enabled { ClippingLegend(settings: model.clipping) }
+                Toggle("Synchronize Navigation", isOn: Binding(
+                    get: { navigation.synchronized },
+                    set: { navigation.setSynchronized($0) }))
+                    .toggleStyle(.switch).controlSize(.small)
+                    .help("Use the same zoom and normalized pan position in both panes")
                 Button("Done", action: model.stopComparison)
             }.font(.caption).padding(.horizontal, 14).padding(.top, 10)
             HStack(spacing: 10) {
-                ComparisonPane(photo: reference, title: "Reference", repository: repository)
-                ComparisonPane(photo: selected, title: "Selected", repository: repository)
+                ComparisonPane(photo: reference, title: "Reference", repository: repository,
+                               navigation: binding(for: .reference))
+                ComparisonPane(photo: selected, title: "Selected", repository: repository,
+                               navigation: binding(for: .selected))
             }.padding(.horizontal, 14).padding(.bottom, 8)
         }.accessibilityElement(children: .contain)
+    }
+
+    private func binding(for side: ComparisonSide) -> Binding<ComparisonNavigation> {
+        Binding(get: { navigation[side] }, set: { navigation.update($0, for: side) })
+    }
+}
+
+struct ComparisonRenderRequest: Equatable {
+    let root: URL
+    let photoID: UUID
+    let filename: String
+    let referencedPath: String?
+    let adjustments: Adjustments
+    let revision: Int
+    let profile: Data?
+    let maximum: CGFloat?
+
+    init(repository: LibraryRepository, photo: Photo, navigation: ComparisonNavigation,
+         revision: Int, profile: Data?) {
+        root = repository.root
+        photoID = photo.id
+        filename = photo.filename
+        referencedPath = photo.referencedPath
+        adjustments = photo.adjustments
+        self.revision = revision
+        self.profile = profile
+        maximum = navigation.scale == nil ? 1800 : nil
+    }
+}
+
+enum ComparisonImageLoader {
+    static func load(_ photo: Photo, request: ComparisonRenderRequest,
+                     repository: LibraryRepository, cache: ViewerRenderCache) async throws -> ViewerImage {
+        try Task.checkCancellation()
+        let url = try repository.availableOriginalURL(photo)
+        let frame = try await cache.frame(url: url, adjustments: request.adjustments,
+                                          maximum: request.maximum, revision: request.revision)
+        try Task.checkCancellation()
+        return try await ViewerImage.prepare(frame.image, proofProfile: request.profile)
     }
 }
 
@@ -137,32 +184,33 @@ private struct ComparisonPane: View {
     let photo: Photo
     let title: String
     let repository: LibraryRepository
+    @Binding var navigation: ComparisonNavigation
     @State private var image: ViewerImage?
     @State private var failure: String?
 
-    private struct Request: Equatable {
-        let root: URL
-        let photoID: UUID
-        let filename: String
-        let referencedPath: String?
-        let adjustments: Adjustments
-        let revision: Int
-        let profile: Data?
-    }
-
     var body: some View {
-        let request = Request(root: repository.root, photoID: photo.id, filename: photo.filename,
-                              referencedPath: photo.referencedPath, adjustments: photo.adjustments,
-                              revision: model.originalStatusRevision, profile: model.proofEnabled ? model.proofProfile : nil)
+        let request = ComparisonRenderRequest(repository: repository, photo: photo,
+            navigation: navigation, revision: model.originalStatusRevision,
+            profile: model.proofEnabled ? model.proofProfile : nil)
         VStack(spacing: 8) {
-            VStack(spacing: 2) {
-                Text(title).font(.caption).foregroundStyle(.secondary)
-                Text(photo.displayName).lineLimit(1).font(.caption.weight(.semibold))
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.caption).foregroundStyle(.secondary)
+                    Text(photo.displayName).lineLimit(1).font(.caption.weight(.semibold))
+                }
+                Spacer()
+                if let scale = navigation.scale {
+                    Text(ViewerZoom.percentage(scale)).font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                Button(navigation.scale == nil ? "100%" : "Fit") {
+                    navigation.toggleActualPixels()
+                }.buttonStyle(.plain).font(.caption.monospacedDigit())
             }
             Group {
                 if let image {
-                    ClippingPreview(image: image).aspectRatio(image.size, contentMode: .fit)
-                        .accessibilityLabel(photo.displayName)
+                    ComparisonViewport(image: image, model: model, label: photo.displayName,
+                                       navigation: $navigation)
                 }
                 else if let failure { ContentUnavailableView("Image unavailable", systemImage: "exclamationmark.triangle", description: Text(failure)) }
                 else { ProgressView() }
@@ -174,10 +222,8 @@ private struct ComparisonPane: View {
                 image = nil
                 failure = nil
                 do {
-                    let url = try repository.availableOriginalURL(photo)
-                    let frame = try await model.viewerRenderCache.frame(url: url, adjustments: request.adjustments,
-                                                                       maximum: 1800, revision: request.revision)
-                    let preview = try await ViewerImage.prepare(frame.image, proofProfile: request.profile)
+                    let preview = try await ComparisonImageLoader.load(photo, request: request,
+                        repository: repository, cache: model.viewerRenderCache)
                     guard !Task.isCancelled else { return }
                     image = preview
                 } catch {

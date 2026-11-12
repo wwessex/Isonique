@@ -30,6 +30,16 @@ Use the signed build and a Mac trackpad or display/input driver that advertises 
 4. Enter a local brush, pinch without painting an accidental stroke, then paint and use Undo/Redo. Reopen the library and confirm the recipe did not change merely from zooming.
 5. If testing a touch display, confirm its driver translates contacts into a native magnification gesture. Record unsupported direct-touch hardware separately rather than treating it as an Isonique zoom failure.
 
+## Physical Compare navigation
+
+Use two photos with visibly different aspect ratios and the signed build. Record the input device and macOS version.
+
+1. Start side-by-side Compare and leave Synchronize Navigation enabled. Click 100% in either pane, pan to an identifiable subject and confirm both percentage readouts and normalized subject positions move together.
+2. Pinch from Fit into pixel zoom, continue to 800%, then pinch inward until both panes return to Fit. Confirm the 1800-pixel preview is replaced by full resolution only while pixel zoom is active.
+3. Disable Synchronize Navigation. Give each pane a different zoom and pan position, then enable synchronization and confirm the selected pane adopts the reference pane’s navigation.
+4. While full-resolution loading is visible, return to Fit or choose a different selected photo from the filmstrip. Confirm the obsolete result never replaces the current comparison.
+5. Export either photo before and after navigation. Confirm output is identical and reopening the library retains its prior recipes without storing comparison navigation.
+
 ## Physical PTP camera import
 
 Use a disposable library and a physical USB camera in PTP or Photo Transfer mode. Put at least three distinct test photos on the camera. A larger group of photos gives you time to cancel an active transfer. Record the Isonique commit, macOS version, camera model, firmware and USB mode with the results. [README smoke test](README.md#development)
