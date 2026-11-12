@@ -11,7 +11,44 @@ public enum LocalBrushAdjustment: String, Codable, CaseIterable, Identifiable {
     case noiseReduction = "Noise Reduction"
     case contrast = "Contrast"
     case blur = "Blur"
+    case tint = "Tint"
+    case skinSmoothing = "Skin Smoothing"
     public var id: Self { self }
+}
+
+public struct LocalTintSettings: Codable, Equatable {
+    public var hue: Double
+    public var saturation: Double
+
+    public init(hue: Double = 30, saturation: Double = 0.35) {
+        self.hue = hue
+        self.saturation = saturation
+    }
+
+    var boundedHue: Double {
+        guard hue.isFinite else { return 30 }
+        let wrapped = hue.truncatingRemainder(dividingBy: 360)
+        return wrapped < 0 ? wrapped + 360 : wrapped
+    }
+
+    var boundedSaturation: Double {
+        saturation.isFinite ? min(1, max(0, saturation)) : 0
+    }
+}
+
+public struct LocalSkinSmoothingSettings: Codable, Equatable {
+    public var amount: Double
+    public var detailPreservation: Double
+
+    public init(amount: Double = 0.5, detailPreservation: Double = 0.5) {
+        self.amount = amount
+        self.detailPreservation = detailPreservation
+    }
+
+    var boundedAmount: Double { amount.isFinite ? min(1, max(0, amount)) : 0 }
+    var boundedDetailPreservation: Double {
+        detailPreservation.isFinite ? min(1, max(0, detailPreservation)) : 0.5
+    }
 }
 
 /// Normalized coordinates in the EXIF-oriented original, before geometric edits.
@@ -306,6 +343,8 @@ public extension Renderer {
         case .noiseReduction: color = (145, 95, 235)
         case .contrast: color = (35, 190, 225)
         case .blur: color = (145, 150, 165)
+        case .tint: color = (235, 100, 115)
+        case .skinSmoothing: color = (235, 175, 120)
         }
         for y in 0..<decoded.height {
             if y.isMultiple(of: 64) { try Task.checkCancellation() }

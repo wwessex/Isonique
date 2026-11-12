@@ -111,6 +111,65 @@ extension Renderer {
         }
     }
 
+    static func applyLocalTint(_ source: CGImage, settings: LocalTintSettings,
+                               mask: LocalAdjustmentMask?) throws -> CGImage {
+        let saturation = settings.boundedSaturation
+        guard saturation > 0, mask?.isActive(.tint) == true else { return source }
+        let hue = settings.boundedHue
+        return try withDetailPixels(source, operation: "local tint") { pixels, width, height in
+            for y in 0..<height {
+                if y.isMultiple(of: 64) { try Task.checkCancellation() }
+                for x in 0..<width {
+                    let offset = (y * width + x) * 4
+                    let alpha = Double(pixels[offset + 3]) / 255
+                    guard alpha > 0 else { continue }
+                    let amount = saturation * (mask?.coverage(for: .tint, x: x, y: y,
+                        imageWidth: width, imageHeight: height) ?? 0)
+                    guard amount > 0 else { continue }
+                    let channels = straightChannels(pixels, offset: offset, alpha: alpha)
+                    let target = tintTarget(hue: hue, lightness: (max(channels.red, channels.green,
+                        channels.blue) + min(channels.red, channels.green, channels.blue)) / 2)
+                    writeChannels(DetailRGB(red: channels.red + (target.red - channels.red) * amount,
+                                           green: channels.green + (target.green - channels.green) * amount,
+                                           blue: channels.blue + (target.blue - channels.blue) * amount),
+                                  alpha: alpha, pixels: pixels, offset: offset)
+                }
+            }
+        }
+    }
+
+    static func applyLocalSkinSmoothing(_ source: CGImage, settings: LocalSkinSmoothingSettings,
+                                        mask: LocalAdjustmentMask?) throws -> CGImage {
+        let amount = settings.boundedAmount
+        guard amount > 0, mask?.isActive(.skinSmoothing) == true else { return source }
+        let preservation = settings.boundedDetailPreservation
+        return try withDetailPixels(source, operation: "local skin smoothing") { pixels, width, height in
+            var blurred = [Float](repeating: 0, count: width * height)
+            var temporary = blurred
+            try blurredLuminance(pixels, width: width, height: height,
+                                 output: &blurred, temporary: &temporary)
+            for y in 0..<height {
+                if y.isMultiple(of: 64) { try Task.checkCancellation() }
+                for x in 0..<width {
+                    let offset = (y * width + x) * 4
+                    let alpha = Double(pixels[offset + 3]) / 255
+                    guard alpha > 0 else { continue }
+                    let channels = straightChannels(pixels, offset: offset, alpha: alpha)
+                    let skin = skinToneWeight(channels)
+                    guard skin > 0 else { continue }
+                    let current = luminance(channels)
+                    let blurredValue = Double(blurred[y * width + x])
+                    let detail = smoothstep(min(1, abs(current - blurredValue) / 0.08))
+                    let coverage = mask?.coverage(for: .skinSmoothing, x: x, y: y,
+                        imageWidth: width, imageHeight: height) ?? 0
+                    let effectiveAmount = coverage * amount * skin * (1 - preservation * detail)
+                    writeLuminanceDelta((blurredValue - current) * effectiveAmount,
+                                        channels: channels, alpha: alpha, pixels: pixels, offset: offset)
+                }
+            }
+        }
+    }
+
     private static func applySharpening(_ source: CGImage, sharpening: Double, edgeSharpening: Double,
                                         mask: LocalAdjustmentMask?) throws -> CGImage {
         let sharpening = boundedDetail(sharpening)
@@ -199,6 +258,37 @@ extension Renderer {
         0.2126 * channels.red + 0.7152 * channels.green + 0.0722 * channels.blue
     }
 
+    private static func tintTarget(hue: Double, lightness: Double) -> DetailRGB {
+        let chroma = max(0, 1 - abs(2 * lightness - 1))
+        let sector = hue / 60
+        let secondary = chroma * (1 - abs(sector.truncatingRemainder(dividingBy: 2) - 1))
+        let channels: (Double, Double, Double)
+        switch sector {
+        case 0..<1: channels = (chroma, secondary, 0)
+        case 1..<2: channels = (secondary, chroma, 0)
+        case 2..<3: channels = (0, chroma, secondary)
+        case 3..<4: channels = (0, secondary, chroma)
+        case 4..<5: channels = (secondary, 0, chroma)
+        default: channels = (chroma, 0, secondary)
+        }
+        let match = lightness - chroma / 2
+        return DetailRGB(red: channels.0 + match, green: channels.1 + match, blue: channels.2 + match)
+    }
+
+    private static func skinToneWeight(_ channels: DetailRGB) -> Double {
+        let maximum = max(channels.red, channels.green, channels.blue)
+        let minimum = min(channels.red, channels.green, channels.blue)
+        let delta = maximum - minimum
+        guard delta > 0.04, channels.red > channels.green, channels.green > channels.blue * 0.82 else { return 0 }
+        var hue = 60 * ((channels.green - channels.blue) / delta).truncatingRemainder(dividingBy: 6)
+        if hue < 0 { hue += 360 }
+        let saturation = maximum > 0 ? delta / maximum : 0
+        let light = (maximum + minimum) / 2
+        guard hue <= 55, (0.12...0.75).contains(saturation), (0.15...0.92).contains(light) else { return 0 }
+        let hueWeight = 1 - smoothstep(min(1, max(0, (hue - 35) / 20)))
+        return max(0.25, hueWeight)
+    }
+
     private static func snapshotLuminance(_ pixels: [UInt8], x: Int, y: Int, width: Int) -> Double? {
         let offset = (y * width + x) * 4
         let alpha = Double(pixels[offset + 3]) / 255
@@ -213,6 +303,16 @@ extension Renderer {
                                             pixels: UnsafeMutablePointer<UInt8>, offset: Int) {
         func encoded(_ value: Double) -> UInt8 {
             UInt8((min(1, max(0, value + delta)) * alpha * 255).rounded())
+        }
+        pixels[offset] = encoded(channels.red)
+        pixels[offset + 1] = encoded(channels.green)
+        pixels[offset + 2] = encoded(channels.blue)
+    }
+
+    private static func writeChannels(_ channels: DetailRGB, alpha: Double,
+                                      pixels: UnsafeMutablePointer<UInt8>, offset: Int) {
+        func encoded(_ value: Double) -> UInt8 {
+            UInt8((min(1, max(0, value)) * alpha * 255).rounded())
         }
         pixels[offset] = encoded(channels.red)
         pixels[offset + 1] = encoded(channels.green)

@@ -172,6 +172,8 @@ private extension Adjustments {
         apply(\.channelLevels, "Channel Levels")
         apply(\.localBrushes, AdjustmentGroup.localBrush.rawValue)
         apply(\.localBrushMaskSettings, AdjustmentGroup.localBrush.rawValue)
+        apply(\.localTintSettings, AdjustmentGroup.localBrush.rawValue)
+        apply(\.localSkinSmoothingSettings, AdjustmentGroup.localBrush.rawValue)
         apply(\.spotRemovals, AdjustmentGroup.retouch.rawValue)
         apply(\.redEyeCorrections, AdjustmentGroup.redEye.rawValue)
         apply(\.sharpening, "Sharpening")

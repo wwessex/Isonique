@@ -308,6 +308,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         saved.upgradeForExtendedLocalBrushes()
         saved.upgradeForLocalDetailBrushes()
         saved.upgradeForLocalContrastBlur()
+        saved.upgradeForLocalTintSkin()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -769,6 +770,8 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                     .disabled(!workspace.canBrush)
                 Button("Contrast Brush") { workspace.chooseBrush(.contrast) }.disabled(!workspace.canBrush)
                 Button("Blur Brush") { workspace.chooseBrush(.blur) }.disabled(!workspace.canBrush)
+                Button("Tint Brush") { workspace.chooseBrush(.tint) }.disabled(!workspace.canBrush)
+                Button("Skin Smoothing Brush") { workspace.chooseBrush(.skinSmoothing) }.disabled(!workspace.canBrush)
                 Button("Repair Spot") { workspace.chooseSpotRemoval(.repair) }.disabled(!workspace.canSpotRemove)
                 Button("Clone Spot") { workspace.chooseSpotRemoval(.clone) }.disabled(!workspace.canSpotRemove)
                 Button("Manual Red-Eye") { workspace.chooseRedEyeCorrection() }.disabled(!workspace.canCorrectRedEye)
@@ -1479,6 +1482,8 @@ struct EditBar: View {
                     Button("Luminance Noise Reduction Brush") { model.chooseBrush(.noiseReduction) }
                     Button("Contrast Brush") { model.chooseBrush(.contrast) }
                     Button("Blur Brush") { model.chooseBrush(.blur) }
+                    Button("Tint Brush") { model.chooseBrush(.tint) }
+                    Button("Skin Smoothing Brush") { model.chooseBrush(.skinSmoothing) }
                 } label: {
                     Label("Brush", systemImage: "paintbrush.pointed")
                         .foregroundStyle(model.tool == .brush ? Color.accentColor : .primary)
@@ -1682,7 +1687,11 @@ struct PhotoViewer: View {
                                   $0.adjustment == model.brushAdjustment && !$0.erasing
                               },
                               maskOpacity: settings.opacity, maskInverted: settings.inverted,
+                              tintSettings: photo.adjustments.localTintSettings,
+                              skinSmoothingSettings: photo.adjustments.localSkinSmoothingSettings,
                               setOpacity: { model.setBrushMaskOpacity($0, for: model.brushAdjustment) },
+                              setTintSettings: model.setLocalTintSettings,
+                              setSkinSmoothingSettings: model.setLocalSkinSmoothingSettings,
                               invert: { model.invertBrushMask(model.brushAdjustment) },
                               reset: { model.clearBrushMask(model.brushAdjustment) },
                               done: { model.tool = .select })
@@ -2056,6 +2065,10 @@ struct Inspector: View {
                         GridRow {
                             Button("Contrast Brush") { model.chooseBrush(.contrast) }
                             Button("Blur Brush") { model.chooseBrush(.blur) }
+                        }
+                        GridRow {
+                            Button("Tint Brush") { model.chooseBrush(.tint) }
+                            Button("Skin Smoothing Brush") { model.chooseBrush(.skinSmoothing) }
                         }
                     }.disabled(!model.canBrush)
                     Text("Paint in the Viewer. Each stroke is one undo step.")

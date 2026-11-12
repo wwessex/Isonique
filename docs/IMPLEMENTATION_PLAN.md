@@ -377,9 +377,15 @@ Contrast and Blur complete two more Aperture-style local operations using the sa
 
 Contrast expands luminance around the exact 8-bit sRGB midpoint after Curves and Levels, preserving a uniform 128-grey field while separating shadows and highlights at maximum strength. Blur blends toward the shared separable luminance neighbourhood after local and global sharpening, retaining the source's colour differences. Zero opacity bypasses both effects. Edge-aware masks protect the opposite side of a high-contrast boundary, and overlaps compose deterministically with Contrast before Blur. Format 30 distinguishes the two identifiers so format-29 builds reject incompatible recipes cleanly.
 
+## Local Tint and Skin Smoothing brushes
+
+Tint and Skin Smoothing complete two more Aperture-style local operations on the shared source-coordinate, edge-aware mask infrastructure. Tint stores a wrapped hue and bounded saturation and blends towards that colour while preserving source lightness. Skin Smoothing stores amount and detail preservation, selects warm skin-like pixels inside its mask and attenuates the smoothing kernel around retained fine detail. Both modes support erase, inversion, post-stroke opacity, overlays, Fit and 100% brushing, normal history and Lift and Stamp.
+
+Skin Smoothing evaluates photographic colour before Tint so a strong cool tint cannot disable the skin classifier where the two masks overlap. Both use the full-resolution CPU preview/export renderer and keep originals untouched. Format 31 distinguishes their identifiers and settings, while older recipes decode with neutral/default settings and keep their previous appearance.
+
 ## Next checkpoint
 
-Add non-destructive local Tint and Skin Smoothing brush modes using the shared edge-aware mask infrastructure. Add persisted Tint hue and saturation plus Skin Smoothing amount and detail-preservation controls. Test neutral and maximum settings, skin-tone and non-skin fixtures, high-contrast boundaries, overlapping masks, Undo/Redo, persistence, full-resolution preview/export consistency and preservation of originals.
+Support multiple independently named instances of each local adjustment brush, with enable/disable, reorder, duplicate and delete actions. Preserve existing single-instance recipes through migration. Test compositing order, independent masks and parameters, Undo/Redo, persistence, Lift and Stamp, preset compatibility, full-resolution preview/export consistency and preservation of originals.
 
 ## Pending physical camera checks
 

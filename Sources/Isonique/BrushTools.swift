@@ -13,6 +13,8 @@ private extension LocalBrushAdjustment {
         case .noiseReduction: return .purple
         case .contrast: return .cyan
         case .blur: return .gray
+        case .tint: return .red
+        case .skinSmoothing: return .brown
         }
     }
 }
@@ -72,6 +74,30 @@ extension Workspace {
             else { $0.adjustments.localBrushMaskSettings[adjustment] = settings }
         }
     }
+
+    func setLocalTintSettings(_ settings: LocalTintSettings) {
+        guard !batchMode else { return }
+        let hue = settings.hue.isFinite
+            ? (settings.hue.truncatingRemainder(dividingBy: 360) + 360).truncatingRemainder(dividingBy: 360) : 30
+        let saturation = settings.saturation.isFinite ? min(1, max(0, settings.saturation)) : 0
+        edit {
+            let value = LocalTintSettings(hue: hue, saturation: saturation)
+            guard $0.adjustments.localTintSettings != value else { return }
+            $0.adjustments.localTintSettings = value
+        }
+    }
+
+    func setLocalSkinSmoothingSettings(_ settings: LocalSkinSmoothingSettings) {
+        guard !batchMode else { return }
+        let amount = settings.amount.isFinite ? min(1, max(0, settings.amount)) : 0
+        let detail = settings.detailPreservation.isFinite
+            ? min(1, max(0, settings.detailPreservation)) : 0.5
+        edit {
+            let value = LocalSkinSmoothingSettings(amount: amount, detailPreservation: detail)
+            guard $0.adjustments.localSkinSmoothingSettings != value else { return }
+            $0.adjustments.localSkinSmoothingSettings = value
+        }
+    }
 }
 
 struct BrushControls: View {
@@ -85,12 +111,20 @@ struct BrushControls: View {
     let hasMask: Bool
     let maskOpacity: Double
     let maskInverted: Bool
+    let tintSettings: LocalTintSettings
+    let skinSmoothingSettings: LocalSkinSmoothingSettings
     let setOpacity: (Double) -> Void
+    let setTintSettings: (LocalTintSettings) -> Void
+    let setSkinSmoothingSettings: (LocalSkinSmoothingSettings) -> Void
     let invert: () -> Void
     let reset: () -> Void
     let done: () -> Void
     @State private var opacity = 100.0
     @State private var editingOpacity = false
+    @State private var tintHue = 30.0
+    @State private var tintSaturation = 35.0
+    @State private var smoothingAmount = 50.0
+    @State private var detailPreservation = 50.0
 
     var body: some View {
         VStack(spacing: 8) {
@@ -124,11 +158,34 @@ struct BrushControls: View {
                     }.disabled(!hasMask).accessibilityLabel("Mask opacity")
                 }
             }
+            if adjustment == .tint {
+                HStack(spacing: 10) {
+                    committedSlider("Tint Hue", value: $tintHue, range: 0...359, suffix: "°") {
+                        setTintSettings(LocalTintSettings(hue: tintHue, saturation: tintSaturation / 100))
+                    }
+                    committedSlider("Tint Saturation", value: $tintSaturation, range: 0...100) {
+                        setTintSettings(LocalTintSettings(hue: tintHue, saturation: tintSaturation / 100))
+                    }
+                }
+            } else if adjustment == .skinSmoothing {
+                HStack(spacing: 10) {
+                    committedSlider("Smoothing", value: $smoothingAmount, range: 0...100) {
+                        setSkinSmoothingSettings(LocalSkinSmoothingSettings(
+                            amount: smoothingAmount / 100, detailPreservation: detailPreservation / 100))
+                    }
+                    committedSlider("Detail Preservation", value: $detailPreservation, range: 0...100) {
+                        setSkinSmoothingSettings(LocalSkinSmoothingSettings(
+                            amount: smoothingAmount / 100, detailPreservation: detailPreservation / 100))
+                    }
+                }
+            }
         }.font(.caption)
-            .onAppear { opacity = maskOpacity * 100 }
+            .onAppear { syncSettings() }
             .onChange(of: maskOpacity) { _, value in
                 if !editingOpacity { opacity = value * 100 }
             }
+            .onChange(of: tintSettings) { _, _ in syncSettings() }
+            .onChange(of: skinSmoothingSettings) { _, _ in syncSettings() }
     }
 
     private func slider(_ name: String, value: Binding<Double>, range: ClosedRange<Double>) -> some View {
@@ -140,6 +197,28 @@ struct BrushControls: View {
             }.monospacedDigit().foregroundStyle(.secondary)
             Slider(value: value, in: range, step: 1).accessibilityLabel(name)
         }
+    }
+
+    private func committedSlider(_ name: String, value: Binding<Double>, range: ClosedRange<Double>,
+                                 suffix: String = "%", commit: @escaping () -> Void) -> some View {
+        VStack(spacing: 2) {
+            HStack {
+                Text(name)
+                Spacer(minLength: 2)
+                Text(value.wrappedValue, format: .number.precision(.fractionLength(0))) + Text(suffix)
+            }.monospacedDigit().foregroundStyle(.secondary)
+            Slider(value: value, in: range, step: 1) { editing in
+                if !editing { commit() }
+            }.accessibilityLabel(name)
+        }
+    }
+
+    private func syncSettings() {
+        opacity = maskOpacity * 100
+        tintHue = tintSettings.hue
+        tintSaturation = tintSettings.saturation * 100
+        smoothingAmount = skinSmoothingSettings.amount * 100
+        detailPreservation = skinSmoothingSettings.detailPreservation * 100
     }
 }
 
