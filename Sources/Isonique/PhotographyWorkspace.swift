@@ -399,6 +399,7 @@ extension Workspace {
         ]
         photographyWindow = window
         isPhotographyFullScreen = window.styleMask.contains(.fullScreen)
+        installKeyboardCommandMonitor(for: window)
         syncPhotographyWindowChrome()
     }
 

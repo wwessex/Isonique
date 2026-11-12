@@ -64,6 +64,10 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var photographyFocus = PhotographyWorkspaceFocus.viewer
     @Published var isPhotographyFullScreen = false
     @Published var secondaryViewerVisible = false
+    @Published var toolbarConfiguration = IsoniqueToolbarConfiguration()
+    @Published var commandPreferences = KeyboardCommandPreferences()
+    @Published var showToolbarEditor = false
+    @Published var showCommandEditor = false
     @Published var compareOriginal = false
     @Published var comparisonID: UUID?
     @Published var comparisonIDs: [UUID] = []
@@ -128,6 +132,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     var photographyWorkspacePreferences = PhotographyWorkspacePreferences()
     weak var photographyWindow: NSWindow?
     var photographyWindowObservers: [NSObjectProtocol] = []
+    var keyboardCommandMonitor: Any?
     lazy var secondaryDisplayController = SecondaryDisplayViewerController(workspace: self)
     private var browserSnapshot: BrowserSnapshot?
     private struct BrowserSnapshot {
@@ -170,6 +175,8 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         gridThumbnailSize = preferences.string(forKey: GridThumbnailSize.preferenceKey)
             .flatMap(GridThumbnailSize.init(rawValue:)) ?? .standard
         labelNames = preferences.dictionary(forKey: "photo.labelNames") as? [String: String] ?? [:]
+        toolbarConfiguration = IsoniqueToolbarConfiguration.load(from: preferences)
+        commandPreferences = KeyboardCommandPreferences.load(from: preferences)
         restorePhotographyWorkspacePreferences()
         do {
             let args = ProcessInfo.processInfo.arguments
@@ -757,55 +764,51 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 }
                 Button(workspace.photographyLayout.browser ? "Hide Browser" : "Show Browser") {
                     workspace.performPhotographyWorkspaceCommand(.togglePanel(.browser))
-                }.keyboardShortcut("b", modifiers: [.command, .option])
+                }
                 Button(workspace.photographyLayout.filmstrip ? "Hide Filmstrip" : "Show Filmstrip") {
                     workspace.performPhotographyWorkspaceCommand(.togglePanel(.filmstrip))
-                }.keyboardShortcut("f", modifiers: [.command, .option])
+                }
                 Button(workspace.photographyLayout.inspector ? "Hide Inspector" : "Show Inspector") {
                     workspace.performPhotographyWorkspaceCommand(.togglePanel(.inspector))
-                }.keyboardShortcut("i", modifiers: [.command, .option])
+                }
                 Button(workspace.photographyLayout.toolbar ? "Hide Toolbar" : "Show Toolbar") {
                     workspace.performPhotographyWorkspaceCommand(.togglePanel(.toolbar))
-                }.keyboardShortcut("t", modifiers: [.command, .option])
+                }
                 Button("Cycle Photography Panels") {
                     workspace.performPhotographyWorkspaceCommand(.cycleFocus)
-                }.keyboardShortcut("w", modifiers: [.control])
+                }
                 Button(workspace.secondaryViewerVisible ? "Close Secondary Display Viewer" : "Show Secondary Display Viewer") {
                     workspace.toggleSecondaryViewer()
                 }.disabled(!workspace.secondaryViewerAvailable)
+                Button("Customize Toolbar…") { workspace.showToolbarEditor = true }
+                Button("Keyboard Command Editor…") { workspace.showCommandEditor = true }
                 Divider()
                 ForEach(BrowserPresentation.allCases) { presentation in
                     Button(presentation.rawValue) { workspace.choosePresentation(presentation) }
-                        .keyboardShortcut(presentation.shortcut)
                         .disabled(!workspace.canChoosePresentation(presentation))
                 }
                 GridThumbnailSizePicker(model: workspace)
                 Toggle("Show Keyword Controls", isOn: $workspace.showKeywordControls)
                 Divider()
                 Button("Advanced Search…") { workspace.showAdvancedSearch = true }
-                    .keyboardShortcut("f", modifiers: [.command, .shift])
                     .disabled(workspace.busy || workspace.repository == nil)
                 Button("Clear Advanced Search") { workspace.advancedSearch = nil }
                     .disabled(workspace.advancedSearch == nil || workspace.busy)
                 Divider()
                 Button("Compare Photos", action: workspace.startComparison)
-                    .keyboardShortcut("o", modifiers: [.option]).disabled(!workspace.canStartComparison)
+                    .disabled(!workspace.canStartComparison)
                 Button("End Comparison", action: workspace.stopComparison)
-                    .keyboardShortcut(.return, modifiers: [.command]).disabled(workspace.comparisonID == nil)
+                    .disabled(workspace.comparisonID == nil)
                 Button("Promote Compare Select", action: workspace.promoteComparisonSelection)
-                    .keyboardShortcut("p", modifiers: [.option])
                     .disabled(!workspace.canPromoteComparisonSelection)
                 Button("Remove Compare Select", action: workspace.removeComparisonSelection)
-                    .keyboardShortcut(.delete, modifiers: [.option])
                     .disabled(!workspace.canRemoveComparisonSelection)
                 Divider()
                 Toggle("Highlight Hot & Cold Areas", isOn: $workspace.clipping.both)
-                    .keyboardShortcut("h", modifiers: [.option, .shift])
                 Toggle("Highlight Clipping Warning", isOn: $workspace.clipping.highlights)
                 Toggle("Shadow Clipping Warning", isOn: $workspace.clipping.shadows)
                 Divider()
                 Button(workspace.loupeActive ? "Hide Loupe" : "Show Loupe", action: workspace.toggleLoupe)
-                    .keyboardShortcut("`", modifiers: [])
                     .disabled(!workspace.loupeActive && !workspace.canShowLoupe)
             }
             CommandMenu("Review") {
@@ -843,14 +846,14 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                     .disabled(workspace.selected == nil)
                 Divider()
                 Button("Lift Settings", action: workspace.lift)
-                    .keyboardShortcut("c", modifiers: [.command, .shift]).disabled(!workspace.canLift)
+                    .disabled(!workspace.canLift)
                 Button("Stamp Selected Settings", action: workspace.stamp)
-                    .keyboardShortcut("v", modifiers: [.command, .shift]).disabled(!workspace.canStamp)
+                    .disabled(!workspace.canStamp)
                 Divider()
                 Button("New Version from Original") { workspace.createVersion(from: .original) }
-                    .keyboardShortcut("g", modifiers: [.option]).disabled(!workspace.canCreateVersion)
+                    .disabled(!workspace.canCreateVersion)
                 Button("Duplicate Version") { workspace.createVersion(from: .current) }
-                    .keyboardShortcut("v", modifiers: [.option]).disabled(!workspace.canCreateVersion)
+                    .disabled(!workspace.canCreateVersion)
                 Button("Edit with External Editor…") { workspace.editWithExternalEditor() }
                     .disabled(!workspace.canEditExternally)
                 Divider()
@@ -894,7 +897,6 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 }
                 Divider()
                 Button("Batch Change…", action: workspace.openBatchMetadata)
-                    .keyboardShortcut("b", modifiers: [.command, .shift])
                     .disabled(!workspace.canOpenBatchMetadata)
                 Button("Catalogue IPTC from Originals…", action: workspace.openInheritedIPTCReview)
                     .disabled(!workspace.canReviewInheritedIPTC)
@@ -1358,7 +1360,6 @@ struct ContentView: View {
                             model.exitViewer()
                             return .handled
                         }
-                        .onKeyPress(keys: [.leftArrow, .rightArrow, "0", "1", "2", "3", "4", "5", "9", "=", "-", "/"], phases: .down, action: model.reviewKey)
                     if model.activeLightTable == nil, model.photographyLayout.inspector && !model.isViewingTrash {
                         Inspector().frame(minWidth: 260, idealWidth: 290, maxWidth: 340).workspaceGlass(radius: 20).padding(10)
                             .focusable().focusEffectDisabled()
@@ -1378,48 +1379,11 @@ struct ContentView: View {
         .disabled(model.busy || model.repository == nil)
         .searchable(text: $model.search, prompt: "Search photos and metadata")
         .toolbar {
-            ToolbarItem { Toggle("Select Photos", isOn: $model.batchMode).onChange(of: model.batchMode) { _, active in
-                model.batchSelection = []
-                if active {
-                    model.places = false
-                    model.showBrowser()
-                    if model.selected == nil { model.selection = model.photos.first?.id }
+            ForEach(model.toolbarConfiguration.items) { item in
+                ToolbarItem(id: item.rawValue) {
+                    ConfiguredToolbarItemView(item: item).environmentObject(model)
                 }
-            }.disabled(model.activeLightTable != nil) }
-            ToolbarItem { Button { openWindow(id: "features") } label: { Label("Features & Limits", systemImage: "questionmark.circle") }.help("See available features and what is still missing") }
-            ToolbarItem { Button { withAnimation(.easeInOut(duration: 0.2)) { model.togglePhotographyPanel(.inspector) } } label: { Label("Inspector", systemImage: "sidebar.right") }.help("Show or hide inspector") }
-            ToolbarItem {
-                Menu {
-                    Picker("Sort by", selection: $model.sort) { ForEach(PhotoSort.allCases) { Text($0.rawValue).tag($0) } }
-                    Toggle("Descending", isOn: $model.sortDescending)
-                    Divider()
-                    Button("Advanced Search…") { model.showAdvancedSearch = true }
-                    Divider()
-                    Picker("Originals", selection: $model.originalFilter) {
-                        ForEach(OriginalFilter.allCases) { filter in Text(filter.rawValue).tag(filter) }
-                    }
-                    Picker("Color Labels", selection: $model.colorFilter) {
-                        Text("All labels").tag(ColorLabelFilter.all)
-                        Text("No label").tag(ColorLabelFilter.unlabelled)
-                        ForEach(PhotoColorLabel.allCases) { label in Text(model.name(for: label)).tag(ColorLabelFilter.color(label)) }
-                    }
-                } label: { Label("Sort & Filter", systemImage: "arrow.up.arrow.down") }
-                    .disabled(model.activeLightTable != nil)
             }
-            ToolbarItem {
-                Menu {
-                    Button("Compare Photos", action: model.startComparison).disabled(!model.canStartComparison)
-                    Button("New Light Table from Selection", action: model.createLightTable)
-                        .disabled(!model.canCreateLightTable)
-                    Button("Auto Stack by Capture Time…") { model.showAutoStack = true }
-                    Button("Start Slideshow…") {
-                        model.startSlideshow()
-                    }
-                } label: { Label("Review", systemImage: "play.rectangle") }
-                    .disabled(model.busy || model.isViewingTrash || model.photos.isEmpty || model.repository == nil)
-            }
-            ToolbarItem { Button(action: model.importPanel) { Label("Import", systemImage: "square.and.arrow.down") } }
-            ToolbarItem { Button(action: model.exportPanel) { Label("Export", systemImage: "square.and.arrow.up") }.disabled(model.activeLightTable != nil || model.isViewingTrash || (model.batchMode ? model.batchPhotos.isEmpty : model.selected == nil)) }
         }
         .background(PhotographyWindowReader { model.attachPhotographyWindow($0) })
     }
@@ -1454,6 +1418,12 @@ struct ContentView: View {
         }
         .sheet(isPresented: $model.showAdjustmentPresetManager) {
             AdjustmentPresetManagerView().environmentObject(model)
+        }
+        .sheet(isPresented: $model.showToolbarEditor) {
+            ToolbarConfigurationView().environmentObject(model)
+        }
+        .sheet(isPresented: $model.showCommandEditor) {
+            KeyboardCommandEditorView().environmentObject(model)
         }
         .sheet(item: $model.adjustmentPresetReview) { review in
             AdjustmentPresetReviewView(review: review).environmentObject(model)

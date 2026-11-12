@@ -152,6 +152,13 @@ struct ReviewSettingsView: View {
                 }
                 GridThumbnailSizePicker(model: model)
             }
+            Section("Workspace Controls") {
+                Button("Customize Toolbar…") { model.showToolbarEditor = true }
+                Button("Keyboard Command Editor…") { model.showCommandEditor = true }
+                LabeledContent("Command Set", value: model.activeKeyboardCommandSet.name)
+                Text("Toolbar and command-set preferences apply across libraries. Photo recipes and exports are unchanged.")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
             Section("External Editor") {
                 LabeledContent("Application", value: model.externalEditorName)
                 HStack {

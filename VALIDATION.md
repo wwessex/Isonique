@@ -63,6 +63,17 @@ Use the signed build with at least two edited photos. For secondary-display chec
 5. Change photos, switch Fit/100% and close the secondary Viewer while a full-resolution frame is loading. Confirm no obsolete image replaces the current selection and reopening starts with the current photo.
 6. Export the tested photos before and after full-screen, focus and secondary-display changes. Confirm byte-identical edited exports, unchanged recipes after reopening and unchanged original fingerprints.
 
+## Physical toolbar and keyboard command customisation
+
+Use the signed build with British English selected in macOS and at least three photos. Keep one photo selected in Grid, Viewer and Compare during the checks.
+
+1. Choose View → Customise Toolbar, hide and reorder several controls, close the sheet and confirm the live toolbar matches. Quit and reopen Isonique, confirm the order returns, then use Reset to Defaults.
+2. Open Keyboard Command Editor, create and rename a set, change one command in each Browser, Viewer and Compare scope and confirm each shortcut runs only in its declared scope. Restart and confirm the active named set and bindings return.
+3. Try to assign one shortcut to overlapping commands, a macOS editing or file command, a colour label and a quick-keyword slot. Confirm each collision is explained and no existing binding changes. Confirm reuse between disjoint Browser/Viewer and Compare scopes is accepted.
+4. Focus Search and editable Inspector metadata, type the unmodified rating keys and customised shortcuts, and confirm the exact text appears without changing the photo. Open a sheet and confirm workflow shortcuts remain inactive until it closes.
+5. Export the named set, reset or remove its bindings, import the JSON and confirm the restored set receives a distinct name when necessary. Cancel both file panels and confirm the current set remains unchanged.
+6. Export an edited photo before and after customisation. Confirm identical pixels and metadata, an unchanged catalogue and unchanged source and managed-original fingerprints.
+
 ## Physical PTP camera import
 
 Use a disposable library and a physical USB camera in PTP or Photo Transfer mode. Put at least three distinct test photos on the camera. A larger group of photos gives you time to cancel an active transfer. Record the Isonique commit, macOS version, camera model, firmware and USB mode with the results. [README smoke test](README.md#development)

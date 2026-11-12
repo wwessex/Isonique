@@ -437,9 +437,17 @@ When a second `NSScreen` is present, the View menu can open a borderless seconda
 
 Automated tests restore independently customised layouts, exercise panel commands and visible focus order, model different backing scales and ICC profiles, cancel a full-resolution request and compare the resulting Viewer pixels with edited PNG export. Physical native-full-screen focus, menu interaction and a mixed-profile second monitor remain on the validation checklist.
 
+## Custom toolbar and keyboard command sets
+
+View → Customise Toolbar now chooses, orders and resets the seven existing main-toolbar controls, with application-level persistence across libraries. View → Keyboard Command Editor retains all 32 established workflow shortcuts in a protected built-in set and creates independently named custom sets. Each command declares Browser, Viewer and Compare scope; shortcuts may be reused only between disjoint scopes. The editor rejects collisions with active commands and reserves native editing, file, colour-label and quick-keyword shortcuts.
+
+Custom sets support rename, delete, reset and atomic JSON import/export. Older sparse preference payloads inherit newly added defaults, imported sets receive a fresh identifier and duplicate names receive a deterministic suffix. The window event router bypasses text fields and open sheets. Toolbar and command preferences live outside the library catalogue, so changing them cannot alter recipes, originals or export pixels.
+
+Automated tests cover defaults, sparse migration, restart restoration, overlapping and disjoint scopes, reserved shortcuts, text and sheet routing, duplicate-name import, invalid-import rollback, toolbar order and older unknown toolbar entries. Signed-app QA under British English verified Customise spelling, live toolbar removal and reset, the named Command Editor and typing a rating key into Search without invoking a photo command.
+
 ## Next checkpoint
 
-Add customisable toolbar contents and a keyboard Command Editor with named command sets. Persist toolbar order and shortcuts, prevent ambiguous collisions, retain all current defaults, expose reset/import/export actions and keep shortcuts scoped correctly between Browser, Viewer, Compare and text fields. Test migration, localisation, focus routing, conflict handling and restart restoration without changing catalogue recipes or exports.
+Add Quick Preview to the Browser and configurable List Browser columns with persistent visibility, order and width. Keep selection, sorting, filtering and rating shortcuts consistent between Grid, List and Quick Preview. Test older preference migration, localisation, focus routing, large metadata values and restart restoration without changing catalogue recipes, originals or exports.
 
 ## Pending physical camera checks
 
