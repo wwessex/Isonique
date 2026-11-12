@@ -52,6 +52,17 @@ Use a disposable library with at least four wide, tall and square photos, includ
 4. Save PDF and use Print. Confirm the PDF matches the canvas arrangement, the print panel scales it to the selected paper and the adjusted photo matches an ordinary edited export.
 5. Export the compared photos before and after Light Table work and verify identical output. Verify the managed originals remain byte-identical.
 
+## Physical full-screen and secondary-display workspace
+
+Use the signed build with at least two edited photos. For secondary-display checks, connect a second display with a different backing scale or ICC profile and record both display models, scale settings and selected colour profiles.
+
+1. Choose each View → Photography Workspace layout, customise Browser, filmstrip, Inspector and toolbar visibility, quit and reopen Isonique, then confirm every layout restores independently.
+2. Enter and leave native full screen with Control-Command-F and Escape. Confirm the library sidebar leaves in full screen and returns afterwards, the selected photo remains selected and Browser/Viewer rating shortcuts keep their expected focus.
+3. Press Control-W repeatedly and confirm focus visits only visible panels. Exercise Option-Command-B/F/I/T, including restoring the toolbar from its menu shortcut after hiding it. Confirm typing in search or metadata fields is not interpreted as a review shortcut.
+4. With a second display connected, choose Show Secondary Display Viewer. Confirm the window opens on the non-primary display at its native scale, follows Viewer and Compare selection changes and looks consistent when the displays use different ICC profiles. Optional RGB proofing must still be visibly explicit rather than silently baked into the screen transform.
+5. Change photos, switch Fit/100% and close the secondary Viewer while a full-resolution frame is loading. Confirm no obsolete image replaces the current selection and reopening starts with the current photo.
+6. Export the tested photos before and after full-screen, focus and secondary-display changes. Confirm byte-identical edited exports, unchanged recipes after reopening and unchanged original fingerprints.
+
 ## Physical PTP camera import
 
 Use a disposable library and a physical USB camera in PTP or Photo Transfer mode. Put at least three distinct test photos on the camera. A larger group of photos gives you time to cancel an active transfer. Record the Isonique commit, macOS version, camera model, firmware and USB mode with the results. [README smoke test](README.md#development)

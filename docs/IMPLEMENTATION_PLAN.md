@@ -429,9 +429,17 @@ The native canvas supports direct dragging, corner resizing, multi-selection, si
 
 PDF and native print output use one page at the saved canvas dimensions. Items render in stacking order through the same full-resolution adjustment renderer used by edited export, then apply only Light Table placement and rotation. Layout operations therefore cannot change catalogue photo recipes, original bytes or ordinary export output. The macOS print panel scales the canvas to the selected paper.
 
+## Full-screen photography workspace
+
+The View menu now selects remembered Editing, Culling and Compare layouts. Each layout independently stores Browser, filmstrip, Inspector and toolbar visibility in application preferences. The window uses native macOS full-screen entry and exit, hides the library navigation column in full screen and restores it afterwards. Control-W cycles focus only through visible Viewer, Browser, filmstrip, Inspector and toolbar panels; dedicated Option-Command shortcuts toggle each panel.
+
+When a second `NSScreen` is present, the View menu can open a borderless secondary Viewer on that display. Its window adopts the destination screen's AppKit colour space and scale, while the image request uses the screen's pixel extent and the shared cancellable Viewer cache. Optional user RGB proofing remains explicit and separate from destination display conversion, avoiding a second baked-in screen-profile transform. Workspace layouts, secondary-display state and navigation stay outside the library catalogue and cannot alter a photo recipe or export.
+
+Automated tests restore independently customised layouts, exercise panel commands and visible focus order, model different backing scales and ICC profiles, cancel a full-resolution request and compare the resulting Viewer pixels with edited PNG export. Physical native-full-screen focus, menu interaction and a mixed-profile second monitor remain on the validation checklist.
+
 ## Next checkpoint
 
-Add a dedicated full-screen photography workspace with independently hideable Browser, filmstrip, Inspector and toolbar panels plus remembered layouts for editing, culling and Compare. Support native full-screen entry/exit, keyboard panel cycling and a secondary-display Viewer where available. Test state restoration, focus and shortcuts, mixed-display scale and colour profiles, cancellation during full-resolution transitions and preservation of recipes and exports.
+Add customisable toolbar contents and a keyboard Command Editor with named command sets. Persist toolbar order and shortcuts, prevent ambiguous collisions, retain all current defaults, expose reset/import/export actions and keep shortcuts scoped correctly between Browser, Viewer, Compare and text fields. Test migration, localisation, focus routing, conflict handling and restart restoration without changing catalogue recipes or exports.
 
 ## Pending physical camera checks
 

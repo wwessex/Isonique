@@ -59,6 +59,11 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         didSet { preferences.set(gridThumbnailSize.rawValue, forKey: GridThumbnailSize.preferenceKey) }
     }
     @Published var showInspector = true
+    @Published var photographyMode = PhotographyWorkspaceMode.editing
+    @Published var photographyLayout = PhotographyWorkspaceLayout.defaultValue(for: .editing)
+    @Published var photographyFocus = PhotographyWorkspaceFocus.viewer
+    @Published var isPhotographyFullScreen = false
+    @Published var secondaryViewerVisible = false
     @Published var compareOriginal = false
     @Published var comparisonID: UUID?
     @Published var comparisonIDs: [UUID] = []
@@ -120,6 +125,10 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         didSet { preferences.set(recentLibraryPaths, forKey: Self.recentLibraryKey) }
     }
     let preferences: UserDefaults
+    var photographyWorkspacePreferences = PhotographyWorkspacePreferences()
+    weak var photographyWindow: NSWindow?
+    var photographyWindowObservers: [NSObjectProtocol] = []
+    lazy var secondaryDisplayController = SecondaryDisplayViewerController(workspace: self)
     private var browserSnapshot: BrowserSnapshot?
     private struct BrowserSnapshot {
         struct Key: Equatable {
@@ -161,6 +170,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         gridThumbnailSize = preferences.string(forKey: GridThumbnailSize.preferenceKey)
             .flatMap(GridThumbnailSize.init(rawValue:)) ?? .standard
         labelNames = preferences.dictionary(forKey: "photo.labelNames") as? [String: String] ?? [:]
+        restorePhotographyWorkspacePreferences()
         do {
             let args = ProcessInfo.processInfo.arguments
             let root: URL
@@ -732,6 +742,38 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 }
             }
             CommandGroup(after: .toolbar) {
+                Menu("Photography Workspace") {
+                    ForEach(PhotographyWorkspaceMode.allCases) { mode in
+                        Button {
+                            workspace.performPhotographyWorkspaceCommand(.selectMode(mode))
+                        } label: {
+                            if workspace.photographyMode == mode { Label(mode.rawValue, systemImage: "checkmark") }
+                            else { Text(mode.rawValue) }
+                        }
+                    }
+                }
+                Button(workspace.isPhotographyFullScreen ? "Exit Photography Full Screen" : "Enter Photography Full Screen") {
+                    workspace.togglePhotographyFullScreen()
+                }
+                Button(workspace.photographyLayout.browser ? "Hide Browser" : "Show Browser") {
+                    workspace.performPhotographyWorkspaceCommand(.togglePanel(.browser))
+                }.keyboardShortcut("b", modifiers: [.command, .option])
+                Button(workspace.photographyLayout.filmstrip ? "Hide Filmstrip" : "Show Filmstrip") {
+                    workspace.performPhotographyWorkspaceCommand(.togglePanel(.filmstrip))
+                }.keyboardShortcut("f", modifiers: [.command, .option])
+                Button(workspace.photographyLayout.inspector ? "Hide Inspector" : "Show Inspector") {
+                    workspace.performPhotographyWorkspaceCommand(.togglePanel(.inspector))
+                }.keyboardShortcut("i", modifiers: [.command, .option])
+                Button(workspace.photographyLayout.toolbar ? "Hide Toolbar" : "Show Toolbar") {
+                    workspace.performPhotographyWorkspaceCommand(.togglePanel(.toolbar))
+                }.keyboardShortcut("t", modifiers: [.command, .option])
+                Button("Cycle Photography Panels") {
+                    workspace.performPhotographyWorkspaceCommand(.cycleFocus)
+                }.keyboardShortcut("w", modifiers: [.control])
+                Button(workspace.secondaryViewerVisible ? "Close Secondary Display Viewer" : "Show Secondary Display Viewer") {
+                    workspace.toggleSecondaryViewer()
+                }.disabled(!workspace.secondaryViewerAvailable)
+                Divider()
                 ForEach(BrowserPresentation.allCases) { presentation in
                     Button(presentation.rawValue) { workspace.choosePresentation(presentation) }
                         .keyboardShortcut(presentation.shortcut)
@@ -1107,12 +1149,13 @@ struct ContentView: View {
     @EnvironmentObject var model: Workspace
     @Environment(\.openWindow) private var openWindow
     @State private var collectionEditor: CollectionEditor?
-    @FocusState private var browserFocused: Bool
+    @State private var columnVisibility = NavigationSplitViewVisibility.all
+    @FocusState private var focusedPhotographyPanel: PhotographyWorkspaceFocus?
     private static let welcomeIcon: NSImage = Bundle.main.url(forResource: "Isonique", withExtension: "icns")
         .flatMap(NSImage.init(contentsOf:)) ?? NSApplication.shared.applicationIconImage
 
     private var workspaceView: some View {
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: $columnVisibility) {
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 10) {
                     Text("I")
@@ -1190,7 +1233,7 @@ struct ContentView: View {
             }.background(.ultraThinMaterial).navigationSplitViewColumnWidth(min: 210, ideal: 240, max: 300)
         } detail: {
             VStack(spacing: 0) {
-                HStack {
+                if model.photographyLayout.toolbar { HStack {
                     if model.viewer {
                         Button { model.showBrowser() } label: { Label("Back to \(model.title)", systemImage: "chevron.left") }
                             .help("Return to the Browser; Escape also goes back")
@@ -1224,14 +1267,30 @@ struct ContentView: View {
                         }.labelsHidden().pickerStyle(.segmented).frame(width: 155)
                     }
                 }.padding(.horizontal, 22).padding(.vertical, 16)
-                Divider().opacity(0.4)
-                if model.activeLightTable == nil {
+                    .focusable().focusEffectDisabled()
+                    .focused($focusedPhotographyPanel, equals: .toolbar)
+                Divider().opacity(0.4) }
+                if model.activeLightTable == nil, model.photographyLayout.toolbar {
                     if model.batchMode { BatchBar() }
                     if model.showKeywordControls && !model.isViewingTrash { KeywordControls() }
                     if !model.isViewingTrash { EditBar().disabled(model.batchMode) }
                     Divider().opacity(0.4)
                 }
                 HSplitView {
+                    if model.activeLightTable == nil, model.viewer, model.photographyLayout.browser {
+                        ScrollView {
+                            LazyVStack(spacing: 10) {
+                                ForEach(model.photos) { photo in
+                                    photoCell(photo, compact: true, photographyFocus: .browser)
+                                }
+                            }.padding(10)
+                        }
+                        .frame(minWidth: 126, idealWidth: 146, maxWidth: 180)
+                        .background(Color(white: 0.04))
+                        .focusable().focusEffectDisabled()
+                        .focused($focusedPhotographyPanel, equals: .browser)
+                        .accessibilityLabel("Photography Browser")
+                    }
                     VStack(spacing: 0) {
                         if let lightTable = model.activeLightTable {
                             LightTableWorkspace(layout: lightTable).environmentObject(model)
@@ -1268,10 +1327,15 @@ struct ContentView: View {
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .simultaneousGesture(TapGesture().onEnded {
-                                if model.tool == .select { browserFocused = true }
+                                if model.tool == .select { focusedPhotographyPanel = .viewer }
                             })
-                            ScrollView(.horizontal) { LazyHStack(spacing: 10) { ForEach(model.photos) { photo in photoCell(photo, compact: true) } }.padding(12) }
-                                .scrollIndicators(.hidden).frame(height: 128).workspaceGlass(radius: 18).padding(.horizontal, 16).padding(.bottom, 14)
+                            if model.photographyLayout.filmstrip {
+                                ScrollView(.horizontal) { LazyHStack(spacing: 10) { ForEach(model.photos) { photo in photoCell(photo, compact: true, photographyFocus: .filmstrip) } }.padding(12) }
+                                    .scrollIndicators(.hidden).frame(height: 128).workspaceGlass(radius: 18).padding(.horizontal, 16).padding(.bottom, 14)
+                                    .focusable().focusEffectDisabled()
+                                    .focused($focusedPhotographyPanel, equals: .filmstrip)
+                                    .accessibilityLabel("Photography Filmstrip")
+                            }
                         } else if model.browserLayout == .list {
                             PhotoListBrowser(model: model, photos: model.photos)
                         } else {
@@ -1282,16 +1346,23 @@ struct ContentView: View {
                             }
                         }
                     }.frame(minWidth: 400).background(Color(white: 0.055))
-                        .focusable().focusEffectDisabled().focused($browserFocused)
+                        .focusable().focusEffectDisabled()
+                        .focused($focusedPhotographyPanel, equals: model.viewer ? .viewer : .browser)
                         .keywordShortcuts(for: model)
                         .onKeyPress(.escape) {
+                            if model.isPhotographyFullScreen {
+                                model.togglePhotographyFullScreen()
+                                return .handled
+                            }
                             guard model.viewer else { return .ignored }
                             model.exitViewer()
                             return .handled
                         }
                         .onKeyPress(keys: [.leftArrow, .rightArrow, "0", "1", "2", "3", "4", "5", "9", "=", "-", "/"], phases: .down, action: model.reviewKey)
-                    if model.activeLightTable == nil, model.showInspector && !model.isViewingTrash {
+                    if model.activeLightTable == nil, model.photographyLayout.inspector && !model.isViewingTrash {
                         Inspector().frame(minWidth: 260, idealWidth: 290, maxWidth: 340).workspaceGlass(radius: 20).padding(10)
+                            .focusable().focusEffectDisabled()
+                            .focused($focusedPhotographyPanel, equals: .inspector)
                     }
                 }
                 Divider()
@@ -1316,7 +1387,7 @@ struct ContentView: View {
                 }
             }.disabled(model.activeLightTable != nil) }
             ToolbarItem { Button { openWindow(id: "features") } label: { Label("Features & Limits", systemImage: "questionmark.circle") }.help("See available features and what is still missing") }
-            ToolbarItem { Button { withAnimation(.easeInOut(duration: 0.2)) { model.showInspector.toggle() } } label: { Label("Inspector", systemImage: "sidebar.right") }.help("Show or hide inspector") }
+            ToolbarItem { Button { withAnimation(.easeInOut(duration: 0.2)) { model.togglePhotographyPanel(.inspector) } } label: { Label("Inspector", systemImage: "sidebar.right") }.help("Show or hide inspector") }
             ToolbarItem {
                 Menu {
                     Picker("Sort by", selection: $model.sort) { ForEach(PhotoSort.allCases) { Text($0.rawValue).tag($0) } }
@@ -1350,6 +1421,7 @@ struct ContentView: View {
             ToolbarItem { Button(action: model.importPanel) { Label("Import", systemImage: "square.and.arrow.down") } }
             ToolbarItem { Button(action: model.exportPanel) { Label("Export", systemImage: "square.and.arrow.up") }.disabled(model.activeLightTable != nil || model.isViewingTrash || (model.batchMode ? model.batchPhotos.isEmpty : model.selected == nil)) }
         }
+        .background(PhotographyWindowReader { model.attachPhotographyWindow($0) })
     }
     var body: some View {
         VStack(spacing: 0) {
@@ -1426,11 +1498,8 @@ struct ContentView: View {
             model.batchSelection = []
             model.showBrowser()
         }
-        .onExitCommand(perform: model.exitViewer)
-        .onChange(of: model.viewer) { _, viewing in
-            if viewing { browserFocused = true }
-            else { model.tool = .select; model.compareOriginal = false; model.stopComparison() }
-        }
+        .modifier(PhotographyWorkspaceInteractionModifier(model: model,
+            columnVisibility: $columnVisibility, focusedPanel: $focusedPhotographyPanel))
         .onChange(of: model.compareOriginal) { _, original in if original { model.stopComparison() } }
         .onChange(of: model.activeCurveSampling) { _, active in
             if active == nil, model.curveSampling != nil { model.curveSampling = nil }
@@ -1450,7 +1519,8 @@ struct ContentView: View {
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didUnmountNotification)) { _ in model.refreshOriginalStatus() }
         .onChange(of: model.selection) { _, _ in model.tool = .select; model.compareOriginal = false }
     }
-    @ViewBuilder func photoCell(_ photo: Photo, compact: Bool, onSelect: (() -> Void)? = nil) -> some View {
+    @ViewBuilder func photoCell(_ photo: Photo, compact: Bool, onSelect: (() -> Void)? = nil,
+                                photographyFocus: PhotographyWorkspaceFocus? = nil) -> some View {
         if let repo = model.repository {
             let url = try? repo.availableOriginalURL(photo)
             Button {
@@ -1460,7 +1530,7 @@ struct ContentView: View {
                     if !model.batchSelection.insert(photo.id).inserted { model.batchSelection.remove(photo.id) }
                     model.selection = photo.id
                 } else { model.selectBrowserPhoto(photo.id); model.viewer = true }
-                browserFocused = true
+                focusedPhotographyPanel = photographyFocus ?? (model.viewer ? .viewer : .browser)
             } label: {
                 VStack(alignment: .leading, spacing: 6) {
                     Group {
