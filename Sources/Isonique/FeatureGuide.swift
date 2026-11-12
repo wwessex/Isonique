@@ -37,6 +37,7 @@ struct FeatureGuide: View {
             Feature(title: "10. Persistent edit history", detail: "Enable Keep Undo/Redo history in Import & History Options to retain the latest 100 edits per library across launches. Turning it off removes saved history.")
         ]),
         Group(title: "Available with limits", symbol: "exclamationmark.circle", features: [
+            Feature(title: "Quick Preview and List columns", detail: "Press P in the Browser or Viewer to use a bounded cached preview while retaining selection, navigation, filters and review shortcuts. Adjustment tools pause until Quick Preview is turned off. In List Browser, View → Customise List Columns chooses among 14 metadata columns; drag native table headers to reorder or resize them. Visibility, order and width persist across launches."),
             Feature(title: "GPX tracks and matching", detail: "Select a project and open Places → GPX Tracks to import, show, hide or remove a route. Click a waypoint pin to review its coordinates and choose which photo versions to assign it to. Metadata → Match GPX Track matches selected photos by timestamp. Both assignment workflows use one Undo step. Reimport older GPX files to add their waypoints."),
             Feature(title: "6. Referenced-original management", detail: "Leave originals where they are from Import Options. Filter referenced and unavailable files using Sort & Filter. Use File → Reconnect Referenced Originals to search a folder for missing references with known filenames and verify their fingerprints. Info can relink or consolidate one file. Use Select Photos and File → Consolidate Selected Originals to copy a batch into managed storage. File → Relocate Originals previews filename and subfolder presets and shows collisions before copying. New Preset saves a reusable pair of custom templates. Isonique verifies the copies before updating the catalogue. Old referenced files are kept by default. Isonique backups retain links; back up external originals separately."),
             Feature(title: "Photo Trash", detail: "Move a photo to Trash from its context menu or press Command-Delete. Select Trash in the sidebar and use Put Back to restore its edits and memberships. Empty Trash reviews eligible records and managed originals before removal. It keeps referenced files and originals used by active versions. Use the same command to retry any pending Finder Trash moves."),
@@ -123,7 +124,7 @@ struct FeatureGuide: View {
                 Link("Pixel alternative: libvips", destination: URL(string: "https://www.libvips.org/")!)
             }.font(.caption)
             Divider()
-            Text("Requires an Apple Silicon Mac with macOS 14 or later. Tested on macOS 27.3.")
+            Text("Requires an Apple Silicon Mac with macOS 15 or later. Tested on macOS 27.3.")
                 .font(.caption).foregroundStyle(.secondary)
         }.padding(24).frame(minWidth: 560, minHeight: 480)
     }

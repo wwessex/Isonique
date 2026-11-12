@@ -8,12 +8,13 @@ import IsoniqueCore
 @MainActor
 final class CommandCustomizationTests: XCTestCase {
     func testDefaultsMigrationNamedSetsAndRestartPersistence() throws {
-        XCTAssertEqual(KeyboardCommandDefinition.definitions.count, 32)
+        XCTAssertEqual(KeyboardCommandDefinition.definitions.count, 33)
         let defaults = KeyboardCommandPreferences()
         XCTAssertEqual(defaults.shortcut(for: .toggleBrowser),
                        .init("b", modifiers: [.command, .option]))
         XCTAssertEqual(defaults.shortcut(for: .rating5), .init("5"))
         XCTAssertEqual(defaults.shortcut(for: .nextPhoto), .init("right"))
+        XCTAssertEqual(defaults.shortcut(for: .quickPreview), .init("p"))
 
         struct LegacyPreferences: Encodable {
             let activeSetID: String

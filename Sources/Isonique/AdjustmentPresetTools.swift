@@ -59,7 +59,7 @@ extension Workspace {
     }
 
     func previewAdjustmentPreset(_ preset: CustomAdjustmentPreset) {
-        guard !busy, !isViewingTrash else { return }
+        guard !busy, !isViewingTrash, !quickPreview else { return }
         let targets = batchMode ? batchPhotos : selected.map { [$0] } ?? []
         guard !targets.isEmpty else { return }
         adjustmentPresetReview = AdjustmentPresetApplicationReview(preset: preset, photoIDs: targets.map(\.id))

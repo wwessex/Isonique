@@ -9,7 +9,7 @@ enum SpotPointKind: String, CaseIterable, Identifiable {
 
 extension Workspace {
     var canSpotRemove: Bool {
-        guard !busy, !batchMode, !isViewingTrash, let selected else { return false }
+        guard !busy, !batchMode, !isViewingTrash, !quickPreview, let selected else { return false }
         return isOriginalAvailable(selected) == true
     }
 

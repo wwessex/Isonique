@@ -9,7 +9,7 @@
 - Run `make build` to compile and ad-hoc sign the arm64 bundle. Extract `build/Isonique.zip` to a local folder and run `codesign --verify --deep --strict /absolute/path/to/Isonique.app` to verify the packaged copy.
 - Follow the [README smoke test](README.md#development) to launch with a disposable catalogue and capture the window.
 
-The supported deployment target is macOS 14. Native validation has been performed on Apple Silicon with macOS 27.3. Running on older macOS versions, using physical camera devices and recovering a real legacy Aperture library remain separate validation tasks.
+The supported deployment target is macOS 15. Native validation has been performed on Apple Silicon with macOS 27.3. Running on macOS 15 or 26, using physical camera devices and recovering a real legacy Aperture library remain separate validation tasks.
 
 ## Physical pressure-sensitive tablet
 
@@ -73,6 +73,16 @@ Use the signed build with British English selected in macOS and at least three p
 4. Focus Search and editable Inspector metadata, type the unmodified rating keys and customised shortcuts, and confirm the exact text appears without changing the photo. Open a sheet and confirm workflow shortcuts remain inactive until it closes.
 5. Export the named set, reset or remove its bindings, import the JSON and confirm the restored set receives a distinct name when necessary. Cancel both file panels and confirm the current set remains unchanged.
 6. Export an edited photo before and after customisation. Confirm identical pixels and metadata, an unchanged catalogue and unchanged source and managed-original fingerprints.
+
+## Quick Preview and List Browser customisation
+
+Use the signed build with British English selected in macOS and a disposable library containing at least six photos with long captions, keyword paths and catalogued EXIF values.
+
+1. In Grid, select a photo, apply a filter and sort order, press **P**, then navigate and assign a rating, flag and colour label. Confirm the selection, visible order and filter remain stable. Enter Viewer and confirm the bounded preview has a yellow Quick Preview indicator and adjustment controls are paused.
+2. Focus Search and type `p`. Confirm the literal character appears and Quick Preview does not toggle. Clear Search, restore Browser focus and press **P** to toggle it. Open Compare and confirm the unmodified key is not routed there.
+3. Enter List Browser and choose View → Customise List Columns. Confirm British English spelling and all 14 fields. Show Caption, Keywords, Lens and ISO; hide Camera. Confirm long values truncate visually without changing their stored metadata.
+4. Drag the Caption header before Rating, resize it, quit and relaunch Isonique, then confirm visibility, order and width return. Use Reset List Columns and confirm the six defaults return.
+5. Export an edited photo before and after these preference changes. Confirm identical pixels and metadata, an unchanged catalogue and unchanged source and managed-original fingerprints.
 
 ## Physical PTP camera import
 

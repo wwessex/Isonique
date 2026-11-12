@@ -34,7 +34,7 @@ struct BatchBar: View {
                             }
                             Divider()
                             Button("Manage Custom Presets…") { model.showAdjustmentPresetManager = true }
-                        }
+                        }.disabled(model.quickPreview)
                         Button("Batch Change…", action: model.openBatchMetadata)
                             .disabled(!model.canOpenBatchMetadata)
                         Button("Stamp", action: model.stamp).disabled(!model.canStamp)

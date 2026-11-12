@@ -37,7 +37,7 @@ Retouch/clone/heal, red-eye removal, localized adjustment brushes, histogram, cu
 
 Seven XCTest cases passed, including old-recipe decoding, saved recipe round trips, matching CPU/preview/export dimensions, clockwise/counterclockwise pixel placement, top-left crop coordinates, opaque straighten corners and unchanged original hashes. The arm64 release build and staged bundle signature verification passed.
 
-Only the native Apple Silicon macOS variant is present and checked on this host. Intel, macOS 14/15 runtime behavior, actual RAW cameras and physical mobile devices are not validated.
+Only the native Apple Silicon macOS variant is present and checked on this host. Intel, macOS 15/26 runtime behaviour, actual RAW cameras and physical mobile devices are not validated.
 
 ## Inspector expansion
 

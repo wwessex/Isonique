@@ -99,7 +99,7 @@ File → Import from Camera or Card discovers local cameras through [Image Captu
 
 ## Tethered capture evaluation
 
-ImageCaptureCore reports separate capabilities for a Mac-triggered shutter and a shutter pressed on the camera. For a camera that reports `cameraDeviceCanTakePicture`, the macOS API exposes `requestTakePicture()`. The SDK deprecates the old tether enable and disable calls on macOS 14 because supported cameras enable the standard shutter command by default. The capability checks, shutter call and new-item delegate signature type-checked for Isonique’s macOS 14 deployment target. [Camera capabilities](https://developer.apple.com/documentation/imagecapturecore/icdevicecapability) · [Tether setup deprecation](https://developer.apple.com/documentation/imagecapturecore/iccameradevice/requestenabletethering())
+ImageCaptureCore reports separate capabilities for a Mac-triggered shutter and a shutter pressed on the camera. For a camera that reports `cameraDeviceCanTakePicture`, the macOS API exposes `requestTakePicture()`. The SDK deprecates the old tether enable and disable calls because supported cameras enable the standard shutter command by default. The capability checks, shutter call and new-item delegate signature type-check for Isonique’s current macOS 15 deployment target. [Camera capabilities](https://developer.apple.com/documentation/imagecapturecore/icdevicecapability) · [Tether setup deprecation](https://developer.apple.com/documentation/imagecapturecore/iccameradevice/requestenabletethering())
 
 The initial simulated arrivals went straight to the importer. Replays could download the same file twice, and separate import batches left RAW and JPEG unpaired. The prototype and native adapter now collect new-file notifications before handing them to the importer.
 
@@ -439,15 +439,23 @@ Automated tests restore independently customised layouts, exercise panel command
 
 ## Custom toolbar and keyboard command sets
 
-View → Customise Toolbar now chooses, orders and resets the seven existing main-toolbar controls, with application-level persistence across libraries. View → Keyboard Command Editor retains all 32 established workflow shortcuts in a protected built-in set and creates independently named custom sets. Each command declares Browser, Viewer and Compare scope; shortcuts may be reused only between disjoint scopes. The editor rejects collisions with active commands and reserves native editing, file, colour-label and quick-keyword shortcuts.
+View → Customise Toolbar now chooses, orders and resets the seven existing main-toolbar controls, with application-level persistence across libraries. View → Keyboard Command Editor retains the established workflow shortcuts in a protected built-in set and creates independently named custom sets. Each command declares Browser, Viewer and Compare scope; shortcuts may be reused only between disjoint scopes. The editor rejects collisions with active commands and reserves native editing, file, colour-label and quick-keyword shortcuts.
 
 Custom sets support rename, delete, reset and atomic JSON import/export. Older sparse preference payloads inherit newly added defaults, imported sets receive a fresh identifier and duplicate names receive a deterministic suffix. The window event router bypasses text fields and open sheets. Toolbar and command preferences live outside the library catalogue, so changing them cannot alter recipes, originals or export pixels.
 
 Automated tests cover defaults, sparse migration, restart restoration, overlapping and disjoint scopes, reserved shortcuts, text and sheet routing, duplicate-name import, invalid-import rollback, toolbar order and older unknown toolbar entries. Signed-app QA under British English verified Customise spelling, live toolbar removal and reset, the named Command Editor and typing a rating key into Search without invoking a photo command.
 
+## Quick Preview and configurable List Browser columns
+
+Quick Preview is a persistent Browser/Viewer mode mapped to **P**. It requests a bounded 1600-pixel cached adjusted preview, keeps navigation, selection, sorting, filtering, ratings, flags, labels and metadata active, and visibly pauses adjustment entry points. Entering it clears transient sampling and Loupe state; Compare, Places, Light Table and full-resolution adjustment operations remain separate. Its state is application preference data and never enters a library catalogue or export recipe.
+
+The List Browser now uses the macOS 15 native table customisation model. Fourteen stable columns cover name, review state, capture details, catalogued EXIF, dimensions, caption and keywords. The photo column stays visible; every other column can be shown or hidden from View → Customise List Columns. Native headers retain drag order and width, and the complete customisation is encoded in application preferences. Existing preference domains migrate with the normal bundle migration, missing older fields inherit current defaults and malformed customisation data falls back safely. Large metadata stays intact and is truncated only for display.
+
+Automated coverage exercises preference migration and restart restoration, British English localisation, Browser/Viewer/Compare and text-input focus routing, selection and review behaviour, large metadata values, malformed-state recovery and catalogue/original/export isolation. Signed-app interaction for native header reordering and resizing remains on the validation checklist.
+
 ## Next checkpoint
 
-Add Quick Preview to the Browser and configurable List Browser columns with persistent visibility, order and width. Keep selection, sorting, filtering and rating shortcuts consistent between Grid, List and Quick Preview. Test older preference migration, localisation, focus routing, large metadata values and restart restoration without changing catalogue recipes, originals or exports.
+Add a second independently scoped Browser pane and persistent manual Browser ordering where the selected container permits it. Keep filters, focus and selection explicit between panes; test drag ordering, stacks, versions, older catalogues, restart restoration and recipe/export isolation.
 
 ## Pending physical camera checks
 

@@ -48,16 +48,9 @@ import Darwin
         timer?.invalidate()
         Task {
             do {
-                let content: SCShareableContent
-                if #available(macOS 14.4, *) {
-                    // Apple's current-process API requires no Screen Recording consent.
-                    content = try await SCShareableContent.currentProcess
-                } else {
-                    guard CGPreflightScreenCaptureAccess() else {
-                        fail("Screenshot capture requires macOS 14.4 or Screen Recording permission")
-                    }
-                    content = try await SCShareableContent.current
-                }
+                // Every supported release provides current-process capture without
+                // requiring broad Screen Recording consent.
+                let content = try await SCShareableContent.currentProcess
                 guard let ownWindow = content.windows.first(where: {
                     $0.windowID == CGWindowID(window.windowNumber)
                 }) else { fail("Application window is unavailable for capture") }

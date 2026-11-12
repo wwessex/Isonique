@@ -50,7 +50,7 @@ private extension LocalBrushAdjustment {
 
 extension Workspace {
     var canBrush: Bool {
-        guard !busy, !batchMode, !isViewingTrash, let selected else { return false }
+        guard !busy, !batchMode, !isViewingTrash, !quickPreview, let selected else { return false }
         return isOriginalAvailable(selected) == true
     }
 

@@ -55,6 +55,12 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var targetedColorSelection: UUID?
     @Published var curvePointSelection: CurvePointSelection?
     @Published var browserLayout: BrowserPresentation
+    @Published var quickPreview = false {
+        didSet { preferences.set(quickPreview, forKey: "browser.quickPreview") }
+    }
+    @Published var listColumnCustomization = TableColumnCustomization<Photo>() {
+        didSet { ListColumnPreferences.save(listColumnCustomization, to: preferences) }
+    }
     @Published var gridThumbnailSize: GridThumbnailSize {
         didSet { preferences.set(gridThumbnailSize.rawValue, forKey: GridThumbnailSize.preferenceKey) }
     }
@@ -68,6 +74,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var commandPreferences = KeyboardCommandPreferences()
     @Published var showToolbarEditor = false
     @Published var showCommandEditor = false
+    @Published var showListColumnEditor = false
     @Published var compareOriginal = false
     @Published var comparisonID: UUID?
     @Published var comparisonIDs: [UUID] = []
@@ -172,6 +179,8 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         showKeywordControls = preferences.bool(forKey: KeywordGroupPreferences.controlsKey)
         let layout = preferences.string(forKey: "browser.layout").flatMap(BrowserPresentation.init(rawValue:))
         browserLayout = layout == .list ? .list : .grid
+        quickPreview = preferences.bool(forKey: "browser.quickPreview")
+        listColumnCustomization = ListColumnPreferences.load(from: preferences)
         gridThumbnailSize = preferences.string(forKey: GridThumbnailSize.preferenceKey)
             .flatMap(GridThumbnailSize.init(rawValue:)) ?? .standard
         labelNames = preferences.dictionary(forKey: "photo.labelNames") as? [String: String] ?? [:]
@@ -528,6 +537,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     }
     var canStamp: Bool {
         guard let liftedAdjustments, !metadataEditingTargets.isEmpty else { return false }
+        if quickPreview && !stampGroups.isEmpty { return false }
         if liftLookupID != nil && stampMetadata.contains(where: { $0.iptcField != nil }) { return false }
         return !stampGroups.isEmpty || stampMetadata.contains(where: liftedAdjustments.includesMetadata)
     }
@@ -788,6 +798,12 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                         .disabled(!workspace.canChoosePresentation(presentation))
                 }
                 GridThumbnailSizePicker(model: workspace)
+                Toggle("Quick Preview", isOn: Binding(get: { workspace.quickPreview }, set: workspace.setQuickPreview))
+                    .disabled(!workspace.quickPreview && !workspace.canToggleQuickPreview)
+                Button("Customize List Columns…") { workspace.showListColumnEditor = true }
+                    .disabled(workspace.browserLayout != .list)
+                Button("Reset List Columns", action: workspace.resetListColumns)
+                    .disabled(workspace.browserLayout != .list)
                 Toggle("Show Keyword Controls", isOn: $workspace.showKeywordControls)
                 Divider()
                 Button("Advanced Search…") { workspace.showAdvancedSearch = true }
@@ -841,7 +857,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                     ForEach(workspace.adjustmentPresets) { preset in
                         Button(preset.name) { workspace.previewAdjustmentPreset(preset) }
                     }
-                }.disabled(workspace.adjustmentPresets.isEmpty || workspace.selected == nil)
+                }.disabled(workspace.quickPreview || workspace.adjustmentPresets.isEmpty || workspace.selected == nil)
                 Button("Manage Adjustment Presets…") { workspace.showAdjustmentPresetManager = true }
                     .disabled(workspace.selected == nil)
                 Divider()
@@ -859,7 +875,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 Divider()
                 ForEach(FlipAxis.allCases) { axis in
                     Button(axis.rawValue) { workspace.flip(axis) }
-                        .disabled(workspace.busy || workspace.isViewingTrash || workspace.selected == nil)
+                        .disabled(workspace.busy || workspace.isViewingTrash || workspace.quickPreview || workspace.selected == nil)
                 }
             }
             CommandMenu("Stacks") {
@@ -1267,6 +1283,14 @@ struct ContentView: View {
                                     .disabled(!model.canChoosePresentation(presentation))
                             }
                         }.labelsHidden().pickerStyle(.segmented).frame(width: 155)
+                        Button(action: model.toggleQuickPreview) {
+                            Image(systemName: model.quickPreview ? "bolt.fill" : "bolt")
+                                .foregroundStyle(model.quickPreview ? Color.yellow : Color.primary)
+                        }
+                        .buttonStyle(.plain)
+                        .help(model.quickPreview ? "Turn Off Quick Preview" : "Turn On Quick Preview")
+                        .accessibilityLabel(model.quickPreview ? "Turn Off Quick Preview" : "Turn On Quick Preview")
+                        .disabled(!model.quickPreview && !model.canToggleQuickPreview)
                     }
                 }.padding(.horizontal, 22).padding(.vertical, 16)
                     .focusable().focusEffectDisabled()
@@ -1275,7 +1299,7 @@ struct ContentView: View {
                 if model.activeLightTable == nil, model.photographyLayout.toolbar {
                     if model.batchMode { BatchBar() }
                     if model.showKeywordControls && !model.isViewingTrash { KeywordControls() }
-                    if !model.isViewingTrash { EditBar().disabled(model.batchMode) }
+                    if !model.isViewingTrash { EditBar().disabled(model.batchMode || model.quickPreview) }
                     Divider().opacity(0.4)
                 }
                 HSplitView {
@@ -1319,7 +1343,9 @@ struct ContentView: View {
                             }.frame(maxWidth: .infinity, maxHeight: .infinity)
                         } else if model.viewer, let photo = model.selected, let repo = model.repository {
                             Group {
-                                if model.comparisonID != nil, model.comparisonPhotos.count >= 2 {
+                                if model.quickPreview, let url = try? repo.availableOriginalURL(photo) {
+                                    QuickPreviewPhotoViewer(photo: photo, url: url)
+                                } else if model.comparisonID != nil, model.comparisonPhotos.count >= 2 {
                                     PhotoComparisonView(photos: model.comparisonPhotos, repository: repo)
                                 } else if let url = try? repo.availableOriginalURL(photo) {
                                     PhotoViewer(photo: photo, url: url, original: model.compareOriginal).id(photo.id)
@@ -1425,6 +1451,9 @@ struct ContentView: View {
         .sheet(isPresented: $model.showCommandEditor) {
             KeyboardCommandEditorView().environmentObject(model)
         }
+        .sheet(isPresented: $model.showListColumnEditor) {
+            ListColumnEditorView().environmentObject(model)
+        }
         .sheet(item: $model.adjustmentPresetReview) { review in
             AdjustmentPresetReviewView(review: review).environmentObject(model)
         }
@@ -1493,6 +1522,8 @@ struct ContentView: View {
                                 photographyFocus: PhotographyWorkspaceFocus? = nil) -> some View {
         if let repo = model.repository {
             let url = try? repo.availableOriginalURL(photo)
+            let isSelected = model.batchMode ? model.batchSelection.contains(photo.id) : model.selection == photo.id
+            let selectedColor = model.quickPreview ? Color.yellow : Color.accentColor
             Button {
                 if let onSelect {
                     onSelect()
@@ -1527,8 +1558,8 @@ struct ContentView: View {
                     }.font(.caption)
                     if !compact { HStack { Text(photo.rating == RatingRules.rejected ? "Rejected" : RatingRules.stars(photo.rating)).foregroundStyle(.orange); Spacer(); if photo.flagged { Image(systemName: "flag.fill").foregroundStyle(.orange) } }.font(.caption).frame(height: 14) }
                 }.padding(7).frame(width: compact ? 110 : nil)
-                    .background((model.batchMode ? model.batchSelection.contains(photo.id) : model.selection == photo.id) ? Color.accentColor.opacity(0.18) : Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke((model.batchMode ? model.batchSelection.contains(photo.id) : model.selection == photo.id) ? Color.accentColor : Color.white.opacity(0.07), lineWidth: (model.batchMode ? model.batchSelection.contains(photo.id) : model.selection == photo.id) ? 2 : 1))
+                    .background(isSelected ? selectedColor.opacity(0.18) : Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(isSelected ? selectedColor : Color.white.opacity(0.07), lineWidth: isSelected ? 2 : 1))
             }.buttonStyle(.plain)
             .contextMenu { PhotoContextActions(model: model, photo: photo, url: url) }
         }
@@ -2052,7 +2083,10 @@ struct Inspector: View {
                         Text("Library").tag("Library")
                     }.pickerStyle(.segmented).labelsHidden()
                     if tab == "Info" { PhotoMetadataInspector(photo: photo) }
-                    if tab == "Adjustments" {
+                    if tab == "Adjustments", model.quickPreview {
+                        ContentUnavailableView("Adjustments Paused", systemImage: "bolt.fill",
+                            description: Text("Turn off Quick Preview to edit this photograph. Ratings, flags, labels and metadata remain available."))
+                    } else if tab == "Adjustments" {
                         VersionFamilyView(photo: photo).id(photo.id)
                         adjustments(photo)
                         VersionsView(photo: photo)

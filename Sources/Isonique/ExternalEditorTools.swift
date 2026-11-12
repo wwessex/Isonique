@@ -21,7 +21,8 @@ extension Workspace {
     }
 
     var canEditExternally: Bool {
-        !busy && !batchMode && !isViewingTrash && externalEditHandoff == nil && selected != nil && repository != nil
+        !busy && !batchMode && !isViewingTrash && !quickPreview && externalEditHandoff == nil &&
+            selected != nil && repository != nil
     }
 
     func chooseExternalEditor() {

@@ -2,6 +2,128 @@ import SwiftUI
 import AppKit
 import IsoniqueCore
 
+enum PhotoListColumn: String, CaseIterable, Identifiable {
+    case photo, rating, label, flag, captured, camera
+    case lens, iso, aperture, shutterSpeed, focalLength, dimensions, caption, keywords
+
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .photo: return "Photo"
+        case .rating: return "Rating"
+        case .label: return "Label"
+        case .flag: return "Flag"
+        case .captured: return "Captured"
+        case .camera: return "Camera"
+        case .lens: return "Lens"
+        case .iso: return "ISO"
+        case .aperture: return "Aperture"
+        case .shutterSpeed: return "Shutter Speed"
+        case .focalLength: return "Focal Length"
+        case .dimensions: return "Dimensions"
+        case .caption: return "Caption"
+        case .keywords: return "Keywords"
+        }
+    }
+    var localizedTitle: String { Bundle.main.localizedString(forKey: title, value: nil, table: nil) }
+    var defaultVisible: Bool {
+        switch self {
+        case .photo, .rating, .label, .flag, .captured, .camera: return true
+        default: return false
+        }
+    }
+    var minimumWidth: CGFloat {
+        switch self {
+        case .photo: return 150
+        case .rating: return 72
+        case .label: return 58
+        case .flag: return 42
+        case .captured: return 115
+        case .camera: return 75
+        case .lens: return 90
+        case .iso: return 52
+        case .aperture: return 64
+        case .shutterSpeed: return 80
+        case .focalLength: return 78
+        case .dimensions: return 92
+        case .caption, .keywords: return 100
+        }
+    }
+    var idealWidth: CGFloat {
+        switch self {
+        case .photo: return 245
+        case .rating: return 88
+        case .label: return 90
+        case .flag: return 42
+        case .captured: return 160
+        case .camera: return 120
+        case .lens: return 180
+        case .iso: return 70
+        case .aperture: return 82
+        case .shutterSpeed: return 105
+        case .focalLength: return 96
+        case .dimensions: return 115
+        case .caption, .keywords: return 220
+        }
+    }
+
+    func value(for photo: Photo) -> String {
+        switch self {
+        case .photo: return photo.displayName
+        case .rating:
+            if photo.rating == RatingRules.rejected { return String(localized: "Rejected") }
+            return photo.rating > 0 ? RatingRules.stars(photo.rating) : String(localized: "Unrated")
+        case .label: return photo.colorLabel?.title ?? ""
+        case .flag: return photo.flagged ? String(localized: "Flagged") : ""
+        case .captured: return photo.captureDate
+        case .camera: return photo.camera
+        case .lens: return photo.cameraEXIF?.lens ?? ""
+        case .iso: return photo.cameraEXIF?.iso.map { String($0) } ?? ""
+        case .aperture: return photo.cameraEXIF?.fNumber.map { "ƒ/\(Self.decimal($0))" } ?? ""
+        case .shutterSpeed: return photo.cameraEXIF?.exposureSeconds.map(Self.shutterSpeed) ?? ""
+        case .focalLength: return photo.cameraEXIF?.focalLengthMM.map { "\(Self.decimal($0)) mm" } ?? ""
+        case .dimensions: return "\(photo.width) × \(photo.height)"
+        case .caption: return photo.caption
+        case .keywords: return photo.keywords
+        }
+    }
+
+    private static func decimal(_ value: Double) -> String {
+        value.formatted(.number.grouping(.never).precision(.fractionLength(0...2)))
+    }
+
+    private static func shutterSpeed(_ seconds: Double) -> String {
+        let reciprocal = 1 / seconds
+        if reciprocal.isFinite, reciprocal >= 2 {
+            let denominator = reciprocal.rounded()
+            if abs(reciprocal - denominator) / reciprocal < 0.005 {
+                return "1/\(Int(denominator)) s"
+            }
+        }
+        return "\(seconds.formatted(.number.grouping(.never).precision(.significantDigits(1...6)))) s"
+    }
+}
+
+enum ListColumnPreferences {
+    static let key = "browser.list.columnCustomization.v1"
+
+    static func load(from preferences: UserDefaults) -> TableColumnCustomization<Photo> {
+        guard let data = preferences.data(forKey: key),
+              let value = try? JSONDecoder().decode(TableColumnCustomization<Photo>.self, from: data) else {
+            return TableColumnCustomization()
+        }
+        return value
+    }
+
+    static func save(_ value: TableColumnCustomization<Photo>, to preferences: UserDefaults) {
+        if let data = try? JSONEncoder().encode(value) { preferences.set(data, forKey: key) }
+    }
+}
+
+enum QuickPreviewPolicy {
+    static let maximumDimension = 1600
+}
+
 enum BrowserPresentation: String, CaseIterable, Identifiable {
     case grid = "Grid Browser"
     case list = "List Browser"
@@ -75,6 +197,27 @@ struct GridThumbnailSizePicker: View {
 
 extension Workspace {
     var usesPlacesPhotos: Bool { places && !batchMode && !isViewingTrash }
+    var canToggleQuickPreview: Bool {
+        !busy && repository != nil && activeLightTable == nil && comparisonID == nil &&
+            !usesPlacesPhotos && !photos.isEmpty
+    }
+
+    func setQuickPreview(_ active: Bool) {
+        guard !active || canToggleQuickPreview else { return }
+        if active {
+            tool = .select
+            compareOriginal = false
+            curveSampling = nil
+            whiteBalanceSampling = nil
+            targetedColorSampling = nil
+            showLoupe = false
+        }
+        quickPreview = active
+    }
+
+    func toggleQuickPreview() {
+        setQuickPreview(!quickPreview)
+    }
 
     var presentation: BrowserPresentation {
         if viewer { return .viewer }
@@ -104,6 +247,7 @@ extension Workspace {
             if selected == nil { selection = photos.first?.id }
             viewer = true
         case .places:
+            setQuickPreview(false)
             showBrowser()
             places = true
             selectAfterChange(preferred: selection)
@@ -122,6 +266,24 @@ extension Workspace {
         if selection.map(batchSelection.contains) != true { selection = chosen.first?.id }
     }
 
+    func listColumnIsVisible(_ column: PhotoListColumn) -> Bool {
+        let visibility = listColumnCustomization[visibility: column.id]
+        if visibility == .visible { return true }
+        if visibility == .hidden { return false }
+        return column.defaultVisible
+    }
+
+    func setListColumn(_ column: PhotoListColumn, visible: Bool) {
+        guard column != .photo else { return }
+        var customization = listColumnCustomization
+        customization[visibility: column.id] = visible ? .visible : .hidden
+        listColumnCustomization = customization
+    }
+
+    func resetListColumns() {
+        listColumnCustomization = TableColumnCustomization()
+    }
+
     func openListPhoto(_ id: UUID) {
         guard !batchMode, photos.contains(where: { $0.id == id }) else { return }
         selectBrowserPhoto(id)
@@ -136,9 +298,11 @@ struct PhotoListBrowser: View {
     var body: some View {
         Group {
             if model.batchMode {
-                Table(photos, selection: Binding(get: { model.batchSelection }, set: model.setListSelection)) { columns }
+                Table(photos, selection: Binding(get: { model.batchSelection }, set: model.setListSelection),
+                      columnCustomization: $model.listColumnCustomization) { columns }
             } else {
-                Table(photos, selection: $model.selection) { columns }
+                Table(photos, selection: $model.selection,
+                      columnCustomization: $model.listColumnCustomization) { columns }
             }
         }
         .environment(\.defaultMinListRowHeight, 30)
@@ -160,7 +324,21 @@ struct PhotoListBrowser: View {
 
     @TableColumnBuilder<Photo, Never>
     private var columns: some TableColumnContent<Photo, Never> {
-        TableColumn("Photo") { photo in
+        TableColumnForEach(PhotoListColumn.allCases) { column in
+            TableColumn(Text(column.localizedTitle)) { photo in
+                columnCell(column, photo: photo)
+            }
+            .width(min: column.minimumWidth, ideal: column.idealWidth)
+            .customizationID(column.id)
+            .defaultVisibility(column.defaultVisible ? .visible : .hidden)
+            .disabledCustomizationBehavior(column == .photo ? .visibility : [])
+        }
+    }
+
+    @ViewBuilder
+    private func columnCell(_ column: PhotoListColumn, photo: Photo) -> some View {
+        switch column {
+        case .photo:
             HStack(spacing: 7) {
                 if let url = try? model.repository?.availableOriginalURL(photo) {
                     Thumbnail(request: .init(photoID: photo.id, url: url, adjustments: photo.adjustments,
@@ -173,8 +351,7 @@ struct PhotoListBrowser: View {
                 Text(photo.displayName).lineLimit(1)
                 if let stackID = photo.stackID { StackBadge(stackID: stackID, photo: photo, model: model) }
             }
-        }.width(min: 150, ideal: 245)
-        TableColumn("Rating") { photo in
+        case .rating:
             if photo.rating == RatingRules.rejected {
                 Text("Rejected").foregroundStyle(.secondary)
             } else if photo.rating > 0 {
@@ -183,17 +360,74 @@ struct PhotoListBrowser: View {
             } else {
                 Text("Unrated").foregroundStyle(.secondary)
             }
-        }.width(min: 72, ideal: 88)
-        TableColumn("Label") { photo in
+        case .label:
             if let label = photo.colorLabel {
                 Label(model.name(for: label), systemImage: "circle.fill").foregroundStyle(label.tint).lineLimit(1)
             }
-        }.width(min: 58, ideal: 90)
-        TableColumn("Flag") { photo in
+        case .flag:
             if photo.flagged { Image(systemName: "flag.fill").foregroundStyle(.orange).accessibilityLabel("Flagged") }
-        }.width(42)
-        TableColumn("Captured", value: \.captureDate).width(min: 115, ideal: 160)
-        TableColumn("Camera", value: \.camera).width(min: 75, ideal: 120)
+        case .captured:
+            Text(photo.captureDate).lineLimit(1).truncationMode(.tail)
+        case .camera:
+            Text(photo.camera).lineLimit(1).truncationMode(.tail)
+        case .lens, .caption, .keywords:
+            Text(column.value(for: photo)).lineLimit(1).truncationMode(.tail)
+        case .iso, .aperture, .shutterSpeed, .focalLength, .dimensions:
+            Text(column.value(for: photo)).monospacedDigit().lineLimit(1)
+        }
+    }
+}
+
+struct ListColumnEditorView: View {
+    @EnvironmentObject private var model: Workspace
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Customize List Columns").font(.title2.bold())
+            Text("Choose visible metadata here. Drag column headers in the List Browser to reorder them or change their width.")
+                .foregroundStyle(.secondary)
+            List(PhotoListColumn.allCases) { column in
+                Toggle(column.localizedTitle, isOn: Binding(get: { model.listColumnIsVisible(column) },
+                    set: { model.setListColumn(column, visible: $0) }))
+                    .disabled(column == .photo)
+            }
+            HStack {
+                Button("Reset to Defaults", action: model.resetListColumns)
+                Spacer()
+                Button("Done") { dismiss() }.keyboardShortcut(.defaultAction)
+            }
+        }.padding(24).frame(width: 520, height: 610)
+    }
+}
+
+struct QuickPreviewPhotoViewer: View {
+    @EnvironmentObject private var model: Workspace
+    let photo: Photo
+    let url: URL
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35)
+            Thumbnail(request: .init(photoID: photo.id, url: url, adjustments: photo.adjustments,
+                                     maximum: QuickPreviewPolicy.maximumDimension,
+                                     revision: model.originalStatusRevision),
+                      cache: model.thumbnailCache)
+                .padding(22)
+        }
+        .overlay(alignment: .top) {
+            HStack(spacing: 9) {
+                Image(systemName: "bolt.fill")
+                Text("Quick Preview").fontWeight(.semibold)
+                Text(photo.displayName).foregroundStyle(.secondary).lineLimit(1)
+            }
+            .font(.caption).foregroundStyle(.yellow)
+            .padding(.horizontal, 14).padding(.vertical, 9)
+            .background(.ultraThinMaterial, in: Capsule()).padding(16)
+        }
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(.yellow.opacity(0.8), lineWidth: 2).padding(8))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Quick Preview of \(photo.displayName)")
     }
 }
 

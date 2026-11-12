@@ -51,7 +51,7 @@ extension Workspace {
     }
 
     var canStartComparison: Bool {
-        guard !busy, !isViewingTrash else { return false }
+        guard !busy, !isViewingTrash, !quickPreview else { return false }
         if batchMode { return photos.lazy.filter { self.batchSelection.contains($0.id) }.prefix(2).count == 2 }
         guard let selected else { return false }
         return photos.count > 1 || library.photos.contains {

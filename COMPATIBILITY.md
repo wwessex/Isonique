@@ -22,4 +22,4 @@ Normal import reads embedded Lightroom-style keyword paths when ImageIO exposes 
 
 ## Platform and image processing
 
-The maintained app targets Apple Silicon and macOS 14 or later. Camera RAW support depends on system ImageIO codecs. Edited output uses 8-bit sRGB. The rendering notes describe the processing choices and the test record identifies the camera samples and OS tested. [Processing notes](PROCESSING_ALTERNATIVES.md) · [Test results](docs/TEST_RESULTS.md)
+The maintained app targets Apple Silicon and macOS 15 or later. Camera RAW support depends on system ImageIO codecs. Edited output uses 8-bit sRGB. The rendering notes describe the processing choices and the test record identifies the camera samples and OS tested. [Processing notes](PROCESSING_ALTERNATIVES.md) · [Test results](docs/TEST_RESULTS.md)

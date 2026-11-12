@@ -104,6 +104,7 @@ enum IsoniqueKeyboardCommand: String, Codable, CaseIterable, Identifiable {
     case gridBrowser
     case listBrowser
     case places
+    case quickPreview
     case advancedSearch
     case startCompare
     case endCompare
@@ -160,6 +161,8 @@ struct KeyboardCommandDefinition: Identifiable, Equatable {
               defaultShortcut: .init("l", modifiers: [.control])),
         .init(command: .places, title: "Places", contexts: allContexts,
               defaultShortcut: .init("m", modifiers: [.control])),
+        .init(command: .quickPreview, title: "Quick Preview", contexts: [.browser, .viewer],
+              defaultShortcut: .init("p")),
         .init(command: .advancedSearch, title: "Advanced Search", contexts: allContexts,
               defaultShortcut: .init("f", modifiers: [.command, .shift])),
         .init(command: .startCompare, title: "Compare Photos", contexts: [.browser, .viewer],
@@ -622,6 +625,9 @@ extension Workspace {
         case .places:
             guard canChoosePresentation(.places) else { return false }
             choosePresentation(.places)
+        case .quickPreview:
+            guard quickPreview || canToggleQuickPreview else { return false }
+            toggleQuickPreview()
         case .advancedSearch:
             guard !busy, repository != nil else { return false }
             showAdvancedSearch = true

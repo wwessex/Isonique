@@ -2,7 +2,7 @@
 import PackageDescription
 let package = Package(
     name: "Isonique",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS("15.0")],
     products: [.executable(name: "Isonique", targets: ["Isonique"])],
     targets: [
         .target(name: "IsoniqueCore"),

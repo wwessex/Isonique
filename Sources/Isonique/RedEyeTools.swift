@@ -3,7 +3,7 @@ import IsoniqueCore
 
 extension Workspace {
     var canCorrectRedEye: Bool {
-        guard !busy, !batchMode, !isViewingTrash, let selected else { return false }
+        guard !busy, !batchMode, !isViewingTrash, !quickPreview, let selected else { return false }
         return isOriginalAvailable(selected) == true
     }
 
