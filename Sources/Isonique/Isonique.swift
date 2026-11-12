@@ -715,15 +715,9 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button("About Isonique") {
-                    let credits = """
-                        Independent, open-source photo management and editing.
-
-                        Isonique is developed independently and is not affiliated with, \
-                        endorsed by, or maintained by Apple Inc.
-                        """
                     NSApplication.shared.orderFrontStandardAboutPanel(options: [
                         .applicationName: "Isonique",
-                        .credits: NSAttributedString(string: credits),
+                        .credits: NSAttributedString(string: "Independent, open-source photo management and editing."),
                     ])
                 }
             }

@@ -1,6 +1,6 @@
 # Isonique
 
-Isonique is an independent, open-source photo management and editing application inspired by the workflow and professional photography tools of Apple’s discontinued Aperture. Isonique is developed independently and is not affiliated with, endorsed by, or maintained by Apple Inc.
+Isonique is an independent, open-source photo management and editing application inspired by the workflow and professional photography tools of Apple’s discontinued Aperture.
 
 Isonique runs on Apple Silicon Macs. Import a shoot, sort and rate the photos, edit selected images and export finished files from one local library. You can let Isonique manage originals or reference files where they already live. Edits are saved as recipes in the Isonique catalogue, leaving the original files intact.
 
