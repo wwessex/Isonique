@@ -95,6 +95,12 @@ Use the signed build and a disposable library containing two projects, a regular
 5. Export and reimport an ordered project twice. Confirm regular-album memberships and relative order survive both imports with distinct remapped identifiers. Merge an older project export and confirm current order is protected by the selected conflict preference.
 6. Export an edited photo before and after Browser ordering. Confirm identical pixels and metadata, unchanged recipes and unchanged source and managed-original fingerprints.
 
+## Offline Viewer previews
+
+1. Import a reference and open it in the regular single-photo Viewer at Fit. Apply an adjustment and let the updated preview finish.
+2. Quit, disconnect the original and reopen the library. Open the same version and check that **Offline Preview** shows its edits. Try an edited export and an original export and confirm both report the unavailable source.
+3. Reconnect or relink the original and open it again. Check that the live view returns. Disconnect it after the new Fit render and verify the saved preview uses the relinked source. An offline version whose edits have changed since its last online render shows **Original unavailable** until a matching preview can be saved.
+
 ## People and face detection
 
 Use a disposable library with an upright group photo and JPEG variants with rotated or mirrored EXIF orientation.

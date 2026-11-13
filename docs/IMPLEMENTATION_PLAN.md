@@ -511,9 +511,15 @@ Reconnect Referenced Originals in the report opens a folder picker and runs the 
 
 Recover Missing Managed Originals searches a chosen backup or folder for the missing managed originals in the report. It uses one target per shared original, matches known filenames and verifies the source and restored copy against the catalogue fingerprint. Recovery checks the catalogue revision before installing files and protects occupied paths. The report shows the result and stays open for retry. Cancelling stops pending recovery, and already verified copies that were installed remain available.
 
+## Persistent Viewer previews
+
+The regular single-photo Viewer automatically saves adjusted Fit previews for referenced originals after a successful render. The saved PNG is at most 2400 pixels along the longest edge and uses the renderer's unproofed image. Before saving, Isonique checks the reference against the catalogue fingerprint and the file identity recorded when rendering began. The per-Mac cache holds up to 512 MiB or 2000 entries across libraries. Older previews are evicted as space is needed.
+
+Open a previously viewed version while its original is offline to see Offline Preview, with Refresh and Relink available. Lookup requires the current library, version, source fingerprint, reference path and adjustment recipe. Changing an edit or reference path requires a matching preview. The cache lives outside the catalogue. Original and edited exports still require an available original.
+
 ## Next checkpoint
 
-Add persistent Viewer previews for referenced originals so previously rendered versions remain viewable when the source drive is offline.
+Add an offline preview indicator and saved thumbnail fallback to the Grid, List and filmstrip for referenced versions with a matching Viewer preview.
 
 ## Pending physical camera checks
 

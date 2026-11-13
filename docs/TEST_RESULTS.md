@@ -884,3 +884,10 @@
 - A cancelled recovery request and a stale catalogue each prevented installation. After reloading the catalogue, recovery completed and retry checked just the two versions sharing the restored file. One Undo reversed their People changes and retained the restored file.
 - In the signed app, cancelling the folder picker returned to the open report. A successful search showed one restored original. Retry checked its two versions and left two offline referenced versions in the report.
 - All 30 focused tests passed. The full suite ran 444 tests with 441 passes, zero failures and three fixture-dependent skips for external camera RAW, Finder Trash and the Vision group portrait. Branding and the Apple Silicon release build passed. The extracted archive passed strict signature verification and targets macOS 15.0.
+
+## Persistent Viewer previews
+
+- Tests rendered an adjusted reference, reopened the library with the original offline and compared the cached preview's decoded pixels and dimensions with the live render. Edited and original exports both returned an unavailable-original error and left neither an output image nor an XMP sidecar.
+- Changed adjustments and a verified relink each rejected the prior preview until a fresh render was saved. The cache rejected a reference whose bytes differed from the catalogue fingerprint. A small cache test confirmed older previews were evicted.
+- In the signed macOS app, opening a reference at Fit produced a saved preview. After quitting, moving the test original offline and relaunching against the same library, the Viewer showed the saved image under Offline Preview with Relink and Refresh available.
+- The full suite ran 447 tests with 444 passes, zero failures and three fixture-dependent skips for external camera RAW, Finder Trash and the Vision group portrait. Branding and the Apple Silicon release build passed. The extracted archive passed strict signature verification and targets macOS 15.0.

@@ -7,6 +7,7 @@ actor ViewerRenderCache {
     struct Frame {
         let image: CGImage
         let geometry: PhotoGeometry
+        let sourceStamp: OriginalFileStamp?
     }
 
     private struct Key: Equatable {
@@ -44,7 +45,7 @@ actor ViewerRenderCache {
         }
         let render = Task.detached(priority: .userInitiated) {
             let result = try Renderer.renderWithGeometry(url, adjustments: adjustments, maxDimension: maximum)
-            return Frame(image: result.image, geometry: result.geometry)
+            return Frame(image: result.image, geometry: result.geometry, sourceStamp: key?.stamp)
         }
         let result = await withTaskCancellationHandler {
             await render.result

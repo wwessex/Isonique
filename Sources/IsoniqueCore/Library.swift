@@ -851,7 +851,7 @@ public final class LibraryRepository {
         try digest(url, checkingCancellation: false)
     }
 
-    static func digest(_ url: URL, checkingCancellation: Bool) throws -> String {
+    public static func digest(_ url: URL, checkingCancellation: Bool) throws -> String {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
         var hash = SHA256()

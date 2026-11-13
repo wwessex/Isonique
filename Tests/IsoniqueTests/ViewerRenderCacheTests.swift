@@ -94,6 +94,129 @@ final class ViewerRenderCacheTests: XCTestCase {
         } catch is CancellationError {}
     }
 
+    func testSavedPreviewSurvivesReopeningOfflineAndExportRequiresTheOriginal() async throws {
+        let directory = try temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let (repository, library, original) = try referencedFixture(in: directory)
+        var edited = library
+        edited.photos[0].adjustments.crop = PhotoCrop(x: 0, y: 0, width: 0.5, height: 1)
+        let saved = try repository.save(edited)
+        let photo = saved.photos[0]
+        let cacheDirectory = directory.appendingPathComponent("Previews")
+        let live = try await saveViewerPreview(photo, repository: repository,
+                                              store: OfflineViewerPreviews(directory: cacheDirectory))
+        XCTAssertEqual(live.width, 32)
+        try FileManager.default.removeItem(at: original)
+
+        let (reopenedRepository, reopened) = try LibraryBackup.openVerified(repository.root)
+        let restored = try XCTUnwrap(reopened.photos.first)
+        let disk = OfflineViewerPreviews(directory: cacheDirectory)
+        let cached = await disk.image(for: restored, in: reopenedRepository.root)
+        let preview = try XCTUnwrap(cached)
+        XCTAssertEqual(preview.width, live.width)
+        XCTAssertEqual(preview.height, live.height)
+        XCTAssertEqual(try rgbaPixels(preview), try rgbaPixels(live))
+        XCTAssertTrue(reopened.hasSameCatalogueRevision(as: saved))
+
+        for format in [ExportFormat.png, .original] {
+            var options = ExportOptions()
+            options.format = format
+            options.xmpSidecar = true
+            let destination = directory.appendingPathComponent("export-\(format).png")
+            XCTAssertThrowsError(try Renderer.export(restored, repository: reopenedRepository,
+                                                      to: destination, options: options)) { error in
+                guard case LibraryError.originalUnavailable = error else {
+                    return XCTFail("Expected the missing original error, got \(error)")
+                }
+            }
+            XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+            XCTAssertFalse(FileManager.default.fileExists(atPath: destination.deletingPathExtension()
+                .appendingPathExtension("xmp").path))
+        }
+    }
+
+    func testOfflinePreviewRequiresCurrentRecipeAndRelinkedSource() async throws {
+        let directory = try temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let (repository, saved, original) = try referencedFixture(in: directory)
+        let photo = saved.photos[0]
+        let cache = OfflineViewerPreviews(directory: directory.appendingPathComponent("Previews"))
+        _ = try await saveViewerPreview(photo, repository: repository, store: cache)
+
+        var draft = saved
+        draft.photos[0].adjustments.exposure = 0.75
+        draft = try repository.save(draft)
+        let oldRecipe = await cache.image(for: draft.photos[0], in: repository.root)
+        XCTAssertNil(oldRecipe)
+        let edited = try await saveViewerPreview(draft.photos[0], repository: repository, store: cache)
+        let editedPreview = await cache.image(for: draft.photos[0], in: repository.root)
+        XCTAssertEqual(try rgbaPixels(XCTUnwrap(editedPreview)), try rgbaPixels(edited))
+        let previous = await cache.image(for: photo, in: repository.root)
+        XCTAssertNil(previous)
+
+        let moved = directory.appendingPathComponent("Relinked.png")
+        try FileManager.default.moveItem(at: original, to: moved)
+        try repository.relinkOriginal(photo.id, to: moved, in: &draft)
+        let oldLocation = await cache.image(for: draft.photos[0], in: repository.root)
+        XCTAssertNil(oldLocation)
+        _ = try await saveViewerPreview(draft.photos[0], repository: repository, store: cache)
+        try FileManager.default.removeItem(at: moved)
+        let relinked = try repository.load().photos[0]
+        let offline = await cache.image(for: relinked, in: repository.root)
+        XCTAssertEqual(try rgbaPixels(XCTUnwrap(offline)), try rgbaPixels(edited))
+    }
+
+    func testPreviewCacheRejectsDifferentOriginalBytesAndPrunesOldVersions() async throws {
+        let directory = try temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let (repository, saved, original) = try referencedFixture(in: directory)
+        let photo = saved.photos[0]
+        let cache = OfflineViewerPreviews(directory: directory.appendingPathComponent("Previews"), entryLimit: 1)
+        try writeFixture(to: original, width: 64, gray: 0.9)
+        _ = try await saveViewerPreview(photo, repository: repository, store: cache)
+        let wrong = await cache.image(for: photo, in: repository.root)
+        XCTAssertNil(wrong)
+
+        try writeFixture(to: original, width: 64, gray: 0.4)
+        _ = try await saveViewerPreview(photo, repository: repository, store: cache)
+        var draft = saved
+        let second = try XCTUnwrap(draft.createVersion(of: photo.id, from: .current))
+        _ = try repository.save(draft)
+        _ = try await saveViewerPreview(second, repository: repository, store: cache)
+        let evicted = await cache.image(for: photo, in: repository.root)
+        let remaining = await cache.image(for: second, in: repository.root)
+        XCTAssertNil(evicted)
+        XCTAssertNotNil(remaining)
+    }
+
+    private func referencedFixture(in directory: URL) throws -> (LibraryRepository, Library, URL) {
+        let repository = try LibraryRepository.createEmpty(at: directory.appendingPathComponent("Library"))
+        let original = directory.appendingPathComponent("Referenced.png").resolvingSymlinksInPath()
+        try writeFixture(to: original, width: 64, gray: 0.4)
+        var library = try repository.load()
+        var options = ImportOptions()
+        options.storage = .referenced
+        XCTAssertTrue(try repository.importPhoto(original, projectID: nil, into: &library, options: options))
+        return (repository, try repository.save(library), original)
+    }
+
+    private func saveViewerPreview(_ photo: Photo, repository: LibraryRepository, store: OfflineViewerPreviews) async throws -> CGImage {
+        let original = try repository.availableOriginalURL(photo)
+        let frame = try await ViewerRenderCache().frame(url: original, adjustments: photo.adjustments,
+                                                       maximum: OfflineViewerPreviews.maximumDimension, revision: 0)
+        await store.save(frame.image, of: photo, in: repository.root, original: original, stamp: try XCTUnwrap(frame.sourceStamp))
+        return frame.image
+    }
+
+    private func rgbaPixels(_ image: CGImage) throws -> Data {
+        let space = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
+        let context = try XCTUnwrap(CGContext(data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
+                                             bytesPerRow: image.width * 4, space: space,
+                                             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        return Data(bytes: try XCTUnwrap(context.data), count: context.bytesPerRow * context.height)
+    }
+
     private func temporaryFolder() throws -> URL {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("IsoniqueCache-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: url, withIntermediateDirectories: false)

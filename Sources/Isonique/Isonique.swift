@@ -162,6 +162,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     }
     @Published var history = EditHistory()
     let viewerRenderCache = ViewerRenderCache()
+    let offlineViewerPreviews = OfflineViewerPreviews()
     let thumbnailCache = ThumbnailCache()
     static let recentLibraryLimit = 10
     static let recentLibraryKey = "library.recentRoots"
@@ -1483,6 +1484,8 @@ struct ContentView: View {
                                     PhotoComparisonView(photos: model.comparisonPhotos, repository: repo)
                                 } else if let url = try? repo.availableOriginalURL(photo) {
                                     PhotoViewer(photo: photo, url: url, original: model.compareOriginal).id(photo.id)
+                                } else if photo.referencedPath != nil, !model.compareOriginal {
+                                    OfflinePhotoViewer(photo: photo, library: repo.root).id(photo.id)
                                 } else {
                                     MissingOriginalView(photo: photo)
                                 }
@@ -1879,6 +1882,7 @@ struct PhotoViewer: View {
         let url: URL
         let originalStatus: Int
         let isCropping: Bool
+        let previewLibrary: URL?
         let adjustments: Adjustments
         let maximum: CGFloat?
         let profile: Data?
@@ -2151,6 +2155,10 @@ struct PhotoViewer: View {
                 geometry = frame.geometry
                 completedRequest = request
                 failure = nil
+                if let library = request.previewLibrary, let stamp = frame.sourceStamp {
+                    await model.offlineViewerPreviews.save(frame.image, of: photo, in: library,
+                                                           original: request.url, stamp: stamp)
+                }
             } catch {
                 guard !Task.isCancelled else { return }
                 image = nil
@@ -2238,11 +2246,14 @@ struct PhotoViewer: View {
     private var renderRequest: RenderRequest {
         var settings = original ? Adjustments() : photo.adjustments
         if model.tool == .crop { settings.crop = nil }
+        let previewLibrary = !original && model.tool == .select && !zoom && !model.loupeActive && photo.referencedPath != nil
+            ? model.repository?.root : nil
         return RenderRequest(url: url, originalStatus: model.originalStatusRevision, isCropping: model.tool == .crop,
+                             previewLibrary: previewLibrary,
                              adjustments: settings,
                              maximum: (model.tool == .spot || model.tool == .redEye ||
                                  (model.tool == .brush && zoom) ||
-                                 (model.tool == .select && (zoom || model.loupeActive))) ? nil : 2400,
+                                 (model.tool == .select && (zoom || model.loupeActive))) ? nil : OfflineViewerPreviews.maximumDimension,
                              profile: model.proofEnabled ? model.proofProfile : nil)
     }
 
