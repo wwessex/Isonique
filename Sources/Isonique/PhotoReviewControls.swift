@@ -33,7 +33,7 @@ extension PhotoColorLabel {
 
 extension Workspace {
     var usesSecondaryBrowserFocus: Bool {
-        secondaryBrowser.visible && activeBrowserPane == .secondary && !viewer && !batchMode
+        secondaryBrowser.visible && activeBrowserPane == .secondary && !viewer && !batchMode && !isPeopleGallery
     }
 
     var reviewPhotos: [Photo] { usesSecondaryBrowserFocus ? secondaryPhotos : photos }

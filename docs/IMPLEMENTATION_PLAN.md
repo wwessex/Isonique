@@ -487,9 +487,15 @@ Select a named People group and open Person Overview from the Browser, the Metad
 
 Choose a saved face to crop an oriented original for the portrait. Format 39 stores the choice with that face in the catalogue, and the existing People history makes the choice undoable. An offline original displays a placeholder and retains the saved choice. Removing or individually reassigning a face clears its role, so the overview falls back to the first remaining face in import order. Whole-group renames carry choices forward. Merging groups displays the most recently selected representative, and choosing a new portrait replaces the group's previous choices.
 
+## People gallery
+
+People opens a gallery of named groups with portrait tiles, case- and accent-insensitive name search and a project picker. Each active version counts once per person. The project filter changes counts and opens the matching project photos with a Person rule. Portraits follow the library's saved representative, including when it belongs to a different project. Offline originals use a placeholder. The Photos with Faces button still opens the Browser for all photos with saved faces.
+
+Portrait loading starts when the image area enters the scroll viewport. Work is cancelled when a tile leaves view. The loader verifies and decodes one original at a time and renders gallery crops to standalone images capped at 360 pixels. The gallery derives its names, counts and portrait choices from the current catalogue, so face reassignment and Undo refresh the affected groups.
+
 ## Next checkpoint
 
-Add a gallery of named People with representative portraits, search and a project filter. Reuse the saved choices and limit preview work to visible tiles.
+Add a read-only People review summary for each project and the entire library. Show counts of unscanned versions, unnamed faces and offline originals, with shortcuts to the existing detection and review workflows.
 
 ## Pending physical camera checks
 

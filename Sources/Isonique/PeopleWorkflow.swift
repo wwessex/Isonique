@@ -46,6 +46,15 @@ extension Workspace {
     func showPeople() {
         showBrowser(allPhotos: true)
         places = false
+        batchMode = false
+        batchSelection = []
+        scope = "people-gallery"
+        selection = nil
+    }
+
+    func showFacePhotos() {
+        showBrowser(allPhotos: true)
+        places = false
         scope = "people"
         selectAfterChange(preferred: selection)
     }

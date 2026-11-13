@@ -88,9 +88,10 @@ struct PersonOverviewView: View {
     }
 }
 
-private struct PersonPortraitPreview: View {
+struct PersonPortraitPreview: View {
     @EnvironmentObject private var model: Workspace
     let face: PersonOverview.Face
+    var compact = false
     @State private var result: PreviewResult?
 
     private struct PreviewKey: Equatable {
@@ -114,12 +115,22 @@ private struct PersonPortraitPreview: View {
         Group {
             if let result, result.key == key {
                 if let image = result.image {
-                    Image(decorative: image, scale: 1, orientation: .up)
-                        .resizable().scaledToFit().accessibilityLabel("Face portrait")
+                    GeometryReader { proxy in
+                        Image(decorative: image, scale: 1, orientation: .up)
+                            .resizable()
+                            .aspectRatio(contentMode: compact ? .fill : .fit)
+                            .frame(width: proxy.size.width, height: proxy.size.height)
+                            .clipped()
+                    }.accessibilityLabel("Face portrait")
+                } else if compact {
+                    Image(systemName: "person.crop.rectangle")
+                        .font(.largeTitle).foregroundStyle(.secondary)
                 } else {
                     ContentUnavailableView("Portrait Unavailable", systemImage: "person.crop.rectangle",
                                            description: Text("The original could not be opened."))
                 }
+            } else if compact {
+                ProgressView().controlSize(.small)
             } else {
                 ProgressView("Loading portrait…")
             }
@@ -128,13 +139,20 @@ private struct PersonPortraitPreview: View {
         .background(.black.opacity(0.25), in: RoundedRectangle(cornerRadius: 8))
         .task(id: key) {
             guard let repository = model.repository else { return }
-            let region = face.face.region
-            let task = Task.detached(priority: .userInitiated) {
-                let source = try repository.verifiedFaceSource(for: photo)
-                return FaceDetection.portrait(in: source, region: region)
-            }
-            let image = try? await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
+            let image = try? await PersonPortraitLoader.shared.load(photo: photo, region: face.face.region,
+                                                                    repository: repository, maximum: compact ? 360 : nil)
             if !Task.isCancelled { result = PreviewResult(key: key, image: image) }
         }
+    }
+}
+
+private actor PersonPortraitLoader {
+    static let shared = PersonPortraitLoader()
+
+    // Serialize original decodes so a screenful of tiles stays within a small working set.
+    func load(photo: Photo, region: FaceRegion, repository: LibraryRepository, maximum: Int?) throws -> CGImage? {
+        let source = try repository.verifiedFaceSource(for: photo)
+        try Task.checkCancellation()
+        return FaceDetection.portrait(in: source, region: region, maximum: maximum)
     }
 }

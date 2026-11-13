@@ -14,6 +14,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         didSet {
             browserSnapshot = nil
             peopleGroupsSnapshot = nil
+            peopleGallerySnapshot = nil
             unnamedFaceQueueSnapshot = nil
         }
     }
@@ -32,6 +33,8 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var personOverview: PersonOverviewRequest?
     @Published var peopleScan: Task<PeopleScanResult, Error>?
     var peopleGroupsSnapshot: [PeopleGroup]?
+    var peopleGallerySnapshot: PeopleGallery?
+    @Published var peopleGallerySearch = ""
     var unnamedFaceQueueSnapshot: (scope: UnnamedFaceScope, items: [UnnamedFaceItem])?
     @Published var advancedSearch: PhotoQuery?
     @Published var editingSmartAlbum: UUID?
@@ -257,6 +260,10 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     }
     var isViewingTrash: Bool { scope == "trash" }
     var photos: [Photo] {
+        if isPeopleGallery {
+            browserSnapshot = nil
+            return []
+        }
         let key = BrowserSnapshot.Key(scope: scope, places: usesPlacesPhotos, search: search, query: advancedSearch, rating: ratingFilter,
                                       color: colorFilter, originals: originalFilter, sort: sort,
                                       descending: sortDescending, locale: Locale.current.identifier,
@@ -372,7 +379,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     }
     var title: String {
         if let lightTable = activeLightTable { return lightTable.name }
-        if scope == "people" { return "People" }
+        if scope == "people" || isPeopleGallery { return "People" }
         if scope.hasPrefix("person:") { return peopleGroups.first { $0.scope == scope }?.name ?? "People" }
         if isViewingTrash { return "Trash" }
         if scope == "flagged" { return "Flagged" }
@@ -1269,8 +1276,9 @@ struct ContentView: View {
                     Section("Library") {
                         Label("All Photos", systemImage: "photo.on.rectangle.angled").tag("all").simultaneousGesture(TapGesture().onEnded { model.showBrowser(allPhotos: true) })
                         Label("Flagged", systemImage: "flag").tag("flagged")
-                        Label("People", systemImage: "person.crop.rectangle").tag("people")
+                        Label("People", systemImage: "person.crop.rectangle").tag("people-gallery")
                             .contextMenu {
+                                Button("Show Photos with Faces", action: model.showFacePhotos)
                                 Button("Review Unnamed Faces…") { model.openUnnamedFaces(.library) }
                                     .disabled(!model.canOpenUnnamedFaces)
                             }
@@ -1363,19 +1371,24 @@ struct ContentView: View {
                     }
                     VStack(alignment: .leading, spacing: 3) {
                         Text(model.title).font(.title2.weight(.semibold))
-                        Text("\(model.activeLightTable?.items.count ?? model.photos.count) photographs")
-                            .font(.caption).foregroundStyle(.secondary)
+                        if !model.isPeopleGallery {
+                            Text("\(model.activeLightTable?.items.count ?? model.photos.count) photographs")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
                     }
                     Spacer()
-                    if model.scope == "people" {
+                    if model.scope == "people" || model.isPeopleGallery {
                         Button("Unnamed Faces…") { model.openUnnamedFaces(.library) }
                             .disabled(!model.canOpenUnnamedFaces)
+                    }
+                    if model.isPeopleGallery {
+                        Button("Photos with Faces", action: model.showFacePhotos)
                     }
                     if let person = model.selectedPersonGroup {
                         Button("Person Overview…") { model.openPersonOverview(person) }
                             .disabled(model.busy)
                     }
-                    if model.activeLightTable == nil, model.advancedSearch != nil {
+                    if model.activeLightTable == nil, model.advancedSearch != nil, !model.isPeopleGallery {
                         Button("Clear Advanced Search", systemImage: "xmark.circle") { model.advancedSearch = nil }
                             .labelStyle(.iconOnly).help("Clear Advanced Search")
                     }
@@ -1385,7 +1398,7 @@ struct ContentView: View {
                         Button("Empty Trash…", action: model.showEmptyLibraryTrashReview)
                             .disabled(!model.canReviewEmptyLibraryTrash)
                     }
-                    if model.activeLightTable == nil {
+                    if model.activeLightTable == nil, !model.isPeopleGallery {
                         Picker("Rating filter", selection: $model.ratingFilter) { ForEach(RatingFilter.allCases) { filter in Text(filter.label).tag(filter) } }.labelsHidden().frame(width: 165)
                         Picker("View", selection: Binding(get: { model.presentation }, set: model.choosePresentation)) {
                             ForEach(BrowserPresentation.allCases) { presentation in
@@ -1406,7 +1419,7 @@ struct ContentView: View {
                     .focusable().focusEffectDisabled()
                     .focused($focusedPhotographyPanel, equals: .toolbar)
                 Divider().opacity(0.4) }
-                if model.activeLightTable == nil, model.photographyLayout.toolbar {
+                if model.activeLightTable == nil, model.photographyLayout.toolbar, !model.isPeopleGallery {
                     if model.batchMode { BatchBar() }
                     if model.showKeywordControls && !model.isViewingTrash { KeywordControls() }
                     if !model.isViewingTrash { EditBar().disabled(model.batchMode || model.quickPreview) }
@@ -1430,6 +1443,8 @@ struct ContentView: View {
                     VStack(spacing: 0) {
                         if let lightTable = model.activeLightTable {
                             LightTableWorkspace(layout: lightTable).environmentObject(model)
+                        } else if model.isPeopleGallery {
+                            PeopleGalleryView().environmentObject(model)
                         } else if model.presentation == .places {
                             PlacesBrowser(model: model) { photo, onSelect in
                                 photoCell(photo, compact: true, onSelect: onSelect)
@@ -1502,10 +1517,10 @@ struct ContentView: View {
                             model.exitViewer()
                             return .handled
                         }
-                    if model.activeLightTable == nil, model.secondaryBrowser.visible, !model.viewer, !model.places, !model.batchMode {
+                    if model.activeLightTable == nil, model.secondaryBrowser.visible, !model.viewer, !model.places, !model.batchMode, !model.isPeopleGallery {
                         SecondaryBrowserPane(model: model)
                     }
-                    if model.activeLightTable == nil, model.photographyLayout.inspector && !model.isViewingTrash {
+                    if model.activeLightTable == nil, model.photographyLayout.inspector && !model.isViewingTrash && !model.isPeopleGallery {
                         Inspector().frame(minWidth: 260, idealWidth: 290, maxWidth: 340).workspaceGlass(radius: 20).padding(10)
                             .focusable().focusEffectDisabled()
                             .focused($focusedPhotographyPanel, equals: .inspector)
@@ -1516,13 +1531,16 @@ struct ContentView: View {
                     if model.busy { ProgressView().controlSize(.small) } else { Image(systemName: "checkmark.shield").foregroundStyle(.secondary) }
                     Text(model.status).font(.caption).lineLimit(2)
                     Spacer()
-                    Text("\(model.activeLightTable?.items.count ?? model.photos.count) photos")
-                        .font(.caption2).foregroundStyle(.secondary)
+                    if !model.isPeopleGallery {
+                        Text("\(model.activeLightTable?.items.count ?? model.photos.count) photos")
+                            .font(.caption2).foregroundStyle(.secondary)
+                    }
                 }.padding(.horizontal, 18).padding(.vertical, 10).background(.ultraThinMaterial)
             }
         }
         .disabled(model.busy || model.repository == nil)
-        .searchable(text: $model.search, prompt: "Search photos and metadata")
+        .searchable(text: model.isPeopleGallery ? $model.peopleGallerySearch : $model.search,
+                    prompt: model.isPeopleGallery ? Text("Search people by name") : Text("Search photos and metadata"))
         .toolbar {
             ForEach(model.toolbarConfiguration.items) { item in
                 ToolbarItem(id: item.rawValue) {
@@ -1622,7 +1640,8 @@ struct ContentView: View {
         }
         .onChange(of: model.scope) { _, _ in
             model.activeBrowserPane = .primary
-            if model.scope == "people" || model.scope.hasPrefix("person:") { model.places = false }
+            if model.scope == "people" || model.scope.hasPrefix("person:") || model.isPeopleGallery { model.places = false }
+            if model.isPeopleGallery { model.batchMode = false }
             if model.isViewingTrash {
                 model.search = ""; model.ratingFilter = .all; model.originalFilter = .all; model.colorFilter = .all; model.advancedSearch = nil
             }

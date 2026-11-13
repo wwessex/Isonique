@@ -848,10 +848,17 @@ public final class LibraryRepository {
         return url
     }
     public static func digest(_ url: URL) throws -> String {
+        try digest(url, checkingCancellation: false)
+    }
+
+    static func digest(_ url: URL, checkingCancellation: Bool) throws -> String {
         let handle = try FileHandle(forReadingFrom: url)
         defer { try? handle.close() }
         var hash = SHA256()
-        while let data = try handle.read(upToCount: 1024 * 1024), !data.isEmpty { hash.update(data: data) }
+        while let data = try handle.read(upToCount: 1024 * 1024), !data.isEmpty {
+            if checkingCancellation { try Task.checkCancellation() }
+            hash.update(data: data)
+        }
         return hash.finalize().map { String(format: "%02x", $0) }.joined()
     }
     public func importPhoto(_ source: URL, projectID: UUID?, into library: inout Library,

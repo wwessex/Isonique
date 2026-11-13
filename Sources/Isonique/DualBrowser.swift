@@ -95,7 +95,7 @@ extension Workspace {
     }
 
     var canShowSecondaryBrowser: Bool {
-        !busy && repository != nil && activeLightTable == nil && !viewer && !places && !batchMode
+        !busy && repository != nil && activeLightTable == nil && !viewer && !places && !batchMode && !isPeopleGallery
     }
 
     func setSecondaryBrowserVisible(_ visible: Bool) {

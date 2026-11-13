@@ -368,6 +368,7 @@ extension Workspace {
     }
 
     var visiblePhotographyFocus: [PhotographyWorkspaceFocus] {
+        if isPeopleGallery { return photographyLayout.toolbar ? [.browser, .toolbar] : [.browser] }
         var result: [PhotographyWorkspaceFocus] = [.viewer]
         if photographyLayout.browser { result.append(.browser) }
         if photographyLayout.filmstrip && viewer { result.append(.filmstrip) }

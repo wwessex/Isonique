@@ -887,7 +887,7 @@ struct ConfiguredToolbarItemView: View {
                     model.showBrowser()
                     if model.selected == nil { model.selection = model.photos.first?.id }
                 }
-            }.disabled(model.activeLightTable != nil)
+            }.disabled(model.activeLightTable != nil || model.isPeopleGallery)
         case .features:
             Button { openWindow(id: "features") } label: { Label("Features & Limits", systemImage: "questionmark.circle") }
                 .help("See available features and what is still missing")
@@ -918,7 +918,7 @@ struct ConfiguredToolbarItemView: View {
                     }
                 }
             } label: { Label("Sort & Filter", systemImage: "arrow.up.arrow.down") }
-                .disabled(model.activeLightTable != nil)
+                .disabled(model.activeLightTable != nil || model.isPeopleGallery)
         case .review:
             Menu {
                 Button("Compare Photos", action: model.startComparison).disabled(!model.canStartComparison)

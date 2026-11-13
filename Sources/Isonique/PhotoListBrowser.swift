@@ -225,7 +225,7 @@ extension Workspace {
     }
 
     func canChoosePresentation(_ presentation: BrowserPresentation) -> Bool {
-        guard !busy, repository != nil else { return false }
+        guard !busy, repository != nil, !isPeopleGallery else { return false }
         switch presentation {
         case .places: return !batchMode && !isViewingTrash
         case .viewer: return !batchMode

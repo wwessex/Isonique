@@ -182,7 +182,7 @@ final class PeopleWorkflowTests: XCTestCase {
         reopened.search = "zoe rivera"
         XCTAssertEqual(reopened.photos.map(\.id), [photoID])
         reopened.search = ""
-        reopened.showPeople()
+        reopened.showFacePhotos()
         XCTAssertEqual(reopened.photos.map(\.id), [photoID])
         reopened.scope = try XCTUnwrap(reopened.peopleGroups.first { $0.name == "Zoë Rivera" }).scope
         XCTAssertEqual(reopened.photos.map(\.id), [photoID])

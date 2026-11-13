@@ -5,6 +5,82 @@ import XCTest
 
 @MainActor
 final class PersonOverviewTests: XCTestCase {
+    func testGalleryFiltersAndCountsOfflinePhotosAndUsesLibraryPortrait() throws {
+        let fixture = try Fixture()
+        defer { fixture.cleanUp() }
+        let model = fixture.open()
+        let first = try XCTUnwrap(model.library.photos[0].projectID)
+        let second = try XCTUnwrap(model.library.photos[1].projectID)
+        let request = try fixture.openOverview(model)
+        let portrait = try XCTUnwrap(fixture.overview(model).faces.first { $0.photo.projectID == second })
+        XCTAssertTrue(model.setRepresentativeFace(portrait, for: request))
+        model.personOverview = nil
+        var draft = model.library
+        draft.photos[0].people?.faces[1].assignName("Sam Lee")
+        draft.photos[3].people?.faces[0].assignName("In Trash")
+        XCTAssertTrue(model.commit(draft))
+        // The sidebar sets the scope before SwiftUI's change handler clears the selection.
+        model.selection = fixture.photos[0].id
+        XCTAssertNotNil(model.selected)
+        model.scope = "people-gallery"
+        XCTAssertNil(model.selected)
+        model.search = "Previously entered photo search"
+        model.showPeople()
+        XCTAssertTrue(model.isPeopleGallery)
+        XCTAssertNil(model.selected)
+        XCTAssertFalse(model.canReviewSelection)
+
+        let gallery = model.peopleGallery
+        XCTAssertEqual(gallery.people.map(\.id), ["sam lee", "zoe rivera"])
+        let matches = gallery.matching(name: "  zÓE   ri ", project: nil)
+        XCTAssertEqual(matches.map(\.id), ["zoe rivera"])
+        XCTAssertEqual(matches.first?.total, 3)
+        XCTAssertEqual(matches.first?.count(in: first), 1)
+        XCTAssertEqual(matches.first?.count(in: second), 1)
+        XCTAssertEqual(gallery.matching(name: "", project: second).map(\.id), ["zoe rivera"])
+        XCTAssertEqual(gallery.matching(name: "Sam", project: second).count, 0)
+        XCTAssertEqual(gallery.matching(name: "Sam", project: first).first?.total, 1)
+        XCTAssertTrue(gallery.matching(name: "", project: UUID()).isEmpty)
+        let tile = try XCTUnwrap(gallery.matching(name: "zoe", project: first).first)
+        XCTAssertEqual(tile.portrait.id, portrait.id, "The project filter preserves the library's portrait choice")
+        XCTAssertThrowsError(try fixture.repository.verifiedFaceSource(for: tile.portrait.photo))
+        model.browseGalleryPerson(tile, project: first)
+        XCTAssertEqual(model.scope, "project:\(first)")
+        XCTAssertEqual(model.photos.map(\.id), [fixture.photos[0].id])
+        XCTAssertEqual(model.selected?.id, fixture.photos[0].id)
+        model.showPeople()
+        model.browseGalleryPerson(tile, project: nil)
+        XCTAssertEqual(model.scope, "person:zoe rivera")
+        XCTAssertEqual(Set(model.photos.map(\.id)), Set(fixture.photos.prefix(3).map(\.id)))
+    }
+
+    func testGalleryRefreshesCountsAndPortraitAfterReassignmentAndUndo() throws {
+        let fixture = try Fixture()
+        defer { fixture.cleanUp() }
+        let model = fixture.open()
+        let request = try fixture.openOverview(model)
+        let choice = try XCTUnwrap(fixture.overview(model).faces.first { $0.photo.id == fixture.photos[1].id })
+        XCTAssertTrue(model.setRepresentativeFace(choice, for: request))
+        model.personOverview = nil
+        model.showPeople()
+        XCTAssertEqual(model.peopleGallery.matching(name: "zoe", project: nil).first?.portrait.id, choice.id)
+        let photo = model.library.photos[1]
+        let project = try XCTUnwrap(photo.projectID)
+        var people = try XCTUnwrap(photo.people)
+        people.faces[0].assignName("Sam Lee")
+        XCTAssertTrue(model.applyPeopleReview(PeopleReview(photo: photo, root: fixture.repository.root), people: people))
+        let updated = model.peopleGallery
+        XCTAssertEqual(updated.matching(name: "zoe", project: nil).first?.portrait.photo.id, fixture.photos[0].id)
+        XCTAssertEqual(updated.matching(name: "zoe", project: nil).first?.total, 2)
+        XCTAssertEqual(updated.matching(name: "", project: project).map(\.id), ["sam lee"])
+        XCTAssertNil(updated.matching(name: "sam", project: project).first?.portrait.face.representativeChosenAt)
+        model.undoEdit()
+        XCTAssertEqual(model.peopleGallery.matching(name: "", project: project).first?.portrait.id, choice.id)
+        model.redoEdit()
+        let reopened = fixture.open()
+        XCTAssertEqual(reopened.peopleGallery.matching(name: "", project: project).map(\.id), ["sam lee"])
+    }
+
     func testCountsAndRepresentativeChoicePersistAndStayBrowsableOffline() throws {
         let fixture = try Fixture()
         defer { fixture.cleanUp() }
@@ -113,10 +189,13 @@ final class PersonOverviewTests: XCTestCase {
         let bottom = try XCTUnwrap(FaceRegion(imageRect: CGRect(x: 0, y: 0.75, width: 0.25, height: 0.25)))
         let upper = try XCTUnwrap(FaceDetection.portrait(in: image, region: top))
         let lower = try XCTUnwrap(FaceDetection.portrait(in: image, region: bottom))
+        let tile = try XCTUnwrap(FaceDetection.portrait(in: image, region: top, maximum: 8))
         XCTAssertEqual(upper.width, 24)
         XCTAssertEqual(upper.height, 12)
         XCTAssertEqual(lower.width, upper.width)
         XCTAssertEqual(lower.height, upper.height)
+        XCTAssertEqual(tile.width, 8)
+        XCTAssertEqual(tile.height, 4)
         func pixel(_ source: CGImage) throws -> [UInt8] {
             let sample = try XCTUnwrap(CGContext(data: nil, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4,
                                                 space: CGColorSpaceCreateDeviceRGB(),
@@ -127,6 +206,7 @@ final class PersonOverviewTests: XCTestCase {
         }
         XCTAssertEqual(try pixel(upper), [255, 0, 0])
         XCTAssertEqual(try pixel(lower), [0, 0, 255])
+        XCTAssertEqual(try pixel(tile), [255, 0, 0])
     }
 
     private struct Fixture {

@@ -306,12 +306,14 @@ public extension LibraryRepository {
         return url
     }
 
-    internal static func verifyOriginal(_ url: URL, photo: Photo) throws {
+    internal static func verifyOriginal(_ url: URL, photo: Photo, checkingCancellation: Bool = false) throws {
         let values = try url.resourceValues(forKeys: [.isRegularFileKey, .isSymbolicLinkKey])
         guard values.isRegularFile == true, values.isSymbolicLink != true else {
             throw LibraryError.originalUnavailable(photo.originalName)
         }
-        guard try digest(url) == photo.sha256 else { throw LibraryError.integrity(photo.originalName) }
+        guard try digest(url, checkingCancellation: checkingCancellation) == photo.sha256 else {
+            throw LibraryError.integrity(photo.originalName)
+        }
     }
 
     @discardableResult

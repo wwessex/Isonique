@@ -162,7 +162,7 @@ public extension Library {
 
 public enum FaceDetection {
     /// Crop an oriented preview using the same top-left coordinates as face review.
-    public static func portrait(in image: CGImage, region: FaceRegion) -> CGImage? {
+    public static func portrait(in image: CGImage, region: FaceRegion, maximum: Int? = nil) -> CGImage? {
         guard region.isValid else { return nil }
         let width = CGFloat(image.width)
         let height = CGFloat(image.height)
@@ -170,7 +170,19 @@ public enum FaceDetection {
                          width: region.width * width, height: region.height * height)
         let padded = box.insetBy(dx: -box.width * 0.2, dy: -box.height * 0.2)
         let bounds = CGRect(x: 0, y: 0, width: width, height: height)
-        return image.cropping(to: padded.integral.intersection(bounds))
+        guard let portrait = image.cropping(to: padded.integral.intersection(bounds)) else { return nil }
+        guard let maximum, maximum > 0 else { return portrait }
+        // Render a standalone tile so a cropped CGImage cannot retain the decoded original.
+        let scale = min(1, Double(maximum) / Double(max(portrait.width, portrait.height)))
+        let tileWidth = max(1, Int(Double(portrait.width) * scale))
+        let tileHeight = max(1, Int(Double(portrait.height) * scale))
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(data: nil, width: tileWidth, height: tileHeight, bitsPerComponent: 8,
+                                      bytesPerRow: 0, space: space,
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        context.interpolationQuality = .high
+        context.draw(portrait, in: CGRect(x: 0, y: 0, width: tileWidth, height: tileHeight))
+        return context.makeImage()
     }
 
     /// Preview and detection use the same orientation-corrected source space.
@@ -195,7 +207,7 @@ public extension LibraryRepository {
     func verifiedFaceSource(for photo: Photo) throws -> CGImage {
         try Task.checkCancellation()
         let url = try availableOriginalURL(photo)
-        try Self.verifyOriginal(url, photo: photo)
+        try Self.verifyOriginal(url, photo: photo, checkingCancellation: true)
         try Task.checkCancellation()
         return try FaceDetection.sourcePreview(at: url)
     }
