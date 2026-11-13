@@ -115,6 +115,10 @@ public extension Library {
             let current = lightTables ?? []
             lightTables = layouts
             return .lightTables(current)
+        case .browserOrders(let orders):
+            let current = browserOrders
+            browserOrders = orders
+            return .browserOrders(current)
         case .stamp(let changes):
             return applyPhotoFieldChanges(changes, photoID: \.photoID) { photo, change in
                 change.applying(to: &photo)
@@ -133,11 +137,12 @@ public enum PhotoHistoryEntry: Codable, Equatable {
     case stamp([PhotoStampChange])
     case locations([PhotoLocationChange])
     case lightTables([LightTableLayout])
+    case browserOrders(BrowserOrderState?)
 
     public var photo: Photo? {
         switch self {
         case .edit(let photo), .removeVersion(let photo), .restoreVersion(let photo): return photo
-        case .stackPick, .captureDates, .batchMetadata, .stamp, .locations, .lightTables: return nil
+        case .stackPick, .captureDates, .batchMetadata, .stamp, .locations, .lightTables, .browserOrders: return nil
         }
     }
 
@@ -152,7 +157,7 @@ public enum PhotoHistoryEntry: Codable, Equatable {
         case .batchMetadata(let changes): return changes.map(\.photoID)
         case .stamp(let changes): return changes.map(\.photoID)
         case .locations(let changes): return changes.map(\.photoID)
-        case .lightTables: return []
+        case .lightTables, .browserOrders: return []
         default: return []
         }
     }
@@ -162,6 +167,7 @@ public enum PhotoHistoryEntry: Codable, Equatable {
         case .captureDates: return 8
         case .locations: return 16
         case .lightTables: return 35
+        case .browserOrders: return 36
         case .stamp(let changes): return max(13, changes.compactMap(\.requiredCatalogueVersion).max() ?? 0)
         case .batchMetadata(let changes):
             if changes.contains(where: { $0.iptc?.isEmpty == false }) { return 11 }

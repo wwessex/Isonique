@@ -84,6 +84,17 @@ Use the signed build with British English selected in macOS and a disposable lib
 4. Drag the Caption header before Rating, resize it, quit and relaunch Isonique, then confirm visibility, order and width return. Use Reset List Columns and confirm the six defaults return.
 5. Export an edited photo before and after these preference changes. Confirm identical pixels and metadata, an unchanged catalogue and unchanged source and managed-original fingerprints.
 
+## Second Browser and manual Browser order
+
+Use the signed build and a disposable library containing two projects, a regular album, a Smart Album, one collapsed stack and at least one version.
+
+1. Choose **View → Second Browser**. Give each Browser a different container, search, rating filter and sort. Select a different photo in each pane and confirm changing one selection does not change the other.
+2. Click each pane in turn and use rating, flag and arrow-key commands. Confirm commands affect only the focused pane's selection. Focus either Search field and confirm typed shortcut characters remain text.
+3. In All Photos, a project and a regular album, drag photos to a new Manual order and use Move to Beginning/End. Confirm a collapsed stack moves as one contiguous block and a version can move independently. Confirm Smart Albums, Flagged, Trash, Places and a stack-only view do not offer Manual order.
+4. Undo and redo an order change, quit and relaunch, then confirm both Browser configurations and every catalogue order return. Import one new photo and confirm it appends without disturbing the saved sequence.
+5. Export and reimport an ordered project twice. Confirm regular-album memberships and relative order survive both imports with distinct remapped identifiers. Merge an older project export and confirm current order is protected by the selected conflict preference.
+6. Export an edited photo before and after Browser ordering. Confirm identical pixels and metadata, unchanged recipes and unchanged source and managed-original fingerprints.
+
 ## Physical PTP camera import
 
 Use a disposable library and a physical USB camera in PTP or Photo Transfer mode. Put at least three distinct test photos on the camera. A larger group of photos gives you time to cancel an active transfer. Record the Isonique commit, macOS version, camera model, firmware and USB mode with the results. [README smoke test](README.md#development)

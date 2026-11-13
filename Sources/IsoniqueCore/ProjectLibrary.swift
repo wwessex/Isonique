@@ -115,6 +115,23 @@ extension Library {
             }
             if state != StackBrowserState() { exported.stackBrowser = state }
         }
+        if let browserOrders {
+            let selected = Set(exported.photos.map(\.id))
+            let projectScope = "project:\(projectID)"
+            let projectOrder = browserOrders.ids(in: projectScope)
+            let allOrder = browserOrders.ids(in: "all")
+            var state = BrowserOrderState()
+            let preferred = (projectOrder.isEmpty ? allOrder : projectOrder).filter(selected.contains)
+            if !preferred.isEmpty {
+                state.set(preferred, in: "all")
+                state.set(preferred, in: projectScope)
+            }
+            for album in exported.albums where album.rule == nil {
+                let scope = "album:\(album.id)"
+                state.set(browserOrders.ids(in: scope).filter(selected.contains), in: scope)
+            }
+            if !state.isEmpty { exported.browserOrders = state; exported.upgradeForBrowserOrders() }
+        }
         exported.projectExportMembership = ProjectExportMembership(
             projectID: projectID,
             originalsByPhoto: Dictionary(exported.photos.map { ($0.id, ProjectExportMembership.Original($0)) },

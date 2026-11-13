@@ -453,9 +453,17 @@ The List Browser now uses the macOS 15 native table customisation model. Fourtee
 
 Automated coverage exercises preference migration and restart restoration, British English localisation, Browser/Viewer/Compare and text-input focus routing, selection and review behaviour, large metadata values, malformed-state recovery and catalogue/original/export isolation. Signed-app interaction for native header reordering and resizing remains on the validation checklist.
 
+## Second Browser and persistent manual order
+
+View → Second Browser opens a compact grid alongside the primary Browser. It persists its own container, text search, rating filter, sort direction and visibility while keeping its selection transient. Primary and secondary selections stay independent; rating, flag and previous/next commands route through explicit last-focused pane state without taking keystrokes from text fields. The secondary pane can reveal a photo in the primary Browser or open it in the Viewer without making ordinary review actions mutate the primary selection.
+
+Format 36 adds catalogue-backed manual order for All Photos, each project and each regular album. Drag and drop or Move to Beginning/End selects Manual order for that pane and records one Undo step. Collapsed stacks move as a stable block, versions can move independently and new photos append deterministically. Smart Albums, Flagged, Trash, Places and stack-only scopes remain derived and cannot receive an order. Project export/import, collision remapping, project merge, whole-library merge, backup, Empty Trash and restart persistence retain or safely prune relevant order records. Primary sort preferences are scoped to the library path so one library cannot change another library's review order.
+
+Automated coverage exercises independent pane scope/search/selection and keyboard focus, sparse older preferences, restart restoration, drag-order mutations, collapsed stacks, versions, Undo/Redo, older catalogues, format rejection, project export/import ID collisions and recipe/original/export isolation.
+
 ## Next checkpoint
 
-Add a second independently scoped Browser pane and persistent manual Browser ordering where the selected container permits it. Keep filters, focus and selection explicit between panes; test drag ordering, stacks, versions, older catalogues, restart restoration and recipe/export isolation.
+Add privacy-preserving, on-device face detection and a People workflow using Vision. Keep recognition opt-in; persist face rectangles, names and manual corrections; integrate People with search and Smart Albums; and keep all processing local. Test image orientation, multiple faces, false-positive removal, offline originals, migration, Undo/Redo, restart persistence and recipe/export isolation.
 
 ## Pending physical camera checks
 

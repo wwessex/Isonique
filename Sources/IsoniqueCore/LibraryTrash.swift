@@ -66,6 +66,8 @@ public extension LibraryRepository {
             var pending = draft.pendingFinderTrash ?? []
             if !removed.isEmpty {
                 draft.history?.discardEmptiedTrash(photoIDs: result.removedPhotoIDs, originalIDs: result.removedOriginalIDs)
+                draft.browserOrders?.remove(result.removedPhotoIDs)
+                if draft.browserOrders?.isEmpty == true { draft.browserOrders = nil }
                 let emptiedStacks = Set(removed.compactMap(\.stackID)).subtracting(draft.photos.compactMap(\.stackID))
                 draft.stackBrowser?.discardEmptiedTrash(photoIDs: result.removedPhotoIDs, stackIDs: emptiedStacks)
                 let verifiedNames = Set(verified.map { managedFilenameKey($0.filename) })

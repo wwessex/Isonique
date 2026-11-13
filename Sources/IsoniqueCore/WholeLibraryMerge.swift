@@ -353,6 +353,30 @@ private struct WholeLibraryMergePlan {
                 }
             }
         }
+        if let incomingOrders = source.browserOrders {
+            var orders = draft.browserOrders ?? BrowserOrderState()
+            let activeIDs = Set(draft.activePhotos.map(\.id))
+            let incomingAll = incomingOrders.ids(in: "all").filter(activeIDs.contains)
+            if !incomingAll.isEmpty {
+                var combined = orders.ids(in: "all")
+                if combined.isEmpty {
+                    combined = destination.activePhotos.sorted {
+                        $0.importedAt == $1.importedAt ? $0.id.uuidString < $1.id.uuidString : $0.importedAt < $1.importedAt
+                    }.map(\.id)
+                }
+                for id in incomingAll where !combined.contains(id) { combined.append(id) }
+                orders.set(combined, in: "all")
+            }
+            for project in newProjects {
+                let scope = "project:\(project.id)"
+                orders.set(incomingOrders.ids(in: scope).filter(activeIDs.contains), in: scope)
+            }
+            for album in newAlbums where album.rule == nil {
+                let scope = "album:\(album.id)"
+                orders.set(incomingOrders.ids(in: scope).filter(activeIDs.contains), in: scope)
+            }
+            if !orders.isEmpty { draft.browserOrders = orders; draft.upgradeForBrowserOrders() }
+        }
         try draft.validateSchema()
         _ = try draft.uniqueOriginals()
         return draft

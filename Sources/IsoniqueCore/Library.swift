@@ -418,7 +418,8 @@ public struct Library: Codable {
     // This is the revision the value was based on, never part of the on-disk schema.
     var catalogueRevision: CatalogueRevision?
     private enum CodingKeys: String, CodingKey {
-        case projectExportMembership, pendingFinderTrash, history, stackBrowser, lightTables, version, photos, projects, albums
+        case projectExportMembership, pendingFinderTrash, history, stackBrowser, lightTables, browserOrders
+        case version, photos, projects, albums
     }
 
     var projectExportMembership: ProjectExportMembership?
@@ -426,6 +427,7 @@ public struct Library: Codable {
     public var history: EditHistory?
     public var stackBrowser: StackBrowserState?
     public var lightTables: [LightTableLayout]?
+    public var browserOrders: BrowserOrderState?
     public var version = 1
     public var photos: [Photo] = []
     public var projects: [Collection] = []
@@ -517,6 +519,10 @@ public struct Library: Codable {
         if version < 35, lightTables?.isEmpty == false { version = 35 }
     }
 
+    public mutating func upgradeForBrowserOrders() {
+        if version < 36, browserOrders?.isEmpty == false { version = 36 }
+    }
+
     public mutating func upgradeForChannelCurves() {
         if version < 5, hasRecipe(where: { $0.channelCurves?.isEmpty == false }) { version = 5 }
     }
@@ -560,6 +566,8 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 36, browserOrders?.isEmpty == false { throw LibraryError.unsupportedVersion }
+        try browserOrders?.validateStructure()
         if version < 35, lightTables?.isEmpty == false { throw LibraryError.unsupportedVersion }
         var lightTableIDs: Set<UUID> = []
         for layout in lightTables ?? [] {
@@ -596,7 +604,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...35).contains(version) { return }
+        if (7...36).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }

@@ -231,6 +231,18 @@ private struct ProjectLibraryImportPlan {
             }
             library.stackBrowser = state
         }
+        if let sourceOrders = source.browserOrders {
+            var state = library.browserOrders ?? BrowserOrderState()
+            let sourceProjectScope = "project:\(project.id)"
+            let preferred = sourceOrders.ids(in: sourceProjectScope).isEmpty
+                ? sourceOrders.ids(in: "all") : sourceOrders.ids(in: sourceProjectScope)
+            state.set(preferred.map { photoIDs[$0] }, in: "project:\(imported.id)")
+            for album in source.albums where album.rule == nil {
+                state.set(sourceOrders.ids(in: "album:\(album.id)").map { photoIDs[$0] },
+                          in: "album:\(albumIDs[album.id])")
+            }
+            if !state.isEmpty { library.browserOrders = state; library.upgradeForBrowserOrders() }
+        }
         try library.validateSchema()
         _ = try library.uniqueOriginals()
         result = ProjectLibraryImportResult(library: library, project: imported, photoCount: source.photos.count)

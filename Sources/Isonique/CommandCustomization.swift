@@ -692,17 +692,17 @@ extension Workspace {
     }
 
     private func navigateFromCommand(by delta: Int) -> Bool {
-        guard !batchMode, !photos.isEmpty else { return false }
+        guard !batchMode, !reviewPhotos.isEmpty else { return false }
         if comparisonID != nil {
             moveComparisonSelection(by: delta)
             return true
         }
-        let visible = photos.filter { $0.id != comparisonID }
-        if let index = visible.firstIndex(where: { $0.id == selection }) {
+        let visible = reviewPhotos.filter { $0.id != comparisonID }
+        if let index = visible.firstIndex(where: { $0.id == reviewSelectionID }) {
             let next = index + delta
-            if visible.indices.contains(next) { selection = visible[next].id }
+            if visible.indices.contains(next) { reviewSelectionID = visible[next].id }
         } else {
-            selection = visible.first?.id
+            reviewSelectionID = visible.first?.id
         }
         return true
     }
@@ -897,7 +897,12 @@ struct ConfiguredToolbarItemView: View {
             }.help("Show or hide inspector")
         case .sortAndFilter:
             Menu {
-                Picker("Sort by", selection: $model.sort) { ForEach(PhotoSort.allCases) { Text($0.rawValue).tag($0) } }
+                Picker("Sort by", selection: $model.sort) {
+                    ForEach(PhotoSort.allCases) { choice in
+                        Text(choice.rawValue).tag(choice)
+                            .disabled(choice == .manual && !model.canManuallyOrder(model.scope))
+                    }
+                }
                 Toggle("Descending", isOn: $model.sortDescending)
                 Divider()
                 Button("Advanced Search…") { model.showAdvancedSearch = true }

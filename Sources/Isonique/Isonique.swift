@@ -4,8 +4,8 @@ import ImageIO
 import IsoniqueCore
 import UniformTypeIdentifiers
 
-enum PhotoSort: String, CaseIterable, Identifiable {
-    case imported = "Import date", name = "Filename", rating = "Rating", captured = "Capture date"
+enum PhotoSort: String, CaseIterable, Identifiable, Codable {
+    case manual = "Manual order", imported = "Import date", name = "Filename", rating = "Rating", captured = "Capture date"
     var id: String { rawValue }
 }
 enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
@@ -25,8 +25,18 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var advancedSearch: PhotoQuery?
     @Published var editingSmartAlbum: UUID?
     @Published var search = ""
-    @Published var sort = PhotoSort.imported
-    @Published var sortDescending = false
+    @Published var sort = PhotoSort.imported {
+        didSet {
+            guard let browserPreferencePrefix else { return }
+            preferences.set(sort.rawValue, forKey: "\(browserPreferencePrefix).sort")
+        }
+    }
+    @Published var sortDescending = false {
+        didSet {
+            guard let browserPreferencePrefix else { return }
+            preferences.set(sortDescending, forKey: "\(browserPreferencePrefix).sortDescending")
+        }
+    }
     @Published var stampGroups = Set(AdjustmentGroup.allCases.filter { $0 != .localBrush && $0 != .retouch && $0 != .redEye })
     @Published var ratingFilter = RatingFilter.all
     @Published var originalFilter = OriginalFilter.all
@@ -58,6 +68,11 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var quickPreview = false {
         didSet { preferences.set(quickPreview, forKey: "browser.quickPreview") }
     }
+    @Published var secondaryBrowser = SecondaryBrowserConfiguration() {
+        didSet { SecondaryBrowserPreferences.save(secondaryBrowser, to: preferences) }
+    }
+    @Published var activeBrowserPane = BrowserPaneFocus.primary
+    @Published var secondaryBrowserSelection: UUID?
     @Published var listColumnCustomization = TableColumnCustomization<Photo>() {
         didSet { ListColumnPreferences.save(listColumnCustomization, to: preferences) }
     }
@@ -136,6 +151,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         didSet { preferences.set(recentLibraryPaths, forKey: Self.recentLibraryKey) }
     }
     let preferences: UserDefaults
+    private var browserPreferencePrefix: String?
     var photographyWorkspacePreferences = PhotographyWorkspacePreferences()
     weak var photographyWindow: NSWindow?
     var photographyWindowObservers: [NSObjectProtocol] = []
@@ -180,6 +196,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         let layout = preferences.string(forKey: "browser.layout").flatMap(BrowserPresentation.init(rawValue:))
         browserLayout = layout == .list ? .list : .grid
         quickPreview = preferences.bool(forKey: "browser.quickPreview")
+        secondaryBrowser = SecondaryBrowserPreferences.load(from: preferences)
         listColumnCustomization = ListColumnPreferences.load(from: preferences)
         gridThumbnailSize = preferences.string(forKey: GridThumbnailSize.preferenceKey)
             .flatMap(GridThumbnailSize.init(rawValue:)) ?? .standard
@@ -203,6 +220,11 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
                 root = Self.defaultLibraryRoot(in: support)
             }
+            let primaryPreferencePrefix = "browser.primary.\(root.standardizedFileURL.path)"
+            browserPreferencePrefix = primaryPreferencePrefix
+            sort = preferences.string(forKey: "\(primaryPreferencePrefix).sort")
+                .flatMap(PhotoSort.init(rawValue:)) ?? .imported
+            sortDescending = preferences.object(forKey: "\(primaryPreferencePrefix).sortDescending") as? Bool ?? false
             let repo = try LibraryRepository(root: root)
             library = try repo.openOrCreateCatalogue()
             repository = repo
@@ -245,27 +267,51 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     }
 
     func filteredPhotos(advancedQuery: PhotoQuery?, includingCollapsed: Bool = false, includingUnlocated: Bool = false) -> [Photo] {
-        let identifier = scope.split(separator: ":").last.flatMap { UUID(uuidString: String($0)) }
-        let smartRule = scope.hasPrefix("album:") ? library.albums.first { $0.id == identifier }?.rule : nil
-        let filtered = library.photos.filter { photo in
-            guard (photo.trashedAt != nil) == isViewingTrash,
-                  includingUnlocated || !usesPlacesPhotos || photo.cataloguedLocation != nil else { return false }
+        filteredPhotos(scope: scope, search: search, sort: sort, descending: sortDescending,
+                       rating: ratingFilter, originals: originalFilter, color: colorFilter,
+                       advancedQuery: advancedQuery, includingCollapsed: includingCollapsed,
+                       placesOnly: usesPlacesPhotos, includingUnlocated: includingUnlocated)
+    }
+
+    func filteredPhotos(scope targetScope: String, search targetSearch: String, sort targetSort: PhotoSort,
+                        descending: Bool, rating: RatingFilter, originals: OriginalFilter,
+                        color: ColorLabelFilter, advancedQuery: PhotoQuery? = nil,
+                        includingCollapsed: Bool = false, placesOnly: Bool = false,
+                        includingUnlocated: Bool = false) -> [Photo] {
+        let identifier = targetScope.split(separator: ":").last.flatMap { UUID(uuidString: String($0)) }
+        let smartRule = targetScope.hasPrefix("album:") ? library.albums.first { $0.id == identifier }?.rule : nil
+        let trash = targetScope == "trash"
+        let candidates = library.photos.filter { photo in
+            guard (photo.trashedAt != nil) == trash,
+                  includingUnlocated || !placesOnly || photo.cataloguedLocation != nil else { return false }
             let inScope: Bool
-            if scope.hasPrefix("project:"), let identifier { inScope = photo.projectID == identifier }
-            else if scope.hasPrefix("album:"), let identifier {
+            if targetScope.hasPrefix("project:"), let identifier { inScope = photo.projectID == identifier }
+            else if targetScope.hasPrefix("album:"), let identifier {
                 inScope = smartRule?.includes(photo, originalAvailable: { self.isOriginalAvailable(photo) }) ?? photo.albumIDs.contains(identifier)
             }
-            else if scope.hasPrefix("stack:"), let identifier { inScope = photo.stackID == identifier }
+            else if targetScope.hasPrefix("stack:"), let identifier { inScope = photo.stackID == identifier }
             else { inScope = true }
             return inScope &&
-                originalFilter.includes(photo, repository: repository) &&
-                colorFilter.includes(photo) &&
-                BrowserFilterRules.includes(rating: photo.rating, flagged: photo.flagged, ratingFilter: ratingFilter, flaggedOnly: scope == "flagged") &&
-                photo.matchesSearchText(search) &&
+                originals.includes(photo, repository: repository) &&
+                color.includes(photo) &&
+                BrowserFilterRules.includes(rating: photo.rating, flagged: photo.flagged, ratingFilter: rating, flaggedOnly: targetScope == "flagged") &&
+                photo.matchesSearchText(targetSearch) &&
                 (advancedQuery?.includes(photo, originalAvailable: { self.isOriginalAvailable(photo) }) ?? true)
-        }.sorted { lhs, rhs in sortDescending ? orderedBefore(rhs, lhs) : orderedBefore(lhs, rhs) }
-        guard !includingCollapsed, !usesPlacesPhotos, !isViewingTrash, !isViewingStack, let state = library.stackBrowser else { return filtered }
-        return state.presenting(filtered, albumID: currentAlbumID)
+        }
+        let sorted: [Photo]
+        if targetSort == .manual, let orderScope = manualOrderScope(for: targetScope) {
+            let ordered = (library.browserOrders ?? BrowserOrderState()).ordered(candidates, in: orderScope)
+            sorted = descending ? Array(ordered.reversed()) : ordered
+        } else {
+            let effectiveSort = targetSort == .manual ? PhotoSort.imported : targetSort
+            sorted = candidates.sorted { lhs, rhs in
+                descending ? orderedBefore(rhs, lhs, sort: effectiveSort) : orderedBefore(lhs, rhs, sort: effectiveSort)
+            }
+        }
+        let albumID = targetScope.hasPrefix("album:") ? identifier : nil
+        guard !includingCollapsed, !placesOnly, !trash, !targetScope.hasPrefix("stack:"),
+              let state = library.stackBrowser else { return sorted }
+        return state.presenting(sorted, albumID: albumID)
     }
 
     func isOriginalAvailable(_ photo: Photo) -> Bool? {
@@ -292,8 +338,9 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         scope = "album:\(album.id)"
         return true
     }
-    private func orderedBefore(_ lhs: Photo, _ rhs: Photo) -> Bool {
+    private func orderedBefore(_ lhs: Photo, _ rhs: Photo, sort: PhotoSort) -> Bool {
         switch sort {
+        case .manual: return lhs.importedAt == rhs.importedAt ? lhs.id.uuidString < rhs.id.uuidString : lhs.importedAt < rhs.importedAt
         case .imported: return lhs.importedAt == rhs.importedAt ? lhs.id.uuidString < rhs.id.uuidString : lhs.importedAt < rhs.importedAt
         case .name: return lhs.displayName == rhs.displayName ? lhs.id.uuidString < rhs.id.uuidString : lhs.displayName.localizedStandardCompare(rhs.displayName) == .orderedAscending
         case .rating: return lhs.rating == rhs.rating ? lhs.importedAt < rhs.importedAt : lhs.rating < rhs.rating
@@ -342,6 +389,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         saved.upgradeForLocalPolarizeHalo()
         saved.upgradeForPressureBrushes()
         saved.upgradeForLightTables()
+        saved.upgradeForBrowserOrders()
         do {
             library = try repository.save(saved)
             if newHistory != nil { history = nextHistory }
@@ -361,6 +409,8 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
               commit(draft, history: nextHistory) else { return }
         if case .lightTables = entry {
             if activeLightTableID != nil, activeLightTable == nil { scope = "all" }
+        } else if case .browserOrders = entry {
+            selectAfterChange(preferred: selection)
         } else {
             let continuedTool = viewer && selection == entry.selectionID && (tool == .brush || tool == .spot || tool == .redEye) ? tool : nil
             selectAfterChange(preferred: entry.selectionID)
@@ -376,6 +426,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         case .stamp: status = redo ? "Stamp redone" : "Stamp undone"
         case .locations: status = redo ? "Location change redone" : "Location change undone"
         case .lightTables: status = redo ? "Light Table change redone" : "Light Table change undone"
+        case .browserOrders: status = redo ? "Browser order redone" : "Browser order undone"
         }
     }
     func selectAfterChange(preferred: UUID?) {
@@ -800,6 +851,9 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 GridThumbnailSizePicker(model: workspace)
                 Toggle("Quick Preview", isOn: Binding(get: { workspace.quickPreview }, set: workspace.setQuickPreview))
                     .disabled(!workspace.quickPreview && !workspace.canToggleQuickPreview)
+                Toggle("Second Browser", isOn: Binding(get: { workspace.secondaryBrowser.visible },
+                    set: workspace.setSecondaryBrowserVisible))
+                    .disabled(!workspace.secondaryBrowser.visible && !workspace.canShowSecondaryBrowser)
                 Button("Customize List Columns…") { workspace.showListColumnEditor = true }
                     .disabled(workspace.browserLayout != .list)
                 Button("Reset List Columns", action: workspace.resetListColumns)
@@ -948,9 +1002,9 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 Button("Reject Photos") { workspace.setReviewRating(RatingRules.rejected) }.disabled(!workspace.canReviewSelection)
                 Divider()
                 Button("Raise Rating") { workspace.adjustReviewRating(by: 1) }
-                    .disabled(!workspace.canReviewSelection || (!workspace.batchMode && (workspace.selected?.rating ?? RatingRules.maximum) >= RatingRules.maximum))
+                    .disabled(!workspace.canReviewSelection || (!workspace.batchMode && (workspace.reviewSelected?.rating ?? RatingRules.maximum) >= RatingRules.maximum))
                 Button("Lower Rating") { workspace.adjustReviewRating(by: -1) }
-                    .disabled(!workspace.canReviewSelection || (!workspace.batchMode && (workspace.selected?.rating ?? RatingRules.rejected) <= RatingRules.rejected))
+                    .disabled(!workspace.canReviewSelection || (!workspace.batchMode && (workspace.reviewSelected?.rating ?? RatingRules.rejected) <= RatingRules.rejected))
             }
             CommandGroup(replacing: .help) {
                 Button("Features & Limits…") { openWindow(id: "features") }
@@ -1369,13 +1423,16 @@ struct ContentView: View {
                         } else {
                             ScrollView {
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: model.gridThumbnailSize.columnWidth), spacing: 16)], spacing: 18) {
-                                    ForEach(model.photos) { photo in photoCell(photo, compact: false) }
+                                    ForEach(model.photos) { photo in photoCell(photo, compact: false, manualReorder: true) }
                                 }.padding(20)
                             }
                         }
                     }.frame(minWidth: 400).background(Color(white: 0.055))
                         .focusable().focusEffectDisabled()
                         .focused($focusedPhotographyPanel, equals: model.viewer ? .viewer : .browser)
+                        .simultaneousGesture(TapGesture().onEnded {
+                            if !model.viewer { model.activeBrowserPane = .primary }
+                        })
                         .keywordShortcuts(for: model)
                         .onKeyPress(.escape) {
                             if model.isPhotographyFullScreen {
@@ -1386,6 +1443,9 @@ struct ContentView: View {
                             model.exitViewer()
                             return .handled
                         }
+                    if model.activeLightTable == nil, model.secondaryBrowser.visible, !model.viewer, !model.places, !model.batchMode {
+                        SecondaryBrowserPane(model: model)
+                    }
                     if model.activeLightTable == nil, model.photographyLayout.inspector && !model.isViewingTrash {
                         Inspector().frame(minWidth: 260, idealWidth: 290, maxWidth: 340).workspaceGlass(radius: 20).padding(10)
                             .focusable().focusEffectDisabled()
@@ -1490,6 +1550,7 @@ struct ContentView: View {
             Text(model.originalJobResult?.details ?? "")
         }
         .onChange(of: model.scope) { _, _ in
+            model.activeBrowserPane = .primary
             if model.isViewingTrash {
                 model.search = ""; model.ratingFilter = .all; model.originalFilter = .all; model.colorFilter = .all; model.advancedSearch = nil
             }
@@ -1519,12 +1580,14 @@ struct ContentView: View {
         .onChange(of: model.selection) { _, _ in model.tool = .select; model.compareOriginal = false }
     }
     @ViewBuilder func photoCell(_ photo: Photo, compact: Bool, onSelect: (() -> Void)? = nil,
+                                manualReorder: Bool = false,
                                 photographyFocus: PhotographyWorkspaceFocus? = nil) -> some View {
         if let repo = model.repository {
             let url = try? repo.availableOriginalURL(photo)
             let isSelected = model.batchMode ? model.batchSelection.contains(photo.id) : model.selection == photo.id
             let selectedColor = model.quickPreview ? Color.yellow : Color.accentColor
             Button {
+                model.activeBrowserPane = .primary
                 if let onSelect {
                     onSelect()
                 } else if model.batchMode {
@@ -1561,7 +1624,26 @@ struct ContentView: View {
                     .background(isSelected ? selectedColor.opacity(0.18) : Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(isSelected ? selectedColor : Color.white.opacity(0.07), lineWidth: isSelected ? 2 : 1))
             }.buttonStyle(.plain)
-            .contextMenu { PhotoContextActions(model: model, photo: photo, url: url) }
+            .draggable(photo.id.uuidString)
+            .dropDestination(for: String.self) { values, _ in
+                guard manualReorder, let value = values.first, let id = UUID(uuidString: value),
+                      model.canManuallyOrder(model.scope) else { return false }
+                let source = model.library.photos.first { $0.id == id }
+                let moving = source.map { model.manualMoveIDs(for: $0, scope: model.scope) } ?? [id]
+                model.moveManualPhotos(moving, before: model.manualDropTargetID(for: photo, scope: model.scope),
+                                       scope: model.scope)
+                return true
+            }
+            .contextMenu {
+                PhotoContextActions(model: model, photo: photo, url: url)
+                if manualReorder {
+                    Divider()
+                    Button("Move to Beginning") { model.moveManualPhoto(photo, toEnd: false, scope: model.scope) }
+                        .disabled(!model.canManuallyOrder(model.scope))
+                    Button("Move to End") { model.moveManualPhoto(photo, toEnd: true, scope: model.scope) }
+                        .disabled(!model.canManuallyOrder(model.scope))
+                }
+            }
         }
     }
 }

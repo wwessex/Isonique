@@ -308,10 +308,16 @@ struct PhotoListBrowser: View {
         .environment(\.defaultMinListRowHeight, 30)
         .accessibilityLabel("Photo list")
         .keywordShortcuts(for: model)
+        .onChange(of: model.selection) { _, _ in model.activeBrowserPane = .primary }
         .contextMenu(forSelectionType: UUID.self) { ids in
             if let id = ids.first, ids.count == 1, let photo = photos.first(where: { $0.id == id }) {
                 if !model.batchMode { Button("Open Photo") { model.openListPhoto(id) } }
                 PhotoContextActions(model: model, photo: photo, url: try? model.repository?.availableOriginalURL(photo))
+                Divider()
+                Button("Move to Beginning") { model.moveManualPhoto(photo, toEnd: false, scope: model.scope) }
+                    .disabled(!model.canManuallyOrder(model.scope))
+                Button("Move to End") { model.moveManualPhoto(photo, toEnd: true, scope: model.scope) }
+                    .disabled(!model.canManuallyOrder(model.scope))
             } else if !ids.isEmpty {
                 Button(model.isViewingTrash ? "Put Back Photos" : "Move Photos to Trash") {
                     model.setPhotosTrashed(ids, trashed: !model.isViewingTrash)
@@ -350,6 +356,16 @@ struct PhotoListBrowser: View {
                 }
                 Text(photo.displayName).lineLimit(1)
                 if let stackID = photo.stackID { StackBadge(stackID: stackID, photo: photo, model: model) }
+            }
+            .draggable(photo.id.uuidString)
+            .dropDestination(for: String.self) { values, _ in
+                guard let value = values.first, let id = UUID(uuidString: value),
+                      model.canManuallyOrder(model.scope) else { return false }
+                let source = model.library.photos.first { $0.id == id }
+                let moving = source.map { model.manualMoveIDs(for: $0, scope: model.scope) } ?? [id]
+                model.moveManualPhotos(moving, before: model.manualDropTargetID(for: photo, scope: model.scope),
+                                       scope: model.scope)
+                return true
             }
         case .rating:
             if photo.rating == RatingRules.rejected {

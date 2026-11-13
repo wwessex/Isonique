@@ -32,8 +32,23 @@ extension PhotoColorLabel {
 }
 
 extension Workspace {
+    var usesSecondaryBrowserFocus: Bool {
+        secondaryBrowser.visible && activeBrowserPane == .secondary && !viewer && !batchMode
+    }
+
+    var reviewPhotos: [Photo] { usesSecondaryBrowserFocus ? secondaryPhotos : photos }
+    var reviewSelected: Photo? { usesSecondaryBrowserFocus ? secondarySelected : selected }
+    var reviewSelectionID: UUID? {
+        get { usesSecondaryBrowserFocus ? secondaryBrowserSelection : selection }
+        set {
+            if usesSecondaryBrowserFocus { secondaryBrowserSelection = newValue }
+            else { selection = newValue }
+        }
+    }
+
     var canReviewSelection: Bool {
-        !busy && !isViewingTrash && (batchMode ? !batchPhotos.isEmpty : selected != nil)
+        let trash = usesSecondaryBrowserFocus ? normalizedSecondaryScope == "trash" : isViewingTrash
+        return !busy && !trash && (batchMode ? !batchPhotos.isEmpty : reviewSelected != nil)
     }
 
     private func applyReviewChange(_ change: (inout Photo) -> Void) {
@@ -42,11 +57,16 @@ extension Workspace {
             editBatch(change)
             return
         }
-        let index = photos.firstIndex { $0.id == selection } ?? 0
-        edit(change)
-        if selected == nil {
-            let remaining = photos
-            selection = remaining.isEmpty ? nil : remaining[min(index, remaining.count - 1)].id
+        let currentPhotos = reviewPhotos
+        let target = reviewSelectionID
+        let index = currentPhotos.firstIndex { $0.id == target } ?? 0
+        guard let target else { return }
+        var draft = library
+        let previous = draft.updatePhotos([target], change: change)
+        guard commitPhotoChanges(draft, previous: previous) else { return }
+        if reviewSelected == nil {
+            let remaining = reviewPhotos
+            reviewSelectionID = remaining.isEmpty ? nil : remaining[min(index, remaining.count - 1)].id
             if remaining.isEmpty { viewer = false }
         }
     }
@@ -64,7 +84,7 @@ extension Workspace {
     }
 
     func toggleReviewFlag() {
-        let flagged = batchMode ? !batchPhotos.allSatisfy(\.flagged) : selected?.flagged != true
+        let flagged = batchMode ? !batchPhotos.allSatisfy(\.flagged) : reviewSelected?.flagged != true
         applyReviewChange { $0.flagged = flagged }
     }
 
@@ -73,17 +93,17 @@ extension Workspace {
               press.modifiers.intersection([.command, .option, .control, .shift]).isEmpty else { return .ignored }
         switch press.key {
         case .leftArrow, .rightArrow:
-            guard !batchMode, !photos.isEmpty else { return .ignored }
+            guard !batchMode, !reviewPhotos.isEmpty else { return .ignored }
             if comparisonID != nil {
                 moveComparisonSelection(by: press.key == .leftArrow ? -1 : 1)
                 return .handled
             }
-            let visible = photos.filter { $0.id != comparisonID }
-            if let index = visible.firstIndex(where: { $0.id == selection }) {
+            let visible = reviewPhotos.filter { $0.id != comparisonID }
+            if let index = visible.firstIndex(where: { $0.id == reviewSelectionID }) {
                 let next = index + (press.key == .leftArrow ? -1 : 1)
-                if visible.indices.contains(next) { selection = visible[next].id }
+                if visible.indices.contains(next) { reviewSelectionID = visible[next].id }
             } else {
-                selection = visible.first?.id
+                reviewSelectionID = visible.first?.id
             }
         default:
             guard canReviewSelection else { return .ignored }

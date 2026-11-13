@@ -227,6 +227,24 @@ public extension LibraryRepository {
                                                                      excludedStacks: excludedPresentation,
                                                                      regularAlbums: sourceRegularIDs)
         }
+        if let incomingOrders = source.browserOrders {
+            var orders = draft.browserOrders ?? BrowserOrderState()
+            let projectScope = "project:\(project.id)"
+            let preferred = incomingOrders.ids(in: projectScope).isEmpty
+                ? incomingOrders.ids(in: "all") : incomingOrders.ids(in: projectScope)
+            let projectIDs = Set(draft.photos.filter { $0.trashedAt == nil && $0.projectID == project.id }.map(\.id))
+            if preference == .incoming || orders.ids(in: projectScope).isEmpty {
+                orders.set(preferred.filter(projectIDs.contains), in: projectScope)
+            }
+            for album in source.albums where album.rule == nil {
+                let scope = "album:\(album.id)"
+                let albumIDs = Set(draft.photos.filter { $0.trashedAt == nil && $0.albumIDs.contains(album.id) }.map(\.id))
+                if preference == .incoming || orders.ids(in: scope).isEmpty {
+                    orders.set(incomingOrders.ids(in: scope).filter(albumIDs.contains), in: scope)
+                }
+            }
+            if !orders.isEmpty { draft.browserOrders = orders; draft.upgradeForBrowserOrders() }
+        }
         try draft.validateSchema()
         _ = try draft.uniqueOriginals()
         try Task.checkCancellation()
