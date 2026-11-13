@@ -111,6 +111,11 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
 
     private var term: String { value.trimmingCharacters(in: .whitespacesAndNewlines) }
 
+    var exactPersonKey: String? {
+        guard field == .person, (comparison == .equals || comparison == .differs), !term.isEmpty else { return nil }
+        return PhotoFace.personKey(term)
+    }
+
     public var isValid: Bool {
         guard field.operators.contains(comparison) else { return false }
         if !comparison.needsValue { return true }
@@ -172,6 +177,10 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
             let names = photo.personNames
             if comparison == .isPresent { return !names.isEmpty }
             if comparison == .isMissing { return names.isEmpty }
+            if let exactPersonKey {
+                let matches = names.contains { PhotoFace.personKey($0) == exactPersonKey }
+                return comparison == .equals ? matches : !matches
+            }
             return matchesText(names)
         case .format:
             let extensionValue = Self.normalizedExtension((photo.filename as NSString).pathExtension)

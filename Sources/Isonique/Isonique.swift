@@ -26,6 +26,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var showSmartAlbum = false
     @Published var showAdvancedSearch = false
     @Published var peopleReview: PeopleReview?
+    @Published var personNameEditor: PersonNameEditorRequest?
     @Published var peopleScan: Task<PeopleScanResult, Error>?
     var peopleGroupsSnapshot: [PeopleGroup]?
     @Published var advancedSearch: PhotoQuery?
@@ -425,6 +426,8 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
             if activeLightTableID != nil, activeLightTable == nil { scope = "all" }
         } else if case .browserOrders = entry {
             selectAfterChange(preferred: selection)
+        } else if case .personName(let change) = entry {
+            refreshPersonNameScopes(from: change.sourceKey, to: change.destinationKey, onlyIfSourceVanished: true)
         } else {
             let continuedTool = viewer && selection == entry.selectionID && (tool == .brush || tool == .spot || tool == .redEye) ? tool : nil
             selectAfterChange(preferred: entry.selectionID)
@@ -440,6 +443,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         case .stamp: status = redo ? "Stamp redone" : "Stamp undone"
         case .locations: status = redo ? "Location change redone" : "Location change undone"
         case .people: status = redo ? "People change redone" : "People change undone"
+        case .personName: status = redo ? "Person name change redone" : "Person name change undone"
         case .lightTables: status = redo ? "Light Table change redone" : "Light Table change undone"
         case .browserOrders: status = redo ? "Browser order redone" : "Browser order undone"
         }
@@ -1270,6 +1274,10 @@ struct ContentView: View {
                             ForEach(people) { person in
                                 Label("\(person.name) (\(person.photoCount))", systemImage: "person")
                                     .tag(person.scope)
+                                    .contextMenu {
+                                        Button("Rename or Merge Person…") { model.openPersonNameEditor(person) }
+                                            .disabled(model.busy)
+                                    }
                             }
                         }
                     }
@@ -1517,6 +1525,9 @@ struct ContentView: View {
         .sheet(isPresented: $model.showAdvancedSearch) { AdvancedSearchView().environmentObject(model) }
         .sheet(item: $model.peopleReview) { review in
             PeopleReviewView(review: review).environmentObject(model)
+        }
+        .sheet(item: $model.personNameEditor) { request in
+            PersonNameEditor(request: request).environmentObject(model)
         }
         .sheet(isPresented: $model.showDeviceImport, onDismiss: model.finishDevicePicker) {
             DeviceImportView(discovery: model.cameraDiscovery).environmentObject(model)

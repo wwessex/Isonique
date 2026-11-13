@@ -469,9 +469,15 @@ Catalogue format 37 stores People records by photo version and supports Person r
 
 Automatic identity recognition remains future opt-in work. The current workflow sends the oriented image to local Vision APIs and assigns identities manually. [Apple Vision face rectangles](https://developer.apple.com/documentation/vision/detectfacerectanglesrequest)
 
+## Person-wide rename and merge
+
+Choose **Rename or Merge Person** from a named group's context menu or select the group and open the Metadata menu. Rename uses the existing case- and accent-insensitive name grouping and allows spelling corrections within the same group. A collision requires an explicit merge. The review lists each affected photo version and face count, including assignments in Trash, and shows the old and new values of each exact-name `is` or `is not` rule in saved Smart Albums. Substring rules keep their text. A merge keeps each face box and can broaden an exact rule to the combined group.
+
+The catalogue saves assignments and rules together. Preview and cancellation perform no writes, and the repository rejects a save based on a stale catalogue revision. With persistent history enabled, format 38 records the whole rename or merge as one Undo/Redo step. Undo and Redo skip rules that were subsequently edited or removed. The workflow reads saved assignments and works with offline originals.
+
 ## Next checkpoint
 
-Add person-wide rename and merge actions with a review of the affected versions and exact-name Smart Album rules. Keep manual assignments available offline and make each confirmed change a single persistent Undo step.
+Add an Unnamed Faces review queue to People with project and library scope. Let users assign an existing name, enter a new one or dismiss a detection, then advance to the next face. Keep saved assignments and Undo/Redo available offline.
 
 ## Pending physical camera checks
 

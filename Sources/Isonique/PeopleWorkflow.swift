@@ -151,5 +151,8 @@ struct PeopleCommands: View {
         Button("Review Faces…") {
             if let photo = model.selected { model.openPeopleReview(photo) }
         }.disabled(model.selected == nil || model.isViewingTrash || model.busy || model.batchMode)
+        Button("Rename or Merge Person…") {
+            if let group = model.selectedPersonGroup { model.openPersonNameEditor(group) }
+        }.disabled(model.selectedPersonGroup == nil || model.busy)
     }
 }

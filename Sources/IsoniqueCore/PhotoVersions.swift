@@ -112,6 +112,7 @@ public extension Library {
             return replaceBatchMetadata(changes).map(PhotoHistoryEntry.batchMetadata)
         case .locations(let changes): return replaceLocations(changes).map(PhotoHistoryEntry.locations)
         case .people(let changes): return replacePeople(changes).map(PhotoHistoryEntry.people)
+        case .personName(let changes): return applyPersonNameChanges(changes).map(PhotoHistoryEntry.personName)
         case .lightTables(let layouts):
             let current = lightTables ?? []
             lightTables = layouts
@@ -138,13 +139,14 @@ public enum PhotoHistoryEntry: Codable, Equatable {
     case stamp([PhotoStampChange])
     case locations([PhotoLocationChange])
     case people([PhotoPeopleChange])
+    case personName(PersonNameHistory)
     case lightTables([LightTableLayout])
     case browserOrders(BrowserOrderState?)
 
     public var photo: Photo? {
         switch self {
         case .edit(let photo), .removeVersion(let photo), .restoreVersion(let photo): return photo
-        case .stackPick, .captureDates, .batchMetadata, .stamp, .locations, .people, .lightTables, .browserOrders: return nil
+        case .stackPick, .captureDates, .batchMetadata, .stamp, .locations, .people, .personName, .lightTables, .browserOrders: return nil
         }
     }
 
@@ -160,6 +162,7 @@ public enum PhotoHistoryEntry: Codable, Equatable {
         case .stamp(let changes): return changes.map(\.photoID)
         case .locations(let changes): return changes.map(\.photoID)
         case .people(let changes): return changes.map(\.photoID)
+        case .personName(let changes): return changes.photos.map(\.photoID)
         case .lightTables, .browserOrders: return []
         default: return []
         }
@@ -172,6 +175,7 @@ public enum PhotoHistoryEntry: Codable, Equatable {
         case .lightTables: return 35
         case .browserOrders: return 36
         case .people: return 37
+        case .personName: return 38
         case .stamp(let changes): return max(13, changes.compactMap(\.requiredCatalogueVersion).max() ?? 0)
         case .batchMetadata(let changes):
             if changes.contains(where: { $0.iptc?.isEmpty == false }) { return 11 }
@@ -258,6 +262,9 @@ public struct EditHistory: Codable {
             if case .people(let changes) = entry {
                 let kept = changes.filter { !photoIDs.contains($0.photoID) }
                 return kept.isEmpty ? nil : .people(kept)
+            }
+            if case .personName(let changes) = entry {
+                return changes.excludingPhotos(photoIDs).map(PhotoHistoryEntry.personName)
             }
             return isRemoved(entry) ? nil : entry
         }

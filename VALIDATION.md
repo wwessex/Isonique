@@ -103,6 +103,7 @@ Use a disposable library with an upright group photo and JPEG variants with rota
 2. Give a face a multiword name, draw a missed face, redraw an existing box and remove a false positive. Rescan and confirm that the dismissed face does not reappear. Save, then Undo, Redo and reopen the library with persistent history enabled.
 3. Check the People sidebar and add a **Person** rule in Advanced Search and a Smart Album. Disconnect the referenced original and repeat the queries. Confirm that saved names can still be corrected, while detection and box placement require the original.
 4. Compare before-and-after edited and original exports with XMP enabled. Check that People names and boxes are absent and the original fingerprints match.
+5. Select a named group and choose **Metadata → Rename or Merge Person**. Try renaming it to a case or accent variant of another group's name. Confirm Rename reports the collision, then choose Merge and preview affected photo versions and exact-name Smart Album rules. Cancel one review and apply another. Reopen the library and verify one Undo or Redo changes the assignments and rules together. Repeat with the referenced originals offline.
 
 ## Physical PTP camera import
 

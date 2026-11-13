@@ -574,6 +574,9 @@ public struct Library: Codable {
             if case .people(let changes) = entry {
                 for change in changes { try change.people?.validate() }
             }
+            if case .personName(let changes) = entry {
+                for change in changes.photos { try change.people?.validate() }
+            }
         }
         if version < 36, browserOrders?.isEmpty == false { throw LibraryError.unsupportedVersion }
         try browserOrders?.validateStructure()
@@ -613,7 +616,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...37).contains(version) { return }
+        if (7...38).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
