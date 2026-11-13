@@ -177,6 +177,7 @@ private struct PhotoQueryRow: View {
         case .exifISO: TextField("e.g. 400", text: $criterion.value).accessibilityLabel("Rule ISO")
         case .exifFocalLength: TextField("e.g. 35 mm", text: $criterion.value).accessibilityLabel("Rule focal length")
         case .exifLens: TextField("Lens name", text: $criterion.value).accessibilityLabel("Rule lens name")
+        case .person: TextField("Person’s name", text: $criterion.value).accessibilityLabel("Rule person name")
         case .gpsLatitude: TextField("e.g. 51.5", text: $criterion.value).accessibilityLabel("Rule latitude")
         case .gpsLongitude: TextField("e.g. -0.125", text: $criterion.value).accessibilityLabel("Rule longitude")
         case .gpsLocation:

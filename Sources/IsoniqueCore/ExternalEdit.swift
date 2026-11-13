@@ -136,6 +136,7 @@ public extension LibraryRepository {
         derivative.width = width
         derivative.height = height
         derivative.sha256 = returnedDigest
+        derivative.people = nil
         derivative.adjustments = Adjustments()
 
         var draft = library

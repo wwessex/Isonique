@@ -111,6 +111,7 @@ public extension Library {
         case .batchMetadata(let changes):
             return replaceBatchMetadata(changes).map(PhotoHistoryEntry.batchMetadata)
         case .locations(let changes): return replaceLocations(changes).map(PhotoHistoryEntry.locations)
+        case .people(let changes): return replacePeople(changes).map(PhotoHistoryEntry.people)
         case .lightTables(let layouts):
             let current = lightTables ?? []
             lightTables = layouts
@@ -136,13 +137,14 @@ public enum PhotoHistoryEntry: Codable, Equatable {
     case batchMetadata([BatchMetadataChange])
     case stamp([PhotoStampChange])
     case locations([PhotoLocationChange])
+    case people([PhotoPeopleChange])
     case lightTables([LightTableLayout])
     case browserOrders(BrowserOrderState?)
 
     public var photo: Photo? {
         switch self {
         case .edit(let photo), .removeVersion(let photo), .restoreVersion(let photo): return photo
-        case .stackPick, .captureDates, .batchMetadata, .stamp, .locations, .lightTables, .browserOrders: return nil
+        case .stackPick, .captureDates, .batchMetadata, .stamp, .locations, .people, .lightTables, .browserOrders: return nil
         }
     }
 
@@ -157,6 +159,7 @@ public enum PhotoHistoryEntry: Codable, Equatable {
         case .batchMetadata(let changes): return changes.map(\.photoID)
         case .stamp(let changes): return changes.map(\.photoID)
         case .locations(let changes): return changes.map(\.photoID)
+        case .people(let changes): return changes.map(\.photoID)
         case .lightTables, .browserOrders: return []
         default: return []
         }
@@ -168,11 +171,13 @@ public enum PhotoHistoryEntry: Codable, Equatable {
         case .locations: return 16
         case .lightTables: return 35
         case .browserOrders: return 36
+        case .people: return 37
         case .stamp(let changes): return max(13, changes.compactMap(\.requiredCatalogueVersion).max() ?? 0)
         case .batchMetadata(let changes):
             if changes.contains(where: { $0.iptc?.isEmpty == false }) { return 11 }
             return changes.contains { $0.keywordPaths != nil } ? 10 : 9
         default:
+            if photo?.people != nil { return 37 }
             if photo?.adjustments.hasPressureBrushRecipe == true { return 34 }
             if photo?.adjustments.hasLocalPolarizeHaloRecipe == true { return 33 }
             if photo?.adjustments.hasLocalBrushInstancesRecipe == true { return 32 }
@@ -249,6 +254,10 @@ public struct EditHistory: Codable {
             if case .locations(let changes) = entry {
                 let kept = changes.filter { !photoIDs.contains($0.photoID) }
                 return kept.isEmpty ? nil : .locations(kept)
+            }
+            if case .people(let changes) = entry {
+                let kept = changes.filter { !photoIDs.contains($0.photoID) }
+                return kept.isEmpty ? nil : .people(kept)
             }
             return isRemoved(entry) ? nil : entry
         }

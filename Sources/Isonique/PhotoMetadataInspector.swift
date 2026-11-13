@@ -42,6 +42,12 @@ struct PhotoMetadataInspector: View {
                     fieldList(view.fields).id(view)
                 }
             }
+            if photo.trashedAt == nil {
+                if !photo.personNames.isEmpty {
+                    LabeledContent("People", value: photo.personNames.joined(separator: ", "))
+                }
+                Button("Review Faces…") { model.openPeopleReview(photo) }.disabled(model.busy)
+            }
         }
         .font(.caption)
         .sheet(item: $editingView) { view in

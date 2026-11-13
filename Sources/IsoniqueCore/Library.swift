@@ -399,6 +399,7 @@ public struct Photo: Codable, Identifiable, Equatable {
     public var cameraEXIF: CameraEXIF?
     public var gpsIndex: GPSIndex?
     public var locationOverride: PhotoLocationOverride?
+    public var people: PhotoPeople?
     public var captureDate: String
     public var sha256: String
     public var adjustments = Adjustments()
@@ -566,6 +567,14 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 37, hasPeopleData { throw LibraryError.unsupportedVersion }
+        for photo in photos { try photo.people?.validate() }
+        for entry in (history?.undo ?? []) + (history?.redo ?? []) {
+            try entry.photo?.people?.validate()
+            if case .people(let changes) = entry {
+                for change in changes { try change.people?.validate() }
+            }
+        }
         if version < 36, browserOrders?.isEmpty == false { throw LibraryError.unsupportedVersion }
         try browserOrders?.validateStructure()
         if version < 35, lightTables?.isEmpty == false { throw LibraryError.unsupportedVersion }
@@ -604,7 +613,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...36).contains(version) { return }
+        if (7...37).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -789,6 +798,7 @@ public final class LibraryRepository {
         normalized.upgradeForLocalPolarizeHalo()
         normalized.upgradeForPressureBrushes()
         normalized.upgradeForLightTables()
+        normalized.upgradeForPeople()
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }

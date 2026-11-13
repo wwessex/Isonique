@@ -42,6 +42,7 @@ public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
     case gpsLocation = "GPS Location"
     case gpsLatitude = "GPS Latitude"
     case gpsLongitude = "GPS Longitude"
+    case person = "Person"
     case format = "File extension"
     case captured = "Capture date"
     case imported = "Import date"
@@ -81,6 +82,7 @@ public enum PhotoQueryField: String, CaseIterable, Codable, Identifiable {
         case .exifLens: return [.contains, .excludes, .equals, .differs, .isPresent, .isMissing]
         case .gpsLocation: return [.withinRadius, .isPresent, .isMissing, .isUnindexed]
         case .gpsLatitude, .gpsLongitude: return [.equals, .minimum, .maximum, .differs]
+        case .person: return [.contains, .excludes, .equals, .differs, .isPresent, .isMissing]
         case .keywordPath: return [.equals, .inBranch, .differs]
         case .format, .colorLabel: return [.equals, .differs]
         case .captured, .imported: return [.since, .until, .equals, .differs]
@@ -166,6 +168,11 @@ public struct PhotoQueryCriterion: Codable, Equatable, Identifiable {
             }
         case .gpsLatitude: return matchesGPSAxis(photo.cataloguedLocation?.latitude)
         case .gpsLongitude: return matchesGPSAxis(photo.cataloguedLocation?.longitude)
+        case .person:
+            let names = photo.personNames
+            if comparison == .isPresent { return !names.isEmpty }
+            if comparison == .isMissing { return names.isEmpty }
+            return matchesText(names)
         case .format:
             let extensionValue = Self.normalizedExtension((photo.filename as NSString).pathExtension)
             let expected = Self.normalizedExtension(term)

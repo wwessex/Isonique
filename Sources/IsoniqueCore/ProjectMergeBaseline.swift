@@ -22,6 +22,7 @@ struct ProjectPhotoMergeValues: Codable {
     let keywordPaths: [KeywordPath]?
     let captureDate: String
     let locationOverride: PhotoLocationOverride?
+    let people: PhotoPeople?
     let albumIDs: Set<UUID>
     let stackID: UUID?
     let pairID: UUID?
@@ -40,15 +41,17 @@ struct ProjectPhotoMergeValues: Codable {
         keywordPaths = photo.keywordPaths
         captureDate = photo.captureDate
         locationOverride = photo.locationOverride
+        people = photo.people
         albumIDs = photo.albumIDs
         stackID = photo.stackID
         pairID = photo.pairID
     }
 
     func merging(_ current: Photo, with incoming: Photo, prefer preference: ProjectMergePreference,
-                 representedAlbums: Set<UUID>, supportsLocationEdits: Bool = false) -> (photo: Photo, conflicts: [String]) {
+                 representedAlbums: Set<UUID>, supportsLocationEdits: Bool = false,
+                 supportsPeople: Bool = false) -> (photo: Photo, conflicts: [String]) {
         var result = Self.mergingEditableValues(current, with: incoming, baseline: self, prefer: preference,
-                                                supportsLocationEdits: supportsLocationEdits)
+                                                supportsLocationEdits: supportsLocationEdits, supportsPeople: supportsPeople)
         // Membership is a Boolean per album. Changes to distinct albums can both survive.
         let touchedAlbums = albumIDs.union(incoming.albumIDs).intersection(representedAlbums)
         for album in touchedAlbums where albumIDs.contains(album) != incoming.albumIDs.contains(album) {
@@ -59,7 +62,8 @@ struct ProjectPhotoMergeValues: Codable {
     }
 
     static func mergingEditableValues(_ current: Photo, with incoming: Photo, baseline: Self?,
-                                      prefer preference: ProjectMergePreference, supportsLocationEdits: Bool = false)
+                                      prefer preference: ProjectMergePreference, supportsLocationEdits: Bool = false,
+                                      supportsPeople: Bool = false)
         -> (photo: Photo, conflicts: [String]) {
         var photo = current
         let edits = current.adjustments.mergingEdits(with: incoming.adjustments, baseline: baseline?.adjustments,
@@ -95,6 +99,9 @@ struct ProjectPhotoMergeValues: Codable {
         // Absence can only mean "use the original" when the incoming export supports edits and has a baseline.
         if incoming.locationOverride != nil || (baseline != nil && supportsLocationEdits) {
             apply(\.locationOverride, \.locationOverride, "Location")
+        }
+        if incoming.people != nil || (baseline != nil && supportsPeople) {
+            apply(\.people, \.people, "People")
         }
         return (photo, conflicts)
     }

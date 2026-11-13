@@ -11,7 +11,10 @@ enum PhotoSort: String, CaseIterable, Identifiable, Codable {
 enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
 @MainActor final class Workspace: ObservableObject {
     @Published var library = Library() {
-        didSet { browserSnapshot = nil }
+        didSet {
+            browserSnapshot = nil
+            peopleGroupsSnapshot = nil
+        }
     }
     @Published var scope = "all"
     @Published var selection: UUID?
@@ -22,6 +25,9 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var slideshowPhotos: [Photo] = []
     @Published var showSmartAlbum = false
     @Published var showAdvancedSearch = false
+    @Published var peopleReview: PeopleReview?
+    @Published var peopleScan: Task<PeopleScanResult, Error>?
+    var peopleGroupsSnapshot: [PeopleGroup]?
     @Published var advancedSearch: PhotoQuery?
     @Published var editingSmartAlbum: UUID?
     @Published var search = ""
@@ -290,6 +296,11 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 inScope = smartRule?.includes(photo, originalAvailable: { self.isOriginalAvailable(photo) }) ?? photo.albumIDs.contains(identifier)
             }
             else if targetScope.hasPrefix("stack:"), let identifier { inScope = photo.stackID == identifier }
+            else if targetScope == "people" { inScope = photo.people?.faces.isEmpty == false }
+            else if targetScope.hasPrefix("person:") {
+                let person = String(targetScope.dropFirst("person:".count))
+                inScope = photo.personNames.contains { PhotoFace.personKey($0) == person }
+            }
             else { inScope = true }
             return inScope &&
                 originals.includes(photo, repository: repository) &&
@@ -310,6 +321,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         }
         let albumID = targetScope.hasPrefix("album:") ? identifier : nil
         guard !includingCollapsed, !placesOnly, !trash, !targetScope.hasPrefix("stack:"),
+              targetScope != "people", !targetScope.hasPrefix("person:"),
               let state = library.stackBrowser else { return sorted }
         return state.presenting(sorted, albumID: albumID)
     }
@@ -355,6 +367,8 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     }
     var title: String {
         if let lightTable = activeLightTable { return lightTable.name }
+        if scope == "people" { return "People" }
+        if scope.hasPrefix("person:") { return peopleGroups.first { $0.scope == scope }?.name ?? "People" }
         if isViewingTrash { return "Trash" }
         if scope == "flagged" { return "Flagged" }
         if let project = library.projects.first(where: { scope == "project:\($0.id)" }) { return project.name }
@@ -425,6 +439,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         case .batchMetadata: status = redo ? "Batch metadata change redone" : "Batch metadata change undone"
         case .stamp: status = redo ? "Stamp redone" : "Stamp undone"
         case .locations: status = redo ? "Location change redone" : "Location change undone"
+        case .people: status = redo ? "People change redone" : "People change undone"
         case .lightTables: status = redo ? "Light Table change redone" : "Light Table change undone"
         case .browserOrders: status = redo ? "Browser order redone" : "Browser order undone"
         }
@@ -851,6 +866,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 GridThumbnailSizePicker(model: workspace)
                 Toggle("Quick Preview", isOn: Binding(get: { workspace.quickPreview }, set: workspace.setQuickPreview))
                     .disabled(!workspace.quickPreview && !workspace.canToggleQuickPreview)
+                Button("People", action: workspace.showPeople)
                 Toggle("Second Browser", isOn: Binding(get: { workspace.secondaryBrowser.visible },
                     set: workspace.setSecondaryBrowserVisible))
                     .disabled(!workspace.secondaryBrowser.visible && !workspace.canShowSecondaryBrowser)
@@ -947,6 +963,8 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 }.disabled(!workspace.canToggleSelectedStack)
             }
             CommandMenu("Metadata") {
+                PeopleCommands(model: workspace)
+                Divider()
                 Button("Keyword Vocabulary…") { workspace.showKeywordVocabulary = true }
                 Button("Manage Keyword Groups…") { workspace.showKeywordGroupEditor = true }
                 if let group = workspace.keywordGroups.active {
@@ -1243,7 +1261,17 @@ struct ContentView: View {
                     Section("Library") {
                         Label("All Photos", systemImage: "photo.on.rectangle.angled").tag("all").simultaneousGesture(TapGesture().onEnded { model.showBrowser(allPhotos: true) })
                         Label("Flagged", systemImage: "flag").tag("flagged")
+                        Label("People", systemImage: "person.crop.rectangle").tag("people")
                         Label("Trash", systemImage: "trash").tag("trash")
+                    }
+                    let people = model.peopleGroups
+                    if !people.isEmpty {
+                        Section("Named People") {
+                            ForEach(people) { person in
+                                Label("\(person.name) (\(person.photoCount))", systemImage: "person")
+                                    .tag(person.scope)
+                            }
+                        }
                     }
                     Section("Projects") {
                         ForEach(model.library.projects) { project in
@@ -1378,6 +1406,9 @@ struct ContentView: View {
                             PlacesBrowser(model: model) { photo, onSelect in
                                 photoCell(photo, compact: true, onSelect: onSelect)
                             }
+                        } else if model.photos.isEmpty, model.scope == "people" {
+                            ContentUnavailableView("No Faces in This View", systemImage: "person.crop.rectangle",
+                                description: Text("Select photos in the Browser, then choose Metadata → Detect Faces in Selection."))
                         } else if model.photos.isEmpty {
                             VStack(spacing: 18) {
                                 Image(nsImage: Self.welcomeIcon)
@@ -1484,6 +1515,9 @@ struct ContentView: View {
         }
         .sheet(isPresented: $model.showSmartAlbum) { SmartAlbumView().environmentObject(model) }
         .sheet(isPresented: $model.showAdvancedSearch) { AdvancedSearchView().environmentObject(model) }
+        .sheet(item: $model.peopleReview) { review in
+            PeopleReviewView(review: review).environmentObject(model)
+        }
         .sheet(isPresented: $model.showDeviceImport, onDismiss: model.finishDevicePicker) {
             DeviceImportView(discovery: model.cameraDiscovery).environmentObject(model)
         }
@@ -1551,6 +1585,7 @@ struct ContentView: View {
         }
         .onChange(of: model.scope) { _, _ in
             model.activeBrowserPane = .primary
+            if model.scope == "people" || model.scope.hasPrefix("person:") { model.places = false }
             if model.isViewingTrash {
                 model.search = ""; model.ratingFilter = .all; model.originalFilter = .all; model.colorFilter = .all; model.advancedSearch = nil
             }

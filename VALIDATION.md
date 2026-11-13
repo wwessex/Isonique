@@ -95,6 +95,15 @@ Use the signed build and a disposable library containing two projects, a regular
 5. Export and reimport an ordered project twice. Confirm regular-album memberships and relative order survive both imports with distinct remapped identifiers. Merge an older project export and confirm current order is protected by the selected conflict preference.
 6. Export an edited photo before and after Browser ordering. Confirm identical pixels and metadata, unchanged recipes and unchanged source and managed-original fingerprints.
 
+## People and face detection
+
+Use a disposable library with an upright group photo and JPEG variants with rotated or mirrored EXIF orientation.
+
+1. Select the photos and choose **Metadata → Detect Faces in Selection**. Open **Review Faces** and check that each box fits the orientation of the preview. Cancel a larger batch and confirm that its pending changes were discarded.
+2. Give a face a multiword name, draw a missed face, redraw an existing box and remove a false positive. Rescan and confirm that the dismissed face does not reappear. Save, then Undo, Redo and reopen the library with persistent history enabled.
+3. Check the People sidebar and add a **Person** rule in Advanced Search and a Smart Album. Disconnect the referenced original and repeat the queries. Confirm that saved names can still be corrected, while detection and box placement require the original.
+4. Compare before-and-after edited and original exports with XMP enabled. Check that People names and boxes are absent and the original fingerprints match.
+
 ## Physical PTP camera import
 
 Use a disposable library and a physical USB camera in PTP or Photo Transfer mode. Put at least three distinct test photos on the camera. A larger group of photos gives you time to cancel an active transfer. Record the Isonique commit, macOS version, camera model, firmware and USB mode with the results. [README smoke test](README.md#development)

@@ -65,6 +65,7 @@ public extension Photo {
             values += iptc.creators ?? []
         }
         return values.joined(separator: " ").localizedCaseInsensitiveContains(text)
+            || personNames.contains { $0.range(of: text, options: [.caseInsensitive, .diacriticInsensitive]) != nil }
     }
 }
 

@@ -58,7 +58,9 @@ struct BrowserScopeOption: Identifiable, Equatable {
 extension Workspace {
     var secondaryScopeOptions: [BrowserScopeOption] {
         var options = [BrowserScopeOption(id: "all", title: "All Photos", symbol: "photo.on.rectangle.angled"),
-                       BrowserScopeOption(id: "flagged", title: "Flagged", symbol: "flag")]
+                       BrowserScopeOption(id: "flagged", title: "Flagged", symbol: "flag"),
+                       BrowserScopeOption(id: "people", title: "People", symbol: "person.crop.rectangle")]
+        options += peopleGroups.map { BrowserScopeOption(id: $0.scope, title: $0.name, symbol: "person") }
         options += library.projects.map { BrowserScopeOption(id: "project:\($0.id)", title: $0.name, symbol: "folder") }
         options += activeStacks.keys.sorted { $0.uuidString < $1.uuidString }.map { id in
             let members = activeStacks[id] ?? []
@@ -120,7 +122,7 @@ extension Workspace {
 
     func manualOrderScope(for scope: String) -> String? {
         if scope == "all" { return scope }
-        if scope.hasPrefix("project:"), secondaryScopeOptions.contains(where: { $0.id == scope }) { return scope }
+        if scope.hasPrefix("project:"), library.projects.contains(where: { "project:\($0.id)" == scope }) { return scope }
         guard scope.hasPrefix("album:"), let id = UUID(uuidString: String(scope.dropFirst(6))),
               library.albums.first(where: { $0.id == id })?.rule == nil else { return nil }
         return scope

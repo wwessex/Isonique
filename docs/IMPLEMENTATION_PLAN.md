@@ -461,9 +461,17 @@ Format 36 adds catalogue-backed manual order for All Photos, each project and ea
 
 Automated coverage exercises independent pane scope/search/selection and keyboard focus, sparse older preferences, restart restoration, drag-order mutations, collapsed stacks, versions, Undo/Redo, older catalogues, format rejection, project export/import ID collisions and recipe/original/export isolation.
 
+## People and on-device face detection
+
+An explicit scan uses Vision on a bounded, EXIF-oriented preview of each verified original in the visible selection. Results are committed together and cancelling the scan discards unpublished changes. Review Faces previews the same source coordinates, supports naming and reassigning individual faces, and lets users draw, redraw or dismiss boxes. Saving a review records one Undo step. Dismissed rectangles prevent overlapping detections from returning on a rescan.
+
+Catalogue format 37 stores People records by photo version and supports Person rules and persistent Undo/Redo. Named sidebar groups, Browser text search, Advanced Search and Smart Albums use saved assignments and work when originals are offline. Names can be edited offline. Placing a box or running detection requires an available original. Photo exports, XMP and adjustment recipes stay independent. Backups and exported Isonique libraries include their saved People catalogue data.
+
+Automatic identity recognition remains future opt-in work. The current workflow sends the oriented image to local Vision APIs and assigns identities manually. [Apple Vision face rectangles](https://developer.apple.com/documentation/vision/detectfacerectanglesrequest)
+
 ## Next checkpoint
 
-Add privacy-preserving, on-device face detection and a People workflow using Vision. Keep recognition opt-in; persist face rectangles, names and manual corrections; integrate People with search and Smart Albums; and keep all processing local. Test image orientation, multiple faces, false-positive removal, offline originals, migration, Undo/Redo, restart persistence and recipe/export isolation.
+Add person-wide rename and merge actions with a review of the affected versions and exact-name Smart Album rules. Keep manual assignments available offline and make each confirmed change a single persistent Undo step.
 
 ## Pending physical camera checks
 

@@ -458,6 +458,7 @@ struct PhotoContextActions: View {
         }
         if !model.isViewingTrash {
             StackContextActions(model: model, photo: photo)
+            Button("Review Faces…") { model.openPeopleReview(photo) }.disabled(model.busy)
             Button("New Version from Original") { model.createVersion(from: .original, of: photo.id) }.disabled(model.batchMode)
             Button("Duplicate Version") { model.createVersion(from: .current, of: photo.id) }.disabled(model.batchMode)
             Button("Edit with External Editor…") { model.editWithExternalEditor(photoID: photo.id) }
