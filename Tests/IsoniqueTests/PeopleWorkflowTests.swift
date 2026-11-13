@@ -184,7 +184,7 @@ final class PeopleWorkflowTests: XCTestCase {
         XCTAssertEqual(model.peopleSummary?.initialScope, scope)
 
         model.scanUnscannedFaces(in: scope)
-        let task = try XCTUnwrap(model.peopleScan)
+        let task = try XCTUnwrap(model.peopleScan?.task)
         let result = try await task.value
         try await waitForScan(model)
         XCTAssertEqual(result.scanned, 1)
@@ -490,7 +490,7 @@ final class PeopleWorkflowTests: XCTestCase {
         model.search = "Only target"
 
         model.scanSelectedFaces()
-        let cancelled = try XCTUnwrap(model.peopleScan)
+        let cancelled = try XCTUnwrap(model.peopleScan?.task)
         cancelled.cancel()
         _ = await cancelled.result
         try await waitForScan(model)
@@ -498,7 +498,7 @@ final class PeopleWorkflowTests: XCTestCase {
         XCTAssertTrue(try repository.load().photos.allSatisfy { $0.people == nil })
 
         model.scanSelectedFaces()
-        let task = try XCTUnwrap(model.peopleScan)
+        let task = try XCTUnwrap(model.peopleScan?.task)
         let result = try await task.value
         XCTAssertEqual(result.scanned, 1)
         try await waitForScan(model)
@@ -508,6 +508,119 @@ final class PeopleWorkflowTests: XCTestCase {
         XCTAssertEqual(model.history.undo.count, 1)
         model.undoEdit()
         XCTAssertTrue(try repository.load().photos.allSatisfy { $0.people == nil })
+    }
+
+    func testScanProgressSkipsAnOriginalDisconnectedMidScanAndSavesOneUndoStep() async throws {
+        let (folder, repository, preferences, suite) = try fixture()
+        defer {
+            preferences.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let offline = folder.appendingPathComponent("Disconnect.png")
+        let corrupt = folder.appendingPathComponent("Changed.png")
+        let first = folder.appendingPathComponent("First.png")
+        let last = folder.appendingPathComponent("Last.png")
+        try makeImage(first)
+        try makeImage(offline, red: 0.2)
+        try makeImage(corrupt, red: 0.4)
+        try makeImage(last, width: 128)
+        var library = try repository.load()
+        var options = ImportOptions()
+        options.storage = .referenced
+        for url in [first, offline, corrupt, last] {
+            XCTAssertTrue(try repository.importPhoto(url, projectID: nil, into: &library, options: options))
+        }
+        let saved = try repository.save(library)
+        try makeImage(corrupt, red: 0.6)
+        let model = Workspace(libraryRoot: repository.root, preferences: preferences)
+        let started = expectation(description: "First original reached detection")
+        let finishing = expectation(description: "Last original reached detection")
+        let firstGate = AsyncStream<Void>.makeStream()
+        let lastGate = AsyncStream<Void>.makeStream()
+        defer { firstGate.continuation.finish(); lastGate.continuation.finish() }
+
+        model.scanFaces(saved.photos, availableOnly: true) { image in
+            if image.width == 96 {
+                started.fulfill()
+                for await _ in firstGate.stream {}
+            } else {
+                finishing.fulfill()
+                for await _ in lastGate.stream {}
+            }
+            return []
+        }
+        let job = try XCTUnwrap(model.peopleScan)
+        await fulfillment(of: [started], timeout: 5)
+        XCTAssertEqual(job.progress.counts, PeopleScanCounts(total: 4))
+        XCTAssertEqual(job.progress.counts.remaining, 4)
+        try FileManager.default.moveItem(at: offline, to: folder.appendingPathComponent("Disconnected.png"))
+        firstGate.continuation.finish()
+
+        await fulfillment(of: [finishing], timeout: 5)
+        XCTAssertEqual(job.progress.counts, PeopleScanCounts(total: 4, checked: 1, skipped: 2))
+        XCTAssertEqual(job.progress.counts.remaining, 1)
+        XCTAssertTrue(try repository.load().hasSameCatalogueRevision(as: saved))
+        lastGate.continuation.finish()
+
+        let result = try await job.task.value
+        try await waitForScan(model)
+        XCTAssertEqual(job.progress.counts, PeopleScanCounts(total: 4, checked: 2, skipped: 2))
+        XCTAssertEqual(job.progress.counts.remaining, 0)
+        XCTAssertEqual(result.offline, 1)
+        XCTAssertEqual(result.issues.count, 1)
+        XCTAssertTrue(model.error?.hasPrefix("Skipped 1 photo version.\n") == true)
+        XCTAssertEqual(try repository.load().photos.map { $0.people?.scanned }, [true, nil, nil, true])
+        XCTAssertEqual(model.history.undo.count, 1)
+        model.undoEdit()
+        XCTAssertEqual(try repository.load().photos, saved.photos)
+        XCTAssertFalse(model.canUndo)
+    }
+
+    func testCancellingAfterProgressDiscardsCompletedChecks() async throws {
+        let (folder, repository, preferences, suite) = try fixture()
+        defer {
+            preferences.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let first = folder.appendingPathComponent("First.png")
+        let second = folder.appendingPathComponent("Second.png")
+        try makeImage(first)
+        try makeImage(second, width: 128)
+        var library = try repository.load()
+        for url in [first, second] {
+            XCTAssertTrue(try repository.importPhoto(url, projectID: nil, into: &library))
+        }
+        let saved = try repository.save(library)
+        let model = Workspace(libraryRoot: repository.root, preferences: preferences)
+        let started = expectation(description: "Second original reached detection")
+        let gate = AsyncStream<Void>.makeStream()
+        defer { gate.continuation.finish() }
+        let face = try XCTUnwrap(FaceRegion(imageRect: CGRect(x: 0.1, y: 0.2, width: 0.25, height: 0.35)))
+
+        model.scanFaces(saved.photos, availableOnly: false) { image in
+            if image.width == 128 {
+                started.fulfill()
+                for await _ in gate.stream {}
+            }
+            return [face]
+        }
+        let job = try XCTUnwrap(model.peopleScan)
+        await fulfillment(of: [started], timeout: 5)
+        XCTAssertEqual(job.progress.counts, PeopleScanCounts(total: 2, checked: 1))
+        XCTAssertEqual(job.progress.counts.remaining, 1)
+        job.progress.cancel(job.task)
+        XCTAssertTrue(job.progress.isCancelling)
+        do {
+            _ = try await job.task.value
+            XCTFail("The cancelled scan returned results")
+        } catch is CancellationError {}
+        try await waitForScan(model)
+        XCTAssertEqual(job.progress.counts, PeopleScanCounts(total: 2, checked: 1))
+        XCTAssertEqual(model.status, "Face detection cancelled")
+        XCTAssertFalse(model.busy)
+        XCTAssertFalse(model.canUndo)
+        XCTAssertEqual(model.library.photos, saved.photos)
+        XCTAssertTrue(try repository.load().hasSameCatalogueRevision(as: saved))
     }
 
     private func waitForScan(_ model: Workspace) async throws {
@@ -535,12 +648,12 @@ final class PeopleWorkflowTests: XCTestCase {
         return people
     }
 
-    private func makeImage(_ url: URL, red: CGFloat = 0.7) throws {
+    private func makeImage(_ url: URL, red: CGFloat = 0.7, width: Int = 96) throws {
         let space = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
-        let ctx = try XCTUnwrap(CGContext(data: nil, width: 96, height: 64, bitsPerComponent: 8, bytesPerRow: 0,
+        let ctx = try XCTUnwrap(CGContext(data: nil, width: width, height: 64, bitsPerComponent: 8, bytesPerRow: 0,
                                           space: space, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
         ctx.setFillColor(red: red, green: 0.3, blue: 0.2, alpha: 1)
-        ctx.fill(CGRect(x: 0, y: 0, width: 96, height: 64))
+        ctx.fill(CGRect(x: 0, y: 0, width: width, height: 64))
         let image = try XCTUnwrap(ctx.makeImage())
         let dest = try XCTUnwrap(CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil))
         CGImageDestinationAddImage(dest, image, nil)

@@ -501,9 +501,13 @@ Scan Available Photos (⌥⌘S) uses the current scope and skips unavailable ori
 
 Show Offline Originals lists the unavailable files in the chosen scope once per original, with names and last known paths grouped by managed or referenced storage. The list uses the same background result as the count. The managed group links to the library-wide First Aid report. The referenced group opens the existing fingerprint-verified folder search restricted to the listed IDs. A successful reconnect updates every version sharing the original, including versions in other projects. Refresh or reopen the summary to see the updated list.
 
+### People scan progress
+
+Review Summary and the workspace show the same live counts during a People scan. Checked versions completed detection, including scans with no faces. Skipped versions include unavailable originals and files that failed to verify, decode, or scan. Remaining includes the version in progress. The summary checks availability again as each version is reached, so files that go offline stay unscanned. Cancel Scan discards all pending changes. A completed scan saves successful checks together in one Undo step.
+
 ## Next checkpoint
 
-Show completed and remaining photo versions during a People scan. Keep the existing cancellation and single Undo behaviour.
+Show a per-version report of skipped People scan results and let the user retry those versions after reconnecting their originals.
 
 ## Pending physical camera checks
 

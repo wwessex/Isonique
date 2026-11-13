@@ -175,12 +175,7 @@ struct PeopleReviewSummaryView: View {
             }
             Divider()
             if let scan = model.peopleScan {
-                HStack {
-                    ProgressView().controlSize(.small)
-                    Text("Detecting faces on this Mac…")
-                    Spacer()
-                    Button("Cancel Scan") { scan.cancel() }
-                }
+                PeopleScanProgressView(task: scan.task, progress: scan.progress)
             } else if requestedScan {
                 Text(model.status).font(.caption).foregroundStyle(.secondary)
             }

@@ -32,8 +32,65 @@ struct PeopleReview: Identifiable {
 struct PeopleScanResult {
     var changes: [PhotoPeopleChange] = []
     var issues: [String] = []
-    var scanned = 0
     var offline = 0
+    var scanned: Int { changes.count }
+    var skipped: Int { offline + issues.count }
+}
+
+struct PeopleScanCounts: Equatable {
+    let total: Int
+    var checked = 0
+    var skipped = 0
+    var processed: Int { checked + skipped }
+    var remaining: Int { total - processed }
+}
+
+// Publish per-version changes only to the progress controls.
+@MainActor final class PeopleScanProgress: ObservableObject {
+    @Published private(set) var counts: PeopleScanCounts
+    @Published private(set) var isCancelling = false
+
+    init(total: Int) {
+        counts = PeopleScanCounts(total: total)
+    }
+
+    func record(checked: Int, skipped: Int) {
+        guard !isCancelling else { return }
+        counts = PeopleScanCounts(total: counts.total, checked: checked, skipped: skipped)
+    }
+
+    func cancel(_ task: Task<PeopleScanResult, Error>) {
+        task.cancel()
+        isCancelling = true
+    }
+}
+
+struct PeopleScanJob {
+    let task: Task<PeopleScanResult, Error>
+    let progress: PeopleScanProgress
+}
+
+struct PeopleScanProgressView: View {
+    let task: Task<PeopleScanResult, Error>
+    @ObservedObject var progress: PeopleScanProgress
+
+    var body: some View {
+        let counts = progress.counts
+        HStack(spacing: 12) {
+            ProgressView(value: Double(counts.processed), total: Double(counts.total)) {
+                if progress.isCancelling {
+                    Text("Cancelling face detection…")
+                } else {
+                    Text("Detecting faces on this Mac…")
+                }
+            } currentValueLabel: {
+                Text("\(counts.checked) checked · \(counts.skipped) skipped · \(counts.remaining) remaining")
+                    .monospacedDigit()
+            }
+            Button("Cancel Scan") { progress.cancel(task) }
+                .disabled(progress.isCancelling)
+        }
+    }
 }
 
 extension Workspace {
@@ -98,35 +155,41 @@ extension Workspace {
         scanFaces(metadataEditingTargets.filter { $0.people?.scanned != true }, availableOnly: false)
     }
 
-    func scanFaces(_ targets: [Photo], availableOnly: Bool) {
+    func scanFaces(_ targets: [Photo], availableOnly: Bool,
+                   detect: @escaping @Sendable (CGImage) async throws -> [FaceRegion] = {
+                       try await FaceDetection.regions(in: $0)
+                   }) {
         guard !busy, let repository, !targets.isEmpty else { return }
         let snapshot = library
+        let progress = PeopleScanProgress(total: targets.count)
         busy = true
         status = "Detecting faces on this Mac…"
         let task = Task.detached(priority: .userInitiated) {
             var result = PeopleScanResult()
             for photo in targets {
                 try Task.checkCancellation()
-                if availableOnly, (try? repository.availableOriginalURL(photo)) == nil {
-                    result.offline += 1
-                    continue
-                }
                 do {
                     let image = try repository.verifiedFaceSource(for: photo)
-                    let regions = try await FaceDetection.regions(in: image)
+                    let regions = try await detect(image)
+                    try Task.checkCancellation()
                     var people = photo.people ?? PhotoPeople()
                     people.incorporateDetections(regions)
                     result.changes.append(PhotoPeopleChange(photoID: photo.id, people: people))
-                    result.scanned += 1
                 } catch is CancellationError {
                     throw CancellationError()
                 } catch {
-                    result.issues.append("\(photo.displayName): \(error.localizedDescription)")
+                    try Task.checkCancellation()
+                    if availableOnly, (try? repository.availableOriginalURL(photo)) == nil {
+                        result.offline += 1
+                    } else {
+                        result.issues.append("\(photo.displayName): \(error.localizedDescription)")
+                    }
                 }
+                await progress.record(checked: result.scanned, skipped: result.skipped)
             }
             return result
         }
-        peopleScan = task
+        peopleScan = PeopleScanJob(task: task, progress: progress)
         Task {
             defer { peopleScan = nil; busy = false }
             do {
@@ -148,7 +211,9 @@ extension Workspace {
                     status += " · " + skipped
                 }
                 if !result.issues.isEmpty {
-                    error = "Skipped \(result.issues.count) photo versions.\n\n" + result.issues.prefix(8).joined(separator: "\n")
+                    let skipped = result.issues.count == 1 ? String(localized: "Skipped 1 photo version.")
+                        : String(localized: "Skipped \(result.issues.count) photo versions.")
+                    error = skipped + "\n\n" + result.issues.prefix(8).joined(separator: "\n")
                 }
             } catch is CancellationError {
                 status = "Face detection cancelled"
@@ -169,7 +234,7 @@ struct PeopleCommands: View {
         Button("Detect Faces in Selection", action: model.scanSelectedFaces)
             .disabled(!model.canScanSelectedFaces)
         if let scan = model.peopleScan {
-            Button("Cancel Face Detection") { scan.cancel() }.disabled(scan.isCancelled)
+            CancelPeopleScanCommand(task: scan.task, progress: scan.progress)
         }
         Button("Review Faces…") {
             if let photo = model.selected { model.openPeopleReview(photo) }
@@ -183,5 +248,15 @@ struct PeopleCommands: View {
         Button("Person Overview…") {
             if let group = model.selectedPersonGroup { model.openPersonOverview(group) }
         }.disabled(model.selectedPersonGroup == nil || model.busy)
+    }
+}
+
+private struct CancelPeopleScanCommand: View {
+    let task: Task<PeopleScanResult, Error>
+    @ObservedObject var progress: PeopleScanProgress
+
+    var body: some View {
+        Button("Cancel Face Detection") { progress.cancel(task) }
+            .disabled(progress.isCancelling)
     }
 }

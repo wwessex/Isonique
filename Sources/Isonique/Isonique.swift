@@ -33,7 +33,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     var pendingPeopleSummaryAction: (root: URL, action: PeopleSummaryAction)?
     @Published var personNameEditor: PersonNameEditorRequest?
     @Published var personOverview: PersonOverviewRequest?
-    @Published var peopleScan: Task<PeopleScanResult, Error>?
+    @Published var peopleScan: PeopleScanJob?
     var peopleGroupsSnapshot: [PeopleGroup]?
     var peopleGallerySnapshot: PeopleGallery?
     @Published var peopleGallerySearch = ""
@@ -1531,15 +1531,17 @@ struct ContentView: View {
                     }
                 }
                 Divider()
-                HStack(spacing: 8) {
-                    if model.busy { ProgressView().controlSize(.small) } else { Image(systemName: "checkmark.shield").foregroundStyle(.secondary) }
-                    Text(model.status).font(.caption).lineLimit(2)
-                    Spacer()
-                    if !model.isPeopleGallery {
-                        Text("\(model.activeLightTable?.items.count ?? model.photos.count) photos")
-                            .font(.caption2).foregroundStyle(.secondary)
-                    }
-                }.padding(.horizontal, 18).padding(.vertical, 10).background(.ultraThinMaterial)
+                if model.peopleScan == nil {
+                    HStack(spacing: 8) {
+                        if model.busy { ProgressView().controlSize(.small) } else { Image(systemName: "checkmark.shield").foregroundStyle(.secondary) }
+                        Text(model.status).font(.caption).lineLimit(2)
+                        Spacer()
+                        if !model.isPeopleGallery {
+                            Text("\(model.activeLightTable?.items.count ?? model.photos.count) photos")
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
+                    }.padding(.horizontal, 18).padding(.vertical, 10).background(.ultraThinMaterial)
+                }
             }
         }
         .disabled(model.busy || model.repository == nil)
@@ -1558,6 +1560,12 @@ struct ContentView: View {
         VStack(spacing: 0) {
             workspaceView
             if model.importInProgress { ImportProgressBar() }
+            if let scan = model.peopleScan, model.peopleSummary == nil {
+                PeopleScanProgressView(task: scan.task, progress: scan.progress)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
+                    .background(.ultraThinMaterial)
+            }
         }
         .sheet(isPresented: $model.showAutoStack) { AutoStackView().environmentObject(model) }
         .sheet(isPresented: $model.showSlideshow) {
