@@ -70,16 +70,19 @@ extension Workspace {
         return choices
     }
 
-    func findOriginalsPanel(_ operation: OriginalFolderOperation, firstAid: LibraryFirstAidReport? = nil) {
-        guard !busy, repository != nil, firstAid != nil || canFindOriginals(operation) else { return }
+    func findOriginalsPanel(_ operation: OriginalFolderOperation, firstAid: LibraryFirstAidReport? = nil,
+                            restrictedTo originalIDs: Set<UUID>? = nil) {
+        guard !busy, repository != nil, originalIDs?.isEmpty != true,
+              firstAid != nil || canFindOriginals(operation) else { return }
         let panel = NSOpenPanel()
         panel.title = operation.title
         panel.message = operation.prompt
         if firstAid != nil { panel.message = operation.prompt + " Recovery applies to the originals in the reviewed report." }
+        if originalIDs != nil { panel.message = operation.prompt + " Only originals listed in People Review Summary will be searched." }
         panel.prompt = "Search Folder"
         panel.canChooseDirectories = true
         panel.canChooseFiles = false
-        let choices = firstAid == nil ? originalFolderScopes(for: operation) : []
+        let choices = firstAid == nil && originalIDs == nil ? originalFolderScopes(for: operation) : []
         let picker = NSPopUpButton()
         picker.addItems(withTitles: choices.map(\.title))
         picker.setAccessibilityLabel("Apply to")
@@ -92,8 +95,8 @@ extension Workspace {
         }
         guard panel.runModal() == .OK, let folder = panel.url else { return }
         let selection = picker.indexOfSelectedItem
-        let originalIDs = choices.indices.contains(selection) ? choices[selection].originalIDs : nil
-        Task { await findOriginals(in: folder, operation: operation, originalIDs: originalIDs, firstAid: firstAid) }
+        let targets = originalIDs ?? (choices.indices.contains(selection) ? choices[selection].originalIDs : nil)
+        Task { await findOriginals(in: folder, operation: operation, originalIDs: targets, firstAid: firstAid) }
     }
 
     func findOriginals(in folder: URL, operation: OriginalFolderOperation, originalIDs: Set<UUID>? = nil,

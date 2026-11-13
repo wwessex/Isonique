@@ -42,8 +42,11 @@ final class PeopleWorkflowTests: XCTestCase {
         let offlineInProject = try await scoped.offlineOriginals(in: repository)
         XCTAssertEqual(Set(scoped.unscannedVersions.map(\.id)), [reference.id, unscannedVersion.id])
         XCTAssertEqual(scoped.unnamedFaceCount, 1)
-        XCTAssertEqual(offlineInProject, [missing.id])
-        XCTAssertEqual(scoped.availableVersionCount(offlineOriginals: offlineInProject), 1)
+        XCTAssertEqual(offlineInProject.managed.map(\.originalID), [missing.id])
+        XCTAssertTrue(offlineInProject.referenced.isEmpty)
+        XCTAssertNil(offlineInProject.reconnectAction)
+        XCTAssertEqual(offlineInProject.count, 1)
+        XCTAssertEqual(scoped.availableVersionCount(offlineOriginals: offlineInProject.originalIDs), 1)
 
         let parked = folder.appendingPathComponent("Disconnected.png")
         try FileManager.default.moveItem(at: source, to: parked)
@@ -51,23 +54,97 @@ final class PeopleWorkflowTests: XCTestCase {
         let offlineInLibrary = try await all.offlineOriginals(in: repository)
         XCTAssertEqual(Set(all.unscannedVersions.map(\.id)), [reference.id, otherVersion.id, unscannedVersion.id])
         XCTAssertEqual(all.unnamedFaceCount, 3)
-        XCTAssertEqual(offlineInLibrary, [reference.id, missing.id, unfiled.id])
-        XCTAssertEqual(all.availableVersionCount(offlineOriginals: offlineInLibrary), 0)
+        XCTAssertEqual(offlineInLibrary.managed.map(\.originalID), [missing.id, unfiled.id])
+        XCTAssertEqual(offlineInLibrary.referenced.map(\.originalID), [reference.id])
+        XCTAssertEqual(offlineInLibrary.reconnectAction, .reconnect([reference.id]))
+        XCTAssertEqual(offlineInLibrary.count, 3)
+        XCTAssertEqual(all.availableVersionCount(offlineOriginals: offlineInLibrary.originalIDs), 0)
         let otherSummary = PeopleReviewSummary(library: saved, scope: .project(other.id))
         let otherOffline = try await otherSummary.offlineOriginals(in: repository)
         XCTAssertEqual(otherSummary.unscannedVersions.map(\.id), [otherVersion.id])
-        XCTAssertEqual(otherOffline, [reference.id])
+        XCTAssertTrue(otherOffline.managed.isEmpty)
+        XCTAssertEqual(otherOffline.referenced.map(\.originalID), [reference.id])
 
         try FileManager.default.moveItem(at: parked, to: source)
         let reconnected = try await all.offlineOriginals(in: repository)
-        XCTAssertEqual(reconnected, [missing.id, unfiled.id])
-        XCTAssertEqual(all.availableVersionCount(offlineOriginals: reconnected), 2)
+        XCTAssertEqual(reconnected.managed.map(\.originalID), [missing.id, unfiled.id])
+        XCTAssertTrue(reconnected.referenced.isEmpty)
+        XCTAssertEqual(all.availableVersionCount(offlineOriginals: reconnected.originalIDs), 2)
         let empty = PeopleReviewSummary(library: saved, scope: .project(UUID()))
         let emptyOffline = try await empty.offlineOriginals(in: repository)
         XCTAssertTrue(empty.unscannedVersions.isEmpty)
         XCTAssertEqual(empty.unnamedFaceCount, 0)
-        XCTAssertTrue(emptyOffline.isEmpty)
+        XCTAssertEqual(emptyOffline.count, 0)
         XCTAssertTrue(try repository.load().hasSameCatalogueRevision(as: saved))
+    }
+
+    func testOfflineListIsReadOnlyAndLimitedReconnectRefreshesSharedVersions() async throws {
+        let (folder, repository, preferences, suite) = try fixture()
+        defer {
+            preferences.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let project = IsoniqueCore.Collection(name: "Review")
+        let other = IsoniqueCore.Collection(name: "Other")
+        let sources = folder.appendingPathComponent("Sources")
+        let moved = folder.appendingPathComponent("Moved")
+        for directory in [sources, moved] {
+            try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+        }
+        let first = sources.appendingPathComponent("First.png")
+        let second = sources.appendingPathComponent("Second.png")
+        try makeImage(first)
+        try makeImage(second, red: 0.1)
+        var draft = try repository.load()
+        draft.projects = [project, other]
+        var options = ImportOptions()
+        options.storage = .referenced
+        XCTAssertTrue(try repository.importPhoto(first, projectID: project.id, into: &draft, options: options))
+        XCTAssertTrue(try repository.importPhoto(second, projectID: other.id, into: &draft, options: options))
+        let firstID = draft.photos[0].id
+        let secondID = draft.photos[1].id
+        let version = try XCTUnwrap(draft.createVersion(of: firstID, from: .current))
+        draft.photos[2].projectID = other.id
+        _ = try repository.save(draft)
+        let movedFirst = moved.appendingPathComponent(first.lastPathComponent)
+        try FileManager.default.moveItem(at: first, to: movedFirst)
+        try FileManager.default.moveItem(at: second, to: moved.appendingPathComponent(second.lastPathComponent))
+
+        let catalogue = repository.root.appendingPathComponent("catalog.json")
+        let before = try Data(contentsOf: catalogue)
+        let fileManager = FileManager.default
+        let beforeAttributes = try fileManager.attributesOfItem(atPath: catalogue.path)
+        let model = Workspace(libraryRoot: repository.root, preferences: preferences)
+        let scope = UnnamedFaceScope.project(project.id)
+        model.openPeopleSummary(scope)
+        let summary = PeopleReviewSummary(library: model.library, scope: scope)
+        let offline = try await summary.offlineOriginals(in: repository)
+        guard case .reconnect(let targetIDs)? = offline.reconnectAction else { return XCTFail("Missing scoped reconnect") }
+        XCTAssertEqual(targetIDs, [firstID])
+        XCTAssertEqual(offline.referenced.map(\.referencedPath), [first.path])
+        XCTAssertEqual(try Data(contentsOf: catalogue), before)
+        let afterAttributes = try fileManager.attributesOfItem(atPath: catalogue.path)
+        XCTAssertEqual(afterAttributes[.systemFileNumber] as? NSNumber, beforeAttributes[.systemFileNumber] as? NSNumber)
+        XCTAssertEqual(afterAttributes[.modificationDate] as? Date, beforeAttributes[.modificationDate] as? Date)
+        XCTAssertFalse(model.canUndo)
+        XCTAssertEqual(model.originalStatusRevision, 0)
+
+        model.continueFromPeopleSummary(.reconnect(targetIDs))
+        XCTAssertNil(model.peopleSummary)
+        XCTAssertEqual(model.pendingPeopleSummaryAction?.root, repository.root)
+        XCTAssertEqual(model.pendingPeopleSummaryAction?.action, .reconnect(targetIDs))
+        XCTAssertEqual(try Data(contentsOf: catalogue), before)
+        await model.findOriginals(in: moved, operation: .reconnect, originalIDs: targetIDs)
+        XCTAssertEqual(model.originalStatusRevision, 1)
+        XCTAssertEqual(try repository.load().photos.filter { $0.originalID == firstID }.map(\.referencedPath),
+                       [movedFirst.path, movedFirst.path])
+        XCTAssertEqual(model.library.photos.first { $0.id == version.id }?.referencedPath, movedFirst.path)
+        XCTAssertEqual(model.library.photos.first { $0.id == secondID }?.referencedPath, second.path)
+
+        let refreshedProject = try await PeopleReviewSummary(library: model.library, scope: scope).offlineOriginals(in: repository)
+        let refreshedLibrary = try await PeopleReviewSummary(library: model.library, scope: .library).offlineOriginals(in: repository)
+        XCTAssertEqual(refreshedProject.count, 0)
+        XCTAssertEqual(refreshedLibrary.referenced.map(\.originalID), [secondID])
     }
 
     func testReviewSummaryActionsScanAvailableVersionsAndOpenScopedOfflineQueue() async throws {
@@ -124,7 +201,7 @@ final class PeopleWorkflowTests: XCTestCase {
         XCTAssertEqual(summary.unscannedVersions.map(\.id), [offline.id])
         XCTAssertEqual(summary.unnamedFaceCount, 1)
 
-        model.reviewFacesFromSummary(in: scope)
+        model.continueFromPeopleSummary(.review(scope))
         XCTAssertNil(model.peopleSummary)
         XCTAssertNil(model.unnamedFaceReview)
         model.finishPeopleSummary()
@@ -458,11 +535,11 @@ final class PeopleWorkflowTests: XCTestCase {
         return people
     }
 
-    private func makeImage(_ url: URL) throws {
+    private func makeImage(_ url: URL, red: CGFloat = 0.7) throws {
         let space = try XCTUnwrap(CGColorSpace(name: CGColorSpace.sRGB))
         let ctx = try XCTUnwrap(CGContext(data: nil, width: 96, height: 64, bitsPerComponent: 8, bytesPerRow: 0,
                                           space: space, bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
-        ctx.setFillColor(red: 0.7, green: 0.3, blue: 0.2, alpha: 1)
+        ctx.setFillColor(red: red, green: 0.3, blue: 0.2, alpha: 1)
         ctx.fill(CGRect(x: 0, y: 0, width: 96, height: 64))
         let image = try XCTUnwrap(ctx.makeImage())
         let dest = try XCTUnwrap(CGImageDestinationCreateWithURL(url as CFURL, UTType.png.identifier as CFString, 1, nil))

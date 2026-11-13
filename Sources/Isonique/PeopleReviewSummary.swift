@@ -25,30 +25,55 @@ struct PeopleReviewSummary {
         unscannedVersions.count { !offlineOriginals.contains($0.originalID) }
     }
 
-    func offlineOriginals(in repository: LibraryRepository) async throws -> Set<UUID> {
+    func offlineOriginals(in repository: LibraryRepository) async throws -> PeopleOfflineOriginals {
         let task = Task.detached(priority: .utility) {
-            var offline: Set<UUID> = []
+            var offline: [Photo] = []
             for photo in originals {
                 try Task.checkCancellation()
-                if (try? repository.availableOriginalURL(photo)) == nil { offline.insert(photo.originalID) }
+                if (try? repository.availableOriginalURL(photo)) == nil { offline.append(photo) }
             }
-            return offline
+            return PeopleOfflineOriginals(offline)
         }
         return try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
     }
 }
 
+struct PeopleOfflineOriginals {
+    let managed: [Photo]
+    let referenced: [Photo]
+    let originalIDs: Set<UUID>
+
+    var count: Int { originalIDs.count }
+    var reconnectAction: PeopleSummaryAction? {
+        referenced.isEmpty ? nil : .reconnect(Set(referenced.map(\.originalID)))
+    }
+
+    init(_ photos: [Photo]) {
+        let sorted = photos.sorted { $0.originalName.localizedStandardCompare($1.originalName) == .orderedAscending }
+        managed = sorted.filter { $0.referencedPath == nil }
+        referenced = sorted.filter { $0.referencedPath != nil }
+        originalIDs = Set(photos.map(\.originalID))
+    }
+}
+
 struct PeopleSummaryRequest: Identifiable {
     let id = UUID()
+    let root: URL
     let initialScope: UnnamedFaceScope
+}
+
+enum PeopleSummaryAction: Equatable {
+    case review(UnnamedFaceScope)
+    case firstAid
+    case reconnect(Set<UUID>)
 }
 
 extension Workspace {
     var currentPeopleReviewScope: UnnamedFaceScope { selectedProject.map { .project($0.id) } ?? .library }
 
     func openPeopleSummary(_ scope: UnnamedFaceScope) {
-        guard canOpenUnnamedFaces else { return }
-        peopleSummary = PeopleSummaryRequest(initialScope: scope)
+        guard canOpenUnnamedFaces, let repository else { return }
+        peopleSummary = PeopleSummaryRequest(root: repository.root, initialScope: scope)
     }
 
     func scanUnscannedFaces(in scope: UnnamedFaceScope) {
@@ -57,16 +82,21 @@ extension Workspace {
         scanFaces(summary.unscannedVersions, availableOnly: true)
     }
 
-    func reviewFacesFromSummary(in scope: UnnamedFaceScope) {
-        guard canOpenUnnamedFaces, peopleSummary != nil else { return }
-        pendingUnnamedFaceScope = scope
+    func continueFromPeopleSummary(_ action: PeopleSummaryAction) {
+        guard canOpenUnnamedFaces, let request = peopleSummary, repository?.root == request.root else { return }
+        pendingPeopleSummaryAction = (request.root, action)
         peopleSummary = nil
     }
 
     func finishPeopleSummary() {
-        guard let scope = pendingUnnamedFaceScope else { return }
-        pendingUnnamedFaceScope = nil
-        openUnnamedFaces(scope)
+        let pending = pendingPeopleSummaryAction
+        pendingPeopleSummaryAction = nil
+        guard let pending, repository?.root == pending.root else { return }
+        switch pending.action {
+        case .review(let scope): openUnnamedFaces(scope)
+        case .firstAid: showLibraryFirstAid()
+        case .reconnect(let ids): findOriginalsPanel(.reconnect, restrictedTo: ids)
+        }
     }
 }
 
@@ -77,6 +107,7 @@ struct PeopleReviewSummaryView: View {
     @State private var refresh = 0
     @State private var availability: Availability?
     @State private var requestedScan = false
+    @State private var showOfflineOriginals = false
 
     private struct OriginalLocation: Equatable {
         let id: UUID
@@ -93,7 +124,7 @@ struct PeopleReviewSummaryView: View {
 
     private struct Availability {
         let key: AvailabilityKey
-        let offline: Set<UUID>
+        let offline: PeopleOfflineOriginals
     }
 
     init(request: PeopleSummaryRequest) {
@@ -106,7 +137,7 @@ struct PeopleReviewSummaryView: View {
             OriginalLocation(id: $0.originalID, filename: $0.filename, reference: $0.referencedPath)
         }, revision: model.originalStatusRevision, refresh: refresh)
         let offline = availability?.key == key ? availability?.offline : nil
-        let ready = offline.map { summary.availableVersionCount(offlineOriginals: $0) }
+        let ready = offline.map { summary.availableVersionCount(offlineOriginals: $0.originalIDs) }
 
         VStack(alignment: .leading, spacing: 16) {
             Text("People Review Summary").font(.title2.bold())
@@ -139,6 +170,9 @@ struct PeopleReviewSummaryView: View {
                 .accessibilityValue(offline.map { $0.count.formatted() } ?? String(localized: "Checking originals"))
             }
             .monospacedDigit()
+            DisclosureGroup("Show Offline Originals", isExpanded: $showOfflineOriginals) {
+                offlineOriginalList(offline)
+            }
             Divider()
             if let scan = model.peopleScan {
                 HStack {
@@ -159,7 +193,7 @@ struct PeopleReviewSummaryView: View {
                 }
                 .keyboardShortcut("s", modifiers: [.command, .option])
                 .disabled(model.busy || (ready ?? 0) == 0)
-                Button("Review Unnamed Faces…") { model.reviewFacesFromSummary(in: scope) }
+                Button("Review Unnamed Faces…") { model.continueFromPeopleSummary(.review(scope)) }
                     .keyboardShortcut("r", modifiers: [.command, .option])
                     .disabled(model.busy || summary.unnamedFaceCount == 0)
                 Spacer()
@@ -181,6 +215,65 @@ struct PeopleReviewSummaryView: View {
             guard let repository = model.repository,
                   let offline = try? await summary.offlineOriginals(in: repository), !Task.isCancelled else { return }
             availability = Availability(key: key, offline: offline)
+        }
+    }
+
+    @ViewBuilder
+    private func offlineOriginalList(_ offline: PeopleOfflineOriginals?) -> some View {
+        if let offline, offline.count > 0 {
+            VStack(alignment: .leading, spacing: 10) {
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 8) {
+                        if !offline.managed.isEmpty {
+                            offlineGroup("Managed Originals", photos: offline.managed)
+                        }
+                        if !offline.referenced.isEmpty {
+                            offlineGroup("Referenced Originals", photos: offline.referenced)
+                        }
+                    }
+                    .padding(10)
+                }
+                .frame(height: min(235, CGFloat(offline.count) * 55 + 55))
+                .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 8))
+                HStack {
+                    if !offline.managed.isEmpty {
+                        Button("Library First Aid…") { model.continueFromPeopleSummary(.firstAid) }
+                            .help("Review storage issues in the entire library")
+                    }
+                    if let action = offline.reconnectAction {
+                        Button("Reconnect Referenced Originals…") { model.continueFromPeopleSummary(action) }
+                    }
+                }
+                .disabled(model.busy)
+            }
+            .padding(.top, 8)
+        } else {
+            if offline == nil {
+                Text("Checking originals…")
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 8)
+            } else {
+                Text("All originals in this scope are available.")
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 8)
+            }
+        }
+    }
+
+    private func offlineGroup(_ title: LocalizedStringKey, photos: [Photo]) -> some View {
+        Section {
+            ForEach(photos, id: \.originalID) { photo in
+                let location = photo.referencedPath ?? "Originals/\(photo.filename)"
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(photo.originalName).lineLimit(1)
+                    Text(location).font(.caption).foregroundStyle(.secondary)
+                        .lineLimit(1).truncationMode(.middle)
+                }
+                .help(location)
+                .accessibilityElement(children: .combine)
+            }
+        } header: {
+            Text(title).font(.headline).accessibilityAddTraits(.isHeader)
         }
     }
 }

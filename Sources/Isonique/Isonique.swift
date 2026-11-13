@@ -30,7 +30,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var peopleReview: PeopleReview?
     @Published var unnamedFaceReview: UnnamedFaceReview?
     @Published var peopleSummary: PeopleSummaryRequest?
-    var pendingUnnamedFaceScope: UnnamedFaceScope?
+    var pendingPeopleSummaryAction: (root: URL, action: PeopleSummaryAction)?
     @Published var personNameEditor: PersonNameEditorRequest?
     @Published var personOverview: PersonOverviewRequest?
     @Published var peopleScan: Task<PeopleScanResult, Error>?

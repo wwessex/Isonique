@@ -499,9 +499,11 @@ Open Review Summary in the People gallery, the Metadata menu or a People or proj
 
 Scan Available Photos (⌥⌘S) uses the current scope and skips unavailable originals. It uses the existing verified source and cancellable on-device Vision workflow, with one Undo step for a completed scan. Review Unnamed Faces (⌥⌘R) opens the existing queue in the same scope, including saved faces on offline versions. Both shortcuts are local to the summary. Opening or refreshing the summary performs no catalogue writes.
 
+Show Offline Originals lists the unavailable files in the chosen scope once per original, with names and last known paths grouped by managed or referenced storage. The list uses the same background result as the count. The managed group links to the library-wide First Aid report. The referenced group opens the existing fingerprint-verified folder search restricted to the listed IDs. A successful reconnect updates every version sharing the original, including versions in other projects. Refresh or reopen the summary to see the updated list.
+
 ## Next checkpoint
 
-Show which originals are offline in the People Review Summary. Group the list by managed and referenced storage and link to the existing recovery workflows.
+Show completed and remaining photo versions during a People scan. Keep the existing cancellation and single Undo behaviour.
 
 ## Pending physical camera checks
 
