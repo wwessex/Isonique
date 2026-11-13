@@ -870,3 +870,10 @@
 - Cancelling retry after one completed check retained the preceding report and preserved the catalogue revision. A completed retry changed two versions in one Undo step, and Undo restored the pre-retry photo records.
 - The signed macOS app showed one checked version and three skipped rows in Review Summary. Restoring a shared original and retrying checked both versions of that original and kept the unrelated unavailable version in the report. The Metadata command opened the same report.
 - All twelve focused People tests passed. The full suite ran 442 tests with 439 passes, zero failures and three fixture-dependent skips for external camera RAW, Finder Trash and the Vision group portrait. Branding and the signed Apple Silicon release build passed. The extracted archive passed strict signature verification and targets macOS 15.0.
+
+## Reconnect from skipped face scan results
+
+- The report's folder search found two offline originals and reconnected all their shared versions. A verified copy of an unrelated reference in the same folder was left offline. Another listed reference that returned to its saved path retained that path. Managed originals and fingerprint failures were excluded from the report's reconnect targets.
+- A cancelled search request preserved the catalogue revision and the report. After reconnect, a cancelled scan retry preserved the report and pending checks were discarded. A completed retry checked the three eligible versions in the report, and one Undo restored their previous People records while retaining the reconnected paths.
+- In the signed app, cancelling the folder picker left the report open. Searching from that report reconnected two originals for three skipped versions. Retry checked all three from the same report.
+- The full suite ran 443 tests with 440 passes, zero failures and three fixture-dependent skips for external camera RAW, Finder Trash and the Vision group portrait. Branding and the Apple Silicon release build passed. The extracted archive passed strict signature verification and targets macOS 15.0.

@@ -94,7 +94,7 @@ public extension LibraryRepository {
                     report.ambiguous.append(photo.originalName)
                 } else if let candidate = candidates.first {
                     let verified = try Self.referenceURL(candidate.path, libraryRoot: root)
-                    try Self.verifyOriginal(verified, photo: photo)
+                    try Self.verifyOriginal(verified, photo: photo, checkingCancellation: true)
                     paths[photo.originalID] = verified.path
                     report.reconnected.append(photo.originalName)
                 } else {
@@ -209,7 +209,7 @@ public extension LibraryRepository {
                 let values = try url.resourceValues(forKeys: keys)
                 guard values.isSymbolicLink != true, values.isRegularFile == true else { continue }
                 let candidate = try Self.referenceURL(url.path, libraryRoot: root)
-                let fingerprint = try Self.digest(candidate)
+                let fingerprint = try Self.digest(candidate, checkingCancellation: true)
                 for photo in possible where photo.sha256 == fingerprint {
                     if matches[photo.originalID, default: []].count < 2 {
                         matches[photo.originalID, default: []].append(candidate)

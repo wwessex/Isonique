@@ -99,10 +99,12 @@ extension Workspace {
         Task { await findOriginals(in: folder, operation: operation, originalIDs: targets, firstAid: firstAid) }
     }
 
+    @discardableResult
     func findOriginals(in folder: URL, operation: OriginalFolderOperation, originalIDs: Set<UUID>? = nil,
-                       firstAid: LibraryFirstAidReport? = nil) async {
-        guard firstAid != nil || canFindOriginals(operation) else { return }
-        await runOriginalJob(status: "Searching for missing originals…") { repository, current in
+                       firstAid: LibraryFirstAidReport? = nil, presentResultInWorkspace: Bool = true) async -> String? {
+        guard originalIDs?.isEmpty != true, firstAid != nil || canFindOriginals(operation) else { return nil }
+        return await runOriginalJob(status: "Searching for missing originals…",
+                                    presentResultInWorkspace: presentResultInWorkspace) { repository, current in
             switch operation {
             case .reconnect:
                 var draft = current
@@ -255,9 +257,11 @@ extension Workspace {
         }
     }
 
-    private func runOriginalJob(status pending: String,
-                                operation: @escaping @Sendable (LibraryRepository, Library) throws -> (Library?, OriginalJobResult)) async {
-        guard !busy, let repository else { return }
+    @discardableResult
+    private func runOriginalJob(status pending: String, presentResultInWorkspace: Bool = true,
+                                operation: @escaping @Sendable (LibraryRepository, Library) throws -> (Library?, OriginalJobResult)) async -> String? {
+        guard !busy, let repository else { return nil }
+        guard !Task.isCancelled else { return String(localized: "Original operation cancelled") }
         let current = library
         busy = true
         status = pending
@@ -265,18 +269,25 @@ extension Workspace {
         originalJobTask = task
         defer { originalJobTask = nil; busy = false }
         do {
-            let (draft, result) = try await task.value
+            let (draft, result) = try await withTaskCancellationHandler {
+                try await task.value
+            } onCancel: {
+                task.cancel()
+            }
             if let draft { library = draft }
             let preferred = selection
             refreshOriginalStatus()
             if selected == nil { selectAfterChange(preferred: preferred) }
-            originalJobResult = result
+            if presentResultInWorkspace { originalJobResult = result }
             status = result.summary
+            return result.details
         } catch is CancellationError {
             status = "Original operation cancelled"
+            return status
         } catch {
-            self.error = error.localizedDescription
+            if presentResultInWorkspace { self.error = error.localizedDescription }
             status = "Original operation failed"
+            return error.localizedDescription
         }
     }
 

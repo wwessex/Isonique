@@ -507,9 +507,11 @@ Review Summary and the workspace show the same live counts during a People scan.
 
 Open Skipped Results from Review Summary or Skipped Face Scan Results from Metadata or the workspace. The latest completed scan in the open library lists every skipped version by name, including versions that share an original. Each row shows whether the file was unavailable or what prevented processing. The report stays available until the next completed scan or until a library is opened. After reconnecting or relinking originals, Retry Skipped Versions looks up the recorded IDs in the current catalogue and retries only active, unscanned versions from that batch. Successful checks save together in one Undo step. Cancelling a retry keeps the previous report and discards the pending checks.
 
+Reconnect Referenced Originals in the report opens a folder picker and runs the existing fingerprint-verified search. The search includes only referenced originals reported unavailable for eligible versions and still offline when the search runs. Versions sharing an original use a single search target. Results appear in the report, which stays open for Retry Skipped Versions after a finished or cancelled search.
+
 ## Next checkpoint
 
-Add a reconnect shortcut to the skipped face scan report. Limit the folder search to the offline referenced originals in the report and deduplicate shared originals before searching.
+Add a managed-original recovery shortcut to Skipped Face Scan Results. Scope the existing verified recovery search to offline managed originals in the report.
 
 ## Pending physical camera checks
 

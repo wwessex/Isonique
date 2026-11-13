@@ -638,29 +638,32 @@ final class PeopleWorkflowTests: XCTestCase {
         let shared = folder.appendingPathComponent("Offline.png")
         let second = folder.appendingPathComponent("Second Offline.png")
         let outside = folder.appendingPathComponent("Outside.png")
+        let restored = folder.appendingPathComponent("Restored.png")
         try makeImage(available)
         try makeImage(shared, red: 0.2)
         try makeImage(second, red: 0.4, width: 128)
         try makeImage(outside, red: 0.6)
+        try makeImage(restored, red: 0.8)
         var draft = try repository.load()
         draft.projects = [project, other]
         var options = ImportOptions()
         options.storage = .referenced
-        for source in [available, shared, second, outside] {
+        for source in [available, shared, second, outside, restored] {
             let projectID = source == outside ? other.id : project.id
             XCTAssertTrue(try repository.importPhoto(source, projectID: projectID, into: &draft, options: options))
         }
         let firstVersion = draft.photos[1]
         let secondVersion = draft.photos[2]
         let outsideVersion = draft.photos[3]
+        let restoredVersion = draft.photos[4]
         let trashedLater = try XCTUnwrap(draft.createVersion(of: firstVersion.id, from: .current))
         let scannedLater = try XCTUnwrap(draft.createVersion(of: firstVersion.id, from: .current))
         let outsideShared = try XCTUnwrap(draft.createVersion(of: firstVersion.id, from: .current))
-        draft.photos[6].projectID = other.id
+        draft.photos[7].projectID = other.id
         _ = try repository.save(draft)
         let relocated = folder.appendingPathComponent("Relocated")
         try FileManager.default.createDirectory(at: relocated, withIntermediateDirectories: false)
-        for source in [shared, second] {
+        for source in [shared, second, outside, restored] {
             try FileManager.default.moveItem(at: source, to: relocated.appendingPathComponent(source.lastPathComponent))
         }
 
@@ -671,14 +674,34 @@ final class PeopleWorkflowTests: XCTestCase {
         try await waitForScan(model)
         let report = try XCTUnwrap(model.peopleScanReport)
         XCTAssertEqual(report.checked, 1)
-        XCTAssertEqual(report.skippedVersions.map(\.id), [firstVersion.id, secondVersion.id, trashedLater.id, scannedLater.id])
-        XCTAssertEqual(report.skippedVersions.map(\.reason), Array(repeating: .unavailable, count: 4))
-        XCTAssertEqual(Set(report.skippedVersions.map(\.name)).count, 4)
+        XCTAssertEqual(report.skippedVersions.map(\.id), [
+            firstVersion.id, secondVersion.id, restoredVersion.id, trashedLater.id, scannedLater.id
+        ])
+        XCTAssertEqual(report.skippedVersions.map(\.reason), Array(repeating: .unavailable, count: 5))
+        XCTAssertEqual(Set(report.skippedVersions.map(\.name)).count, 5)
 
-        await model.findOriginals(in: relocated, operation: .reconnect, originalIDs: [firstVersion.originalID, secondVersion.originalID])
+        // An original can return to its saved path while the report is open.
+        try FileManager.default.copyItem(at: relocated.appendingPathComponent(restored.lastPathComponent), to: restored)
+        let beforeReconnect = try repository.load()
+        let cancelledSearch = Task { await model.reconnectPeopleScanOriginals(report, in: relocated) }
+        cancelledSearch.cancel()
+        let cancelledDetails = await cancelledSearch.value
+        XCTAssertEqual(cancelledDetails, "Original operation cancelled")
+        XCTAssertEqual(model.peopleScanReport?.id, report.id)
+        XCTAssertTrue(try repository.load().hasSameCatalogueRevision(as: beforeReconnect))
+
+        let details = await model.reconnectPeopleScanOriginals(report, in: relocated)
+        XCTAssertEqual(details, "2 reconnected · 0 unmatched · 0 ambiguous")
+        XCTAssertEqual(model.peopleScanReport?.id, report.id)
+        XCTAssertNil(model.originalJobResult)
         var latest = try repository.load()
-        latest.photos[4].trashedAt = Date()
-        latest.photos[5].people = try detections()
+        let offlineVersions = latest.photos.filter { $0.originalID == firstVersion.originalID }
+        XCTAssertEqual(offlineVersions.count, 4)
+        XCTAssertEqual(Set(offlineVersions.compactMap(\.referencedPath)), [relocated.appendingPathComponent(shared.lastPathComponent).path])
+        XCTAssertEqual(latest.photos[3].referencedPath, outside.path)
+        XCTAssertEqual(latest.photos[4].referencedPath, restored.path)
+        latest.photos[5].trashedAt = Date()
+        latest.photos[6].people = try detections()
         _ = try repository.save(latest)
         await model.reloadLibrary()
         model.scope = "project:\(other.id)"
@@ -696,7 +719,7 @@ final class PeopleWorkflowTests: XCTestCase {
         }
         let cancelled = try XCTUnwrap(model.peopleScan)
         await fulfillment(of: [started], timeout: 5)
-        XCTAssertEqual(cancelled.progress.counts, PeopleScanCounts(total: 2, checked: 1))
+        XCTAssertEqual(cancelled.progress.counts, PeopleScanCounts(total: 3, checked: 1))
         cancelled.progress.cancel(cancelled.task)
         _ = await cancelled.task.result
         try await waitForScan(model)
@@ -707,7 +730,7 @@ final class PeopleWorkflowTests: XCTestCase {
         let retry = try XCTUnwrap(model.peopleScan)
         let result = try await retry.task.value
         try await waitForScan(model)
-        XCTAssertEqual(result.changes.map(\.photoID), [firstVersion.id, secondVersion.id])
+        XCTAssertEqual(result.changes.map(\.photoID), [firstVersion.id, secondVersion.id, restoredVersion.id])
         XCTAssertTrue(result.skippedVersions.isEmpty)
         XCTAssertFalse(model.canOpenPeopleScanReport)
         XCTAssertNil(model.library.photos.first { $0.id == outsideShared.id }?.people)
@@ -715,6 +738,41 @@ final class PeopleWorkflowTests: XCTestCase {
         XCTAssertEqual(model.history.undo.count, (unretried.history?.undo.count ?? 0) + 1)
         model.undoEdit()
         XCTAssertEqual(try repository.load().photos, unretried.photos)
+        let staleSearch = await model.reconnectPeopleScanOriginals(report, in: relocated)
+        XCTAssertNil(staleSearch)
+    }
+
+    func testSkippedReportReconnectIgnoresMissingManagedFilesAndProcessingFailures() async throws {
+        let (folder, repository, preferences, suite) = try fixture()
+        defer {
+            preferences.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let managed = folder.appendingPathComponent("Managed.png")
+        let changed = folder.appendingPathComponent("Changed.png")
+        try makeImage(managed)
+        try makeImage(changed, red: 0.2)
+        var draft = try repository.load()
+        var options = ImportOptions()
+        options.storage = .referenced
+        XCTAssertTrue(try repository.importPhoto(managed, projectID: nil, into: &draft))
+        XCTAssertTrue(try repository.importPhoto(changed, projectID: nil, into: &draft, options: options))
+        let saved = try repository.save(draft)
+        try FileManager.default.removeItem(at: repository.originalURL(saved.photos[0]))
+        try makeImage(changed, red: 0.4)
+
+        let model = Workspace(libraryRoot: repository.root, preferences: preferences)
+        model.scanUnscannedFaces(in: .library)
+        let scan = try XCTUnwrap(model.peopleScan?.task)
+        _ = try await scan.value
+        try await waitForScan(model)
+        let report = try XCTUnwrap(model.peopleScanReport)
+        XCTAssertEqual(report.skippedVersions.count, 2)
+        XCTAssertTrue(model.peopleScanReconnectIDs(report).isEmpty)
+        let details = await model.reconnectPeopleScanOriginals(report, in: folder)
+        XCTAssertNil(details)
+        XCTAssertEqual(model.peopleScanReport?.id, report.id)
+        XCTAssertTrue(try repository.load().hasSameCatalogueRevision(as: saved))
     }
 
     private func waitForScan(_ model: Workspace) async throws {

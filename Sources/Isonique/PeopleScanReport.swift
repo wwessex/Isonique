@@ -66,16 +66,30 @@ extension Workspace {
                          }) {
         scanFaces(peopleScanRetryTargets(report), detect: detect)
     }
+
+    func peopleScanReconnectIDs(_ report: PeopleScanReport) -> Set<UUID> {
+        let unavailable = Set(report.skippedVersions.filter { $0.reason == .unavailable }.map(\.id))
+        let references = peopleScanRetryTargets(report).filter { unavailable.contains($0.id) && $0.referencedPath != nil }
+        return Set(references.map(\.originalID))
+    }
+
+    func reconnectPeopleScanOriginals(_ report: PeopleScanReport, in folder: URL) async -> String? {
+        await findOriginals(in: folder, operation: .reconnect, originalIDs: peopleScanReconnectIDs(report),
+                            presentResultInWorkspace: false)
+    }
 }
 
 struct PeopleScanReportView: View {
     @EnvironmentObject private var model: Workspace
     @Environment(\.dismiss) private var dismiss
     @State private var requestedRetry = false
+    @State private var showReconnectPicker = false
+    @State private var reconnectDetails: String?
 
     var body: some View {
         if let report = model.peopleScanReport, model.repository?.root == report.root {
             let eligibleCount = model.peopleScanRetryTargets(report).count
+            let canReconnect = !model.peopleScanReconnectIDs(report).isEmpty
             VStack(alignment: .leading, spacing: 14) {
                 Text("Skipped Face Scan Results").font(.title2.bold())
                 Text(report.summary).foregroundStyle(.secondary)
@@ -100,13 +114,27 @@ struct PeopleScanReportView: View {
                 }
                 if let scan = model.peopleScan {
                     PeopleScanProgressView(task: scan.task, progress: scan.progress)
+                } else if let search = model.originalJobTask {
+                    HStack {
+                        ProgressView().controlSize(.small)
+                        Text("Searching for missing originals…")
+                        Spacer()
+                        Button("Cancel Search") { search.cancel() }
+                    }
+                } else if let reconnectDetails {
+                    Text(reconnectDetails).font(.caption).foregroundStyle(.secondary)
                 } else if requestedRetry && model.status != report.summary {
                     Text(model.status).font(.caption).foregroundStyle(.secondary)
                 }
                 HStack {
+                    if canReconnect {
+                        Button("Reconnect Referenced Originals…") { showReconnectPicker = true }
+                            .disabled(model.busy)
+                    }
                     Spacer()
                     if !report.skippedVersions.isEmpty {
                         Button("Retry Skipped Versions (\(eligibleCount))") {
+                            reconnectDetails = nil
                             requestedRetry = true
                             model.retryPeopleScan(report)
                         }
@@ -117,6 +145,21 @@ struct PeopleScanReportView: View {
             }
             .padding(20)
             .frame(width: 570)
+            .fileImporter(isPresented: $showReconnectPicker, allowedContentTypes: [.folder]) { result in
+                switch result {
+                case .success(let folder):
+                    Task {
+                        let hasAccess = folder.startAccessingSecurityScopedResource()
+                        defer { if hasAccess { folder.stopAccessingSecurityScopedResource() } }
+                        reconnectDetails = await model.reconnectPeopleScanOriginals(report, in: folder)
+                    }
+                case .failure(let error):
+                    if (error as? CocoaError)?.code != .userCancelled {
+                        reconnectDetails = error.localizedDescription
+                    }
+                }
+            }
+            .onChange(of: report.id) { reconnectDetails = nil }
         }
     }
 }
