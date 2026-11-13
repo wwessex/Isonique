@@ -110,6 +110,10 @@ struct PeopleGalleryView: View {
                     }
                 }
                 .frame(maxWidth: 295)
+                Button("Review Summary…") {
+                    model.openPeopleSummary(project.map { .project($0) } ?? .library)
+                }
+                .disabled(!model.canOpenUnnamedFaces)
             }
             .padding(.horizontal, 20)
             .padding(.vertical, 12)

@@ -29,6 +29,8 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var showAdvancedSearch = false
     @Published var peopleReview: PeopleReview?
     @Published var unnamedFaceReview: UnnamedFaceReview?
+    @Published var peopleSummary: PeopleSummaryRequest?
+    var pendingUnnamedFaceScope: UnnamedFaceScope?
     @Published var personNameEditor: PersonNameEditorRequest?
     @Published var personOverview: PersonOverviewRequest?
     @Published var peopleScan: Task<PeopleScanResult, Error>?
@@ -1278,6 +1280,7 @@ struct ContentView: View {
                         Label("Flagged", systemImage: "flag").tag("flagged")
                         Label("People", systemImage: "person.crop.rectangle").tag("people-gallery")
                             .contextMenu {
+                                Button("People Review Summary…") { model.openPeopleSummary(.library) }
                                 Button("Show Photos with Faces", action: model.showFacePhotos)
                                 Button("Review Unnamed Faces…") { model.openUnnamedFaces(.library) }
                                     .disabled(!model.canOpenUnnamedFaces)
@@ -1304,6 +1307,7 @@ struct ContentView: View {
                             Label(project.name, systemImage: "folder")
                                 .tag("project:\(project.id)")
                                 .contextMenu {
+                                    Button("People Review Summary…") { model.openPeopleSummary(.project(project.id)) }
                                     Button("Review Unnamed Faces…") { model.openUnnamedFaces(.project(project.id)) }
                                         .disabled(!model.canOpenUnnamedFaces)
                                     Button("Export Project as Library…") { model.exportProjectPanel(project) }
@@ -1563,6 +1567,9 @@ struct ContentView: View {
         .sheet(isPresented: $model.showAdvancedSearch) { AdvancedSearchView().environmentObject(model) }
         .sheet(item: $model.peopleReview) { review in
             PeopleReviewView(review: review).environmentObject(model)
+        }
+        .sheet(item: $model.peopleSummary, onDismiss: model.finishPeopleSummary) { request in
+            PeopleReviewSummaryView(request: request).environmentObject(model)
         }
         .sheet(item: $model.unnamedFaceReview) { review in
             UnnamedFaceQueueView(review: review).environmentObject(model)

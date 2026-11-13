@@ -493,9 +493,15 @@ People opens a gallery of named groups with portrait tiles, case- and accent-ins
 
 Portrait loading starts when the image area enters the scroll viewport. Work is cancelled when a tile leaves view. The loader verifies and decodes one original at a time and renders gallery crops to standalone images capped at 360 pixels. The gallery derives its names, counts and portrait choices from the current catalogue, so face reassignment and Undo refresh the affected groups.
 
+## People review summary
+
+Open Review Summary in the People gallery, the Metadata menu or a People or project context menu. The scope picker switches between the library and individual projects. Counts cover active versions independently of Browser filters. A completed scan counts even when Vision found no faces, and each saved unnamed face counts separately. The availability check runs in the background and counts each missing managed or referenced original once across its versions. Refresh checks again after a volume is connected or disconnected.
+
+Scan Available Photos (⌥⌘S) uses the current scope and skips unavailable originals. It uses the existing verified source and cancellable on-device Vision workflow, with one Undo step for a completed scan. Review Unnamed Faces (⌥⌘R) opens the existing queue in the same scope, including saved faces on offline versions. Both shortcuts are local to the summary. Opening or refreshing the summary performs no catalogue writes.
+
 ## Next checkpoint
 
-Add a read-only People review summary for each project and the entire library. Show counts of unscanned versions, unnamed faces and offline originals, with shortcuts to the existing detection and review workflows.
+Show which originals are offline in the People Review Summary. Group the list by managed and referenced storage and link to the existing recovery workflows.
 
 ## Pending physical camera checks
 

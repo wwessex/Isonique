@@ -6,6 +6,138 @@ import XCTest
 
 @MainActor
 final class PeopleWorkflowTests: XCTestCase {
+    func testReviewSummaryCountsVersionsFacesAndDistinctOfflineOriginalsByScope() async throws {
+        let (folder, repository, preferences, suite) = try fixture()
+        defer {
+            preferences.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let project = IsoniqueCore.Collection(name: "Review")
+        let other = IsoniqueCore.Collection(name: "Other project")
+        let source = folder.appendingPathComponent("Referenced.png")
+        try makeImage(source)
+        var options = ImportOptions()
+        options.storage = .referenced
+        var draft = try repository.load()
+        draft.projects = [project, other]
+        XCTAssertTrue(try repository.importPhoto(source, projectID: project.id, into: &draft, options: options))
+        let reference = draft.photos[0]
+        var otherVersion = try XCTUnwrap(draft.createVersion(of: reference.id, from: .current))
+        otherVersion.projectID = other.id
+        draft.photos[1] = otherVersion
+
+        var missing = try queuePhoto("Missing managed", id: 1, project: project.id, imported: 1)
+        missing.people?.faces[0].assignName("Sam")
+        var unscannedVersion = missing
+        unscannedVersion.id = queueID(2)
+        unscannedVersion.sharedOriginalID = missing.id
+        unscannedVersion.people = nil
+        var trashed = try queuePhoto("Trash", id: 3, project: project.id, imported: 2)
+        trashed.trashedAt = Date()
+        let unfiled = try queuePhoto("Unfiled", id: 4, project: nil, imported: 3)
+        draft.photos += [missing, unscannedVersion, trashed, unfiled]
+        let saved = try repository.save(draft)
+
+        let scoped = PeopleReviewSummary(library: saved, scope: .project(project.id))
+        let offlineInProject = try await scoped.offlineOriginals(in: repository)
+        XCTAssertEqual(Set(scoped.unscannedVersions.map(\.id)), [reference.id, unscannedVersion.id])
+        XCTAssertEqual(scoped.unnamedFaceCount, 1)
+        XCTAssertEqual(offlineInProject, [missing.id])
+        XCTAssertEqual(scoped.availableVersionCount(offlineOriginals: offlineInProject), 1)
+
+        let parked = folder.appendingPathComponent("Disconnected.png")
+        try FileManager.default.moveItem(at: source, to: parked)
+        let all = PeopleReviewSummary(library: saved, scope: .library)
+        let offlineInLibrary = try await all.offlineOriginals(in: repository)
+        XCTAssertEqual(Set(all.unscannedVersions.map(\.id)), [reference.id, otherVersion.id, unscannedVersion.id])
+        XCTAssertEqual(all.unnamedFaceCount, 3)
+        XCTAssertEqual(offlineInLibrary, [reference.id, missing.id, unfiled.id])
+        XCTAssertEqual(all.availableVersionCount(offlineOriginals: offlineInLibrary), 0)
+        let otherSummary = PeopleReviewSummary(library: saved, scope: .project(other.id))
+        let otherOffline = try await otherSummary.offlineOriginals(in: repository)
+        XCTAssertEqual(otherSummary.unscannedVersions.map(\.id), [otherVersion.id])
+        XCTAssertEqual(otherOffline, [reference.id])
+
+        try FileManager.default.moveItem(at: parked, to: source)
+        let reconnected = try await all.offlineOriginals(in: repository)
+        XCTAssertEqual(reconnected, [missing.id, unfiled.id])
+        XCTAssertEqual(all.availableVersionCount(offlineOriginals: reconnected), 2)
+        let empty = PeopleReviewSummary(library: saved, scope: .project(UUID()))
+        let emptyOffline = try await empty.offlineOriginals(in: repository)
+        XCTAssertTrue(empty.unscannedVersions.isEmpty)
+        XCTAssertEqual(empty.unnamedFaceCount, 0)
+        XCTAssertTrue(emptyOffline.isEmpty)
+        XCTAssertTrue(try repository.load().hasSameCatalogueRevision(as: saved))
+    }
+
+    func testReviewSummaryActionsScanAvailableVersionsAndOpenScopedOfflineQueue() async throws {
+        let (folder, repository, preferences, suite) = try fixture()
+        defer {
+            preferences.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let project = IsoniqueCore.Collection(name: "Review")
+        let other = IsoniqueCore.Collection(name: "Other project")
+        let source = folder.appendingPathComponent("Available.png")
+        try makeImage(source)
+        var draft = try repository.load()
+        draft.projects = [project, other]
+        XCTAssertTrue(try repository.importPhoto(source, projectID: project.id, into: &draft))
+        let available = draft.photos[0]
+        var outside = try XCTUnwrap(draft.createVersion(of: available.id, from: .current))
+        outside.projectID = other.id
+        draft.photos[1] = outside
+        var alreadyScanned = try XCTUnwrap(draft.createVersion(of: available.id, from: .current))
+        alreadyScanned.people = PhotoPeople()
+        alreadyScanned.people?.incorporateDetections([])
+        draft.photos[2] = alreadyScanned
+        var offline = try queuePhoto("Offline", id: 1, project: project.id, imported: 1)
+        let face = try XCTUnwrap(offline.people?.faces.first)
+        offline.people = PhotoPeople()
+        offline.people?.faces = [face]
+        draft.photos.append(offline)
+        _ = try repository.save(draft)
+        let model = Workspace(libraryRoot: repository.root, preferences: preferences)
+        model.scope = "project:\(project.id.uuidString)"
+        model.search = "Nothing matches"
+        XCTAssertTrue(model.photos.isEmpty)
+        let scope = UnnamedFaceScope.project(project.id)
+        XCTAssertEqual(model.currentPeopleReviewScope, scope)
+        model.openPeopleSummary(model.currentPeopleReviewScope)
+        XCTAssertEqual(model.peopleSummary?.initialScope, scope)
+
+        model.scanUnscannedFaces(in: scope)
+        let task = try XCTUnwrap(model.peopleScan)
+        let result = try await task.value
+        try await waitForScan(model)
+        XCTAssertEqual(result.scanned, 1)
+        XCTAssertEqual(result.offline, 1)
+        XCTAssertEqual(model.status, "Checked 1 photo version for faces · 1 offline version skipped")
+        XCTAssertTrue(result.issues.isEmpty)
+        XCTAssertEqual(result.changes.map(\.photoID), [available.id])
+        XCTAssertEqual(model.history.undo.count, 1)
+        let saved = try repository.load()
+        XCTAssertTrue(saved.photos[0].people?.scanned == true)
+        XCTAssertNil(saved.photos[1].people)
+        XCTAssertEqual(saved.photos[2], alreadyScanned)
+        let summary = PeopleReviewSummary(library: saved, scope: scope)
+        XCTAssertEqual(summary.unscannedVersions.map(\.id), [offline.id])
+        XCTAssertEqual(summary.unnamedFaceCount, 1)
+
+        model.reviewFacesFromSummary(in: scope)
+        XCTAssertNil(model.peopleSummary)
+        XCTAssertNil(model.unnamedFaceReview)
+        model.finishPeopleSummary()
+        let review = try XCTUnwrap(model.unnamedFaceReview)
+        XCTAssertEqual(review.initialScope, scope)
+        let target = try XCTUnwrap(model.unnamedFaces(in: scope).first)
+        XCTAssertEqual(target.photo.id, offline.id)
+        XCTAssertTrue(model.resolveUnnamedFace(target, in: scope, review: review, decision: .newName("Alex")))
+        XCTAssertEqual(PeopleReviewSummary(library: model.library, scope: scope).unnamedFaceCount, 0)
+        model.undoEdit()
+        XCTAssertEqual(PeopleReviewSummary(library: model.library, scope: scope).unnamedFaceCount, 1)
+    }
+
     func testUnnamedQueueHasStableOrderAndIncludesOnlyEligibleVersions() throws {
         let (folder, repository, preferences, suite) = try fixture()
         defer {

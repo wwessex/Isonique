@@ -33,6 +33,7 @@ struct PeopleScanResult {
     var changes: [PhotoPeopleChange] = []
     var issues: [String] = []
     var scanned = 0
+    var offline = 0
 }
 
 extension Workspace {
@@ -94,9 +95,11 @@ extension Workspace {
     }
 
     func scanSelectedFaces() {
-        guard let repository else { return }
-        let targets = metadataEditingTargets.filter { $0.people?.scanned != true }
-        guard !targets.isEmpty else { return }
+        scanFaces(metadataEditingTargets.filter { $0.people?.scanned != true }, availableOnly: false)
+    }
+
+    func scanFaces(_ targets: [Photo], availableOnly: Bool) {
+        guard !busy, let repository, !targets.isEmpty else { return }
         let snapshot = library
         busy = true
         status = "Detecting faces on this Mac…"
@@ -104,6 +107,10 @@ extension Workspace {
             var result = PeopleScanResult()
             for photo in targets {
                 try Task.checkCancellation()
+                if availableOnly, (try? repository.availableOriginalURL(photo)) == nil {
+                    result.offline += 1
+                    continue
+                }
                 do {
                     let image = try repository.verifiedFaceSource(for: photo)
                     let regions = try await FaceDetection.regions(in: image)
@@ -135,6 +142,11 @@ extension Workspace {
                     return
                 }
                 status = result.scanned == 1 ? "Checked 1 photo version for faces" : "Checked \(result.scanned) photo versions for faces"
+                if result.offline > 0 {
+                    let skipped = result.offline == 1 ? String(localized: "1 offline version skipped")
+                        : String(localized: "\(result.offline) offline versions skipped")
+                    status += " · " + skipped
+                }
                 if !result.issues.isEmpty {
                     error = "Skipped \(result.issues.count) photo versions.\n\n" + result.issues.prefix(8).joined(separator: "\n")
                 }
@@ -152,6 +164,8 @@ struct PeopleCommands: View {
     @ObservedObject var model: Workspace
 
     var body: some View {
+        Button("People Review Summary…") { model.openPeopleSummary(model.currentPeopleReviewScope) }
+            .disabled(!model.canOpenUnnamedFaces)
         Button("Detect Faces in Selection", action: model.scanSelectedFaces)
             .disabled(!model.canScanSelectedFaces)
         if let scan = model.peopleScan {
@@ -161,7 +175,7 @@ struct PeopleCommands: View {
             if let photo = model.selected { model.openPeopleReview(photo) }
         }.disabled(model.selected == nil || model.isViewingTrash || model.busy || model.batchMode)
         Button("Review Unnamed Faces…") {
-            model.openUnnamedFaces(model.selectedProject.map { .project($0.id) } ?? .library)
+            model.openUnnamedFaces(model.currentPeopleReviewScope)
         }.disabled(!model.canOpenUnnamedFaces)
         Button("Rename or Merge Person…") {
             if let group = model.selectedPersonGroup { model.openPersonNameEditor(group) }
