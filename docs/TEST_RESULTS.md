@@ -891,3 +891,11 @@
 - Changed adjustments and a verified relink each rejected the prior preview until a fresh render was saved. The cache rejected a reference whose bytes differed from the catalogue fingerprint. A small cache test confirmed older previews were evicted.
 - In the signed macOS app, opening a reference at Fit produced a saved preview. After quitting, moving the test original offline and relaunching against the same library, the Viewer showed the saved image under Offline Preview with Relink and Refresh available.
 - The full suite ran 447 tests with 444 passes, zero failures and three fixture-dependent skips for external camera RAW, Finder Trash and the Vision group portrait. Branding and the Apple Silicon release build passed. The extracted archive passed strict signature verification and targets macOS 15.0.
+
+## Offline Browser thumbnails
+
+- A reopened library showed size-bounded thumbnails for two versions sharing an offline original, with each version's crop preserved. The test opened the cropped version through List selection and switched versions through Browser selection. A third version without a saved preview returned no thumbnail.
+- Editing one offline version invalidated its thumbnail while leaving the other version's thumbnail available. Relinking invalidated the old reference path. A fresh render at the new path supplied a matching thumbnail when the original went offline again.
+- In the signed app, Grid, List, filmstrip and the Second Browser displayed Offline for both cached versions after relaunch. Opening the alternate version from List and switching through the filmstrip displayed the corresponding saved Viewer image each time.
+- The final List accessibility tree included the version name and offline status. Rotating one version offline hid its stale filmstrip thumbnail and Viewer preview while the other version stayed available. Undo restored the matching cached image.
+- All 17 focused tests passed. The full suite ran 448 tests with 445 passes, zero failures and three fixture-dependent skips for external camera RAW, Finder Trash and the Vision group portrait. Branding and the signed Apple Silicon release build passed. The extracted archive passed strict signature verification and targets macOS 15.0.

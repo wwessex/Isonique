@@ -166,6 +166,69 @@ final class ViewerRenderCacheTests: XCTestCase {
         XCTAssertEqual(try rgbaPixels(XCTUnwrap(offline)), try rgbaPixels(edited))
     }
 
+    @MainActor
+    func testReopenedBrowserLoadsThumbnailsForTheSelectedVersionOnly() async throws {
+        let directory = try temporaryFolder()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let (repository, library, original) = try referencedFixture(in: directory, width: 480)
+        var draft = library
+        let firstID = draft.photos[0].id
+        let alternate = try XCTUnwrap(draft.createVersion(of: firstID, from: .current))
+        let unsaved = try XCTUnwrap(draft.createVersion(of: firstID, from: .current))
+        draft.photos[1].adjustments.crop = PhotoCrop(x: 0, y: 0, width: 0.5, height: 1)
+        draft = try repository.save(draft)
+        let previews = directory.appendingPathComponent("Previews")
+        let store = OfflineViewerPreviews(directory: previews)
+        for photo in draft.photos.prefix(2) { _ = try await saveViewerPreview(photo, repository: repository, store: store) }
+        let disconnected = directory.appendingPathComponent("Disconnected.png")
+        try FileManager.default.moveItem(at: original, to: disconnected)
+
+        let suite = "IsoniqueOfflineThumbnails.\(UUID())"
+        let preferences = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defer { preferences.removePersistentDomain(forName: suite) }
+        let model = Workspace(libraryRoot: repository.root, preferences: preferences)
+        let reopened = OfflineViewerPreviews(directory: previews)
+        model.openListPhoto(alternate.id)
+        XCTAssertTrue(model.viewer)
+        let selectedAlternate = try XCTUnwrap(model.selected)
+        XCTAssertEqual(selectedAlternate.id, alternate.id)
+        let alternateKey = try XCTUnwrap(OfflineViewerPreviews.Key(photo: selectedAlternate, library: repository.root))
+        let listImage = await reopened.thumbnail(for: alternateKey, maximum: 96)
+        XCTAssertEqual(listImage?.width, 48)
+        XCTAssertEqual(listImage?.height, 96)
+
+        model.selectBrowserPhoto(firstID)
+        let selectedOriginal = try XCTUnwrap(model.selected)
+        XCTAssertEqual(selectedOriginal.id, firstID)
+        let originalKey = try XCTUnwrap(OfflineViewerPreviews.Key(photo: selectedOriginal, library: repository.root))
+        let filmstripImage = await reopened.thumbnail(for: originalKey, maximum: 220)
+        XCTAssertEqual(filmstripImage?.width, 220)
+        XCTAssertEqual(filmstripImage?.height, 220)
+        let unseenKey = try XCTUnwrap(OfflineViewerPreviews.Key(photo: unsaved, library: repository.root))
+        let unseen = await reopened.thumbnail(for: unseenKey, maximum: 220)
+        XCTAssertNil(unseen)
+
+        model.edit { $0.adjustments.exposure = 0.5 }
+        let edited = try XCTUnwrap(model.selected)
+        let editedKey = try XCTUnwrap(OfflineViewerPreviews.Key(photo: edited, library: repository.root))
+        let staleAfterEdit = await reopened.thumbnail(for: editedKey, maximum: 220)
+        XCTAssertNil(staleAfterEdit)
+        let unaffected = await reopened.thumbnail(for: alternateKey, maximum: 96)
+        XCTAssertNotNil(unaffected)
+
+        var relinked = try repository.load()
+        try repository.relinkOriginal(alternate.id, to: disconnected, in: &relinked)
+        let relinkedVariant = try XCTUnwrap(relinked.photos.first { $0.id == alternate.id })
+        let relinkedKey = try XCTUnwrap(OfflineViewerPreviews.Key(photo: relinkedVariant, library: repository.root))
+        let staleAfterRelink = await reopened.thumbnail(for: relinkedKey, maximum: 96)
+        XCTAssertNil(staleAfterRelink)
+        _ = try await saveViewerPreview(relinkedVariant, repository: repository, store: reopened)
+        try FileManager.default.removeItem(at: disconnected)
+        let refreshed = await reopened.thumbnail(for: relinkedKey, maximum: 96)
+        XCTAssertEqual(refreshed?.width, 48)
+        XCTAssertEqual(refreshed?.height, 96)
+    }
+
     func testPreviewCacheRejectsDifferentOriginalBytesAndPrunesOldVersions() async throws {
         let directory = try temporaryFolder()
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -189,10 +252,10 @@ final class ViewerRenderCacheTests: XCTestCase {
         XCTAssertNotNil(remaining)
     }
 
-    private func referencedFixture(in directory: URL) throws -> (LibraryRepository, Library, URL) {
+    private func referencedFixture(in directory: URL, width: Int = 64) throws -> (LibraryRepository, Library, URL) {
         let repository = try LibraryRepository.createEmpty(at: directory.appendingPathComponent("Library"))
         let original = directory.appendingPathComponent("Referenced.png").resolvingSymlinksInPath()
-        try writeFixture(to: original, width: 64, gray: 0.4)
+        try writeFixture(to: original, width: width, gray: 0.4)
         var library = try repository.load()
         var options = ImportOptions()
         options.storage = .referenced

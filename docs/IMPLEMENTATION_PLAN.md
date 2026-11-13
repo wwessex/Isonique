@@ -517,9 +517,11 @@ The regular single-photo Viewer automatically saves adjusted Fit previews for re
 
 Open a previously viewed version while its original is offline to see Offline Preview, with Refresh and Relink available. Lookup requires the current library, version, source fingerprint, reference path and adjustment recipe. Changing an edit or reference path requires a matching preview. The cache lives outside the catalogue. Original and edited exports still require an available original.
 
+Grid, List, filmstrip and the Second Browser downsample the same matching preview for an offline reference and display an Offline badge. Each visible cell requests its own thumbnail size. A version without a matching preview keeps the unavailable-original indicator. When an original returns, the Browser uses its normal live-thumbnail path.
+
 ## Next checkpoint
 
-Add an offline preview indicator and saved thumbnail fallback to the Grid, List and filmstrip for referenced versions with a matching Viewer preview.
+Add a project-scoped command to generate offline Viewer previews in a batch for referenced originals.
 
 ## Pending physical camera checks
 

@@ -9,10 +9,23 @@ actor OfflineViewerPreviews {
     private static let maximumEntrySize = 32 * 1024 * 1024
     private static let formatVersion = 1
 
-    private struct Source: Codable, Equatable {
+    fileprivate struct Source: Codable, Equatable {
         let fingerprint: String
         let path: String
         let adjustments: Adjustments
+    }
+
+    struct Key: Equatable {
+        fileprivate let library: URL
+        fileprivate let photoID: UUID
+        fileprivate let source: Source
+
+        init?(photo: Photo, library: URL) {
+            guard let path = photo.referencedPath else { return nil }
+            self.library = library.standardizedFileURL
+            self.photoID = photo.id
+            self.source = Source(fingerprint: photo.sha256, path: path, adjustments: photo.adjustments)
+        }
     }
 
     private struct Entry: Codable {
@@ -38,7 +51,8 @@ actor OfflineViewerPreviews {
     func save(_ image: CGImage, of photo: Photo, in library: URL, original: URL, stamp: OriginalFileStamp) async {
         guard !Task.isCancelled, byteLimit > 0, entryLimit > 0,
               max(image.width, image.height) <= Int(Self.maximumDimension),
-              let source = source(for: photo), let file = file(for: photo, in: library) else { return }
+              let key = Key(photo: photo, library: library), let file = file(for: key) else { return }
+        let source = key.source
         let saved = savedSources[file]
         let verified = saved?.source.fingerprint == source.fingerprint && saved?.source.path == source.path && saved?.stamp == stamp
         let saveID = UUID()
@@ -74,27 +88,45 @@ actor OfflineViewerPreviews {
     }
 
     func image(for photo: Photo, in library: URL) -> CGImage? {
-        guard !Task.isCancelled, let source = source(for: photo), let file = file(for: photo, in: library),
-              let entry = entry(at: file), entry.source == source,
+        guard let key = Key(photo: photo, library: library) else { return nil }
+        return image(for: key, maximum: nil)
+    }
+
+    func thumbnail(for key: Key, maximum: Int) -> CGImage? {
+        guard (1...Int(Self.maximumDimension)).contains(maximum) else { return nil }
+        return image(for: key, maximum: maximum)
+    }
+
+    private func image(for key: Key, maximum: Int?) -> CGImage? {
+        guard !Task.isCancelled, let file = file(for: key),
+              let entry = entry(at: file), entry.source == key.source,
               let decoder = CGImageSourceCreateWithData(entry.png as CFData, nil),
               let properties = CGImageSourceCopyPropertiesAtIndex(decoder, 0, nil) as? [CFString: Any],
               let width = properties[kCGImagePropertyPixelWidth] as? Int,
               let height = properties[kCGImagePropertyPixelHeight] as? Int,
-              (1...Int(Self.maximumDimension)).contains(width), (1...Int(Self.maximumDimension)).contains(height),
-              let image = CGImageSourceCreateImageAtIndex(decoder, 0, nil), !Task.isCancelled else { return nil }
+              (1...Int(Self.maximumDimension)).contains(width),
+              (1...Int(Self.maximumDimension)).contains(height) else { return nil }
+        let image: CGImage?
+        if let maximum {
+            let options: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceThumbnailMaxPixelSize: maximum,
+                kCGImageSourceShouldCacheImmediately: true
+            ]
+            image = CGImageSourceCreateThumbnailAtIndex(decoder, 0, options as CFDictionary)
+        } else {
+            image = CGImageSourceCreateImageAtIndex(decoder, 0, nil)
+        }
+        guard let image, !Task.isCancelled else { return nil }
         try? FileManager.default.setAttributes([.modificationDate: Date()], ofItemAtPath: file.path)
         return image
     }
 
-    private func source(for photo: Photo) -> Source? {
-        photo.referencedPath.map { Source(fingerprint: photo.sha256, path: $0, adjustments: photo.adjustments) }
-    }
-
-    private func file(for photo: Photo, in library: URL) -> URL? {
+    private func file(for key: Key) -> URL? {
         guard let directory else { return nil }
-        let hash = SHA256.hash(data: Data(library.standardizedFileURL.path.utf8))
+        let hash = SHA256.hash(data: Data(key.library.path.utf8))
             .map { String(format: "%02x", $0) }.joined()
-        return directory.appendingPathComponent("\(hash)-\(photo.id.uuidString).preview")
+        return directory.appendingPathComponent("\(hash)-\(key.photoID.uuidString).preview")
     }
 
     private func entry(at file: URL) -> Entry? {

@@ -100,6 +100,7 @@ Use the signed build and a disposable library containing two projects, a regular
 1. Import a reference and open it in the regular single-photo Viewer at Fit. Apply an adjustment and let the updated preview finish.
 2. Quit, disconnect the original and reopen the library. Open the same version and check that **Offline Preview** shows its edits. Try an edited export and an original export and confirm both report the unavailable source.
 3. Reconnect or relink the original and open it again. Check that the live view returns. Disconnect it after the new Fit render and verify the saved preview uses the relinked source. An offline version whose edits have changed since its last online render shows **Original unavailable** until a matching preview can be saved.
+4. Save Fit previews for two versions sharing a reference, with a different crop on each. Reopen the library offline and check the **Offline** badges in Grid, List and filmstrip. Select each version and compare its thumbnail and Viewer image. Check that editing one offline version removes its stale thumbnail and leaves the other version's thumbnail available. Relink and confirm live thumbnails return.
 
 ## People and face detection
 

@@ -346,14 +346,8 @@ struct PhotoListBrowser: View {
         switch column {
         case .photo:
             HStack(spacing: 7) {
-                if let url = try? model.repository?.availableOriginalURL(photo) {
-                    Thumbnail(request: .init(photoID: photo.id, url: url, adjustments: photo.adjustments,
-                                             maximum: 96, revision: model.originalStatusRevision),
-                              cache: model.thumbnailCache).frame(width: 34, height: 25)
-                } else {
-                    Image(systemName: "exclamationmark.triangle").foregroundStyle(.secondary)
-                        .accessibilityLabel("Original unavailable").frame(width: 34)
-                }
+                BrowserThumbnail(photo: photo, original: try? model.repository?.availableOriginalURL(photo),
+                                 maximum: 96, inList: true)
                 Text(photo.displayName).lineLimit(1)
                 if let stackID = photo.stackID { StackBadge(stackID: stackID, photo: photo, model: model) }
             }

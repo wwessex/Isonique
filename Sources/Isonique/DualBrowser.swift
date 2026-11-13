@@ -263,15 +263,8 @@ private struct SecondaryBrowserPhotoCell: View {
             model.activeBrowserPane = .secondary
         } label: {
             VStack(alignment: .leading, spacing: 5) {
-                if let repository = model.repository,
-                   let url = try? repository.availableOriginalURL(photo) {
-                    Thumbnail(request: .init(photoID: photo.id, url: url, adjustments: photo.adjustments,
-                                             maximum: 256, revision: model.originalStatusRevision),
-                              cache: model.thumbnailCache)
-                        .frame(height: 82).clipShape(RoundedRectangle(cornerRadius: 7))
-                } else {
-                    Image(systemName: "photo.badge.exclamationmark").frame(maxWidth: .infinity).frame(height: 82)
-                }
+                BrowserThumbnail(photo: photo, original: try? model.repository?.availableOriginalURL(photo), maximum: 256)
+                    .frame(height: 82).clipShape(RoundedRectangle(cornerRadius: 7))
                 Text(photo.displayName).font(.caption).lineLimit(1)
                 Text(photo.rating == RatingRules.rejected ? "Rejected" : RatingRules.stars(photo.rating))
                     .font(.caption2).foregroundStyle(.orange).frame(height: 11)

@@ -1712,15 +1712,8 @@ struct ContentView: View {
                 focusedPhotographyPanel = photographyFocus ?? (model.viewer ? .viewer : .browser)
             } label: {
                 VStack(alignment: .leading, spacing: 6) {
-                    Group {
-                        if let url {
-                            Thumbnail(request: .init(photoID: photo.id, url: url, adjustments: photo.adjustments,
-                                                     maximum: compact ? 220 : model.gridThumbnailSize.decodeMaximum,
-                                                     revision: model.originalStatusRevision),
-                                      cache: model.thumbnailCache)
-                        }
-                        else { Label("Original unavailable", systemImage: "exclamationmark.triangle").font(.caption).foregroundStyle(.secondary) }
-                    }.frame(height: compact ? 76 : model.gridThumbnailSize.imageHeight)
+                    BrowserThumbnail(photo: photo, original: url, maximum: compact ? 220 : model.gridThumbnailSize.decodeMaximum)
+                        .frame(height: compact ? 76 : model.gridThumbnailSize.imageHeight)
                         .frame(maxWidth: .infinity).background(Color.black.opacity(0.3)).clipped()
                     HStack {
                         if model.batchMode { Image(systemName: model.batchSelection.contains(photo.id) ? "checkmark.circle.fill" : "circle") }
