@@ -475,9 +475,15 @@ Choose **Rename or Merge Person** from a named group's context menu or select th
 
 The catalogue saves assignments and rules together. Preview and cancellation perform no writes, and the repository rejects a save based on a stale catalogue revision. With persistent history enabled, format 38 records the whole rename or merge as one Undo/Redo step. Undo and Redo skip rules that were subsequently edited or removed. The workflow reads saved assignments and works with offline originals.
 
+## Unnamed Faces review queue
+
+The Metadata menu opens the queue for the selected project or the whole library. The People and project context menus provide direct entry points, and the scope picker can switch between them. Unnamed faces in active photo versions are ordered by import date with the photo ID as a tie breaker, then by saved face order. Browser filters and collapsed stacks do not restrict the queue.
+
+Each entry highlights its box on an orientation-corrected original preview when available. The saved face number and photo name remain visible offline. Assign an existing or new name, or dismiss the detection, to save one People history entry and advance. Skip postpones a face for the current session without saving. Reopening restores any unreviewed faces from the catalogue. Dismissals reuse the existing rescan suppression, and Undo/Redo reuse the current People history format.
+
 ## Next checkpoint
 
-Add an Unnamed Faces review queue to People with project and library scope. Let users assign an existing name, enter a new one or dismiss a detection, then advance to the next face. Keep saved assignments and Undo/Redo available offline.
+Add a person overview to People with a user-chosen representative face and photo counts by project. Use saved face boxes and local previews, and keep each person browsable when the representative original is offline.
 
 ## Pending physical camera checks
 

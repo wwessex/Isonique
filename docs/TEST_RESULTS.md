@@ -821,3 +821,10 @@
 - A format-37 catalogue reopened with its existing People records. With persistent history enabled, one format-38 Undo/Redo step changed assignments and exact rules after reopening. History survived removal of an affected Trash record and respected later edits to individual rules.
 - The signed app verified the Metadata command, rename preview, Undo, a collision message and an explicit merge preview showing the affected photo and the Smart Album's before and after rule. The album found the matching photo after the merge.
 - With the Vision group fixture configured, 425 of 427 tests passed. The existing external camera RAW and Finder Trash tests skipped. Branding and signed arm64 release archive checks passed, with a macOS 15.0 deployment minimum.
+
+## Unnamed Faces review queue
+
+- Queue tests verified import-date order, the photo ID tie breaker and saved face order after reopening. Project scope excluded other projects, and library scope included unfiled versions. Named faces and Trash were excluded. Versions sharing an original and face IDs remained independently reviewable. Browser search did not hide queue entries.
+- With originals offline, assigning an existing name, dismissing a face and assigning a new name each saved once and advanced. Invalid names, stale face records and a stale catalogue save did not advance. Dismissed boxes stayed suppressed when detections were added again. Reopening restored the queue, and persistent Undo/Redo restored each decision in order. The fixture remained on catalogue format 37.
+- In the signed app, the library queue displayed the oriented photo and highlighted the current face. Assigning a new name with Return made it available for the next face. Existing-name assignment, Skip, Dismiss Face and Review Skipped Faces advanced or returned to the expected entry.
+- With the Vision group fixture configured, 428 of 430 tests passed. The existing camera RAW and Finder Trash checks skipped. Branding, release build and strict verification of the extracted arm64 archive passed. Its deployment minimum is macOS 15.0.

@@ -14,6 +14,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         didSet {
             browserSnapshot = nil
             peopleGroupsSnapshot = nil
+            unnamedFaceQueueSnapshot = nil
         }
     }
     @Published var scope = "all"
@@ -26,9 +27,11 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var showSmartAlbum = false
     @Published var showAdvancedSearch = false
     @Published var peopleReview: PeopleReview?
+    @Published var unnamedFaceReview: UnnamedFaceReview?
     @Published var personNameEditor: PersonNameEditorRequest?
     @Published var peopleScan: Task<PeopleScanResult, Error>?
     var peopleGroupsSnapshot: [PeopleGroup]?
+    var unnamedFaceQueueSnapshot: (scope: UnnamedFaceScope, items: [UnnamedFaceItem])?
     @Published var advancedSearch: PhotoQuery?
     @Published var editingSmartAlbum: UUID?
     @Published var search = ""
@@ -1266,6 +1269,10 @@ struct ContentView: View {
                         Label("All Photos", systemImage: "photo.on.rectangle.angled").tag("all").simultaneousGesture(TapGesture().onEnded { model.showBrowser(allPhotos: true) })
                         Label("Flagged", systemImage: "flag").tag("flagged")
                         Label("People", systemImage: "person.crop.rectangle").tag("people")
+                            .contextMenu {
+                                Button("Review Unnamed Faces…") { model.openUnnamedFaces(.library) }
+                                    .disabled(!model.canOpenUnnamedFaces)
+                            }
                         Label("Trash", systemImage: "trash").tag("trash")
                     }
                     let people = model.peopleGroups
@@ -1286,6 +1293,8 @@ struct ContentView: View {
                             Label(project.name, systemImage: "folder")
                                 .tag("project:\(project.id)")
                                 .contextMenu {
+                                    Button("Review Unnamed Faces…") { model.openUnnamedFaces(.project(project.id)) }
+                                        .disabled(!model.canOpenUnnamedFaces)
                                     Button("Export Project as Library…") { model.exportProjectPanel(project) }
                                         .disabled(model.busy || model.repository == nil)
                                 }
@@ -1355,6 +1364,10 @@ struct ContentView: View {
                             .font(.caption).foregroundStyle(.secondary)
                     }
                     Spacer()
+                    if model.scope == "people" {
+                        Button("Unnamed Faces…") { model.openUnnamedFaces(.library) }
+                            .disabled(!model.canOpenUnnamedFaces)
+                    }
                     if model.activeLightTable == nil, model.advancedSearch != nil {
                         Button("Clear Advanced Search", systemImage: "xmark.circle") { model.advancedSearch = nil }
                             .labelStyle(.iconOnly).help("Clear Advanced Search")
@@ -1525,6 +1538,9 @@ struct ContentView: View {
         .sheet(isPresented: $model.showAdvancedSearch) { AdvancedSearchView().environmentObject(model) }
         .sheet(item: $model.peopleReview) { review in
             PeopleReviewView(review: review).environmentObject(model)
+        }
+        .sheet(item: $model.unnamedFaceReview) { review in
+            UnnamedFaceQueueView(review: review).environmentObject(model)
         }
         .sheet(item: $model.personNameEditor) { request in
             PersonNameEditor(request: request).environmentObject(model)

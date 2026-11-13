@@ -6,6 +6,146 @@ import XCTest
 
 @MainActor
 final class PeopleWorkflowTests: XCTestCase {
+    func testUnnamedQueueHasStableOrderAndIncludesOnlyEligibleVersions() throws {
+        let (folder, repository, preferences, suite) = try fixture()
+        defer {
+            preferences.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let project = IsoniqueCore.Collection(name: "First project")
+        let other = IsoniqueCore.Collection(name: "Other project")
+        let later = try queuePhoto("Later", id: 1, project: project.id, imported: 2)
+        let shared = try queuePhoto("Shared", id: 3, project: project.id, imported: 1)
+        var version = shared
+        version.id = queueID(4)
+        version.sharedOriginalID = shared.id
+        version.versionName = "Alternate"
+        var outside = try queuePhoto("Outside", id: 2, project: other.id, imported: 1)
+        outside.people?.faces[0].assignName("Already named")
+        var trashed = try queuePhoto("Trash", id: 5, project: project.id, imported: 0)
+        trashed.trashedAt = Date()
+        let unfiled = try queuePhoto("Unfiled", id: 6, project: nil, imported: 3)
+        var draft = try repository.load()
+        draft.projects = [project, other]
+        draft.photos = [later, version, trashed, outside, unfiled, shared]
+        _ = try repository.save(draft)
+
+        let model = Workspace(libraryRoot: repository.root, preferences: preferences)
+        model.search = "Nothing matches"
+        XCTAssertTrue(model.photos.isEmpty)
+        let scoped = model.unnamedFaces(in: .project(project.id))
+        XCTAssertEqual(scoped.map { $0.photo.id }, [shared.id, shared.id, version.id, version.id, later.id, later.id])
+        XCTAssertEqual(scoped.prefix(2).map { $0.face.id }, shared.people?.faces.map(\.id))
+        XCTAssertEqual(scoped.map(\.number), [1, 2, 1, 2, 1, 2])
+        XCTAssertEqual(Set(scoped.map(\.id)).count, 6, "Shared face IDs must be distinct queue entries across versions")
+        XCTAssertEqual(model.unnamedFaces(in: .project(other.id)).map(\.number), [2])
+        let all = model.unnamedFaces(in: .library)
+        XCTAssertEqual(all.map { $0.photo.id }, [outside.id] + scoped.map { $0.photo.id } + [unfiled.id, unfiled.id])
+        XCTAssertTrue(model.unnamedFaces(in: .project(UUID())).isEmpty)
+        let reopened = Workspace(libraryRoot: repository.root, preferences: preferences)
+        XCTAssertEqual(reopened.unnamedFaces(in: .library).map(\.id), all.map(\.id))
+    }
+
+    func testUnnamedQueueAdvancesOfflineAndRestoresDecisionsAfterRestart() throws {
+        let (folder, repository, preferences, suite) = try fixture()
+        defer {
+            preferences.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let project = IsoniqueCore.Collection(name: "Review")
+        var target = try queuePhoto("Offline", id: 1, project: project.id, imported: 1)
+        target.referencedPath = folder.appendingPathComponent("Missing.png").path
+        target.adjustments.exposure = 0.4
+        let next = try queuePhoto("Next", id: 2, project: project.id, imported: 2)
+        var named = try queuePhoto("Names", id: 3, project: nil, imported: 3)
+        named.people?.faces[0].assignName("Zoë Rivera")
+        var draft = try repository.load()
+        draft.projects = [project]
+        draft.photos = [target, next, named]
+        _ = try repository.save(draft)
+        let model = Workspace(libraryRoot: repository.root, preferences: preferences)
+        let scope = UnnamedFaceScope.project(project.id)
+        model.openUnnamedFaces(scope)
+        let review = try XCTUnwrap(model.unnamedFaceReview)
+        XCTAssertEqual(review.initialScope, scope)
+        let first = try XCTUnwrap(model.unnamedFaces(in: scope).first)
+        XCTAssertThrowsError(try repository.availableOriginalURL(first.photo))
+        XCTAssertFalse(model.resolveUnnamedFace(first, in: scope, review: review, decision: .newName("  ")))
+        XCTAssertFalse(model.resolveUnnamedFace(first, in: scope, review: review, decision: .existingName("missing")))
+        XCTAssertEqual(model.unnamedFaces(in: scope).first?.id, first.id)
+        XCTAssertFalse(model.canUndo)
+        XCTAssertTrue(model.resolveUnnamedFace(first, in: scope, review: review, decision: .existingName("zoe rivera")))
+        let second = try XCTUnwrap(model.unnamedFaces(in: scope).first)
+        XCTAssertEqual(second.number, 2)
+        XCTAssertFalse(model.resolveUnnamedFace(first, in: scope, review: review, decision: .dismiss))
+        XCTAssertTrue(model.resolveUnnamedFace(second, in: scope, review: review, decision: .dismiss))
+        let third = try XCTUnwrap(model.unnamedFaces(in: scope).first)
+        XCTAssertEqual(third.photo.id, next.id)
+        XCTAssertTrue(model.resolveUnnamedFace(third, in: scope, review: review, decision: .newName("  Sam   Lee  ")))
+        XCTAssertEqual(model.unnamedFaces(in: scope).first?.number, 2)
+        XCTAssertEqual(model.history.undo.count, 3)
+        XCTAssertEqual(model.library.version, 37)
+
+        let reopened = Workspace(libraryRoot: repository.root, preferences: preferences)
+        XCTAssertEqual(reopened.unnamedFaces(in: scope).count, 1)
+        XCTAssertEqual(reopened.library.photos[0].personNames, ["Zoë Rivera"])
+        XCTAssertEqual(reopened.library.photos[1].personNames, ["Sam Lee"])
+        XCTAssertEqual(reopened.library.photos[0].adjustments, target.adjustments)
+        var rescanned = try XCTUnwrap(reopened.library.photos[0].people)
+        rescanned.incorporateDetections([second.face.region])
+        XCTAssertEqual(rescanned.faces.map(\.id), [first.face.id])
+        reopened.undoEdit()
+        XCTAssertEqual(reopened.unnamedFaces(in: scope).first?.id, third.id)
+        reopened.undoEdit()
+        XCTAssertEqual(reopened.unnamedFaces(in: scope).first?.id, second.id)
+        reopened.undoEdit()
+        XCTAssertEqual(reopened.unnamedFaces(in: scope).first?.id, first.id)
+
+        let redo = Workspace(libraryRoot: repository.root, preferences: preferences)
+        redo.redoEdit()
+        XCTAssertEqual(redo.unnamedFaces(in: scope).first?.id, second.id)
+        redo.redoEdit()
+        XCTAssertEqual(redo.unnamedFaces(in: scope).first?.id, third.id)
+        redo.redoEdit()
+        XCTAssertEqual(redo.unnamedFaces(in: scope).count, 1)
+        XCTAssertEqual(redo.library.photos, model.library.photos)
+    }
+
+    func testUnnamedQueueDoesNotAdvanceWhenCatalogueSaveIsStale() throws {
+        let (folder, repository, preferences, suite) = try fixture()
+        defer {
+            preferences.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: folder)
+        }
+        var draft = try repository.load()
+        draft.photos = [try queuePhoto("Stale", id: 1, project: nil, imported: 1)]
+        _ = try repository.save(draft)
+        let model = Workspace(libraryRoot: repository.root, preferences: preferences)
+        model.openUnnamedFaces(.library)
+        let review = try XCTUnwrap(model.unnamedFaceReview)
+        let first = try XCTUnwrap(model.unnamedFaces(in: .library).first)
+        var newer = try repository.load()
+        newer.photos[0].caption = "Saved elsewhere"
+        _ = try repository.save(newer)
+        XCTAssertFalse(model.resolveUnnamedFace(first, in: .library, review: review, decision: .dismiss))
+        XCTAssertEqual(model.unnamedFaces(in: .library).first?.id, first.id)
+        XCTAssertFalse(model.canUndo)
+        XCTAssertEqual(try repository.load().photos, newer.photos)
+    }
+
+    private func queueID(_ suffix: Int) -> UUID {
+        UUID(uuidString: String(format: "00000000-0000-0000-0000-%012d", suffix))!
+    }
+
+    private func queuePhoto(_ name: String, id: Int, project: UUID?, imported: TimeInterval) throws -> Photo {
+        var photo = Photo(filename: name + ".png", originalName: name + ".png", projectID: project,
+                          width: 80, height: 60, camera: "", captureDate: "", sha256: name)
+        photo.id = queueID(id)
+        photo.importedAt = Date(timeIntervalSince1970: imported)
+        photo.people = try detections()
+        return photo
+    }
+
     func testPeopleSurviveRestartAndWorkOfflineWithSearchAndSmartAlbums() throws {
         let (folder, repository, preferences, suite) = try fixture()
         defer {
