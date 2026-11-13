@@ -683,14 +683,14 @@ final class PeopleWorkflowTests: XCTestCase {
         // An original can return to its saved path while the report is open.
         try FileManager.default.copyItem(at: relocated.appendingPathComponent(restored.lastPathComponent), to: restored)
         let beforeReconnect = try repository.load()
-        let cancelledSearch = Task { await model.reconnectPeopleScanOriginals(report, in: relocated) }
+        let cancelledSearch = Task { await model.findPeopleScanOriginals(report, in: relocated, operation: .reconnect) }
         cancelledSearch.cancel()
         let cancelledDetails = await cancelledSearch.value
         XCTAssertEqual(cancelledDetails, "Original operation cancelled")
         XCTAssertEqual(model.peopleScanReport?.id, report.id)
         XCTAssertTrue(try repository.load().hasSameCatalogueRevision(as: beforeReconnect))
 
-        let details = await model.reconnectPeopleScanOriginals(report, in: relocated)
+        let details = await model.findPeopleScanOriginals(report, in: relocated, operation: .reconnect)
         XCTAssertEqual(details, "2 reconnected · 0 unmatched · 0 ambiguous")
         XCTAssertEqual(model.peopleScanReport?.id, report.id)
         XCTAssertNil(model.originalJobResult)
@@ -738,7 +738,7 @@ final class PeopleWorkflowTests: XCTestCase {
         XCTAssertEqual(model.history.undo.count, (unretried.history?.undo.count ?? 0) + 1)
         model.undoEdit()
         XCTAssertEqual(try repository.load().photos, unretried.photos)
-        let staleSearch = await model.reconnectPeopleScanOriginals(report, in: relocated)
+        let staleSearch = await model.findPeopleScanOriginals(report, in: relocated, operation: .reconnect)
         XCTAssertNil(staleSearch)
     }
 
@@ -768,11 +768,94 @@ final class PeopleWorkflowTests: XCTestCase {
         try await waitForScan(model)
         let report = try XCTUnwrap(model.peopleScanReport)
         XCTAssertEqual(report.skippedVersions.count, 2)
-        XCTAssertTrue(model.peopleScanReconnectIDs(report).isEmpty)
-        let details = await model.reconnectPeopleScanOriginals(report, in: folder)
+        let details = await model.findPeopleScanOriginals(report, in: folder, operation: .reconnect)
         XCTAssertNil(details)
         XCTAssertEqual(model.peopleScanReport?.id, report.id)
         XCTAssertTrue(try repository.load().hasSameCatalogueRevision(as: saved))
+    }
+
+    func testSkippedReportRecoversOnlyVerifiedManagedOriginalsAndKeepsRetryAvailable() async throws {
+        let (folder, repository, preferences, suite) = try fixture()
+        let files = FileManager.default
+        defer {
+            preferences.removePersistentDomain(forName: suite)
+            try? files.removeItem(at: folder)
+        }
+        let project = IsoniqueCore.Collection(name: "Scanned Project")
+        let other = IsoniqueCore.Collection(name: "Other Project")
+        let backup = folder.appendingPathComponent("Backup")
+        try files.createDirectory(at: backup, withIntermediateDirectories: false)
+        let shared = backup.appendingPathComponent("Shared.png")
+        let wrong = backup.appendingPathComponent("Wrong Copy.png")
+        let outside = backup.appendingPathComponent("Other Project.png")
+        let reference = folder.appendingPathComponent("Referenced.png")
+        try makeImage(shared)
+        try makeImage(wrong, red: 0.2)
+        try makeImage(outside, red: 0.4)
+        try makeImage(reference, red: 0.6)
+        var draft = try repository.load()
+        draft.projects = [project, other]
+        for source in [shared, wrong, outside] {
+            let projectID = source == outside ? other.id : project.id
+            XCTAssertTrue(try repository.importPhoto(source, projectID: projectID, into: &draft))
+        }
+        var options = ImportOptions()
+        options.storage = .referenced
+        XCTAssertTrue(try repository.importPhoto(reference, projectID: project.id, into: &draft, options: options))
+        let original = draft.photos[0]
+        let version = try XCTUnwrap(draft.createVersion(of: original.id, from: .current))
+        draft.photos[0].adjustments.exposure = 0.4
+        let saved = try repository.save(draft)
+        let managedTarget = try repository.originalURL(original)
+        for photo in saved.photos.prefix(3) { try files.removeItem(at: repository.originalURL(photo)) }
+        try files.moveItem(at: reference, to: backup.appendingPathComponent(reference.lastPathComponent))
+        try makeImage(wrong, red: 0.8)
+
+        let model = Workspace(libraryRoot: repository.root, preferences: preferences)
+        model.scanUnscannedFaces(in: .project(project.id))
+        let scan = try XCTUnwrap(model.peopleScan?.task)
+        _ = try await scan.value
+        try await waitForScan(model)
+        let report = try XCTUnwrap(model.peopleScanReport)
+        XCTAssertEqual(report.skippedVersions.count, 4)
+
+        let cancelled = Task { await model.findPeopleScanOriginals(report, in: backup, operation: .recoverManaged) }
+        cancelled.cancel()
+        let cancelledDetails = await cancelled.value
+        XCTAssertEqual(cancelledDetails, "Original operation cancelled")
+        XCTAssertEqual(model.peopleScanReport?.id, report.id)
+        XCTAssertFalse(files.fileExists(atPath: managedTarget.path))
+        XCTAssertTrue(try repository.load().hasSameCatalogueRevision(as: saved))
+
+        var newer = try repository.load()
+        newer.photos[0].caption = "Saved elsewhere"
+        let updated = try repository.save(newer)
+        let staleDetails = await model.findPeopleScanOriginals(report, in: backup, operation: .recoverManaged)
+        XCTAssertEqual(staleDetails, LibraryError.staleCatalogue.localizedDescription)
+        XCTAssertFalse(files.fileExists(atPath: managedTarget.path))
+        await model.reloadLibrary()
+
+        model.scope = "project:\(other.id)"
+        let details = await model.findPeopleScanOriginals(report, in: backup, operation: .recoverManaged)
+        XCTAssertEqual(details, "1 restored · 1 unmatched · 0 ambiguous\nUnmatched — Wrong Copy.png")
+        XCTAssertEqual(model.peopleScanReport?.id, report.id)
+        XCTAssertNil(model.originalJobResult)
+        XCTAssertEqual(try repository.availableOriginalURL(version), managedTarget)
+        XCTAssertEqual(try LibraryRepository.digest(managedTarget), original.sha256)
+        XCTAssertEqual(try LibraryRepository.digest(shared), original.sha256)
+        for photo in saved.photos[1...3] { XCTAssertThrowsError(try repository.availableOriginalURL(photo)) }
+        XCTAssertTrue(try repository.load().hasSameCatalogueRevision(as: updated))
+
+        model.retryPeopleScan(report)
+        let retry = try XCTUnwrap(model.peopleScan?.task)
+        let result = try await retry.value
+        try await waitForScan(model)
+        XCTAssertEqual(result.changes.map(\.photoID), [original.id, version.id])
+        XCTAssertEqual(result.skippedVersions.map(\.id), [saved.photos[1].id, saved.photos[3].id])
+        XCTAssertEqual(model.history.undo.count, 1)
+        model.undoEdit()
+        XCTAssertEqual(try repository.load().photos, updated.photos)
+        XCTAssertEqual(try LibraryRepository.digest(managedTarget), original.sha256)
     }
 
     private func waitForScan(_ model: Workspace) async throws {

@@ -134,7 +134,8 @@ public extension LibraryRepository {
             }
         }
         let matches = try originalMatches(in: folder, for: missing, includeStoredName: true, scanErrors: &report.scanErrors)
-        return try applyOriginalRecovery(expecting: expectedCatalogue) {
+        let reviewedLibrary = originalIDs != nil && library.catalogueRevision != nil ? library : nil
+        return try applyOriginalRecovery(expecting: expectedCatalogue, basedOn: reviewedLibrary) {
             for photo in missing {
                 if Task.isCancelled {
                     report.cancelled = true
@@ -325,12 +326,13 @@ public extension LibraryRepository {
 
     internal static func installVerifiedOriginal(from input: URL, at target: URL, photo: Photo) throws {
         let fm = FileManager.default
+        try Task.checkCancellation()
         guard !fm.fileExists(atPath: target.path) else { throw LibraryError.unsafePath }
-        try verifyOriginal(input, photo: photo)
+        try verifyOriginal(input, photo: photo, checkingCancellation: true)
         let staging = target.deletingLastPathComponent().appendingPathComponent(".isonique-original-\(UUID().uuidString)")
         defer { try? fm.removeItem(at: staging) }
         try fm.copyItem(at: input, to: staging)
-        try verifyOriginal(staging, photo: photo)
+        try verifyOriginal(staging, photo: photo, checkingCancellation: true)
         try Task.checkCancellation()
         try publishStagedItem(staging, at: target)
     }

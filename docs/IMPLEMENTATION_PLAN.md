@@ -509,9 +509,11 @@ Open Skipped Results from Review Summary or Skipped Face Scan Results from Metad
 
 Reconnect Referenced Originals in the report opens a folder picker and runs the existing fingerprint-verified search. The search includes only referenced originals reported unavailable for eligible versions and still offline when the search runs. Versions sharing an original use a single search target. Results appear in the report, which stays open for Retry Skipped Versions after a finished or cancelled search.
 
+Recover Missing Managed Originals searches a chosen backup or folder for the missing managed originals in the report. It uses one target per shared original, matches known filenames and verifies the source and restored copy against the catalogue fingerprint. Recovery checks the catalogue revision before installing files and protects occupied paths. The report shows the result and stays open for retry. Cancelling stops pending recovery, and already verified copies that were installed remain available.
+
 ## Next checkpoint
 
-Add a managed-original recovery shortcut to Skipped Face Scan Results. Scope the existing verified recovery search to offline managed originals in the report.
+Add persistent Viewer previews for referenced originals so previously rendered versions remain viewable when the source drive is offline.
 
 ## Pending physical camera checks
 

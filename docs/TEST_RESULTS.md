@@ -877,3 +877,10 @@
 - A cancelled search request preserved the catalogue revision and the report. After reconnect, a cancelled scan retry preserved the report and pending checks were discarded. A completed retry checked the three eligible versions in the report, and one Undo restored their previous People records while retaining the reconnected paths.
 - In the signed app, cancelling the folder picker left the report open. Searching from that report reconnected two originals for three skipped versions. Retry checked all three from the same report.
 - The full suite ran 443 tests with 440 passes, zero failures and three fixture-dependent skips for external camera RAW, Finder Trash and the Vision group portrait. Branding and the Apple Silicon release build passed. The extracted archive passed strict signature verification and targets macOS 15.0.
+
+## Managed original recovery from skipped face scan results
+
+- Recovery from the report restored one managed file for two versions. It rejected a same-name candidate with different bytes and left an unrelated project's missing file and an offline reference untouched. The restored file and backup had the saved SHA-256 fingerprint. The report and catalogue revision stayed intact.
+- A cancelled recovery request and a stale catalogue each prevented installation. After reloading the catalogue, recovery completed and retry checked just the two versions sharing the restored file. One Undo reversed their People changes and retained the restored file.
+- In the signed app, cancelling the folder picker returned to the open report. A successful search showed one restored original. Retry checked its two versions and left two offline referenced versions in the report.
+- All 30 focused tests passed. The full suite ran 444 tests with 441 passes, zero failures and three fixture-dependent skips for external camera RAW, Finder Trash and the Vision group portrait. Branding and the Apple Silicon release build passed. The extracted archive passed strict signature verification and targets macOS 15.0.
