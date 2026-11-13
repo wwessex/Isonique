@@ -45,6 +45,7 @@ public struct PhotoFace: Codable, Equatable, Identifiable, Sendable {
     public let id: UUID
     public var region: FaceRegion
     public private(set) var name: String?
+    public private(set) var representativeChosenAt: Date?
 
     public init(region: FaceRegion) {
         id = UUID()
@@ -62,7 +63,20 @@ public struct PhotoFace: Codable, Equatable, Identifiable, Sendable {
 
     public mutating func assignName(_ value: String) {
         let cleaned = Self.cleanedName(value)
+        if name.map(Self.personKey) != Self.personKey(cleaned) || cleaned.isEmpty {
+            representativeChosenAt = nil
+        }
         name = cleaned.isEmpty ? nil : cleaned
+    }
+
+    mutating func renamePerson(to value: String) {
+        let previousChoice = representativeChosenAt
+        assignName(value)
+        setRepresentative(chosenAt: previousChoice)
+    }
+
+    public mutating func setRepresentative(chosenAt date: Date?) {
+        representativeChosenAt = name == nil ? nil : date
     }
 }
 
@@ -74,6 +88,7 @@ public struct PhotoPeople: Codable, Equatable, Sendable {
     public init() {}
 
     public var hasData: Bool { scanned || !faces.isEmpty || !dismissedRegions.isEmpty }
+    var hasRepresentative: Bool { faces.contains { $0.representativeChosenAt != nil } }
 
     public mutating func incorporateDetections(_ regions: [FaceRegion]) {
         scanned = true
@@ -104,6 +119,7 @@ public struct PhotoPeople: Codable, Equatable, Sendable {
         guard Set(faces.map(\.id)).count == faces.count,
               faces.allSatisfy({ face in
                   face.region.isValid && (face.name.map { !$0.isEmpty && $0 == PhotoFace.cleanedName($0) } ?? true)
+                      && (face.representativeChosenAt.map { face.name != nil && $0.timeIntervalSinceReferenceDate.isFinite } ?? true)
               }),
               dismissedRegions.allSatisfy(\.isValid) else {
             throw LibraryError.integrity("invalid People records")
@@ -145,6 +161,18 @@ public extension Library {
 }
 
 public enum FaceDetection {
+    /// Crop an oriented preview using the same top-left coordinates as face review.
+    public static func portrait(in image: CGImage, region: FaceRegion) -> CGImage? {
+        guard region.isValid else { return nil }
+        let width = CGFloat(image.width)
+        let height = CGFloat(image.height)
+        let box = CGRect(x: region.x * width, y: region.y * height,
+                         width: region.width * width, height: region.height * height)
+        let padded = box.insetBy(dx: -box.width * 0.2, dy: -box.height * 0.2)
+        let bounds = CGRect(x: 0, y: 0, width: width, height: height)
+        return image.cropping(to: padded.integral.intersection(bounds))
+    }
+
     /// Preview and detection use the same orientation-corrected source space.
     public static func sourcePreview(at url: URL) throws -> CGImage {
         guard url.isFileURL else { throw LibraryError.unsafePath }

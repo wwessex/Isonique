@@ -105,6 +105,7 @@ Use a disposable library with an upright group photo and JPEG variants with rota
 4. Compare before-and-after edited and original exports with XMP enabled. Check that People names and boxes are absent and the original fingerprints match.
 5. Select a named group and choose **Metadata → Rename or Merge Person**. Try renaming it to a case or accent variant of another group's name. Confirm Rename reports the collision, then choose Merge and preview affected photo versions and exact-name Smart Album rules. Cancel one review and apply another. Reopen the library and verify one Undo or Redo changes the assignments and rules together. Repeat with the referenced originals offline.
 6. Run **Metadata → Review Unnamed Faces** from a project containing at least two versions with unnamed faces. Confirm the project scope, then switch to Entire Library. Check the highlighted box, assign an existing or new name and dismiss a face. Confirm each saved decision advances. Skip a face and bring it back with Review Skipped Faces. Repeat with the original offline, then reopen the library with persistent history enabled and verify Undo and Redo restore the expected queue.
+7. Select a named group and open **Person Overview**. Check the project counts against its active versions, choose a different face and reopen the library. Make that original unavailable and verify the saved choice, counts and Browse Photos action. Remove or reassign the chosen face in Review Faces and verify the fallback portrait. Undo to restore the choice.
 
 ## Physical PTP camera import
 

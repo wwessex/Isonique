@@ -166,6 +166,11 @@ struct PeopleReviewView: View {
         guard let index = people.faces.firstIndex(where: { $0.id == id }) else { return }
         nameDrafts[id] = name
         people.faces[index].assignName(name)
+        if let original = review.photo.people?.faces.first(where: { $0.id == id }),
+           let oldName = original.name, let newName = people.faces[index].name,
+           PhotoFace.personKey(oldName) == PhotoFace.personKey(newName) {
+            people.faces[index].setRepresentative(chosenAt: original.representativeChosenAt)
+        }
     }
 
     private func loadPreview() async {

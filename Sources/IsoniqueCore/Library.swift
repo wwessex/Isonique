@@ -567,6 +567,9 @@ public struct Library: Codable {
     fileprivate var hasProjectGPXTracks: Bool { projects.contains { $0.gpxTracks?.isEmpty == false } }
 
     func validateSchema() throws {
+        if version < 39, photos.contains(where: { $0.people?.hasRepresentative == true }) {
+            throw LibraryError.unsupportedVersion
+        }
         if version < 37, hasPeopleData { throw LibraryError.unsupportedVersion }
         for photo in photos { try photo.people?.validate() }
         for entry in (history?.undo ?? []) + (history?.redo ?? []) {
@@ -616,7 +619,7 @@ public struct Library: Codable {
         if let requiredVersion = history?.requiredCatalogueVersion, version < requiredVersion {
             throw LibraryError.unsupportedVersion
         }
-        if (7...38).contains(version) { return }
+        if (7...39).contains(version) { return }
         guard !hasRecipe(where: \.hasLevelQuarterTones) else { throw LibraryError.unsupportedVersion }
         if version == 6 { return }
         guard !hasRecipe(where: { $0.channelLevels?.isEmpty == false }) else { throw LibraryError.unsupportedVersion }
@@ -802,6 +805,9 @@ public final class LibraryRepository {
         normalized.upgradeForPressureBrushes()
         normalized.upgradeForLightTables()
         normalized.upgradeForPeople()
+        if normalized.version < 39, normalized.photos.contains(where: { $0.people?.hasRepresentative == true }) {
+            normalized.version = 39
+        }
         if normalized.version < 18, normalized.hasProjectGPXWaypoints { normalized.version = 18 }
         if normalized.version < 17, normalized.hasProjectGPXTracks { normalized.version = 17 }
         if normalized.version < 16, normalized.hasLocationOverrides { normalized.version = 16 }

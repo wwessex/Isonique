@@ -481,9 +481,15 @@ The Metadata menu opens the queue for the selected project or the whole library.
 
 Each entry highlights its box on an orientation-corrected original preview when available. The saved face number and photo name remain visible offline. Assign an existing or new name, or dismiss the detection, to save one People history entry and advance. Skip postpones a face for the current session without saving. Reopening restores any unreviewed faces from the catalogue. Dismissals reuse the existing rescan suppression, and Undo/Redo reuse the current People history format.
 
+## Person overview and representative faces
+
+Select a named People group and open Person Overview from the Browser, the Metadata menu or the group's context menu. Counts include each active photo version once per project, even if a version has several faces with the same name. Versions without a project appear under No Project. Browse Photos opens the named group independently of portrait availability.
+
+Choose a saved face to crop an oriented original for the portrait. Format 39 stores the choice with that face in the catalogue, and the existing People history makes the choice undoable. An offline original displays a placeholder and retains the saved choice. Removing or individually reassigning a face clears its role, so the overview falls back to the first remaining face in import order. Whole-group renames carry choices forward. Merging groups displays the most recently selected representative, and choosing a new portrait replaces the group's previous choices.
+
 ## Next checkpoint
 
-Add a person overview to People with a user-chosen representative face and photo counts by project. Use saved face boxes and local previews, and keep each person browsable when the representative original is offline.
+Add a gallery of named People with representative portraits, search and a project filter. Reuse the saved choices and limit preview work to visible tiles.
 
 ## Pending physical camera checks
 

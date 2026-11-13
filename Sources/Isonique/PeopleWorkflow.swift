@@ -157,5 +157,8 @@ struct PeopleCommands: View {
         Button("Rename or Merge Person…") {
             if let group = model.selectedPersonGroup { model.openPersonNameEditor(group) }
         }.disabled(model.selectedPersonGroup == nil || model.busy)
+        Button("Person Overview…") {
+            if let group = model.selectedPersonGroup { model.openPersonOverview(group) }
+        }.disabled(model.selectedPersonGroup == nil || model.busy)
     }
 }

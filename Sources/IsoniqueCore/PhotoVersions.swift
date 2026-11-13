@@ -39,6 +39,10 @@ public extension Library {
         version.sharedOriginalID = photo.originalID
         version.versionName = "\(stem) — Version \(number)"
         version.versions = nil
+        if var people = version.people {
+            for index in people.faces.indices { people.faces[index].setRepresentative(chosenAt: nil) }
+            version.people = people
+        }
         if source == .original { version.adjustments = Adjustments() }
         self.version = max(self.version, 3)
         photos.append(version)
@@ -174,13 +178,14 @@ public enum PhotoHistoryEntry: Codable, Equatable {
         case .locations: return 16
         case .lightTables: return 35
         case .browserOrders: return 36
-        case .people: return 37
-        case .personName: return 38
+        case .people(let changes): return changes.contains { $0.people?.hasRepresentative == true } ? 39 : 37
+        case .personName(let changes): return changes.photos.contains { $0.people?.hasRepresentative == true } ? 39 : 38
         case .stamp(let changes): return max(13, changes.compactMap(\.requiredCatalogueVersion).max() ?? 0)
         case .batchMetadata(let changes):
             if changes.contains(where: { $0.iptc?.isEmpty == false }) { return 11 }
             return changes.contains { $0.keywordPaths != nil } ? 10 : 9
         default:
+            if photo?.people?.hasRepresentative == true { return 39 }
             if photo?.people != nil { return 37 }
             if photo?.adjustments.hasPressureBrushRecipe == true { return 34 }
             if photo?.adjustments.hasLocalPolarizeHaloRecipe == true { return 33 }

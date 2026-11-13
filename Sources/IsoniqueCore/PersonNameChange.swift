@@ -110,7 +110,7 @@ public extension Library {
             for index in people.faces.indices {
                 guard let name = people.faces[index].name, name != destination,
                       PhotoFace.personKey(name) == sourceKey else { continue }
-                people.faces[index].assignName(destination)
+                people.faces[index].renamePerson(to: destination)
                 count += 1
             }
             if count > 0 {

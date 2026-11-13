@@ -29,6 +29,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var peopleReview: PeopleReview?
     @Published var unnamedFaceReview: UnnamedFaceReview?
     @Published var personNameEditor: PersonNameEditorRequest?
+    @Published var personOverview: PersonOverviewRequest?
     @Published var peopleScan: Task<PeopleScanResult, Error>?
     var peopleGroupsSnapshot: [PeopleGroup]?
     var unnamedFaceQueueSnapshot: (scope: UnnamedFaceScope, items: [UnnamedFaceItem])?
@@ -1282,6 +1283,8 @@ struct ContentView: View {
                                 Label("\(person.name) (\(person.photoCount))", systemImage: "person")
                                     .tag(person.scope)
                                     .contextMenu {
+                                        Button("Person Overview…") { model.openPersonOverview(person) }
+                                            .disabled(model.busy)
                                         Button("Rename or Merge Person…") { model.openPersonNameEditor(person) }
                                             .disabled(model.busy)
                                     }
@@ -1367,6 +1370,10 @@ struct ContentView: View {
                     if model.scope == "people" {
                         Button("Unnamed Faces…") { model.openUnnamedFaces(.library) }
                             .disabled(!model.canOpenUnnamedFaces)
+                    }
+                    if let person = model.selectedPersonGroup {
+                        Button("Person Overview…") { model.openPersonOverview(person) }
+                            .disabled(model.busy)
                     }
                     if model.activeLightTable == nil, model.advancedSearch != nil {
                         Button("Clear Advanced Search", systemImage: "xmark.circle") { model.advancedSearch = nil }
@@ -1544,6 +1551,9 @@ struct ContentView: View {
         }
         .sheet(item: $model.personNameEditor) { request in
             PersonNameEditor(request: request).environmentObject(model)
+        }
+        .sheet(item: $model.personOverview) { request in
+            PersonOverviewView(request: request).environmentObject(model)
         }
         .sheet(isPresented: $model.showDeviceImport, onDismiss: model.finishDevicePicker) {
             DeviceImportView(discovery: model.cameraDiscovery).environmentObject(model)
