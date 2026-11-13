@@ -188,9 +188,8 @@ final class PeopleWorkflowTests: XCTestCase {
         let result = try await task.value
         try await waitForScan(model)
         XCTAssertEqual(result.scanned, 1)
-        XCTAssertEqual(result.offline, 1)
-        XCTAssertEqual(model.status, "Checked 1 photo version for faces · 1 offline version skipped")
-        XCTAssertTrue(result.issues.isEmpty)
+        XCTAssertEqual(result.skippedVersions, [PeopleScanSkip(photo: offline, reason: .unavailable)])
+        XCTAssertEqual(model.status, "Checked 1 photo version for faces · 1 version skipped")
         XCTAssertEqual(result.changes.map(\.photoID), [available.id])
         XCTAssertEqual(model.history.undo.count, 1)
         let saved = try repository.load()
@@ -539,7 +538,7 @@ final class PeopleWorkflowTests: XCTestCase {
         let lastGate = AsyncStream<Void>.makeStream()
         defer { firstGate.continuation.finish(); lastGate.continuation.finish() }
 
-        model.scanFaces(saved.photos, availableOnly: true) { image in
+        model.scanFaces(saved.photos) { image in
             if image.width == 96 {
                 started.fulfill()
                 for await _ in firstGate.stream {}
@@ -566,9 +565,13 @@ final class PeopleWorkflowTests: XCTestCase {
         try await waitForScan(model)
         XCTAssertEqual(job.progress.counts, PeopleScanCounts(total: 4, checked: 2, skipped: 2))
         XCTAssertEqual(job.progress.counts.remaining, 0)
-        XCTAssertEqual(result.offline, 1)
-        XCTAssertEqual(result.issues.count, 1)
-        XCTAssertTrue(model.error?.hasPrefix("Skipped 1 photo version.\n") == true)
+        XCTAssertEqual(result.skippedVersions, [
+            PeopleScanSkip(photo: saved.photos[1], reason: .unavailable),
+            PeopleScanSkip(photo: saved.photos[2], reason: .processingFailed(
+                LibraryError.integrity(corrupt.lastPathComponent).localizedDescription))
+        ])
+        XCTAssertEqual(model.peopleScanReport?.skippedVersions, result.skippedVersions)
+        XCTAssertNil(model.error)
         XCTAssertEqual(try repository.load().photos.map { $0.people?.scanned }, [true, nil, nil, true])
         XCTAssertEqual(model.history.undo.count, 1)
         model.undoEdit()
@@ -597,7 +600,7 @@ final class PeopleWorkflowTests: XCTestCase {
         defer { gate.continuation.finish() }
         let face = try XCTUnwrap(FaceRegion(imageRect: CGRect(x: 0.1, y: 0.2, width: 0.25, height: 0.35)))
 
-        model.scanFaces(saved.photos, availableOnly: false) { image in
+        model.scanFaces(saved.photos) { image in
             if image.width == 128 {
                 started.fulfill()
                 for await _ in gate.stream {}
@@ -621,6 +624,97 @@ final class PeopleWorkflowTests: XCTestCase {
         XCTAssertFalse(model.canUndo)
         XCTAssertEqual(model.library.photos, saved.photos)
         XCTAssertTrue(try repository.load().hasSameCatalogueRevision(as: saved))
+    }
+
+    func testSkippedReportRetainsEachVersionAndRetriesOnlyItsBatchAfterReconnect() async throws {
+        let (folder, repository, preferences, suite) = try fixture()
+        defer {
+            preferences.removePersistentDomain(forName: suite)
+            try? FileManager.default.removeItem(at: folder)
+        }
+        let project = IsoniqueCore.Collection(name: "Batch")
+        let other = IsoniqueCore.Collection(name: "Other Project")
+        let available = folder.appendingPathComponent("Available.png")
+        let shared = folder.appendingPathComponent("Offline.png")
+        let second = folder.appendingPathComponent("Second Offline.png")
+        let outside = folder.appendingPathComponent("Outside.png")
+        try makeImage(available)
+        try makeImage(shared, red: 0.2)
+        try makeImage(second, red: 0.4, width: 128)
+        try makeImage(outside, red: 0.6)
+        var draft = try repository.load()
+        draft.projects = [project, other]
+        var options = ImportOptions()
+        options.storage = .referenced
+        for source in [available, shared, second, outside] {
+            let projectID = source == outside ? other.id : project.id
+            XCTAssertTrue(try repository.importPhoto(source, projectID: projectID, into: &draft, options: options))
+        }
+        let firstVersion = draft.photos[1]
+        let secondVersion = draft.photos[2]
+        let outsideVersion = draft.photos[3]
+        let trashedLater = try XCTUnwrap(draft.createVersion(of: firstVersion.id, from: .current))
+        let scannedLater = try XCTUnwrap(draft.createVersion(of: firstVersion.id, from: .current))
+        let outsideShared = try XCTUnwrap(draft.createVersion(of: firstVersion.id, from: .current))
+        draft.photos[6].projectID = other.id
+        _ = try repository.save(draft)
+        let relocated = folder.appendingPathComponent("Relocated")
+        try FileManager.default.createDirectory(at: relocated, withIntermediateDirectories: false)
+        for source in [shared, second] {
+            try FileManager.default.moveItem(at: source, to: relocated.appendingPathComponent(source.lastPathComponent))
+        }
+
+        let model = Workspace(libraryRoot: repository.root, preferences: preferences)
+        model.scanUnscannedFaces(in: .project(project.id))
+        let initial = try XCTUnwrap(model.peopleScan?.task)
+        _ = try await initial.value
+        try await waitForScan(model)
+        let report = try XCTUnwrap(model.peopleScanReport)
+        XCTAssertEqual(report.checked, 1)
+        XCTAssertEqual(report.skippedVersions.map(\.id), [firstVersion.id, secondVersion.id, trashedLater.id, scannedLater.id])
+        XCTAssertEqual(report.skippedVersions.map(\.reason), Array(repeating: .unavailable, count: 4))
+        XCTAssertEqual(Set(report.skippedVersions.map(\.name)).count, 4)
+
+        await model.findOriginals(in: relocated, operation: .reconnect, originalIDs: [firstVersion.originalID, secondVersion.originalID])
+        var latest = try repository.load()
+        latest.photos[4].trashedAt = Date()
+        latest.photos[5].people = try detections()
+        _ = try repository.save(latest)
+        await model.reloadLibrary()
+        model.scope = "project:\(other.id)"
+        model.selection = outsideVersion.id
+        let unretried = try repository.load()
+        let started = expectation(description: "Retry reached the second original")
+        let gate = AsyncStream<Void>.makeStream()
+        defer { gate.continuation.finish() }
+        model.retryPeopleScan(report) { image in
+            if image.width == 128 {
+                started.fulfill()
+                for await _ in gate.stream {}
+            }
+            return []
+        }
+        let cancelled = try XCTUnwrap(model.peopleScan)
+        await fulfillment(of: [started], timeout: 5)
+        XCTAssertEqual(cancelled.progress.counts, PeopleScanCounts(total: 2, checked: 1))
+        cancelled.progress.cancel(cancelled.task)
+        _ = await cancelled.task.result
+        try await waitForScan(model)
+        XCTAssertEqual(model.peopleScanReport?.id, report.id)
+        XCTAssertTrue(try repository.load().hasSameCatalogueRevision(as: unretried))
+
+        model.retryPeopleScan(report)
+        let retry = try XCTUnwrap(model.peopleScan)
+        let result = try await retry.task.value
+        try await waitForScan(model)
+        XCTAssertEqual(result.changes.map(\.photoID), [firstVersion.id, secondVersion.id])
+        XCTAssertTrue(result.skippedVersions.isEmpty)
+        XCTAssertFalse(model.canOpenPeopleScanReport)
+        XCTAssertNil(model.library.photos.first { $0.id == outsideShared.id }?.people)
+        XCTAssertNil(model.library.photos.first { $0.id == outsideVersion.id }?.people)
+        XCTAssertEqual(model.history.undo.count, (unretried.history?.undo.count ?? 0) + 1)
+        model.undoEdit()
+        XCTAssertEqual(try repository.load().photos, unretried.photos)
     }
 
     private func waitForScan(_ model: Workspace) async throws {

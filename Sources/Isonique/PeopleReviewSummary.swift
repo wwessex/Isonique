@@ -79,7 +79,7 @@ extension Workspace {
     func scanUnscannedFaces(in scope: UnnamedFaceScope) {
         guard !busy, repository != nil else { return }
         let summary = PeopleReviewSummary(library: library, scope: scope)
-        scanFaces(summary.unscannedVersions, availableOnly: true)
+        scanFaces(summary.unscannedVersions)
     }
 
     func continueFromPeopleSummary(_ action: PeopleSummaryAction) {
@@ -108,6 +108,7 @@ struct PeopleReviewSummaryView: View {
     @State private var availability: Availability?
     @State private var requestedScan = false
     @State private var showOfflineOriginals = false
+    @State private var showScanReport = false
 
     private struct OriginalLocation: Equatable {
         let id: UUID
@@ -176,8 +177,16 @@ struct PeopleReviewSummaryView: View {
             Divider()
             if let scan = model.peopleScan {
                 PeopleScanProgressView(task: scan.task, progress: scan.progress)
-            } else if requestedScan {
-                Text(model.status).font(.caption).foregroundStyle(.secondary)
+            } else {
+                HStack {
+                    if requestedScan {
+                        Text(model.status).font(.caption).foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    if model.canOpenPeopleScanReport {
+                        Button("Skipped Results…") { showScanReport = true }
+                    }
+                }
             }
             HStack {
                 let scanTitle = ready.map { String(localized: "Scan Available Photos (\($0.formatted()))") }
@@ -199,6 +208,9 @@ struct PeopleReviewSummaryView: View {
         }
         .padding(20)
         .frame(width: 605)
+        .sheet(isPresented: $showScanReport) {
+            PeopleScanReportView().environmentObject(model)
+        }
         .onChange(of: model.library.projects.map(\.id)) { _, ids in
             if case .project(let id) = scope, !ids.contains(id) { scope = .library }
         }

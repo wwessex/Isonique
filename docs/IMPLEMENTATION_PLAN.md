@@ -505,9 +505,11 @@ Show Offline Originals lists the unavailable files in the chosen scope once per 
 
 Review Summary and the workspace show the same live counts during a People scan. Checked versions completed detection, including scans with no faces. Skipped versions include unavailable originals and files that failed to verify, decode, or scan. Remaining includes the version in progress. The summary checks availability again as each version is reached, so files that go offline stay unscanned. Cancel Scan discards all pending changes. A completed scan saves successful checks together in one Undo step.
 
+Open Skipped Results from Review Summary or Skipped Face Scan Results from Metadata or the workspace. The latest completed scan in the open library lists every skipped version by name, including versions that share an original. Each row shows whether the file was unavailable or what prevented processing. The report stays available until the next completed scan or until a library is opened. After reconnecting or relinking originals, Retry Skipped Versions looks up the recorded IDs in the current catalogue and retries only active, unscanned versions from that batch. Successful checks save together in one Undo step. Cancelling a retry keeps the previous report and discards the pending checks.
+
 ## Next checkpoint
 
-Show a per-version report of skipped People scan results and let the user retry those versions after reconnecting their originals.
+Add a reconnect shortcut to the skipped face scan report. Limit the folder search to the offline referenced originals in the report and deduplicate shared originals before searching.
 
 ## Pending physical camera checks
 

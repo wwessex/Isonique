@@ -863,3 +863,10 @@
 - A cancellation test waited until one successful check had accumulated and the next version was in progress. Cancelling discarded the pending detections and left the catalogue revision and Undo history intact.
 - The signed macOS app displayed live counts in Review Summary and during a selection scan. Cancelling in the summary kept all 124 test versions unscanned. The selection scan checked 123 versions and skipped an unavailable reference. One Undo returned all 123 versions to unscanned.
 - All eleven focused People tests passed. The full suite ran 441 tests with 438 passes, zero failures and three fixture-dependent skips for external camera RAW, Finder Trash and the Vision group portrait. Branding and the Apple Silicon release build passed. The extracted archive passed strict signature verification and targets macOS 15.0.
+
+## Skipped People scan results and retry
+
+- Tests verified version-specific rows for unavailable originals and fingerprint failures, including distinct rows for versions sharing a file. After reconnect and catalogue reload, retry used only the original report's active, unscanned versions despite a different Browser scope and selection. It excluded a trashed version, a version scanned since the report and an unrelated version sharing the reconnected original.
+- Cancelling retry after one completed check retained the preceding report and preserved the catalogue revision. A completed retry changed two versions in one Undo step, and Undo restored the pre-retry photo records.
+- The signed macOS app showed one checked version and three skipped rows in Review Summary. Restoring a shared original and retrying checked both versions of that original and kept the unrelated unavailable version in the report. The Metadata command opened the same report.
+- All twelve focused People tests passed. The full suite ran 442 tests with 439 passes, zero failures and three fixture-dependent skips for external camera RAW, Finder Trash and the Vision group portrait. Branding and the signed Apple Silicon release build passed. The extracted archive passed strict signature verification and targets macOS 15.0.

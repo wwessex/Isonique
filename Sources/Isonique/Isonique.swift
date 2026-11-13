@@ -34,6 +34,8 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
     @Published var personNameEditor: PersonNameEditorRequest?
     @Published var personOverview: PersonOverviewRequest?
     @Published var peopleScan: PeopleScanJob?
+    @Published var peopleScanReport: PeopleScanReport?
+    @Published var showPeopleScanReport = false
     var peopleGroupsSnapshot: [PeopleGroup]?
     var peopleGallerySnapshot: PeopleGallery?
     @Published var peopleGallerySearch = ""
@@ -1536,6 +1538,9 @@ struct ContentView: View {
                         if model.busy { ProgressView().controlSize(.small) } else { Image(systemName: "checkmark.shield").foregroundStyle(.secondary) }
                         Text(model.status).font(.caption).lineLimit(2)
                         Spacer()
+                        if model.canOpenPeopleScanReport {
+                            Button("Skipped Face Scan Results…") { model.showPeopleScanReport = true }
+                        }
                         if !model.isPeopleGallery {
                             Text("\(model.activeLightTable?.items.count ?? model.photos.count) photos")
                                 .font(.caption2).foregroundStyle(.secondary)
@@ -1579,6 +1584,7 @@ struct ContentView: View {
         .sheet(item: $model.peopleSummary, onDismiss: model.finishPeopleSummary) { request in
             PeopleReviewSummaryView(request: request).environmentObject(model)
         }
+        .sheet(isPresented: $model.showPeopleScanReport) { PeopleScanReportView().environmentObject(model) }
         .sheet(item: $model.unnamedFaceReview) { review in
             UnnamedFaceQueueView(review: review).environmentObject(model)
         }

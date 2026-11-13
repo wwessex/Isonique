@@ -31,10 +31,9 @@ struct PeopleReview: Identifiable {
 
 struct PeopleScanResult {
     var changes: [PhotoPeopleChange] = []
-    var issues: [String] = []
-    var offline = 0
+    var skippedVersions: [PeopleScanSkip] = []
     var scanned: Int { changes.count }
-    var skipped: Int { offline + issues.count }
+    var skipped: Int { skippedVersions.count }
 }
 
 struct PeopleScanCounts: Equatable {
@@ -152,10 +151,10 @@ extension Workspace {
     }
 
     func scanSelectedFaces() {
-        scanFaces(metadataEditingTargets.filter { $0.people?.scanned != true }, availableOnly: false)
+        scanFaces(metadataEditingTargets.filter { $0.people?.scanned != true })
     }
 
-    func scanFaces(_ targets: [Photo], availableOnly: Bool,
+    func scanFaces(_ targets: [Photo],
                    detect: @escaping @Sendable (CGImage) async throws -> [FaceRegion] = {
                        try await FaceDetection.regions(in: $0)
                    }) {
@@ -177,13 +176,12 @@ extension Workspace {
                     result.changes.append(PhotoPeopleChange(photoID: photo.id, people: people))
                 } catch is CancellationError {
                     throw CancellationError()
+                } catch LibraryError.originalUnavailable {
+                    try Task.checkCancellation()
+                    result.skippedVersions.append(PeopleScanSkip(photo: photo, reason: .unavailable))
                 } catch {
                     try Task.checkCancellation()
-                    if availableOnly, (try? repository.availableOriginalURL(photo)) == nil {
-                        result.offline += 1
-                    } else {
-                        result.issues.append("\(photo.displayName): \(error.localizedDescription)")
-                    }
+                    result.skippedVersions.append(PeopleScanSkip(photo: photo, reason: .processingFailed(error.localizedDescription)))
                 }
                 await progress.record(checked: result.scanned, skipped: result.skipped)
             }
@@ -204,17 +202,9 @@ extension Workspace {
                     status = "Face detection could not save its results"
                     return
                 }
-                status = result.scanned == 1 ? "Checked 1 photo version for faces" : "Checked \(result.scanned) photo versions for faces"
-                if result.offline > 0 {
-                    let skipped = result.offline == 1 ? String(localized: "1 offline version skipped")
-                        : String(localized: "\(result.offline) offline versions skipped")
-                    status += " · " + skipped
-                }
-                if !result.issues.isEmpty {
-                    let skipped = result.issues.count == 1 ? String(localized: "Skipped 1 photo version.")
-                        : String(localized: "Skipped \(result.issues.count) photo versions.")
-                    error = skipped + "\n\n" + result.issues.prefix(8).joined(separator: "\n")
-                }
+                let report = PeopleScanReport(root: repository.root, result: result)
+                peopleScanReport = report
+                status = report.summary
             } catch is CancellationError {
                 status = "Face detection cancelled"
             } catch {
@@ -236,6 +226,8 @@ struct PeopleCommands: View {
         if let scan = model.peopleScan {
             CancelPeopleScanCommand(task: scan.task, progress: scan.progress)
         }
+        Button("Skipped Face Scan Results…") { model.showPeopleScanReport = true }
+            .disabled(!model.canOpenPeopleScanReport)
         Button("Review Faces…") {
             if let photo = model.selected { model.openPeopleReview(photo) }
         }.disabled(model.selected == nil || model.isViewingTrash || model.busy || model.batchMode)

@@ -50,6 +50,8 @@ extension Workspace {
             preferences.set(repo.root.path, forKey: "library.selectedRoot")
         }
         repository = repo; library = restored
+        peopleScanReport = nil
+        showPeopleScanReport = false
         history = keepHistory ? (library.history ?? EditHistory()) : EditHistory()
         scope = "all"; search = ""; ratingFilter = .all; originalFilter = .all; colorFilter = .all; advancedSearch = nil
         batchMode = false; batchSelection = []; selection = nil
