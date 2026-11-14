@@ -899,3 +899,18 @@
 - In the signed app, Grid, List, filmstrip and the Second Browser displayed Offline for both cached versions after relaunch. Opening the alternate version from List and switching through the filmstrip displayed the corresponding saved Viewer image each time.
 - The final List accessibility tree included the version name and offline status. Rotating one version offline hid its stale filmstrip thumbnail and Viewer preview while the other version stayed available. Undo restored the matching cached image.
 - All 17 focused tests passed. The full suite ran 448 tests with 445 passes, zero failures and three fixture-dependent skips for external camera RAW, Finder Trash and the Vision group portrait. Branding and the signed Apple Silicon release build passed. The extracted archive passed strict signature verification and targets macOS 15.0.
+
+## Human Interface Guidelines fixes
+
+The Browser, filmstrip and Second Browser expose photo selection, rating and flag state. Export names the quality and watermark sliders and the longest-edge field. Compare names Synchronize Navigation and the promote and remove actions. The List Browser and Inspector each stay within their assigned pane, and the Inspector uses a standard system background. The workspace, Settings and Help follow the system appearance, with a neutral photo canvas. The editing strip moves Lift, Stamp, Original, Undo and Redo to a second row when the single row no longer fits.
+
+Activating a focused Undo or Redo transfers keyboard or VoiceOver focus to the opposite button when the current action runs out and the opposite action becomes available.
+
+| Runtime | Verified result |
+| --- | --- |
+| macOS Sequoia 15.7.7 (24G720), Apple Silicon Tart VM | The signed app opened a disposable library. At 1,050 × 650 pt of content area, the List and Inspector fit side by side and all five trailing editing controls were visible. Full Keyboard Access moved focus directly from Undo to Redo after Space, and a second Space restored the rotation and moved focus back to Undo. The actual VoiceOver cursor announced the strip controls and Original's selected state. After activating the last Undo, VoiceOver moved to and announced “Redo photo edit button.” Activating Redo restored the rotation and announced “Undo photo edit button.” |
+| macOS 27.3 (26C5035r), Apple Silicon host | The List and Inspector fit side by side in Light and Dark appearance. At the minimum content size, the List scrolled horizontally to Keywords with all 14 columns enabled and the Inspector scrolled independently. All five trailing editing controls were visible. Full Keyboard Access moved focus immediately from Undo to Redo, and a second Space restored the rotation and returned focus to Undo. The actual VoiceOver cursor moved directly to Redo after Undo, announced “Redo photo edit button” and activated it successfully. |
+
+Separate macOS 27.3 passes covered import, selection, exposure editing and JPEG export with both Full Keyboard Access and the actual VoiceOver cursor. The exported JPEGs were readable and the source originals matched byte for byte. The live accessibility tree also confirmed the revised Export and Compare names. Sequoia verification covered launch, the minimum window layout and editing strip focus. The end-to-end import and export workflow was exercised on macOS 27.3.
+
+The host and guest test executables matched the signed release build. Full Keyboard Access, VoiceOver and VoiceOver AppleScript control were restored to their original settings after testing. The macOS 27.3 build and branding checks passed. The full XCTest suite recorded 445 passes, zero failures and three fixture-dependent skips for external camera RAW, Finder Trash and the Vision group portrait.

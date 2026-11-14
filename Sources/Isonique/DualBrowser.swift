@@ -246,7 +246,7 @@ struct SecondaryBrowserPane: View {
                 .font(.caption2).foregroundStyle(.secondary).padding(8)
         }
         .frame(minWidth: 240, idealWidth: 310, maxWidth: 430)
-        .background(Color(white: 0.045))
+        .background(Color(nsColor: .underPageBackgroundColor))
         .accessibilityLabel("Second Browser")
         .simultaneousGesture(TapGesture().onEnded { model.activeBrowserPane = .secondary })
     }
@@ -268,13 +268,15 @@ private struct SecondaryBrowserPhotoCell: View {
                 Text(photo.displayName).font(.caption).lineLimit(1)
                 Text(photo.rating == RatingRules.rejected ? "Rejected" : RatingRules.stars(photo.rating))
                     .font(.caption2).foregroundStyle(.orange).frame(height: 11)
+                    .accessibilityHidden(true)
             }.padding(6)
-                .background(selected ? Color.accentColor.opacity(0.2) : Color.white.opacity(0.035),
+                .background(selected ? Color.accentColor.opacity(0.2) : Color.primary.opacity(0.04),
                             in: RoundedRectangle(cornerRadius: 9))
                 .overlay(RoundedRectangle(cornerRadius: 9)
-                    .stroke(selected ? Color.accentColor : Color.white.opacity(0.08), lineWidth: selected ? 2 : 1))
+                    .stroke(selected ? Color.accentColor : Color.primary.opacity(0.1), lineWidth: selected ? 2 : 1))
         }
         .buttonStyle(.plain)
+        .photoReviewAccessibility(photo, selected: selected)
         .draggable(photo.id.uuidString)
         .dropDestination(for: String.self) { values, _ in
             guard let value = values.first, let id = UUID(uuidString: value),

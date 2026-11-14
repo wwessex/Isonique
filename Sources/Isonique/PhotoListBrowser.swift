@@ -418,13 +418,14 @@ struct QuickPreviewPhotoViewer: View {
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.35)
+            Color(white: 0.08)
             Thumbnail(request: .init(photoID: photo.id, url: url, adjustments: photo.adjustments,
                                      maximum: QuickPreviewPolicy.maximumDimension,
                                      revision: model.originalStatusRevision),
                       cache: model.thumbnailCache)
                 .padding(22)
         }
+        .environment(\.colorScheme, .dark)
         .overlay(alignment: .top) {
             HStack(spacing: 9) {
                 Image(systemName: "bolt.fill")
@@ -434,6 +435,7 @@ struct QuickPreviewPhotoViewer: View {
             .font(.caption).foregroundStyle(.yellow)
             .padding(.horizontal, 14).padding(.vertical, 9)
             .background(.ultraThinMaterial, in: Capsule()).padding(16)
+            .environment(\.colorScheme, .dark)
         }
         .overlay(RoundedRectangle(cornerRadius: 8).stroke(.yellow.opacity(0.8), lineWidth: 2).padding(8))
         .accessibilityElement(children: .contain)

@@ -180,7 +180,7 @@ private struct PeopleGalleryTile: View {
             }
             .padding(8)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white.opacity(0.065), in: RoundedRectangle(cornerRadius: 10))
+            .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 10))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

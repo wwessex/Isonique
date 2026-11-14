@@ -32,7 +32,14 @@ struct ExportOptionsView: View {
                 Text("Copies the original file byte for byte, including its embedded metadata and GPS.").foregroundStyle(.secondary)
             } else {
                 if options.format == .jpeg || options.format == .heif {
-                    HStack { Text("\(options.format.rawValue) quality"); Slider(value: $options.quality, in: 0.1...1); Text("\(Int(options.quality * 100))%").monospacedDigit().frame(width: 45) }
+                    HStack {
+                        Text("\(options.format.rawValue) quality").accessibilityHidden(true)
+                        Slider(value: $options.quality, in: 0.1...1)
+                            .accessibilityLabel("\(options.format.rawValue) quality")
+                            .accessibilityValue(options.quality.formatted(.percent.precision(.fractionLength(0))))
+                        Text("\(Int(options.quality * 100))%").monospacedDigit().frame(width: 45)
+                            .accessibilityHidden(true)
+                    }
                 }
                 if options.format == .tiff {
                     Picker("TIFF compression", selection: Binding(
@@ -44,7 +51,13 @@ struct ExportOptionsView: View {
                         }
                     }
                 }
-                HStack { Text("Longest edge (pixels)"); TextField("0", value: $options.maxDimension, format: .number).frame(width: 100) }
+                HStack {
+                    Text("Longest edge (pixels)").accessibilityHidden(true)
+                    TextField("Longest edge (pixels)", value: $options.maxDimension, format: .number, prompt: Text("0"))
+                        .frame(width: 100)
+                        .accessibilityLabel("Longest edge (pixels)")
+                        .accessibilityHint("Enter zero to keep full resolution.")
+                }
                 Text("0 keeps full resolution. Images are reduced proportionally and never enlarged.").font(.caption).foregroundStyle(.secondary)
                 watermarkControls(model.batchMode ? model.batchPhotos.first : model.selected)
                 GroupBox("Include metadata") {
@@ -146,14 +159,20 @@ struct ExportOptionsView: View {
                         ForEach(WatermarkPosition.allCases) { Text($0.rawValue).tag($0) }
                     }
                     HStack {
-                        Text("Opacity")
+                        Text("Opacity").accessibilityHidden(true)
                         Slider(value: watermarkBinding(\.opacity, default: 0.75), in: 0.1...1)
+                            .accessibilityLabel("Watermark opacity")
+                            .accessibilityValue(watermark.opacity.formatted(.percent.precision(.fractionLength(0))))
                         Text("\(Int(watermark.opacity * 100))%").monospacedDigit().frame(width: 45)
+                            .accessibilityHidden(true)
                     }
                     HStack {
-                        Text("Scale")
+                        Text("Scale").accessibilityHidden(true)
                         Slider(value: watermarkBinding(\.scale, default: 0.06), in: 0.02...0.2)
+                            .accessibilityLabel("Watermark scale")
+                            .accessibilityValue(watermark.scale.formatted(.percent.precision(.fractionLength(0))))
                         Text("\(Int(watermark.scale * 100))%").monospacedDigit().frame(width: 45)
+                            .accessibilityHidden(true)
                     }
                     if let photo, let repository = model.repository,
                        let url = try? repository.availableOriginalURL(photo) {

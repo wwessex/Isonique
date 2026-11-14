@@ -9,7 +9,18 @@
 - Run `make build` to compile and ad-hoc sign the arm64 bundle. Extract `build/Isonique.zip` to a local folder and run `codesign --verify --deep --strict /absolute/path/to/Isonique.app` to verify the packaged copy.
 - Follow the [README smoke test](README.md#development) to launch with a disposable catalogue and capture the window.
 
-The supported deployment target is macOS 15. Native validation has been performed on Apple Silicon with macOS 27.3. Running on macOS 15 or 26, using physical camera devices and recovering a real legacy Aperture library remain separate validation tasks.
+The supported deployment target is macOS 15. Native validation has been performed on Apple Silicon with macOS 27.3. The HIG layout and editing strip checks also ran in an Apple Silicon VM with macOS Sequoia 15.7.7. See [the results](docs/TEST_RESULTS.md#human-interface-guidelines-fixes) for coverage by version. Broader macOS 15 workflow coverage, macOS 26 runtime testing, physical camera devices and recovery from a real legacy Aperture library remain separate validation tasks.
+
+## Human Interface Guidelines regression checks
+
+Use the signed app and a disposable library with two JPEGs. Record the macOS version and build, whether the app runs on the host or in a VM, and which steps were completed. Record the initial VoiceOver and Full Keyboard Access settings before changing them.
+
+1. With the sidebar and Inspector open, switch to List Browser and resize the window to its 1,050 × 650 pt minimum content size. On the tested builds, the title bar and toolbar bring the full window frame to 1,050 × 702 pt. Enable all 14 List columns and scroll horizontally to Keywords, then scroll the Inspector vertically. Confirm each pane stays within its bounds and scrolls independently.
+2. At minimum size, confirm Lift, Stamp, Original, Undo and Redo are all visible on the second row without horizontal scrolling. Widen the window and confirm the strip returns to one row when the controls fit.
+3. In a fresh edit session, make one rotation. With Full Keyboard Access on, tab to Undo and press Space. Confirm the rotation is undone and focus immediately lands on Redo. Press Space again without tabbing. Confirm the rotation returns and focus lands on Undo. With more than one edit in history, verify that focus stays on the current button while another step in the same direction remains available.
+4. Repeat the single-edit check with the actual VoiceOver cursor. Confirm that VoiceOver names the strip controls, announces Original's selected state when toggled, and announces Redo when the last Undo transfers focus. Activate Redo and confirm the rotation returns. Capture the phrases from VoiceOver speech, its caption panel or its last-spoken-phrase interface.
+5. Import a JPEG, select it in the Grid, open the Viewer, change Exposure and export an edited JPEG. Confirm the selected state and review information are exposed on the Grid and filmstrip thumbnails. Check Compare's Synchronize Navigation and Promote to Primary labels, plus Remove from Compare when three or more panes are open. In Export, confirm the quality slider has a name and percentage and the longest-edge field has a name and value. Verify the exported file and compare the original's bytes with the input.
+6. Switch between Light and Dark appearance and confirm the workspace, Settings and Help follow the system appearance while the photo canvas keeps a neutral surround. Restore the original appearance and accessibility settings, including VoiceOver AppleScript control if it was enabled for the test.
 
 ## Physical pressure-sensitive tablet
 

@@ -204,6 +204,7 @@ struct PhotoComparisonView: View {
                     set: { navigation.setSynchronized($0, primaryID: model.comparisonID,
                                                        visibleIDs: ids) }))
                     .toggleStyle(.switch).controlSize(.small)
+                    .accessibilityLabel("Synchronize Navigation")
                     .help("Use the same zoom and normalized pan position in every pane")
                 Button("Done", action: model.stopComparison)
             }.font(.caption).padding(.horizontal, 14).padding(.top, 10)
@@ -312,6 +313,7 @@ private struct ComparisonPane: View {
                         Text(photo.displayName).lineLimit(1).font(.caption.weight(.semibold))
                     }
                 }.buttonStyle(.plain)
+                    .accessibilityAddTraits(isActive ? .isSelected : [])
                 Spacer()
                 if let scale = navigation.scale {
                     Text(ViewerZoom.percentage(scale)).font(.caption.monospacedDigit())
@@ -323,10 +325,12 @@ private struct ComparisonPane: View {
                 if !isPrimary {
                     Button(action: promote) { Image(systemName: "arrow.up.to.line") }
                         .buttonStyle(.plain).help("Promote to Primary · Option-P")
+                        .accessibilityLabel("Promote to Primary")
                 }
                 if canRemove {
                     Button(action: remove) { Image(systemName: "xmark") }
                         .buttonStyle(.plain).help("Remove from Compare · Option-Delete")
+                        .accessibilityLabel("Remove from Compare")
                 }
             }
             Group {
@@ -337,10 +341,12 @@ private struct ComparisonPane: View {
                 else if let failure { ContentUnavailableView("Image unavailable", systemImage: "exclamationmark.triangle", description: Text(failure)) }
                 else { ProgressView() }
             }.frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(Color(white: 0.08))
+                .environment(\.colorScheme, .dark)
         }.padding(8).frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(.black.opacity(0.3), in: RoundedRectangle(cornerRadius: 10))
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
             .overlay(RoundedRectangle(cornerRadius: 10)
-                .stroke(isActive ? Color.accentColor : Color.white.opacity(0.08),
+                .stroke(isActive ? Color.accentColor : Color.primary.opacity(0.12),
                         lineWidth: isActive ? 2 : 1))
             .task(id: request) {
                 guard !Task.isCancelled else { return }

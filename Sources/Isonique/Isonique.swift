@@ -818,7 +818,6 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         WindowGroup("Isonique") {
             ContentView().environmentObject(workspace)
                 .frame(minWidth: 1050, minHeight: 650)
-                .preferredColorScheme(.dark)
                 .onAppear {
                     NSApplication.shared.setActivationPolicy(.regular)
                     NSApplication.shared.activate(ignoringOtherApps: true)
@@ -1159,11 +1158,11 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
             }
         }
         Window("Features & Limits", id: "features") {
-            FeatureGuide().preferredColorScheme(.dark)
+            FeatureGuide()
         }
         .defaultSize(width: 720, height: 700)
         Settings {
-            ReviewSettingsView().environmentObject(workspace).preferredColorScheme(.dark)
+            ReviewSettingsView().environmentObject(workspace)
         }
     }
 }
@@ -1184,7 +1183,7 @@ private struct WorkspaceGlass: ViewModifier {
             content.glassEffect(.regular, in: RoundedRectangle(cornerRadius: radius))
         } else {
             content.background(.regularMaterial, in: RoundedRectangle(cornerRadius: radius))
-                .overlay(RoundedRectangle(cornerRadius: radius).stroke(.white.opacity(0.12)))
+                .overlay(RoundedRectangle(cornerRadius: radius).stroke(.primary.opacity(0.12)))
         }
     }
 }
@@ -1270,9 +1269,8 @@ struct ContentView: View {
                 HStack(spacing: 10) {
                     Text("I")
                         .font(.system(size: 27, weight: .semibold, design: .serif))
-                        .foregroundStyle(.white)
                         .frame(width: 46, height: 46)
-                        .workspaceGlass(radius: 14)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14))
                         .accessibilityHidden(true)
                     VStack(alignment: .leading) { Text("Isonique").font(.system(size: 22, weight: .semibold, design: .rounded)); Text("PHOTO WORKSPACE").font(.system(size: 9, weight: .medium)).tracking(1.6).foregroundStyle(.secondary) }
                 }.padding(20)
@@ -1442,7 +1440,7 @@ struct ContentView: View {
                             }.padding(10)
                         }
                         .frame(minWidth: 126, idealWidth: 146, maxWidth: 180)
-                        .background(Color(white: 0.04))
+                        .background(Color(nsColor: .underPageBackgroundColor))
                         .focusable().focusEffectDisabled()
                         .focused($focusedPhotographyPanel, equals: .browser)
                         .accessibilityLabel("Photography Browser")
@@ -1496,13 +1494,20 @@ struct ContentView: View {
                             })
                             if model.photographyLayout.filmstrip {
                                 ScrollView(.horizontal) { LazyHStack(spacing: 10) { ForEach(model.photos) { photo in photoCell(photo, compact: true, photographyFocus: .filmstrip) } }.padding(12) }
-                                    .scrollIndicators(.hidden).frame(height: 128).workspaceGlass(radius: 18).padding(.horizontal, 16).padding(.bottom, 14)
+                                    .scrollIndicators(.hidden).frame(height: 128)
+                                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
+                                    .padding(.horizontal, 16).padding(.bottom, 14)
                                     .focusable().focusEffectDisabled()
                                     .focused($focusedPhotographyPanel, equals: .filmstrip)
                                     .accessibilityLabel("Photography Filmstrip")
                             }
                         } else if model.browserLayout == .list {
-                            PhotoListBrowser(model: model, photos: model.photos)
+                            // The table scrolls its columns inside the space assigned by the split view.
+                            GeometryReader { viewport in
+                                PhotoListBrowser(model: model, photos: model.photos)
+                                    .frame(width: viewport.size.width, height: viewport.size.height)
+                                    .clipped()
+                            }
                         } else {
                             ScrollView {
                                 LazyVGrid(columns: [GridItem(.adaptive(minimum: model.gridThumbnailSize.columnWidth), spacing: 16)], spacing: 18) {
@@ -1510,7 +1515,9 @@ struct ContentView: View {
                                 }.padding(20)
                             }
                         }
-                    }.frame(minWidth: 400).background(Color(white: 0.055))
+                    }.frame(minWidth: 300, maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Color(nsColor: .controlBackgroundColor))
+                        .clipped()
                         .focusable().focusEffectDisabled()
                         .focused($focusedPhotographyPanel, equals: model.viewer ? .viewer : .browser)
                         .simultaneousGesture(TapGesture().onEnded {
@@ -1530,7 +1537,10 @@ struct ContentView: View {
                         SecondaryBrowserPane(model: model)
                     }
                     if model.activeLightTable == nil, model.photographyLayout.inspector && !model.isViewingTrash && !model.isPeopleGallery {
-                        Inspector().frame(minWidth: 260, idealWidth: 290, maxWidth: 340).workspaceGlass(radius: 20).padding(10)
+                        Inspector()
+                            .frame(minWidth: 260, idealWidth: 290, maxWidth: 340, maxHeight: .infinity)
+                            .background(Color(nsColor: .windowBackgroundColor))
+                            .clipped()
                             .focusable().focusEffectDisabled()
                             .focused($focusedPhotographyPanel, equals: .inspector)
                     }
@@ -1538,7 +1548,11 @@ struct ContentView: View {
                 Divider()
                 if model.peopleScan == nil {
                     HStack(spacing: 8) {
-                        if model.busy { ProgressView().controlSize(.small) } else { Image(systemName: "checkmark.shield").foregroundStyle(.secondary) }
+                        if model.busy {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "checkmark.shield").foregroundStyle(.secondary).accessibilityHidden(true)
+                        }
                         Text(model.status).font(.caption).lineLimit(2)
                         Spacer()
                         if model.canOpenPeopleScanReport {
@@ -1716,7 +1730,9 @@ struct ContentView: View {
                         .frame(height: compact ? 76 : model.gridThumbnailSize.imageHeight)
                         .frame(maxWidth: .infinity).background(Color.black.opacity(0.3)).clipped()
                     HStack {
-                        if model.batchMode { Image(systemName: model.batchSelection.contains(photo.id) ? "checkmark.circle.fill" : "circle") }
+                        if model.batchMode {
+                            Image(systemName: isSelected ? "checkmark.circle.fill" : "circle").accessibilityHidden(true)
+                        }
                         Text(photo.displayName).lineLimit(1)
                         if photo.id == model.comparisonID { Image(systemName: "pin.fill").accessibilityLabel("Comparison reference") }
                         if let stackID = photo.stackID {
@@ -1727,11 +1743,18 @@ struct ContentView: View {
                             Image(systemName: "circle.fill").foregroundStyle(label.tint).accessibilityLabel(model.name(for: label))
                         }
                     }.font(.caption)
-                    if !compact { HStack { Text(photo.rating == RatingRules.rejected ? "Rejected" : RatingRules.stars(photo.rating)).foregroundStyle(.orange); Spacer(); if photo.flagged { Image(systemName: "flag.fill").foregroundStyle(.orange) } }.font(.caption).frame(height: 14) }
+                    if !compact {
+                        HStack {
+                            Text(photo.rating == RatingRules.rejected ? "Rejected" : RatingRules.stars(photo.rating))
+                            Spacer()
+                            if photo.flagged { Image(systemName: "flag.fill") }
+                        }.font(.caption).foregroundStyle(.orange).frame(height: 14).accessibilityHidden(true)
+                    }
                 }.padding(7).frame(width: compact ? 110 : nil)
-                    .background(isSelected ? selectedColor.opacity(0.18) : Color.white.opacity(0.035), in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(isSelected ? selectedColor : Color.white.opacity(0.07), lineWidth: isSelected ? 2 : 1))
+                    .background(isSelected ? selectedColor.opacity(0.18) : Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(isSelected ? selectedColor : Color.primary.opacity(0.1), lineWidth: isSelected ? 2 : 1))
             }.buttonStyle(.plain)
+            .photoReviewAccessibility(photo, selected: isSelected)
             .draggable(photo.id.uuidString)
             .dropDestination(for: String.self) { values, _ in
                 guard manualReorder, let value = values.first, let id = UUID(uuidString: value),
@@ -1760,8 +1783,15 @@ struct EditBar: View {
     var body: some View {
         VStack(spacing: 10) {
             ViewThatFits(in: .horizontal) {
-                controls
-                ScrollView(.horizontal) { controls }.scrollIndicators(.hidden)
+                HStack(spacing: 14) {
+                    editingTools
+                    Divider().frame(height: 20)
+                    reviewControls
+                }.fixedSize(horizontal: true, vertical: false)
+                VStack(alignment: .leading, spacing: 8) {
+                    editingTools
+                    reviewControls
+                }
             }
             if model.tool == .straighten {
                 HStack {
@@ -1781,56 +1811,103 @@ struct EditBar: View {
             }
         }.frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, 16).padding(.vertical, 10).background(.ultraThinMaterial)
     }
-    var controls: some View {
+    private var editingTools: some View {
+        HStack(spacing: 14) {
+            tool("Select", icon: "cursorarrow", mode: .select)
+            Button { model.rotate(-1) } label: { Label("Left", systemImage: "rotate.left") }.help("Rotate 90° left; clears crop")
+            Button { model.rotate(1) } label: { Label("Right", systemImage: "rotate.right") }.help("Rotate 90° right; clears crop")
+            Menu {
+                ForEach(FlipAxis.allCases) { axis in Button(axis.rawValue) { model.flip(axis) } }
+            } label: { Label("Flip", systemImage: "arrow.left.and.right") }
+            Divider().frame(height: 20)
+            tool("Crop", icon: "crop", mode: .crop)
+            tool("Straighten", icon: "level", mode: .straighten)
+            Menu {
+                Button("Dodge Brush") { model.chooseBrush(.dodge) }
+                Button("Burn Brush") { model.chooseBrush(.burn) }
+                Button("Saturation Brush") { model.chooseBrush(.saturation) }
+                Button("Definition Brush") { model.chooseBrush(.definition) }
+                Button("Sharpening Brush") { model.chooseBrush(.sharpening) }
+                Button("Luminance Noise Reduction Brush") { model.chooseBrush(.noiseReduction) }
+                Button("Contrast Brush") { model.chooseBrush(.contrast) }
+                Button("Blur Brush") { model.chooseBrush(.blur) }
+                Button("Tint Brush") { model.chooseBrush(.tint) }
+                Button("Skin Smoothing Brush") { model.chooseBrush(.skinSmoothing) }
+                Button("Polarize Brush") { model.chooseBrush(.polarize) }
+                Button("Halo Reduction Brush") { model.chooseBrush(.haloReduction) }
+            } label: {
+                Label("Brush", systemImage: "paintbrush.pointed")
+                    .foregroundStyle(model.tool == .brush ? Color.accentColor : .primary)
+            }.disabled(!model.canBrush)
+            Menu {
+                Button("Repair Spot") { model.chooseSpotRemoval(.repair) }
+                Button("Clone Spot") { model.chooseSpotRemoval(.clone) }
+                Button("Manual Red-Eye") { model.chooseRedEyeCorrection() }
+            } label: {
+                Label("Retouch", systemImage: "bandage")
+                    .foregroundStyle(model.tool == .spot || model.tool == .redEye ? Color.accentColor : .primary)
+            }.disabled(!model.canSpotRemove && !model.canCorrectRedEye)
+        }
+        .disabled(model.selected == nil)
+        .buttonStyle(.borderless)
+        .font(.caption)
+    }
+
+    private var reviewControls: some View {
         HStack(spacing: 14) {
             Group {
-                tool("Select", icon: "cursorarrow", mode: .select)
-                Button { model.rotate(-1) } label: { Label("Left", systemImage: "rotate.left") }.help("Rotate 90° left; clears crop")
-                Button { model.rotate(1) } label: { Label("Right", systemImage: "rotate.right") }.help("Rotate 90° right; clears crop")
-                Menu {
-                    ForEach(FlipAxis.allCases) { axis in Button(axis.rawValue) { model.flip(axis) } }
-                } label: { Label("Flip", systemImage: "arrow.left.and.right") }
-                Divider().frame(height: 20)
-                tool("Crop", icon: "crop", mode: .crop)
-                tool("Straighten", icon: "level", mode: .straighten)
-                Menu {
-                    Button("Dodge Brush") { model.chooseBrush(.dodge) }
-                    Button("Burn Brush") { model.chooseBrush(.burn) }
-                    Button("Saturation Brush") { model.chooseBrush(.saturation) }
-                    Button("Definition Brush") { model.chooseBrush(.definition) }
-                    Button("Sharpening Brush") { model.chooseBrush(.sharpening) }
-                    Button("Luminance Noise Reduction Brush") { model.chooseBrush(.noiseReduction) }
-                    Button("Contrast Brush") { model.chooseBrush(.contrast) }
-                    Button("Blur Brush") { model.chooseBrush(.blur) }
-                    Button("Tint Brush") { model.chooseBrush(.tint) }
-                    Button("Skin Smoothing Brush") { model.chooseBrush(.skinSmoothing) }
-                    Button("Polarize Brush") { model.chooseBrush(.polarize) }
-                    Button("Halo Reduction Brush") { model.chooseBrush(.haloReduction) }
-                } label: {
-                    Label("Brush", systemImage: "paintbrush.pointed")
-                        .foregroundStyle(model.tool == .brush ? Color.accentColor : .primary)
-                }.disabled(!model.canBrush)
-                Menu {
-                    Button("Repair Spot") { model.chooseSpotRemoval(.repair) }
-                    Button("Clone Spot") { model.chooseSpotRemoval(.clone) }
-                    Button("Manual Red-Eye") { model.chooseRedEyeCorrection() }
-                } label: {
-                    Label("Retouch", systemImage: "bandage")
-                        .foregroundStyle(model.tool == .spot || model.tool == .redEye ? Color.accentColor : .primary)
-                }.disabled(!model.canSpotRemove && !model.canCorrectRedEye)
-                Divider().frame(height: 20)
                 Button(action: model.lift) { Label("Lift", systemImage: "eyedropper") }
                     .disabled(!model.canLift).help("Copy adjustments and metadata from this photo")
                 Button(action: model.stamp) { Label("Stamp", systemImage: "eyedropper.full") }.disabled(!model.canStamp).help("Apply the adjustments and metadata selected in Inspector")
                 Divider().frame(height: 20)
                 Toggle(isOn: $model.compareOriginal) { Label("Original", systemImage: "square.on.square") }.toggleStyle(.button).disabled(model.tool != .select).help("Compare with the untouched original")
             }.disabled(model.selected == nil)
-            Button { model.undoEdit() } label: { Image(systemName: "arrow.uturn.backward") }.disabled(!model.canUndo).help("Undo photo edit").accessibilityLabel("Undo photo edit")
-            Button { model.redoEdit() } label: { Image(systemName: "arrow.uturn.forward") }.disabled(!model.canRedo).help("Redo photo edit").accessibilityLabel("Redo photo edit")
-        }.buttonStyle(.borderless).font(.caption).fixedSize(horizontal: true, vertical: false)
+            EditHistoryButtons()
+        }
+        .buttonStyle(.borderless)
+        .font(.caption)
     }
+
     func tool(_ title: String, icon: String, mode: EditTool) -> some View {
         Button { model.chooseTool(mode) } label: { Label(title, systemImage: icon).foregroundStyle(model.tool == mode ? Color.accentColor : .primary) }.help(title)
+    }
+}
+private struct EditHistoryButtons: View {
+    private enum Action: Hashable { case undo, redo }
+
+    @EnvironmentObject private var model: Workspace
+    @FocusState private var keyboardFocus: Action?
+    @AccessibilityFocusState(for: .voiceOver) private var voiceOverFocus: Action?
+
+    var body: some View {
+        historyButton(.undo, title: "Undo photo edit", icon: "arrow.uturn.backward", enabled: model.canUndo)
+        historyButton(.redo, title: "Redo photo edit", icon: "arrow.uturn.forward", enabled: model.canRedo)
+    }
+
+    private func historyButton(_ action: Action, title: LocalizedStringKey, icon: String, enabled: Bool) -> some View {
+        Button {
+            let wasKeyboardFocused = keyboardFocus == action
+            let wasVoiceOverFocused = voiceOverFocus == action
+            if action == .undo { model.undoEdit() } else { model.redoEdit() }
+
+            let actionStillAvailable = action == .undo ? model.canUndo : model.canRedo
+            let oppositeAvailable = action == .undo ? model.canRedo : model.canUndo
+            guard !actionStillAvailable, oppositeAvailable else { return }
+            let next: Action = action == .undo ? .redo : .undo
+            // Let SwiftUI enable the destination before moving focus to it.
+            DispatchQueue.main.async {
+                if wasKeyboardFocused { keyboardFocus = next }
+                if wasVoiceOverFocused { voiceOverFocus = next }
+            }
+        } label: {
+            Image(systemName: icon)
+        }
+        .disabled(!enabled)
+        .help(Text(title))
+        .accessibilityLabel(Text(title))
+        .focusable(interactions: .activate)
+        .focused($keyboardFocus, equals: action)
+        .accessibilityFocused($voiceOverFocus, equals: action)
     }
 }
 struct PhotoViewer: View {
@@ -1945,7 +2022,10 @@ struct PhotoViewer: View {
                 }
             } else if let failure { ContentUnavailableView("Image unavailable", systemImage: "exclamationmark.triangle", description: Text(failure)) }
             else { ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity) }
-        }.overlay(alignment: .top) {
+        }
+        .background(Color(white: 0.08))
+        .environment(\.colorScheme, .dark)
+        .overlay(alignment: .top) {
             HStack(spacing: 14) {
                 Image(systemName: original ? "photo" : "slider.horizontal.3").foregroundStyle(.secondary)
                 Text(photo.displayName).font(.caption.weight(.medium)).lineLimit(1)
@@ -2269,38 +2349,46 @@ struct Inspector: View {
     @State private var adjustmentInputs: (AdjustmentHistogramRequest, AdjustmentHistograms)?
     @State private var inputHistogramError = false
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                Label("Inspector", systemImage: "slider.horizontal.3").font(.headline)
-                if model.batchMode { Text("This inspector edits one photo. Use the selection bar above for batch actions.").font(.caption).foregroundStyle(.secondary) }
-                if let photo = model.selected {
-                    Text(photo.displayName).font(.headline).textSelection(.enabled)
-                    Picker("Inspector section", selection: $tab) {
-                        Text("Info").tag("Info")
-                        Text("Adjustments").tag("Adjustments")
-                        Text("Library").tag("Library")
-                    }.pickerStyle(.segmented).labelsHidden()
-                    if tab == "Info" { PhotoMetadataInspector(photo: photo) }
-                    if tab == "Adjustments", model.quickPreview {
-                        ContentUnavailableView("Adjustments Paused", systemImage: "bolt.fill",
-                            description: Text("Turn off Quick Preview to edit this photograph. Ratings, flags, labels and metadata remain available."))
-                    } else if tab == "Adjustments" {
-                        VersionFamilyView(photo: photo).id(photo.id)
-                        adjustments(photo)
-                        VersionsView(photo: photo)
-                    }
-                    if tab == "Library" { organisation() }
-                } else {
-                    Text("Select a photograph to view metadata and adjustments.").foregroundStyle(.secondary)
-                    Divider()
-                    Text("Isonique preserves your originals. Camera RAW support depends on macOS decoders; editing uses Isonique’s own pixel formulas.").font(.caption).foregroundStyle(.secondary)
-                    Button("Import XML / XMP Metadata…", action: model.importMetadataPanel).disabled(model.busy || model.library.activePhotos.isEmpty)
+        GeometryReader { viewport in
+            ScrollView {
+                inspectorContent
+                    .frame(width: max(0, viewport.size.width - 36), alignment: .leading)
+                    .padding(18)
+            }
+        }
+    }
+
+    private var inspectorContent: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Label("Inspector", systemImage: "slider.horizontal.3").font(.headline)
+            if model.batchMode { Text("This inspector edits one photo. Use the selection bar above for batch actions.").font(.caption).foregroundStyle(.secondary) }
+            if let photo = model.selected {
+                Text(photo.displayName).font(.headline).textSelection(.enabled)
+                Picker("Inspector section", selection: $tab) {
+                    Text("Info").tag("Info")
+                    Text("Adjustments").tag("Adjustments")
+                    Text("Library").tag("Library")
+                }.pickerStyle(.segmented).labelsHidden()
+                if tab == "Info" { PhotoMetadataInspector(photo: photo) }
+                if tab == "Adjustments", model.quickPreview {
+                    ContentUnavailableView("Adjustments Paused", systemImage: "bolt.fill",
+                        description: Text("Turn off Quick Preview to edit this photograph. Ratings, flags, labels and metadata remain available."))
+                } else if tab == "Adjustments" {
+                    VersionFamilyView(photo: photo).id(photo.id)
+                    adjustments(photo)
+                    VersionsView(photo: photo)
+                }
+                if tab == "Library" { organisation() }
+            } else {
+                Text("Select a photograph to view metadata and adjustments.")
+                Divider()
+                Text("Isonique preserves your originals. Camera RAW support depends on macOS decoders; editing uses Isonique’s own pixel formulas.").font(.callout)
+                Button("Import XML / XMP Metadata…", action: model.importMetadataPanel).disabled(model.busy || model.library.activePhotos.isEmpty)
                 Button("Import & History Options…", action: model.showImportSettings)
                 Button("Recover Aperture Originals…", action: model.recoverPanel)
-                    Text("Recovery copies and verifies the source first. Legacy albums, referenced files and editing recipes are not migrated.").font(.caption).foregroundStyle(.secondary)
-                }
-            }.padding(18)
-        }.scrollIndicators(.hidden)
+                Text("Recovery copies and verifies the source first. Legacy albums, referenced files and editing recipes are not migrated.").font(.callout)
+            }
+        }
     }
     func adjustments(_ photo: Photo) -> some View {
         let showsInputs = levelsExpanded || channelLevelsExpanded || masterCurveExpanded || channelCurvesExpanded
@@ -2633,7 +2721,9 @@ struct Inspector: View {
             HStack {
                 Text(title)
                 Spacer()
-                TextField(title, value: value, format: .number.precision(.fractionLength(2))).textFieldStyle(.roundedBorder).frame(width: 60).multilineTextAlignment(.trailing)
+                TextField(title, value: value, format: .number.precision(.fractionLength(2)))
+                    .textFieldStyle(.roundedBorder).frame(width: 60).multilineTextAlignment(.trailing)
+                    .accessibilityLabel(title)
                 Button { value.wrappedValue = neutral } label: { Image(systemName: "arrow.counterclockwise") }.buttonStyle(.borderless).help("Reset \(title)").accessibilityLabel("Reset \(title)")
             }.font(.caption)
             Slider(value: value, in: range).accessibilityLabel(title)

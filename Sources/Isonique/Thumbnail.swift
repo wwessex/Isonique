@@ -1,6 +1,22 @@
 import SwiftUI
 import IsoniqueCore
 
+extension View {
+    func photoReviewAccessibility(_ photo: Photo, selected: Bool) -> some View {
+        let rating: String
+        if photo.rating == RatingRules.rejected {
+            rating = String(localized: "Rejected")
+        } else if photo.rating > 0 {
+            rating = photo.rating == 1 ? String(localized: "1 star") : String(localized: "\(photo.rating) stars")
+        } else {
+            rating = String(localized: "Unrated")
+        }
+        let reviewState = photo.flagged ? String(localized: "\(rating), Flagged") : rating
+        return accessibilityAddTraits(selected ? .isSelected : [])
+            .accessibilityValue(reviewState)
+    }
+}
+
 struct Thumbnail: View {
     let request: ThumbnailCache.Request
     let cache: ThumbnailCache
