@@ -1106,15 +1106,7 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
                 Divider()
                 Button("New Isonique Library…", action: workspace.createLibraryPanel).keyboardShortcut("n", modifiers: [.command, .shift]).disabled(workspace.busy)
                 Button("Open Isonique Library…", action: workspace.openLibraryPanel).disabled(workspace.busy)
-                Menu("Open Recent Library") {
-                    ForEach(workspace.recentLibraryPaths, id: \.self) { path in
-                        Button(workspace.recentLibraryTitle(for: path)) {
-                            Task { await workspace.openLibrary(at: URL(fileURLWithPath: path, isDirectory: true)) }
-                        }.disabled(path == workspace.repository?.root.path)
-                    }
-                    Divider()
-                    Button("Clear Recent Libraries") { workspace.recentLibraryPaths = [] }
-                }.disabled(workspace.busy || workspace.recentLibraryPaths.isEmpty)
+                recentLibrariesMenu
                 Button("Reload Library") { Task { await workspace.reloadLibrary() } }
                     .disabled(workspace.busy || workspace.repository == nil)
                 Button("Export Project as Library…") {
@@ -1164,6 +1156,24 @@ enum EditTool: String { case select, crop, straighten, brush, spot, redEye }
         Settings {
             ReviewSettingsView().environmentObject(workspace)
         }
+    }
+
+    private var recentLibrariesMenu: some View {
+        Menu("Open Recent Library") {
+            ForEach(workspace.recentLibraryPaths, id: \.self) { path in
+                recentLibraryButton(path)
+            }
+            Divider()
+            Button("Clear Recent Libraries") { workspace.recentLibraryPaths = [] }
+        }.disabled(workspace.busy || workspace.recentLibraryPaths.isEmpty)
+    }
+
+    private func recentLibraryButton(_ path: String) -> some View {
+        let title = workspace.recentLibraryTitle(for: path)
+        let url = URL(fileURLWithPath: path, isDirectory: true)
+        return Button(title) {
+            Task { await workspace.openLibrary(at: url) }
+        }.disabled(path == workspace.repository?.root.path)
     }
 }
 extension ProcessInfo {
@@ -1263,6 +1273,24 @@ struct ContentView: View {
     private static let welcomeIcon: NSImage = Bundle.main.url(forResource: "Isonique", withExtension: "icns")
         .flatMap(NSImage.init(contentsOf:)) ?? NSApplication.shared.applicationIconImage
 
+    private func albumRow(_ album: Collection) -> some View {
+        let isSmart = album.rule != nil
+        return Label(album.name, systemImage: isSmart ? "gearshape.2" : "rectangle.stack")
+            .tag("album:\(album.id)")
+            .contextMenu {
+                if isSmart {
+                    Button("Edit Smart Album…") {
+                        model.editingSmartAlbum = album.id
+                        model.showSmartAlbum = true
+                    }.disabled(model.busy)
+                } else {
+                    Button("Rename Album…") {
+                        collectionEditor = .renameAlbum(album)
+                    }.disabled(model.busy)
+                }
+            }
+    }
+
     private var workspaceView: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             VStack(alignment: .leading, spacing: 0) {
@@ -1324,17 +1352,9 @@ struct ContentView: View {
                         }
                     }
                     Section("Albums") {
-                        ForEach(model.library.albums) { album in Label(album.name, systemImage: album.rule == nil ? "rectangle.stack" : "gearshape.2").tag("album:\(album.id)")
-                            .contextMenu {
-                                if album.rule != nil {
-                                    Button("Edit Smart Album…") { model.editingSmartAlbum = album.id; model.showSmartAlbum = true }
-                                        .disabled(model.busy)
-                                } else {
-                                    Button("Rename Album…") {
-                                        collectionEditor = .renameAlbum(album)
-                                    }.disabled(model.busy)
-                                }
-                            } }
+                        ForEach(model.library.albums) { album in
+                            albumRow(album)
+                        }
                     }
                     Section("Light Tables") {
                         ForEach(model.lightTables) { layout in
