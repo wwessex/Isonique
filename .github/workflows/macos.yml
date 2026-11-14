@@ -1,0 +1,44 @@
+name: macOS CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    name: Branding, tests, and signed arm64 build
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Check the Apple Silicon toolchain
+        run: |
+          test "$(uname -m)" = arm64
+          sw_vers
+          xcodebuild -version
+          xcrun --sdk macosx --show-sdk-version
+
+      - name: Check branding
+        run: make check-branding
+
+      - name: Run tests
+        run: make test
+
+      - name: Build and sign Isonique
+        run: make build
+
+      - name: Verify the packaged arm64 app
+        run: |
+          staging="$(mktemp -d)"
+          ditto -x -k build/Isonique.zip "$staging"
+          app="$staging/Isonique.app"
+          test "$(lipo -archs "$app/Contents/MacOS/Isonique")" = arm64
+          codesign --verify --deep --strict --verbose=2 "$app"
