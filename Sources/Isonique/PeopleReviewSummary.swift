@@ -76,10 +76,13 @@ extension Workspace {
         peopleSummary = PeopleSummaryRequest(root: repository.root, initialScope: scope)
     }
 
-    func scanUnscannedFaces(in scope: UnnamedFaceScope) {
+    func scanUnscannedFaces(in scope: UnnamedFaceScope,
+                            detect: @escaping @Sendable (CGImage) async throws -> [FaceRegion] = {
+                                try await FaceDetection.regions(in: $0)
+                            }) {
         guard !busy, repository != nil else { return }
         let summary = PeopleReviewSummary(library: library, scope: scope)
-        scanFaces(summary.unscannedVersions)
+        scanFaces(summary.unscannedVersions, detect: detect)
     }
 
     func continueFromPeopleSummary(_ action: PeopleSummaryAction) {

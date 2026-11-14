@@ -183,7 +183,7 @@ final class PeopleWorkflowTests: XCTestCase {
         model.openPeopleSummary(model.currentPeopleReviewScope)
         XCTAssertEqual(model.peopleSummary?.initialScope, scope)
 
-        model.scanUnscannedFaces(in: scope)
+        model.scanUnscannedFaces(in: scope) { _ in [] }
         let task = try XCTUnwrap(model.peopleScan?.task)
         let result = try await task.value
         try await waitForScan(model)
@@ -488,7 +488,7 @@ final class PeopleWorkflowTests: XCTestCase {
         model.batchSelection = [selectedID, hidden.id]
         model.search = "Only target"
 
-        model.scanSelectedFaces()
+        model.scanSelectedFaces { _ in [] }
         let cancelled = try XCTUnwrap(model.peopleScan?.task)
         cancelled.cancel()
         _ = await cancelled.result
@@ -496,7 +496,7 @@ final class PeopleWorkflowTests: XCTestCase {
         XCTAssertEqual(model.status, "Face detection cancelled")
         XCTAssertTrue(try repository.load().photos.allSatisfy { $0.people == nil })
 
-        model.scanSelectedFaces()
+        model.scanSelectedFaces { _ in [] }
         let task = try XCTUnwrap(model.peopleScan?.task)
         let result = try await task.value
         XCTAssertEqual(result.scanned, 1)
@@ -668,7 +668,7 @@ final class PeopleWorkflowTests: XCTestCase {
         }
 
         let model = Workspace(libraryRoot: repository.root, preferences: preferences)
-        model.scanUnscannedFaces(in: .project(project.id))
+        model.scanUnscannedFaces(in: .project(project.id)) { _ in [] }
         let initial = try XCTUnwrap(model.peopleScan?.task)
         _ = try await initial.value
         try await waitForScan(model)
@@ -726,7 +726,7 @@ final class PeopleWorkflowTests: XCTestCase {
         XCTAssertEqual(model.peopleScanReport?.id, report.id)
         XCTAssertTrue(try repository.load().hasSameCatalogueRevision(as: unretried))
 
-        model.retryPeopleScan(report)
+        model.retryPeopleScan(report) { _ in [] }
         let retry = try XCTUnwrap(model.peopleScan)
         let result = try await retry.task.value
         try await waitForScan(model)
@@ -846,7 +846,7 @@ final class PeopleWorkflowTests: XCTestCase {
         for photo in saved.photos[1...3] { XCTAssertThrowsError(try repository.availableOriginalURL(photo)) }
         XCTAssertTrue(try repository.load().hasSameCatalogueRevision(as: updated))
 
-        model.retryPeopleScan(report)
+        model.retryPeopleScan(report) { _ in [] }
         let retry = try XCTUnwrap(model.peopleScan?.task)
         let result = try await retry.value
         try await waitForScan(model)

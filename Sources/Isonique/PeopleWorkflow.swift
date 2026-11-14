@@ -150,8 +150,10 @@ extension Workspace {
         metadataEditingTargets.contains { $0.people?.scanned != true }
     }
 
-    func scanSelectedFaces() {
-        scanFaces(metadataEditingTargets.filter { $0.people?.scanned != true })
+    func scanSelectedFaces(detect: @escaping @Sendable (CGImage) async throws -> [FaceRegion] = {
+        try await FaceDetection.regions(in: $0)
+    }) {
+        scanFaces(metadataEditingTargets.filter { $0.people?.scanned != true }, detect: detect)
     }
 
     func scanFaces(_ targets: [Photo],
@@ -221,7 +223,7 @@ struct PeopleCommands: View {
     var body: some View {
         Button("People Review Summary…") { model.openPeopleSummary(model.currentPeopleReviewScope) }
             .disabled(!model.canOpenUnnamedFaces)
-        Button("Detect Faces in Selection", action: model.scanSelectedFaces)
+        Button("Detect Faces in Selection") { model.scanSelectedFaces() }
             .disabled(!model.canScanSelectedFaces)
         if let scan = model.peopleScan {
             CancelPeopleScanCommand(task: scan.task, progress: scan.progress)
